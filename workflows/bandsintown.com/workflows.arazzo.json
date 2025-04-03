@@ -1,0 +1,185 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/bandsintown.com/main/3.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "display-artist-profile-and-upcoming-events",
+      "summary": "Retrieves core artist information (photo, tracker count, Bandsintown profile link) and their upcoming event schedule (dates, venues, ticket links) for display on websites or applications. This is a primary use case for integrating Bandsintown data.",
+      "description": "Retrieves core artist information (photo, tracker count, Bandsintown profile link) and their upcoming event schedule (dates, venues, ticket links) for display on websites or applications. This is a primary use case for integrating Bandsintown data.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "artistname": {
+            "type": "string"
+          },
+          "app_id": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-artist-info",
+          "description": "Fetches basic information about the specified artist.",
+          "operationId": "artist",
+          "parameters": [
+            {
+              "name": "artistname",
+              "in": "path",
+              "value": "$inputs.artistname"
+            },
+            {
+              "name": "app_id",
+              "in": "query",
+              "value": "$inputs.app_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "artist_id": "$response.body",
+            "artist_name": "$response.body",
+            "artist_url": "$response.body",
+            "image_url": "$response.body",
+            "thumb_url": "$response.body",
+            "facebook_page_url": "$response.body",
+            "mbid": "$response.body",
+            "tracker_count": "$response.body",
+            "upcoming_event_count": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-upcoming-events",
+          "description": "Fetches the list of upcoming events for the specified artist. Uses the default `date` parameter or explicitly sets `date=upcoming`.",
+          "operationId": "artistEvents",
+          "parameters": [
+            {
+              "name": "artistname",
+              "in": "path",
+              "value": "$inputs.artistname"
+            },
+            {
+              "name": "app_id",
+              "in": "query",
+              "value": "$inputs.app_id"
+            },
+            {
+              "name": "date",
+              "in": "query",
+              "value": "$inputs.date"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "events": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "artist_id": "$steps.get-artist-info.outputs.artist_id",
+        "artist_name": "$steps.get-artist-info.outputs.artist_name",
+        "artist_url": "$steps.get-artist-info.outputs.artist_url",
+        "image_url": "$steps.get-artist-info.outputs.image_url",
+        "thumb_url": "$steps.get-artist-info.outputs.thumb_url",
+        "facebook_page_url": "$steps.get-artist-info.outputs.facebook_page_url",
+        "mbid": "$steps.get-artist-info.outputs.mbid",
+        "tracker_count": "$steps.get-artist-info.outputs.tracker_count",
+        "upcoming_event_count": "$steps.get-artist-info.outputs.upcoming_event_count",
+        "events": "$steps.get-upcoming-events.outputs.events"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

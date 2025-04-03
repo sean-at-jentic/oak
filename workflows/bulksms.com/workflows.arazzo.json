@@ -1,0 +1,684 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/bulksms.com/main/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "send-personalized-bulk-sms-campaign",
+      "summary": "Sends customized SMS messages to multiple recipients using templates and checks the account profile first.",
+      "description": "Sends customized SMS messages to multiple recipients using templates and checks the account profile first.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "deduplication-id": {
+            "type": "string"
+          },
+          "auto-unicode": {
+            "type": "string"
+          },
+          "schedule-date": {
+            "type": "string"
+          },
+          "schedule-description": {
+            "type": "string"
+          },
+          "send-personalized-messages_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "check-account-profile",
+          "description": "Retrieve account profile to check credits and quota before sending.",
+          "operationPath": "openapi_source#/paths/~1profile/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "profile_info": "$response.body"
+          }
+        },
+        {
+          "stepId": "send-personalized-messages",
+          "description": "Send SMS messages using body templates with personalized fields for each recipient. Requires sufficient credits checked in the previous step.",
+          "operationPath": "openapi_source#/paths/~1messages/post",
+          "parameters": [
+            {
+              "name": "deduplication-id",
+              "in": "query",
+              "value": "$inputs.deduplication-id"
+            },
+            {
+              "name": "auto-unicode",
+              "in": "query",
+              "value": "$inputs.auto-unicode"
+            },
+            {
+              "name": "schedule-date",
+              "in": "query",
+              "value": "$inputs.schedule-date"
+            },
+            {
+              "name": "schedule-description",
+              "in": "query",
+              "value": "$inputs.schedule-description"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.send-personalized-messages_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "message_array": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "profile_info": "$steps.check-account-profile.outputs.profile_info",
+        "message_array": "$steps.send-personalized-messages.outputs.message_array"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "send-sms-with-attachment",
+      "summary": "Uploads a file to BulkSMS storage and sends an SMS containing a link to the hosted file.",
+      "description": "Uploads a file to BulkSMS storage and sends an SMS containing a link to the hosted file.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "request-upload-url_body": {
+            "type": "object"
+          },
+          "deduplication-id": {
+            "type": "string"
+          },
+          "auto-unicode": {
+            "type": "string"
+          },
+          "schedule-date": {
+            "type": "string"
+          },
+          "schedule-description": {
+            "type": "string"
+          },
+          "send-message-with-attachment-link_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "request-upload-url",
+          "description": "Request a pre-signed URL to upload the attachment file.",
+          "operationPath": "openapi_source#/paths/~1rmm~1pre-sign-attachment/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.request-upload-url_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "PreSignInfo": "$response.body"
+          }
+        },
+        {
+          "stepId": "send-message-with-attachment-link",
+          "description": "Send an SMS message containing the 'fetchUrl' obtained from the previous step in its body.",
+          "operationPath": "openapi_source#/paths/~1messages/post",
+          "parameters": [
+            {
+              "name": "deduplication-id",
+              "in": "query",
+              "value": "$inputs.deduplication-id"
+            },
+            {
+              "name": "auto-unicode",
+              "in": "query",
+              "value": "$inputs.auto-unicode"
+            },
+            {
+              "name": "schedule-date",
+              "in": "query",
+              "value": "$inputs.schedule-date"
+            },
+            {
+              "name": "schedule-description",
+              "in": "query",
+              "value": "$inputs.schedule-description"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$steps.request-upload-url.outputs.PreSignInfo.fetchUrl"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "message_array": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "PreSignInfo": "$steps.request-upload-url.outputs.PreSignInfo",
+        "message_array": "$steps.send-message-with-attachment-link.outputs.message_array"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "process-incoming-sms-replies-via-webhooks",
+      "summary": "Sets up a webhook to receive incoming SMS messages (replies) and optionally retrieves the original sent message for context.",
+      "description": "Sets up a webhook to receive incoming SMS messages (replies) and optionally retrieves the original sent message for context.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-receive-webhook_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-receive-webhook",
+          "description": "Create a webhook configured to trigger when an SMS message is received.",
+          "operationPath": "openapi_source#/paths/~1webhooks/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-receive-webhook_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Webhook": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-related-sent-message",
+          "description": "Retrieve messages related to a specific sent message ID (typically the 'relatedSentMessageId' provided in the webhook payload for a received message). This step is triggered externally when the webhook receives a message.",
+          "operationPath": "openapi_source#/paths/~1messages~1{id}~1relatedReceivedMessages/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "message_array": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "Webhook": "$steps.create-receive-webhook.outputs.Webhook",
+        "message_array": "$steps.get-related-sent-message.outputs.message_array"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "track-sms-delivery-status-via-polling",
+      "summary": "Sends an SMS message and then periodically checks its status until a final state (DELIVERED/FAILED) is reached.",
+      "description": "Sends an SMS message and then periodically checks its status until a final state (DELIVERED/FAILED) is reached.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "deduplication-id": {
+            "type": "string"
+          },
+          "auto-unicode": {
+            "type": "string"
+          },
+          "schedule-date": {
+            "type": "string"
+          },
+          "schedule-description": {
+            "type": "string"
+          },
+          "send-message_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "send-message",
+          "description": "Send a single SMS message.",
+          "operationPath": "openapi_source#/paths/~1messages/post",
+          "parameters": [
+            {
+              "name": "deduplication-id",
+              "in": "query",
+              "value": "$inputs.deduplication-id"
+            },
+            {
+              "name": "auto-unicode",
+              "in": "query",
+              "value": "$inputs.auto-unicode"
+            },
+            {
+              "name": "schedule-date",
+              "in": "query",
+              "value": "$inputs.schedule-date"
+            },
+            {
+              "name": "schedule-description",
+              "in": "query",
+              "value": "$inputs.schedule-description"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.send-message_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "message_array": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-message-status",
+          "description": "Retrieve the message details, including its current delivery status. This step may need to be repeated.",
+          "operationPath": "openapi_source#/paths/~1messages~1{id}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.send-message.outputs.message_array.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Message": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "message_array": "$steps.send-message.outputs.message_array",
+        "Message": "$steps.check-message-status.outputs.Message"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "configure-and-verify-webhooks-for-message-events",
+      "summary": "Sets up webhooks for both SENT message status updates and RECEIVED messages, then lists all configured webhooks to verify.",
+      "description": "Sets up webhooks for both SENT message status updates and RECEIVED messages, then lists all configured webhooks to verify.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-sent-status-webhook_body": {
+            "type": "object"
+          },
+          "create-received-message-webhook_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-sent-status-webhook",
+          "description": "Create a webhook to receive status updates for sent messages.",
+          "operationPath": "openapi_source#/paths/~1webhooks/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-sent-status-webhook_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Webhook_sent": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-received-message-webhook",
+          "description": "Create a webhook to receive incoming messages.",
+          "operationPath": "openapi_source#/paths/~1webhooks/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-received-message-webhook_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Webhook_received": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-all-webhooks",
+          "description": "List all configured webhooks for the account to verify creation.",
+          "operationPath": "openapi_source#/paths/~1webhooks/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Webhook_array": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "Webhook_sent": "$steps.create-sent-status-webhook.outputs.Webhook_sent",
+        "Webhook_received": "$steps.create-received-message-webhook.outputs.Webhook_received",
+        "Webhook_array": "$steps.list-all-webhooks.outputs.Webhook_array"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-blocklist",
+      "summary": "Adds phone numbers to the account's blocklist to prevent sending messages to them, and allows listing the current blocklist.",
+      "description": "Adds phone numbers to the account's blocklist to prevent sending messages to them, and allows listing the current blocklist.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "add-numbers-to-blocklist_body": {
+            "type": "object"
+          },
+          "min-id": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-numbers-to-blocklist",
+          "description": "Add one or more phone numbers to the blocklist.",
+          "operationPath": "openapi_source#/paths/~1blocked-numbers/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.add-numbers-to-blocklist_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "blocklist_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-blocked-numbers",
+          "description": "Retrieve the list of currently blocked numbers for the account.",
+          "operationPath": "openapi_source#/paths/~1blocked-numbers/get",
+          "parameters": [
+            {
+              "name": "min-id",
+              "in": "query",
+              "value": "$inputs.min-id"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "BlockedNumber_array": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "blocklist_data": "$steps.add-numbers-to-blocklist.outputs.blocklist_data",
+        "BlockedNumber_array": "$steps.list-blocked-numbers.outputs.BlockedNumber_array"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "transfer-credits-between-accounts",
+      "summary": "Checks if credit transfer is allowed and has sufficient balance, then transfers credits to another BulkSMS user account.",
+      "description": "Checks if credit transfer is allowed and has sufficient balance, then transfers credits to another BulkSMS user account.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "transfer-credits_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "check-profile-for-transfer",
+          "description": "Retrieve own profile to check credit balance and if transfers are enabled.",
+          "operationPath": "openapi_source#/paths/~1profile/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Profile": "$response.body"
+          }
+        },
+        {
+          "stepId": "transfer-credits",
+          "description": "Transfer a specified amount of credits to another user account. Requires 'credit-transfer facility' to be activated.",
+          "operationPath": "openapi_source#/paths/~1credit~1transfer/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.transfer-credits_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "credits_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "Profile": "$steps.check-profile-for-transfer.outputs.Profile",
+        "credits_data": "$steps.transfer-credits.outputs.credits_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

@@ -1,0 +1,1101 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/powerdns.local/main/0.0.15/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "create-zone-and-add-initial-record",
+      "summary": "Creates a new authoritative DNS zone and adds an initial DNS record (e.g., an A record for the apex domain). This is a fundamental setup task.",
+      "description": "Creates a new authoritative DNS zone and adds an initial DNS record (e.g., an A record for the apex domain). This is a fundamental setup task.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "server_id": {
+            "type": "string"
+          },
+          "rrsets": {
+            "type": "string"
+          },
+          "create-new-zone_body": {
+            "type": "object"
+          },
+          "zone_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-new-zone",
+          "description": "Creates a new DNS zone (e.g., example.com).",
+          "operationId": "createZone",
+          "parameters": [
+            {
+              "name": "server_id",
+              "in": "path",
+              "value": "$inputs.server_id"
+            },
+            {
+              "name": "rrsets",
+              "in": "query",
+              "value": "$inputs.rrsets"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-new-zone_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "zone_id": "$response.body",
+            "zone_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-apex-record",
+          "description": "Adds an initial record (e.g., A record) to the newly created zone.",
+          "operationId": "patchZone",
+          "parameters": [
+            {
+              "name": "server_id",
+              "in": "path",
+              "value": "$inputs.server_id"
+            },
+            {
+              "name": "zone_id",
+              "in": "path",
+              "value": "$steps.create-new-zone.outputs.zone_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "zone_id": "$steps.create-new-zone.outputs.zone_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "patch_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "zone_id": "$steps.create-new-zone.outputs.zone_id",
+        "zone_details": "$steps.create-new-zone.outputs.zone_details",
+        "patch_status": "$steps.add-apex-record.outputs.patch_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "add-or-update-dns-record-in-existing-zone",
+      "summary": "Finds a zone by name and then adds a new DNS record or updates an existing one by replacing its RRSet.",
+      "description": "Finds a zone by name and then adds a new DNS record or updates an existing one by replacing its RRSet.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "server_id": {
+            "type": "string"
+          },
+          "zone": {
+            "type": "string"
+          },
+          "dnssec": {
+            "type": "string"
+          },
+          "zone_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-zone-by-name",
+          "description": "Retrieves zone details, including the zone ID, by filtering by zone name.",
+          "operationId": "listZones",
+          "parameters": [
+            {
+              "name": "server_id",
+              "in": "path",
+              "value": "$inputs.server_id"
+            },
+            {
+              "name": "zone",
+              "in": "query",
+              "value": "$inputs.zone"
+            },
+            {
+              "name": "dnssec",
+              "in": "query",
+              "value": "$inputs.dnssec"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "zone_id": "$response.body",
+            "zone_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "patch-zone-records",
+          "description": "Adds or updates a DNS record (RRSet) within the specified zone.",
+          "operationId": "patchZone",
+          "parameters": [
+            {
+              "name": "server_id",
+              "in": "path",
+              "value": "$inputs.server_id"
+            },
+            {
+              "name": "zone_id",
+              "in": "path",
+              "value": "$steps.find-zone-by-name.outputs.zone_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "zone_id": "$steps.find-zone-by-name.outputs.zone_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "patch_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "zone_id": "$steps.find-zone-by-name.outputs.zone_id",
+        "zone_list": "$steps.find-zone-by-name.outputs.zone_list",
+        "patch_status": "$steps.patch-zone-records.outputs.patch_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "delete-dns-record",
+      "summary": "Finds a zone by name and then deletes a specific DNS record (RRSet) within that zone.",
+      "description": "Finds a zone by name and then deletes a specific DNS record (RRSet) within that zone.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "server_id": {
+            "type": "string"
+          },
+          "zone": {
+            "type": "string"
+          },
+          "dnssec": {
+            "type": "string"
+          },
+          "zone_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-zone-for-delete",
+          "description": "Retrieves zone details, including the zone ID, by filtering by zone name.",
+          "operationId": "listZones",
+          "parameters": [
+            {
+              "name": "server_id",
+              "in": "path",
+              "value": "$inputs.server_id"
+            },
+            {
+              "name": "zone",
+              "in": "query",
+              "value": "$inputs.zone"
+            },
+            {
+              "name": "dnssec",
+              "in": "query",
+              "value": "$inputs.dnssec"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "zone_id": "$response.body",
+            "zone_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "delete-rrset",
+          "description": "Deletes a specific DNS record (RRSet) by specifying its name and type with changetype='DELETE'.",
+          "operationId": "patchZone",
+          "parameters": [
+            {
+              "name": "server_id",
+              "in": "path",
+              "value": "$inputs.server_id"
+            },
+            {
+              "name": "zone_id",
+              "in": "path",
+              "value": "$steps.find-zone-for-delete.outputs.zone_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "zone_id": "$steps.find-zone-for-delete.outputs.zone_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "patch_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "zone_id": "$steps.find-zone-for-delete.outputs.zone_id",
+        "zone_list": "$steps.find-zone-for-delete.outputs.zone_list",
+        "patch_status": "$steps.delete-rrset.outputs.patch_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "enable-basic-dnssec-for-zone",
+      "summary": "Enables DNSSEC for an existing zone by creating and activating Key-Signing Key (KSK) and Zone-Signing Key (ZSK). Assumes default algorithms/sizes or requires them in the request.",
+      "description": "Enables DNSSEC for an existing zone by creating and activating Key-Signing Key (KSK) and Zone-Signing Key (ZSK). Assumes default algorithms/sizes or requires them in the request.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "server_id": {
+            "type": "string"
+          },
+          "zone": {
+            "type": "string"
+          },
+          "dnssec": {
+            "type": "string"
+          },
+          "zone_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-zone-for-dnssec",
+          "description": "Retrieves zone details, including the zone ID, by filtering by zone name.",
+          "operationId": "listZones",
+          "parameters": [
+            {
+              "name": "server_id",
+              "in": "path",
+              "value": "$inputs.server_id"
+            },
+            {
+              "name": "zone",
+              "in": "query",
+              "value": "$inputs.zone"
+            },
+            {
+              "name": "dnssec",
+              "in": "query",
+              "value": "$inputs.dnssec"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "zone_id": "$response.body",
+            "zone_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-ksk",
+          "description": "Creates a Key-Signing Key (KSK) for the zone.",
+          "operationId": "createCryptokey",
+          "parameters": [
+            {
+              "name": "server_id",
+              "in": "path",
+              "value": "$inputs.server_id"
+            },
+            {
+              "name": "zone_id",
+              "in": "path",
+              "value": "$steps.find-zone-for-dnssec.outputs.zone_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "zone_id": "$steps.find-zone-for-dnssec.outputs.zone_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ksk_id": "$response.body",
+            "ksk_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-zsk",
+          "description": "Creates a Zone-Signing Key (ZSK) for the zone.",
+          "operationId": "createCryptokey",
+          "parameters": [
+            {
+              "name": "server_id",
+              "in": "path",
+              "value": "$inputs.server_id"
+            },
+            {
+              "name": "zone_id",
+              "in": "path",
+              "value": "$steps.find-zone-for-dnssec.outputs.zone_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "zone_id": "$steps.find-zone-for-dnssec.outputs.zone_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "zsk_id": "$response.body",
+            "zsk_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "rectify-zone-dnssec",
+          "description": "Rectifies the zone data to ensure it is correctly signed with the new DNSSEC keys.",
+          "operationId": "rectifyZone",
+          "parameters": [
+            {
+              "name": "server_id",
+              "in": "path",
+              "value": "$inputs.server_id"
+            },
+            {
+              "name": "zone_id",
+              "in": "path",
+              "value": "$steps.find-zone-for-dnssec.outputs.zone_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "rectify_result": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "zone_id": "$steps.find-zone-for-dnssec.outputs.zone_id",
+        "zone_list": "$steps.find-zone-for-dnssec.outputs.zone_list",
+        "ksk_id": "$steps.create-ksk.outputs.ksk_id",
+        "ksk_details": "$steps.create-ksk.outputs.ksk_details",
+        "zsk_id": "$steps.create-zsk.outputs.zsk_id",
+        "zsk_details": "$steps.create-zsk.outputs.zsk_details",
+        "rectify_result": "$steps.rectify-zone-dnssec.outputs.rectify_result"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "configure-and-sync-slave-zone",
+      "summary": "Creates a new zone configured as a slave, specifying its master servers, and then triggers an initial zone transfer (AXFR) from the master.",
+      "description": "Creates a new zone configured as a slave, specifying its master servers, and then triggers an initial zone transfer (AXFR) from the master.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "server_id": {
+            "type": "string"
+          },
+          "rrsets": {
+            "type": "string"
+          },
+          "create-slave-zone_body": {
+            "type": "object"
+          },
+          "zone_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-slave-zone",
+          "description": "Creates a new DNS zone configured as a Slave, specifying master IP addresses.",
+          "operationId": "createZone",
+          "parameters": [
+            {
+              "name": "server_id",
+              "in": "path",
+              "value": "$inputs.server_id"
+            },
+            {
+              "name": "rrsets",
+              "in": "query",
+              "value": "$inputs.rrsets"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-slave-zone_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "zone_id": "$response.body",
+            "zone_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "trigger-axfr-retrieval",
+          "description": "Initiates an AXFR zone transfer from the configured master server(s) to populate the slave zone.",
+          "operationId": "axfrRetrieveZone",
+          "parameters": [
+            {
+              "name": "server_id",
+              "in": "path",
+              "value": "$inputs.server_id"
+            },
+            {
+              "name": "zone_id",
+              "in": "path",
+              "value": "$steps.create-slave-zone.outputs.zone_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "axfr_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "zone_id": "$steps.create-slave-zone.outputs.zone_id",
+        "zone_details": "$steps.create-slave-zone.outputs.zone_details",
+        "axfr_status": "$steps.trigger-axfr-retrieval.outputs.axfr_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "configure-tsig-key-for-secure-zone-transfer",
+      "summary": "Creates a new TSIG key, retrieves its details (including the secret key), and associates it with a zone for securing AXFR/IXFR transfers (e.g., as a slave key).",
+      "description": "Creates a new TSIG key, retrieves its details (including the secret key), and associates it with a zone for securing AXFR/IXFR transfers (e.g., as a slave key).",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "server_id": {
+            "type": "string"
+          },
+          "create-tsig-key_body": {
+            "type": "object"
+          },
+          "tsigkey_id": {
+            "type": "string"
+          },
+          "zone_id": {
+            "type": "string"
+          },
+          "rrsets": {
+            "type": "string"
+          },
+          "rrset_name": {
+            "type": "string"
+          },
+          "rrset_type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-tsig-key",
+          "description": "Creates a new TSIG key, potentially auto-generating the secret.",
+          "operationId": "createTSIGKey",
+          "parameters": [
+            {
+              "name": "server_id",
+              "in": "path",
+              "value": "$inputs.server_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-tsig-key_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tsigkey_id": "$response.body",
+            "tsigkey_details_no_secret": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-tsig-key-secret",
+          "description": "Retrieves the full details of the TSIG key, including the secret.",
+          "operationId": "getTSIGKey",
+          "parameters": [
+            {
+              "name": "server_id",
+              "in": "path",
+              "value": "$inputs.server_id"
+            },
+            {
+              "name": "tsigkey_id",
+              "in": "path",
+              "value": "$steps.create-tsig-key.outputs.tsigkey_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tsigkey_details_with_secret": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-zone-for-tsig-update",
+          "description": "Retrieves current zone details before updating TSIG key associations.",
+          "operationId": "listZone",
+          "parameters": [
+            {
+              "name": "server_id",
+              "in": "path",
+              "value": "$inputs.server_id"
+            },
+            {
+              "name": "zone_id",
+              "in": "path",
+              "value": "$inputs.zone_id"
+            },
+            {
+              "name": "rrsets",
+              "in": "query",
+              "value": "$inputs.rrsets"
+            },
+            {
+              "name": "rrset_name",
+              "in": "query",
+              "value": "$inputs.rrset_name"
+            },
+            {
+              "name": "rrset_type",
+              "in": "query",
+              "value": "$inputs.rrset_type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "zone_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "associate-tsig-key-with-zone",
+          "description": "Updates the zone configuration to use the created TSIG key for slave operations.",
+          "operationId": "putZone",
+          "parameters": [
+            {
+              "name": "server_id",
+              "in": "path",
+              "value": "$inputs.server_id"
+            },
+            {
+              "name": "zone_id",
+              "in": "path",
+              "value": "$steps.get-zone-for-tsig-update.outputs.zone_details.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "zone_id": "$steps.get-zone-for-tsig-update.outputs.zone_details.id",
+              "Zone object (including slave_tsig_key_ids or master_tsig_key_ids)": "$steps.create-tsig-key.outputs.tsigkey_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "update_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "tsigkey_id": "$steps.create-tsig-key.outputs.tsigkey_id",
+        "tsigkey_details_no_secret": "$steps.create-tsig-key.outputs.tsigkey_details_no_secret",
+        "tsigkey_details_with_secret": "$steps.get-tsig-key-secret.outputs.tsigkey_details_with_secret",
+        "zone_details": "$steps.get-zone-for-tsig-update.outputs.zone_details",
+        "update_status": "$steps.associate-tsig-key-with-zone.outputs.update_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "troubleshoot-dns-record-and-flush-cache",
+      "summary": "Searches for a specific DNS record or zone, retrieves its details, and then flushes the server's cache for that domain if necessary.",
+      "description": "Searches for a specific DNS record or zone, retrieves its details, and then flushes the server's cache for that domain if necessary.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "server_id": {
+            "type": "string"
+          },
+          "q": {
+            "type": "string"
+          },
+          "max": {
+            "type": "string"
+          },
+          "object_type": {
+            "type": "string"
+          },
+          "zone_id": {
+            "type": "string"
+          },
+          "rrsets": {
+            "type": "string"
+          },
+          "rrset_name": {
+            "type": "string"
+          },
+          "rrset_type": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-dns-data",
+          "description": "Searches for a zone or record using a query string.",
+          "operationId": "searchData",
+          "parameters": [
+            {
+              "name": "server_id",
+              "in": "path",
+              "value": "$inputs.server_id"
+            },
+            {
+              "name": "q",
+              "in": "query",
+              "value": "$inputs.q"
+            },
+            {
+              "name": "max",
+              "in": "query",
+              "value": "$inputs.max"
+            },
+            {
+              "name": "object_type",
+              "in": "query",
+              "value": "$inputs.object_type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "search_results": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-zone-details-from-search",
+          "description": "Retrieves full details for a specific zone found in the search results.",
+          "operationId": "listZone",
+          "parameters": [
+            {
+              "name": "server_id",
+              "in": "path",
+              "value": "$inputs.server_id"
+            },
+            {
+              "name": "zone_id",
+              "in": "path",
+              "value": "$steps.search-dns-data.outputs.search_results.zone_id"
+            },
+            {
+              "name": "rrsets",
+              "in": "query",
+              "value": "$inputs.rrsets"
+            },
+            {
+              "name": "rrset_name",
+              "in": "query",
+              "value": "$inputs.rrset_name"
+            },
+            {
+              "name": "rrset_type",
+              "in": "query",
+              "value": "$inputs.rrset_type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "zone_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "flush-domain-cache",
+          "description": "Flushes the cache for a specific domain name.",
+          "operationId": "cacheFlushByName",
+          "parameters": [
+            {
+              "name": "server_id",
+              "in": "path",
+              "value": "$inputs.server_id"
+            },
+            {
+              "name": "domain",
+              "in": "query",
+              "value": "$steps.search-dns-data.outputs.search_results.zone"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "cache_flush_result": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "search_results": "$steps.search-dns-data.outputs.search_results",
+        "zone_details": "$steps.get-zone-details-from-search.outputs.zone_details",
+        "cache_flush_result": "$steps.flush-domain-cache.outputs.cache_flush_result"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "set-zone-metadata",
+      "summary": "Sets or replaces metadata of a specific kind (e.g., SOA-EDIT policy) for a given zone.",
+      "description": "Sets or replaces metadata of a specific kind (e.g., SOA-EDIT policy) for a given zone.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "server_id": {
+            "type": "string"
+          },
+          "zone": {
+            "type": "string"
+          },
+          "dnssec": {
+            "type": "string"
+          },
+          "zone_id": {
+            "type": "string"
+          },
+          "metadata_kind": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-zone-for-metadata",
+          "description": "Retrieves zone details, including the zone ID, by filtering by zone name.",
+          "operationId": "listZones",
+          "parameters": [
+            {
+              "name": "server_id",
+              "in": "path",
+              "value": "$inputs.server_id"
+            },
+            {
+              "name": "zone",
+              "in": "query",
+              "value": "$inputs.zone"
+            },
+            {
+              "name": "dnssec",
+              "in": "query",
+              "value": "$inputs.dnssec"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "zone_id": "$response.body",
+            "zone_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "set-zone-metadata",
+          "description": "Replaces all metadata values for a specific kind associated with the zone.",
+          "operationId": "modifyMetadata",
+          "parameters": [
+            {
+              "name": "server_id",
+              "in": "path",
+              "value": "$inputs.server_id"
+            },
+            {
+              "name": "zone_id",
+              "in": "path",
+              "value": "$steps.find-zone-for-metadata.outputs.zone_id"
+            },
+            {
+              "name": "metadata_kind",
+              "in": "path",
+              "value": "$inputs.metadata_kind"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "zone_id": "$steps.find-zone-for-metadata.outputs.zone_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "metadata_result": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "zone_id": "$steps.find-zone-for-metadata.outputs.zone_id",
+        "zone_list": "$steps.find-zone-for-metadata.outputs.zone_list",
+        "metadata_result": "$steps.set-zone-metadata.outputs.metadata_result"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

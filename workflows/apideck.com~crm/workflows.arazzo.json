@@ -1,0 +1,1295 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/apideck.com/crm/10.14.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "new-lead-to-opportunity-pipeline",
+      "summary": "Captures a new lead, creates associated company and contact records, generates an initial opportunity, and logs a follow-up task.",
+      "description": "Captures a new lead, creates associated company and contact records, generates an initial opportunity, and logs a follow-up task.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "raw": {
+            "type": "string"
+          },
+          "x-apideck-consumer-id": {
+            "type": "string"
+          },
+          "x-apideck-app-id": {
+            "type": "string"
+          },
+          "x-apideck-service-id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "company_name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-lead",
+          "description": "Create a new lead record with contact and potential company information.",
+          "operationId": "leadsAdd",
+          "parameters": [
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name",
+              "company_name": "$inputs.company_name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "lead_id": "$response.body",
+            "lead_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-company-from-lead",
+          "description": "Create a new company record based on the lead information.",
+          "operationId": "companiesAdd",
+          "parameters": [
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$steps.create-lead.outputs.lead_details.company_name",
+              "emails": "$steps.create-lead.outputs.lead_details.emails",
+              "phone_numbers": "$steps.create-lead.outputs.lead_details.phone_numbers",
+              "addresses": "$steps.create-lead.outputs.lead_details.addresses"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "company_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-contact-from-lead",
+          "description": "Create a new contact record based on the lead information and link it to the created company.",
+          "operationId": "contactsAdd",
+          "parameters": [
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$steps.create-lead.outputs.lead_details.name",
+              "first_name": "$steps.create-lead.outputs.lead_details.first_name",
+              "last_name": "$steps.create-lead.outputs.lead_details.last_name",
+              "emails": "$steps.create-lead.outputs.lead_details.emails",
+              "phone_numbers": "$steps.create-lead.outputs.lead_details.phone_numbers",
+              "company_id": "$steps.create-company-from-lead.outputs.company_id",
+              "lead_id": "$steps.create-lead.outputs.lead_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "contact_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-initial-opportunity",
+          "description": "Create an initial sales opportunity linked to the new contact and company.",
+          "operationId": "opportunitiesAdd",
+          "parameters": [
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "title": "$steps.create-lead.outputs.lead_details.company_name",
+              "company_id": "$steps.create-company-from-lead.outputs.company_id",
+              "primary_contact_id": "$steps.create-contact-from-lead.outputs.contact_id",
+              "lead_id": "$steps.create-lead.outputs.lead_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "opportunity_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "log-follow-up-task",
+          "description": "Create a follow-up task activity associated with the new lead, contact, company, and opportunity.",
+          "operationId": "activitiesAdd",
+          "parameters": [
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "company_id": "$steps.create-company-from-lead.outputs.company_id",
+              "contact_id": "$steps.create-contact-from-lead.outputs.contact_id",
+              "opportunity_id": "$steps.create-initial-opportunity.outputs.opportunity_id",
+              "lead_id": "$steps.create-lead.outputs.lead_id",
+              "type": "$inputs.type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "activity_id": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "lead_id": "$steps.create-lead.outputs.lead_id",
+        "lead_details": "$steps.create-lead.outputs.lead_details",
+        "company_id": "$steps.create-company-from-lead.outputs.company_id",
+        "contact_id": "$steps.create-contact-from-lead.outputs.contact_id",
+        "opportunity_id": "$steps.create-initial-opportunity.outputs.opportunity_id",
+        "activity_id": "$steps.log-follow-up-task.outputs.activity_id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "log-interaction-on-existing-opportunity",
+      "summary": "Finds an existing opportunity and logs a new activity (e.g., call, meeting) and an associated note against it.",
+      "description": "Finds an existing opportunity and logs a new activity (e.g., call, meeting) and an associated note against it.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "raw": {
+            "type": "string"
+          },
+          "x-apideck-consumer-id": {
+            "type": "string"
+          },
+          "x-apideck-app-id": {
+            "type": "string"
+          },
+          "x-apideck-service-id": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "filter": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "string"
+          },
+          "pass_through": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "owner_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-opportunity",
+          "description": "Search for an opportunity using filter criteria (e.g., title, company name). Assumes the first result is the desired one.",
+          "operationId": "opportunitiesAll",
+          "parameters": [
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            },
+            {
+              "name": "cursor",
+              "in": "query",
+              "value": "$inputs.cursor"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            },
+            {
+              "name": "sort",
+              "in": "query",
+              "value": "$inputs.sort"
+            },
+            {
+              "name": "pass_through",
+              "in": "query",
+              "value": "$inputs.pass_through"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "opportunity_id": "$response.body",
+            "primary_contact_id": "$response.body",
+            "company_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "log-interaction-activity",
+          "description": "Log an activity (e.g., call, meeting, email) related to the found opportunity.",
+          "operationId": "activitiesAdd",
+          "parameters": [
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "opportunity_id": "$steps.find-opportunity.outputs.opportunity_id",
+              "contact_id": "$steps.find-opportunity.outputs.primary_contact_id",
+              "company_id": "$steps.find-opportunity.outputs.company_id",
+              "type": "$inputs.type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "activity_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-interaction-note",
+          "description": "Add a detailed note related to the interaction logged in the previous step.",
+          "operationId": "notesAdd",
+          "parameters": [
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "opportunity_id": "$steps.find-opportunity.outputs.opportunity_id",
+              "contact_id": "$steps.find-opportunity.outputs.primary_contact_id",
+              "company_id": "$steps.find-opportunity.outputs.company_id",
+              "title": "$inputs.title",
+              "content": "$inputs.content",
+              "owner_id": "$inputs.owner_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "note_id": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "opportunity_id": "$steps.find-opportunity.outputs.opportunity_id",
+        "primary_contact_id": "$steps.find-opportunity.outputs.primary_contact_id",
+        "company_id": "$steps.find-opportunity.outputs.company_id",
+        "activity_id": "$steps.log-interaction-activity.outputs.activity_id",
+        "note_id": "$steps.add-interaction-note.outputs.note_id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "progress-opportunity-through-sales-pipeline",
+      "summary": "Updates an opportunity's stage within its sales pipeline and logs an activity reflecting the change.",
+      "description": "Updates an opportunity's stage within its sales pipeline and logs an activity reflecting the change.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "x-apideck-consumer-id": {
+            "type": "string"
+          },
+          "x-apideck-app-id": {
+            "type": "string"
+          },
+          "x-apideck-service-id": {
+            "type": "string"
+          },
+          "raw": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-opportunity-details",
+          "description": "Retrieve the current details of a specific opportunity by its ID.",
+          "operationId": "opportunitiesOne",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            },
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "opportunity_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-opportunity-stage",
+          "description": "Update the opportunity's pipeline stage, win probability, status, or other relevant fields.",
+          "operationId": "opportunitiesUpdate",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            },
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "opportunity_id": "$steps.get-opportunity-details.outputs.opportunity_details.id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_opportunity_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "log-stage-update-activity",
+          "description": "Log an activity noting the pipeline stage change for the opportunity.",
+          "operationId": "activitiesAdd",
+          "parameters": [
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "opportunity_id": "$steps.update-opportunity-stage.outputs.updated_opportunity_id",
+              "type": "$inputs.type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "activity_id": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "opportunity_details": "$steps.get-opportunity-details.outputs.opportunity_details",
+        "updated_opportunity_id": "$steps.update-opportunity-stage.outputs.updated_opportunity_id",
+        "activity_id": "$steps.log-stage-update-activity.outputs.activity_id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "prepare-for-account-review",
+      "summary": "Gathers key information about a company, including its contacts, open opportunities, and recent activities, to prepare for an account review meeting.",
+      "description": "Gathers key information about a company, including its contacts, open opportunities, and recent activities, to prepare for an account review meeting.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "raw": {
+            "type": "string"
+          },
+          "x-apideck-consumer-id": {
+            "type": "string"
+          },
+          "x-apideck-app-id": {
+            "type": "string"
+          },
+          "x-apideck-service-id": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "filter": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "string"
+          },
+          "pass_through": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-company-info",
+          "description": "Retrieve detailed information about the target company.",
+          "operationId": "companiesOne",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "company_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-company-contacts",
+          "description": "List all contacts associated with the company.",
+          "operationId": "contactsAll",
+          "parameters": [
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            },
+            {
+              "name": "cursor",
+              "in": "query",
+              "value": "$inputs.cursor"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            },
+            {
+              "name": "sort",
+              "in": "query",
+              "value": "$inputs.sort"
+            },
+            {
+              "name": "pass_through",
+              "in": "query",
+              "value": "$inputs.pass_through"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "contact_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-company-opportunities",
+          "description": "List all opportunities associated with the company (potentially filtered by status, e.g., 'open').",
+          "operationId": "opportunitiesAll",
+          "parameters": [
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            },
+            {
+              "name": "cursor",
+              "in": "query",
+              "value": "$inputs.cursor"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            },
+            {
+              "name": "sort",
+              "in": "query",
+              "value": "$inputs.sort"
+            },
+            {
+              "name": "pass_through",
+              "in": "query",
+              "value": "$inputs.pass_through"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "opportunity_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-company-activities",
+          "description": "List recent activities related to the company.",
+          "operationId": "activitiesAll",
+          "parameters": [
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            },
+            {
+              "name": "cursor",
+              "in": "query",
+              "value": "$inputs.cursor"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            },
+            {
+              "name": "sort",
+              "in": "query",
+              "value": "$inputs.sort"
+            },
+            {
+              "name": "pass_through",
+              "in": "query",
+              "value": "$inputs.pass_through"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "activity_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "company_details": "$steps.get-company-info.outputs.company_details",
+        "contact_list": "$steps.get-company-contacts.outputs.contact_list",
+        "opportunity_list": "$steps.get-company-opportunities.outputs.opportunity_list",
+        "activity_list": "$steps.get-company-activities.outputs.activity_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "add-new-user-and-assign-lead",
+      "summary": "Creates a new user (e.g., sales representative) in the CRM and assigns an existing unassigned lead to them.",
+      "description": "Creates a new user (e.g., sales representative) in the CRM and assigns an existing unassigned lead to them.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "raw": {
+            "type": "string"
+          },
+          "x-apideck-consumer-id": {
+            "type": "string"
+          },
+          "x-apideck-app-id": {
+            "type": "string"
+          },
+          "x-apideck-service-id": {
+            "type": "string"
+          },
+          "emails": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "filter": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "string"
+          },
+          "pass_through": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-user",
+          "description": "Create a new user record.",
+          "operationId": "usersAdd",
+          "parameters": [
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "emails": "$inputs.emails"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "find-unassigned-lead",
+          "description": "Find a lead that does not currently have an owner assigned (assumes filtering by null owner_id is possible or handled by retrieving a list and checking). Takes the first result.",
+          "operationId": "leadsAll",
+          "parameters": [
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            },
+            {
+              "name": "cursor",
+              "in": "query",
+              "value": "$inputs.cursor"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            },
+            {
+              "name": "sort",
+              "in": "query",
+              "value": "$inputs.sort"
+            },
+            {
+              "name": "pass_through",
+              "in": "query",
+              "value": "$inputs.pass_through"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "lead_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "assign-lead-to-user",
+          "description": "Update the found lead to assign the newly created user as the owner.",
+          "operationId": "leadsUpdate",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            },
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "lead_id": "$steps.find-unassigned-lead.outputs.lead_id",
+              "owner_id": "$steps.create-user.outputs.user_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_lead_id": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "user_id": "$steps.create-user.outputs.user_id",
+        "lead_id": "$steps.find-unassigned-lead.outputs.lead_id",
+        "updated_lead_id": "$steps.assign-lead-to-user.outputs.updated_lead_id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

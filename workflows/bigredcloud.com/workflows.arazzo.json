@@ -1,0 +1,986 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/bigredcloud.com/main/v1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "quote-to-invoice-sales-process",
+      "summary": "Creates a sales quote for a customer, optionally emails it, converts the quote to a sales invoice, and optionally emails the invoice. This represents a standard sales cycle.",
+      "description": "Creates a sales quote for a customer, optionally emails it, converts the quote to a sales invoice, and optionally emails the invoice. This represents a standard sales cycle.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "needBalance": {
+            "type": "string"
+          },
+          "bccAddresses": {
+            "type": "string"
+          },
+          "messageBody": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-customer",
+          "description": "Find the target customer ID. Assumes customer exists. Use query parameters if needed.",
+          "operationId": "Customers_Get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "customer_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-customer-details",
+          "description": "Retrieve full details for a specific customer.",
+          "operationId": "Customers_Get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "needBalance",
+              "in": "query",
+              "value": "$inputs.needBalance"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "customer_details": "$response.body",
+            "customerId": "$response.body"
+          }
+        },
+        {
+          "stepId": "find-product",
+          "description": "Find the product ID and details for the quote/invoice line items.",
+          "operationId": "Products_Get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "product_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-product-details",
+          "description": "Retrieve full details for a specific product.",
+          "operationId": "Products_Get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "product_details": "$response.body",
+            "productId": "$response.body",
+            "product_unitPrice": "$response.body",
+            "product_vatRateId": "$response.body"
+          }
+        },
+        {
+          "stepId": "find-sales-rep",
+          "description": "Find the Sales Rep ID (optional).",
+          "operationId": "SalesRep_Get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sales_rep_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-quote",
+          "description": "Create a new sales quote for the customer with the selected products.",
+          "operationId": "Quote_Post_CreateQuoteWithGeneratingReference",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "quote_creation_response": "$response.body",
+            "quoteId": "$response.body"
+          }
+        },
+        {
+          "stepId": "email-quote",
+          "description": "Optionally email the created quote to the customer.",
+          "operationId": "Email_SendQuote",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "quoteId": "$steps.create-quote.outputs.quoteId",
+              "toAddress": "$steps.get-customer-details.outputs.customer_details.email",
+              "bccAddresses": "$inputs.bccAddresses",
+              "messageBody": "$inputs.messageBody"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "email_send_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "generate-invoice-from-quote",
+          "description": "Convert the accepted quote into a sales invoice.",
+          "operationId": "Quote_Post_GenerateSaleInvoice",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "quoteId": "$steps.create-quote.outputs.quoteId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "invoice_generation_response": "$response.body",
+            "salesInvoiceId": "$response.body"
+          }
+        },
+        {
+          "stepId": "email-sales-invoice",
+          "description": "Optionally email the generated sales invoice to the customer.",
+          "operationId": "Email_SendSalesInvoice",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "salesInvoiceId": "$steps.generate-invoice-from-quote.outputs.salesInvoiceId",
+              "toAddress": "$steps.get-customer-details.outputs.customer_details.email",
+              "bccAddresses": "$inputs.bccAddresses",
+              "messageBody": "$inputs.messageBody"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "email_send_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "customer_list": "$steps.find-customer.outputs.customer_list",
+        "customer_details": "$steps.get-customer-details.outputs.customer_details",
+        "customerId": "$steps.get-customer-details.outputs.customerId",
+        "product_list": "$steps.find-product.outputs.product_list",
+        "product_details": "$steps.get-product-details.outputs.product_details",
+        "productId": "$steps.get-product-details.outputs.productId",
+        "product_unitPrice": "$steps.get-product-details.outputs.product_unitPrice",
+        "product_vatRateId": "$steps.get-product-details.outputs.product_vatRateId",
+        "sales_rep_list": "$steps.find-sales-rep.outputs.sales_rep_list",
+        "quote_creation_response": "$steps.create-quote.outputs.quote_creation_response",
+        "quoteId": "$steps.create-quote.outputs.quoteId",
+        "email_send_status": "$steps.email-sales-invoice.outputs.email_send_status",
+        "invoice_generation_response": "$steps.generate-invoice-from-quote.outputs.invoice_generation_response",
+        "salesInvoiceId": "$steps.generate-invoice-from-quote.outputs.salesInvoiceId"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "record-purchase-and-payment",
+      "summary": "Records a purchase from a supplier and then records a payment made to that supplier via a bank account.",
+      "description": "Records a purchase from a supplier and then records a payment made to that supplier via a bank account.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "needBalance": {
+            "type": "string"
+          },
+          "entryDate": {
+            "type": "string"
+          },
+          "procDate": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-supplier",
+          "description": "Find the target supplier ID.",
+          "operationId": "Suppliers_Get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "supplier_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-supplier-details",
+          "description": "Retrieve full details for a specific supplier.",
+          "operationId": "Suppliers_Get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "needBalance",
+              "in": "query",
+              "value": "$inputs.needBalance"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "supplier_details": "$response.body",
+            "supplierId": "$response.body"
+          }
+        },
+        {
+          "stepId": "find-vat-rate",
+          "description": "Find the appropriate VAT rate ID for the purchase.",
+          "operationId": "VatRates_Get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "vat_rate_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-purchase",
+          "description": "Create a new purchase record for the supplier.",
+          "operationId": "Purchases_CreatePurchaseWithGeneratingReference",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "purchase_creation_response": "$response.body",
+            "purchaseId": "$response.body"
+          }
+        },
+        {
+          "stepId": "find-bank-account",
+          "description": "Find the bank account ID used for the payment.",
+          "operationId": "BankAccounts_Get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "bank_account_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-payment",
+          "description": "Create a payment record against the supplier from the bank account.",
+          "operationId": "Payments_Post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "supplierId": "$steps.get-supplier-details.outputs.supplierId",
+              "bankAccountId": "$steps.find-bank-account.outputs.bank_account_list.Items[0].id",
+              "total": "$steps.create-purchase.outputs.purchase_creation_response.total",
+              "entryDate": "$inputs.entryDate",
+              "procDate": "$inputs.procDate",
+              "reference": "$inputs.reference"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "payment_creation_response": "$response.body",
+            "paymentId": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "supplier_list": "$steps.find-supplier.outputs.supplier_list",
+        "supplier_details": "$steps.get-supplier-details.outputs.supplier_details",
+        "supplierId": "$steps.get-supplier-details.outputs.supplierId",
+        "vat_rate_list": "$steps.find-vat-rate.outputs.vat_rate_list",
+        "purchase_creation_response": "$steps.create-purchase.outputs.purchase_creation_response",
+        "purchaseId": "$steps.create-purchase.outputs.purchaseId",
+        "bank_account_list": "$steps.find-bank-account.outputs.bank_account_list",
+        "payment_creation_response": "$steps.create-payment.outputs.payment_creation_response",
+        "paymentId": "$steps.create-payment.outputs.paymentId"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "add-new-product",
+      "summary": "Adds a new product/service to the company's product list, potentially looking up necessary type and VAT information first.",
+      "description": "Adds a new product/service to the company's product list, potentially looking up necessary type and VAT information first.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "details": {
+            "type": "string"
+          },
+          "grossUnitPrice": {
+            "type": "string"
+          },
+          "hasDefaultVatRate": {
+            "type": "string"
+          },
+          "stockCode": {
+            "type": "string"
+          },
+          "unitPrice": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-product-types",
+          "description": "Retrieve available product types to find the correct productTypeId (optional).",
+          "operationId": "ProductTypes_Get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "product_type_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-vat-analysis-types",
+          "description": "Retrieve available VAT analysis types to find the correct vatAnalysisTypeId (optional).",
+          "operationId": "VatAnalysisTypes_Get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "vat_analysis_type_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-vat-rates",
+          "description": "Retrieve available VAT rates to find the correct vatRateId if the product has a default rate (optional).",
+          "operationId": "VatRates_Get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "vat_rate_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-product",
+          "description": "Create the new product record.",
+          "operationId": "Products_Post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "productTypeId": "$steps.get-product-types.outputs.product_type_list.Items[0].id",
+              "vatAnalysisTypeId": "$steps.get-vat-analysis-types.outputs.vat_analysis_type_list.Items[0].id",
+              "vatRateId": "$steps.get-vat-rates.outputs.vat_rate_list.Items[0].id",
+              "details": "$inputs.details",
+              "grossUnitPrice": "$inputs.grossUnitPrice",
+              "hasDefaultVatRate": "$inputs.hasDefaultVatRate",
+              "stockCode": "$inputs.stockCode",
+              "unitPrice": "$inputs.unitPrice"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "product_creation_response": "$response.body",
+            "productId": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "product_type_list": "$steps.get-product-types.outputs.product_type_list",
+        "vat_analysis_type_list": "$steps.get-vat-analysis-types.outputs.vat_analysis_type_list",
+        "vat_rate_list": "$steps.get-vat-rates.outputs.vat_rate_list",
+        "product_creation_response": "$steps.create-product.outputs.product_creation_response",
+        "productId": "$steps.create-product.outputs.productId"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "record-customer-payment-cash-receipt",
+      "summary": "Records a payment received from a customer, typically not directly linked to a specific invoice via the API but recorded against the customer account.",
+      "description": "Records a payment received from a customer, typically not directly linked to a specific invoice via the API but recorded against the customer account.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "needBalance": {
+            "type": "string"
+          },
+          "acEntries": {
+            "type": "string"
+          },
+          "entryDate": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "procDate": {
+            "type": "string"
+          },
+          "total": {
+            "type": "string"
+          },
+          "vatEntries": {
+            "type": "string"
+          },
+          "vatTypeId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-customer-for-receipt",
+          "description": "Find the target customer ID.",
+          "operationId": "Customers_Get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "customer_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-customer-receipt-details",
+          "description": "Retrieve customer details.",
+          "operationId": "Customers_Get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "needBalance",
+              "in": "query",
+              "value": "$inputs.needBalance"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "customer_details": "$response.body",
+            "customerId": "$response.body"
+          }
+        },
+        {
+          "stepId": "find-vat-rate-for-receipt",
+          "description": "Find the appropriate VAT rate ID if VAT is applicable to the receipt (optional).",
+          "operationId": "VatRates_Get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "vat_rate_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-cash-receipt",
+          "description": "Create the cash receipt record for the customer.",
+          "operationId": "CashReceipts_Post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "customerId": "$steps.get-customer-receipt-details.outputs.customerId",
+              "acEntries": "$inputs.acEntries",
+              "entryDate": "$inputs.entryDate",
+              "note": "$inputs.note",
+              "procDate": "$inputs.procDate",
+              "total": "$inputs.total",
+              "vatEntries": "$inputs.vatEntries",
+              "vatTypeId": "$inputs.vatTypeId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "receipt_creation_response": "$response.body",
+            "cashReceiptId": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "customer_list": "$steps.find-customer-for-receipt.outputs.customer_list",
+        "customer_details": "$steps.get-customer-receipt-details.outputs.customer_details",
+        "customerId": "$steps.get-customer-receipt-details.outputs.customerId",
+        "vat_rate_list": "$steps.find-vat-rate-for-receipt.outputs.vat_rate_list",
+        "receipt_creation_response": "$steps.create-cash-receipt.outputs.receipt_creation_response",
+        "cashReceiptId": "$steps.create-cash-receipt.outputs.cashReceiptId"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "send-customer-statement",
+      "summary": "Retrieves a customer's details and sends them an email statement for a specified period.",
+      "description": "Retrieves a customer's details and sends them an email statement for a specified period.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "needBalance": {
+            "type": "string"
+          },
+          "bccAddresses": {
+            "type": "string"
+          },
+          "fromPeriod": {
+            "type": "string"
+          },
+          "messageBody": {
+            "type": "string"
+          },
+          "minimumBalance": {
+            "type": "string"
+          },
+          "toPeriod": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-customer-for-statement",
+          "description": "Find the target customer ID.",
+          "operationId": "Customers_Get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "customer_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-customer-email",
+          "description": "Retrieve customer details, specifically the email address.",
+          "operationId": "Customers_Get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "needBalance",
+              "in": "query",
+              "value": "$inputs.needBalance"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "customer_details": "$response.body",
+            "customerId": "$response.body",
+            "customerEmail": "$response.body"
+          }
+        },
+        {
+          "stepId": "send-statement-email",
+          "description": "Send the statement email to the customer.",
+          "operationId": "Email_SendEmailStatement",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "customerId": "$steps.get-customer-email.outputs.customerId",
+              "toAddress": "$steps.get-customer-email.outputs.customerEmail",
+              "bccAddresses": "$inputs.bccAddresses",
+              "fromPeriod": "$inputs.fromPeriod",
+              "messageBody": "$inputs.messageBody",
+              "minimumBalance": "$inputs.minimumBalance",
+              "toPeriod": "$inputs.toPeriod"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "email_send_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "customer_list": "$steps.find-customer-for-statement.outputs.customer_list",
+        "customer_details": "$steps.get-customer-email.outputs.customer_details",
+        "customerId": "$steps.get-customer-email.outputs.customerId",
+        "customerEmail": "$steps.get-customer-email.outputs.customerEmail",
+        "email_send_status": "$steps.send-statement-email.outputs.email_send_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "generate-customer-aged-debtors-report-data",
+      "summary": "Retrieves the aged balance summary for all active customers to build an aged debtors report.",
+      "description": "Retrieves the aged balance summary for all active customers to build an aged debtors report.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "itemId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-active-customers",
+          "description": "Retrieve a list of all active customers.",
+          "operationId": "Customers_GetWithoutDormant",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "active_customer_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-customer-aged-balance",
+          "description": "Retrieve the aged opening balance for a single customer. This step would typically be looped for all customers found in the previous step.",
+          "operationId": "Customers_GetOpeningBalance",
+          "parameters": [
+            {
+              "name": "itemId",
+              "in": "path",
+              "value": "$inputs.itemId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "customer_aged_balance": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "active_customer_list": "$steps.get-active-customers.outputs.active_customer_list",
+        "customer_aged_balance": "$steps.get-customer-aged-balance.outputs.customer_aged_balance"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-nominal-ledger-details-for-specific-accounts",
+      "summary": "Fetches detailed transaction listings for specified nominal accounts within a given date range, often aligned with the financial year.",
+      "description": "Fetches detailed transaction listings for specified nominal accounts within a given date range, often aligned with the financial year.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string"
+          },
+          "endDate": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-financial-year",
+          "description": "Retrieve the company's financial year settings to determine appropriate date ranges.",
+          "operationId": "CompanySetupConfig_GetFinancialYear",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "financial_year_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-nominal-accounts",
+          "description": "Retrieve the list of nominal accounts to identify the IDs of interest.",
+          "operationId": "NominalAccounts_Get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "nominal_account_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-specific-ledger-details",
+          "description": "Fetch the ledger transactions for the selected nominal account IDs within the specified date range.",
+          "operationId": "NominalAccounts_GetLedgerListing",
+          "parameters": [
+            {
+              "name": "ids",
+              "in": "path",
+              "value": "$inputs.ids"
+            },
+            {
+              "name": "startDate",
+              "in": "query",
+              "value": "$steps.get-financial-year.outputs.financial_year_details.start_date_calculation"
+            },
+            {
+              "name": "endDate",
+              "in": "query",
+              "value": "$steps.get-financial-year.outputs.financial_year_details.end_date_calculation"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "nominal_ledger_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "financial_year_details": "$steps.get-financial-year.outputs.financial_year_details",
+        "nominal_account_list": "$steps.get-nominal-accounts.outputs.nominal_account_list",
+        "nominal_ledger_details": "$steps.get-specific-ledger-details.outputs.nominal_ledger_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

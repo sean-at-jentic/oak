@@ -1,0 +1,787 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/up.com.au/main/v1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "set-up-real-time-transaction-notifications",
+      "summary": "Creates a new webhook to receive notifications for transaction events, tests it with a ping, and shows how to check delivery logs.",
+      "description": "Creates a new webhook to receive notifications for transaction events, tests it with a ping, and shows how to check delivery logs.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-webhook_body": {
+            "type": "object"
+          },
+          "webhookId": {
+            "type": "string"
+          },
+          "page[size]": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-webhook",
+          "description": "Register a new webhook URL to receive transaction events.",
+          "operationPath": "openapi_source#/paths/~1webhooks/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-webhook_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "webhook_id": "$response.body",
+            "secretKey": "$response.body"
+          }
+        },
+        {
+          "stepId": "ping-webhook",
+          "description": "Send a test PING event to the newly created webhook.",
+          "operationPath": "openapi_source#/paths/~1webhooks~1{webhookId}~1ping/post",
+          "parameters": [
+            {
+              "name": "webhookId",
+              "in": "path",
+              "value": "$steps.create-webhook.outputs.webhook_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "webhook_event_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-webhook-logs",
+          "description": "Retrieve delivery logs for the webhook to verify the ping was delivered.",
+          "operationPath": "openapi_source#/paths/~1webhooks~1{webhookId}~1logs/get",
+          "parameters": [
+            {
+              "name": "webhookId",
+              "in": "path",
+              "value": "$steps.create-webhook.outputs.webhook_id"
+            },
+            {
+              "name": "page[size]",
+              "in": "query",
+              "value": "$inputs.page[size]"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "delivery_logs": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "webhook_id": "$steps.create-webhook.outputs.webhook_id",
+        "secretKey": "$steps.create-webhook.outputs.secretKey",
+        "webhook_event_details": "$steps.ping-webhook.outputs.webhook_event_details",
+        "delivery_logs": "$steps.check-webhook-logs.outputs.delivery_logs"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "check-account-balances-and-recent-transactions",
+      "summary": "Retrieves all user accounts, selects a specific account, and lists its recent transactions. Useful for getting a quick overview of account activity.",
+      "description": "Retrieves all user accounts, selects a specific account, and lists its recent transactions. Useful for getting a quick overview of account activity.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "page[size]": {
+            "type": "string"
+          },
+          "filter[accountType]": {
+            "type": "string"
+          },
+          "filter[ownershipType]": {
+            "type": "string"
+          },
+          "accountId": {
+            "type": "string"
+          },
+          "filter[status]": {
+            "type": "string"
+          },
+          "filter[since]": {
+            "type": "string"
+          },
+          "filter[until]": {
+            "type": "string"
+          },
+          "filter[category]": {
+            "type": "string"
+          },
+          "filter[tag]": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-accounts",
+          "description": "Retrieve a list of all accounts for the authenticated user.",
+          "operationPath": "openapi_source#/paths/~1accounts/get",
+          "parameters": [
+            {
+              "name": "page[size]",
+              "in": "query",
+              "value": "$inputs.page[size]"
+            },
+            {
+              "name": "filter[accountType]",
+              "in": "query",
+              "value": "$inputs.filter[accountType]"
+            },
+            {
+              "name": "filter[ownershipType]",
+              "in": "query",
+              "value": "$inputs.filter[ownershipType]"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "accounts_list": "$response.body",
+            "account_ids": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-account-transactions",
+          "description": "Retrieve recent transactions for a specific account.",
+          "operationPath": "openapi_source#/paths/~1accounts~1{accountId}~1transactions/get",
+          "parameters": [
+            {
+              "name": "accountId",
+              "in": "path",
+              "value": "$steps.list-accounts.outputs.accounts_list"
+            },
+            {
+              "name": "page[size]",
+              "in": "query",
+              "value": "$inputs.page[size]"
+            },
+            {
+              "name": "filter[status]",
+              "in": "query",
+              "value": "$inputs.filter[status]"
+            },
+            {
+              "name": "filter[since]",
+              "in": "query",
+              "value": "$inputs.filter[since]"
+            },
+            {
+              "name": "filter[until]",
+              "in": "query",
+              "value": "$inputs.filter[until]"
+            },
+            {
+              "name": "filter[category]",
+              "in": "query",
+              "value": "$inputs.filter[category]"
+            },
+            {
+              "name": "filter[tag]",
+              "in": "query",
+              "value": "$inputs.filter[tag]"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "transactions_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "accounts_list": "$steps.list-accounts.outputs.accounts_list",
+        "account_ids": "$steps.list-accounts.outputs.account_ids",
+        "transactions_list": "$steps.list-account-transactions.outputs.transactions_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "categorize-uncategorized-transactions",
+      "summary": "Finds transactions that can be categorized, lists available categories, and allows the user to assign a category to a specific transaction.",
+      "description": "Finds transactions that can be categorized, lists available categories, and allows the user to assign a category to a specific transaction.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "page[size]": {
+            "type": "string"
+          },
+          "filter[status]": {
+            "type": "string"
+          },
+          "filter[since]": {
+            "type": "string"
+          },
+          "filter[until]": {
+            "type": "string"
+          },
+          "filter[category]": {
+            "type": "string"
+          },
+          "filter[tag]": {
+            "type": "string"
+          },
+          "filter[parent]": {
+            "type": "string"
+          },
+          "transactionId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-categorizable-transactions",
+          "description": "Retrieve a list of transactions. Users can filter or manually identify transactions where 'isCategorizable' is true and 'category' relationship is null.",
+          "operationPath": "openapi_source#/paths/~1transactions/get",
+          "parameters": [
+            {
+              "name": "page[size]",
+              "in": "query",
+              "value": "$inputs.page[size]"
+            },
+            {
+              "name": "filter[status]",
+              "in": "query",
+              "value": "$inputs.filter[status]"
+            },
+            {
+              "name": "filter[since]",
+              "in": "query",
+              "value": "$inputs.filter[since]"
+            },
+            {
+              "name": "filter[until]",
+              "in": "query",
+              "value": "$inputs.filter[until]"
+            },
+            {
+              "name": "filter[category]",
+              "in": "query",
+              "value": "$inputs.filter[category]"
+            },
+            {
+              "name": "filter[tag]",
+              "in": "query",
+              "value": "$inputs.filter[tag]"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "transactions_list": "$response.body",
+            "categorizable_transaction_ids": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-categories",
+          "description": "Retrieve the list of available transaction categories (excluding parent categories for assignment).",
+          "operationPath": "openapi_source#/paths/~1categories/get",
+          "parameters": [
+            {
+              "name": "filter[parent]",
+              "in": "query",
+              "value": "$inputs.filter[parent]"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "categories_list": "$response.body",
+            "category_ids": "$response.body"
+          }
+        },
+        {
+          "stepId": "categorize-transaction",
+          "description": "Assign a specific category to a transaction.",
+          "operationPath": "openapi_source#/paths/~1transactions~1{transactionId}~1relationships~1category/patch",
+          "parameters": [
+            {
+              "name": "transactionId",
+              "in": "path",
+              "value": "$steps.find-categorizable-transactions.outputs.transactions_list"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "transactionId": "$steps.find-categorizable-transactions.outputs.categorizable_transaction_ids[0]",
+              "categoryId": "$steps.list-categories.outputs.category_ids[0]"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_code_204": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "transactions_list": "$steps.find-categorizable-transactions.outputs.transactions_list",
+        "categorizable_transaction_ids": "$steps.find-categorizable-transactions.outputs.categorizable_transaction_ids",
+        "categories_list": "$steps.list-categories.outputs.categories_list",
+        "category_ids": "$steps.list-categories.outputs.category_ids",
+        "status_code_204": "$steps.categorize-transaction.outputs.status_code_204"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "tag-transactions-for-budgetinganalysis",
+      "summary": "Finds specific transactions (e.g., by date range or description) and applies one or more tags to them for custom tracking.",
+      "description": "Finds specific transactions (e.g., by date range or description) and applies one or more tags to them for custom tracking.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "page[size]": {
+            "type": "string"
+          },
+          "filter[status]": {
+            "type": "string"
+          },
+          "filter[since]": {
+            "type": "string"
+          },
+          "filter[until]": {
+            "type": "string"
+          },
+          "filter[category]": {
+            "type": "string"
+          },
+          "filter[tag]": {
+            "type": "string"
+          },
+          "transactionId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-transactions-to-tag",
+          "description": "Retrieve transactions based on filters like date range or status to identify transactions needing tags.",
+          "operationPath": "openapi_source#/paths/~1transactions/get",
+          "parameters": [
+            {
+              "name": "page[size]",
+              "in": "query",
+              "value": "$inputs.page[size]"
+            },
+            {
+              "name": "filter[status]",
+              "in": "query",
+              "value": "$inputs.filter[status]"
+            },
+            {
+              "name": "filter[since]",
+              "in": "query",
+              "value": "$inputs.filter[since]"
+            },
+            {
+              "name": "filter[until]",
+              "in": "query",
+              "value": "$inputs.filter[until]"
+            },
+            {
+              "name": "filter[category]",
+              "in": "query",
+              "value": "$inputs.filter[category]"
+            },
+            {
+              "name": "filter[tag]",
+              "in": "query",
+              "value": "$inputs.filter[tag]"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "transactions_list": "$response.body",
+            "transaction_ids_to_tag": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-tags",
+          "description": "Add one or more tags (e.g., 'Holiday', 'Groceries') to a specific transaction.",
+          "operationPath": "openapi_source#/paths/~1transactions~1{transactionId}~1relationships~1tags/post",
+          "parameters": [
+            {
+              "name": "transactionId",
+              "in": "path",
+              "value": "$steps.find-transactions-to-tag.outputs.transactions_list"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "transactionId": "$steps.find-transactions-to-tag.outputs.transaction_ids_to_tag[0]"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_code_204": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "transactions_list": "$steps.find-transactions-to-tag.outputs.transactions_list",
+        "transaction_ids_to_tag": "$steps.find-transactions-to-tag.outputs.transaction_ids_to_tag",
+        "status_code_204": "$steps.add-tags.outputs.status_code_204"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "analyze-spending-by-tag",
+      "summary": "Lists all used tags and retrieves all transactions associated with a specific tag.",
+      "description": "Lists all used tags and retrieves all transactions associated with a specific tag.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "page[size]": {
+            "type": "string"
+          },
+          "filter[status]": {
+            "type": "string"
+          },
+          "filter[since]": {
+            "type": "string"
+          },
+          "filter[until]": {
+            "type": "string"
+          },
+          "filter[category]": {
+            "type": "string"
+          },
+          "filter[tag]": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-tags",
+          "description": "Retrieve the list of all tags currently in use.",
+          "operationPath": "openapi_source#/paths/~1tags/get",
+          "parameters": [
+            {
+              "name": "page[size]",
+              "in": "query",
+              "value": "$inputs.page[size]"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tags_list": "$response.body",
+            "tag_ids": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-transactions-by-tag",
+          "description": "Retrieve all transactions filtered by a specific tag.",
+          "operationPath": "openapi_source#/paths/~1transactions/get",
+          "parameters": [
+            {
+              "name": "page[size]",
+              "in": "query",
+              "value": "$inputs.page[size]"
+            },
+            {
+              "name": "filter[status]",
+              "in": "query",
+              "value": "$inputs.filter[status]"
+            },
+            {
+              "name": "filter[since]",
+              "in": "query",
+              "value": "$inputs.filter[since]"
+            },
+            {
+              "name": "filter[until]",
+              "in": "query",
+              "value": "$inputs.filter[until]"
+            },
+            {
+              "name": "filter[category]",
+              "in": "query",
+              "value": "$inputs.filter[category]"
+            },
+            {
+              "name": "filter[tag]",
+              "in": "query",
+              "value": "$steps.list-tags.outputs.tags_list"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tagged_transactions_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "tags_list": "$steps.list-tags.outputs.tags_list",
+        "tag_ids": "$steps.list-tags.outputs.tag_ids",
+        "tagged_transactions_list": "$steps.list-transactions-by-tag.outputs.tagged_transactions_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-transaction-attachment-receipt",
+      "summary": "Fetches a specific transaction, checks if it has an attachment, and retrieves the attachment details including the temporary download URL.",
+      "description": "Fetches a specific transaction, checks if it has an attachment, and retrieves the attachment details including the temporary download URL.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-transaction",
+          "description": "Retrieve details of a specific transaction by its ID.",
+          "operationPath": "openapi_source#/paths/~1transactions~1{id}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "transaction_details": "$response.body",
+            "attachment_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-attachment",
+          "description": "Retrieve the details of the attachment associated with the transaction, if one exists.",
+          "operationPath": "openapi_source#/paths/~1attachments~1{id}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-transaction.outputs.attachment_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "attachment_details": "$response.body",
+            "fileURL": "$response.body",
+            "fileURLExpiresAt": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "transaction_details": "$steps.get-transaction.outputs.transaction_details",
+        "attachment_id": "$steps.get-transaction.outputs.attachment_id",
+        "attachment_details": "$steps.get-attachment.outputs.attachment_details",
+        "fileURL": "$steps.get-attachment.outputs.fileURL",
+        "fileURLExpiresAt": "$steps.get-attachment.outputs.fileURLExpiresAt"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

@@ -1,0 +1,648 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/apideck.com/webhook/10.14.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "webhook-setup-and-test-execution",
+      "summary": "Creates a new webhook subscription for a specific Unified API and event types, then manually triggers an execution for testing purposes, and finally checks the logs to verify the test execution.",
+      "description": "Creates a new webhook subscription for a specific Unified API and event types, then manually triggers an execution for testing purposes, and finally checks the logs to verify the test execution.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "x-apideck-app-id": {
+            "type": "string"
+          },
+          "delivery_url": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "events": {
+            "type": "string"
+          },
+          "unified_api": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "serviceId": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "filter": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-webhook",
+          "description": "Create a new webhook subscription to receive events for a specified Unified API.",
+          "operationId": "webhooksAdd",
+          "parameters": [
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "delivery_url": "$inputs.delivery_url",
+              "status": "$inputs.status",
+              "events": "$inputs.events",
+              "unified_api": "$inputs.unified_api"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "webhook_id": "$response.body",
+            "execute_base_url": "$response.body",
+            "webhook_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "execute-webhook-test",
+          "description": "Manually execute the created webhook for a specific service to test the endpoint.",
+          "operationId": "webhooksExecute",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "serviceId",
+              "in": "path",
+              "value": "$inputs.serviceId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "webhookToken": "$steps.create-webhook.outputs.webhook_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "execution_status": "$response.body",
+            "request_id": "$response.body",
+            "timestamp": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-execution-logs",
+          "description": "Retrieve event logs, filtering for the specific webhook and potentially the test execution request ID, to verify successful delivery.",
+          "operationId": "eventLogsAll",
+          "parameters": [
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "cursor",
+              "in": "query",
+              "value": "$inputs.cursor"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "event_logs": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "webhook_id": "$steps.create-webhook.outputs.webhook_id",
+        "execute_base_url": "$steps.create-webhook.outputs.execute_base_url",
+        "webhook_details": "$steps.create-webhook.outputs.webhook_details",
+        "execution_status": "$steps.execute-webhook-test.outputs.execution_status",
+        "request_id": "$steps.execute-webhook-test.outputs.request_id",
+        "timestamp": "$steps.execute-webhook-test.outputs.timestamp",
+        "event_logs": "$steps.check-execution-logs.outputs.event_logs"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "troubleshoot-failing-webhook",
+      "summary": "Identifies failing webhook deliveries by checking logs, retrieves the configuration of the problematic webhook, and then updates its status to 'disabled' or corrects its delivery URL.",
+      "description": "Identifies failing webhook deliveries by checking logs, retrieves the configuration of the problematic webhook, and then updates its status to 'disabled' or corrects its delivery URL.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "x-apideck-app-id": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "filter": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "delivery_url": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-failed-deliveries",
+          "description": "List webhook event logs, filtering for unsuccessful delivery attempts.",
+          "operationId": "eventLogsAll",
+          "parameters": [
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "cursor",
+              "in": "query",
+              "value": "$inputs.cursor"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "failed_log_entries": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-webhook-details",
+          "description": "Retrieve the details of a specific webhook identified from the failed logs.",
+          "operationId": "webhooksOne",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "webhook_id": "$response.body",
+            "webhook_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-webhook-config",
+          "description": "Update the webhook's configuration, either disabling it or correcting the delivery URL.",
+          "operationId": "webhooksUpdate",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "webhookToken": "$steps.get-webhook-details.outputs.webhook_id",
+              "status": "$inputs.status",
+              "delivery_url": "$inputs.delivery_url"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_webhook_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "failed_log_entries": "$steps.find-failed-deliveries.outputs.failed_log_entries",
+        "webhook_id": "$steps.get-webhook-details.outputs.webhook_id",
+        "webhook_details": "$steps.get-webhook-details.outputs.webhook_details",
+        "updated_webhook_details": "$steps.update-webhook-config.outputs.updated_webhook_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "resolve-and-execute-webhook-via-lookup-id",
+      "summary": "Handles an incoming request (typically from a third-party service configured with a specific Apideck URL) that uses a lookup ID to identify the correct webhook configuration and then executes it with the provided payload. This workflow represents the action triggered by the external call.",
+      "description": "Handles an incoming request (typically from a third-party service configured with a specific Apideck URL) that uses a lookup ID to identify the correct webhook configuration and then executes it with the provided payload. This workflow represents the action triggered by the external call.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "serviceId": {
+            "type": "string"
+          },
+          "e": {
+            "type": "string"
+          },
+          "resolve-and-execute-post_body": {
+            "type": "object"
+          },
+          "x-apideck-app-id": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "filter": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "resolve-and-execute-post",
+          "description": "Receives an event payload, resolves the target webhook using the lookup ID (`id` path parameter), and executes it for the specified service.",
+          "operationId": "webhooksResolve",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "serviceId",
+              "in": "path",
+              "value": "$inputs.serviceId"
+            },
+            {
+              "name": "e",
+              "in": "query",
+              "value": "$inputs.e"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.resolve-and-execute-post_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "resolve_status": "$response.body",
+            "request_id": "$response.body",
+            "timestamp": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-resolved-execution-logs",
+          "description": "Retrieve event logs after a resolve/execute call to verify its successful processing and delivery.",
+          "operationId": "eventLogsAll",
+          "parameters": [
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "cursor",
+              "in": "query",
+              "value": "$inputs.cursor"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "event_logs": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "resolve_status": "$steps.resolve-and-execute-post.outputs.resolve_status",
+        "request_id": "$steps.resolve-and-execute-post.outputs.request_id",
+        "timestamp": "$steps.resolve-and-execute-post.outputs.timestamp",
+        "event_logs": "$steps.check-resolved-execution-logs.outputs.event_logs"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "update-webhook-delivery-url",
+      "summary": "Lists existing webhooks, allows the user to identify a specific webhook, updates its delivery URL, and then retrieves the webhook again to verify the change.",
+      "description": "Lists existing webhooks, allows the user to identify a specific webhook, updates its delivery URL, and then retrieves the webhook again to verify the change.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "x-apideck-app-id": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "delivery_url": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-webhooks",
+          "description": "Retrieve a list of all configured webhook subscriptions.",
+          "operationId": "webhooksAll",
+          "parameters": [
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "cursor",
+              "in": "query",
+              "value": "$inputs.cursor"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "webhooks_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-delivery-url",
+          "description": "Update the delivery URL for a specific webhook identified from the list.",
+          "operationId": "webhooksUpdate",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "webhookToken": "$steps.list-webhooks.outputs.webhooks_list[n].id",
+              "delivery_url": "$inputs.delivery_url"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "webhook_id": "$response.body",
+            "updated_webhook_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "verify-webhook-update",
+          "description": "Retrieve the details of the updated webhook to confirm the delivery URL change.",
+          "operationId": "webhooksOne",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "verified_webhook_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "webhooks_list": "$steps.list-webhooks.outputs.webhooks_list",
+        "webhook_id": "$steps.update-delivery-url.outputs.webhook_id",
+        "updated_webhook_details": "$steps.update-delivery-url.outputs.updated_webhook_details",
+        "verified_webhook_details": "$steps.verify-webhook-update.outputs.verified_webhook_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

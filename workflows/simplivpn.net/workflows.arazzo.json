@@ -1,0 +1,446 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/simplivpn.net/main/1.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "admin-user-registration",
+      "summary": "Allows a VPN administrator to check if a desired username is available and, if so, register a new VPN user account. This is a core administrative task for onboarding new users.",
+      "description": "Allows a VPN administrator to check if a desired username is available and, if so, register a new VPN user account. This is a core administrative task for onboarding new users.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "check-username-availability",
+          "description": "Check if a specific username is available for registration. Requires Admin API Key for authentication.",
+          "operationId": "UsernameAvailable",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "username": "$inputs.username"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "availability_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "register-new-user",
+          "description": "Register a new VPN user account with the specified username and password. Requires Admin API Key for authentication. The user is auto-enabled upon registration.",
+          "operationId": "Register",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "password": "$inputs.password",
+              "username": "$inputs.username"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "registration_details": "$response.body",
+            "user_info": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "availability_status": "$steps.check-username-availability.outputs.availability_status",
+        "registration_details": "$steps.register-new-user.outputs.registration_details",
+        "user_info": "$steps.register-new-user.outputs.user_info"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "user-disables-vpn-access",
+      "summary": "Allows an authenticated user to disable their own VPN access. This requires the user to be logged in first.",
+      "description": "Allows an authenticated user to disable their own VPN access. This requires the user to be logged in first.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "login-user",
+          "description": "Login with username and password to obtain a Bearer authentication token.",
+          "operationId": "Login",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "password": "$inputs.password",
+              "username": "$inputs.username"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "bearer_token": "$response.body",
+            "username": "$response.body"
+          }
+        },
+        {
+          "stepId": "disable-user-access",
+          "description": "Disable VPN access for the authenticated user.",
+          "operationId": "DisableUser",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "username": "$steps.login-user.outputs.username",
+              "auth_token": "$steps.login-user.outputs.bearer_token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "disable_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "bearer_token": "$steps.login-user.outputs.bearer_token",
+        "username": "$steps.login-user.outputs.username",
+        "disable_status": "$steps.disable-user-access.outputs.disable_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "user-enables-vpn-access",
+      "summary": "Allows an authenticated user to enable their own VPN access, for instance, after it was previously disabled. This requires the user to be logged in first.",
+      "description": "Allows an authenticated user to enable their own VPN access, for instance, after it was previously disabled. This requires the user to be logged in first.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "login-user",
+          "description": "Login with username and password to obtain a Bearer authentication token.",
+          "operationId": "Login",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "password": "$inputs.password",
+              "username": "$inputs.username"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "bearer_token": "$response.body",
+            "username": "$response.body"
+          }
+        },
+        {
+          "stepId": "enable-user-access",
+          "description": "Enable VPN access for the authenticated user.",
+          "operationId": "EnableUser",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "username": "$steps.login-user.outputs.username",
+              "auth_token": "$steps.login-user.outputs.bearer_token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "enable_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "bearer_token": "$steps.login-user.outputs.bearer_token",
+        "username": "$steps.login-user.outputs.username",
+        "enable_status": "$steps.enable-user-access.outputs.enable_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "view-available-vpn-servers",
+      "summary": "Retrieves a list of available VPN servers. This information can be used by clients to select a server to connect to. Requires user authentication.",
+      "description": "Retrieves a list of available VPN servers. This information can be used by clients to select a server to connect to. Requires user authentication.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "login-user",
+          "description": "Login with username and password to obtain a Bearer authentication token.",
+          "operationId": "Login",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "password": "$inputs.password",
+              "username": "$inputs.username"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "bearer_token": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-server-list",
+          "description": "Retrieve the full list of available VPN servers.",
+          "operationId": "GetServers",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "server_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "bearer_token": "$steps.login-user.outputs.bearer_token",
+        "server_list": "$steps.get-server-list.outputs.server_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "view-vpn-server-summaries",
+      "summary": "Retrieves a summary list of available VPN servers, likely containing less detail than the full server list. Requires user authentication.",
+      "description": "Retrieves a summary list of available VPN servers, likely containing less detail than the full server list. Requires user authentication.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "login-user",
+          "description": "Login with username and password to obtain a Bearer authentication token.",
+          "operationId": "Login",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "password": "$inputs.password",
+              "username": "$inputs.username"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "bearer_token": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-server-summary-list",
+          "description": "Retrieve a summary list of available VPN servers.",
+          "operationId": "GetServerSummaries",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "server_summary_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "bearer_token": "$steps.login-user.outputs.bearer_token",
+        "server_summary_list": "$steps.get-server-summary-list.outputs.server_summary_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

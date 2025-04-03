@@ -1,0 +1,2604 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/appcenter.ms/main/v0.1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "setup-new-app-and-configure-repository",
+      "summary": "Creates a new application within App Center and configures its source code repository connection.",
+      "description": "Creates a new application within App Center and configures its source code repository connection.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "owner_name": {
+            "type": "string"
+          },
+          "app_name": {
+            "type": "string"
+          },
+          "repo_url": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-app",
+          "description": "Creates a new app definition.",
+          "operationId": "apps_create",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "app_secret": "$response.body",
+            "owner_name": "$response.body",
+            "app_name": "$response.body",
+            "platform": "$response.body",
+            "origin": "$response.body"
+          }
+        },
+        {
+          "stepId": "configure-repository",
+          "description": "Connects a source code repository to the newly created app.",
+          "operationId": "repositoryConfigurations_createOrUpdate",
+          "parameters": [
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$inputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$inputs.app_name"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "repo_url": "$inputs.repo_url"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "message": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-app.outputs.id",
+        "app_secret": "$steps.create-app.outputs.app_secret",
+        "owner_name": "$steps.create-app.outputs.owner_name",
+        "app_name": "$steps.create-app.outputs.app_name",
+        "platform": "$steps.create-app.outputs.platform",
+        "origin": "$steps.create-app.outputs.origin",
+        "message": "$steps.configure-repository.outputs.message"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "configure-branch-for-build-and-trigger-build",
+      "summary": "Configures a specific branch of a connected repository for building and then triggers a new build for that branch.",
+      "description": "Configures a specific branch of a connected repository for building and then triggers a new build for that branch.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "owner_name": {
+            "type": "string"
+          },
+          "app_name": {
+            "type": "string"
+          },
+          "branch": {
+            "type": "string"
+          },
+          "artifactVersioning": {
+            "type": "string"
+          },
+          "toolsets": {
+            "type": "string"
+          },
+          "trigger": {
+            "type": "string"
+          },
+          "debug": {
+            "type": "string"
+          },
+          "sourceVersion": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-app-details",
+          "description": "Retrieve app details to confirm existence and get owner/app names.",
+          "operationId": "apps_get",
+          "parameters": [
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$inputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$inputs.app_name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "owner_name": "$response.body",
+            "app_name": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-branches",
+          "description": "Lists available branches for the app's configured repository.",
+          "operationId": "builds_listBranches",
+          "parameters": [
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$inputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$inputs.app_name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "branches": "$response.body"
+          }
+        },
+        {
+          "stepId": "configure-branch-build",
+          "description": "Sets up the build configuration for a specific branch.",
+          "operationId": "branchConfigurations_create",
+          "parameters": [
+            {
+              "name": "branch",
+              "in": "path",
+              "value": "$steps.list-branches.outputs.branches.branch.name"
+            },
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$inputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$inputs.app_name"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "branch": "$steps.list-branches.outputs.branches[0].branch.name",
+              "artifactVersioning": "$inputs.artifactVersioning",
+              "toolsets": "$inputs.toolsets",
+              "trigger": "$inputs.trigger"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "trigger": "$response.body",
+            "toolsets": "$response.body"
+          }
+        },
+        {
+          "stepId": "trigger-build",
+          "description": "Starts a new build for the configured branch.",
+          "operationId": "builds_create",
+          "parameters": [
+            {
+              "name": "branch",
+              "in": "path",
+              "value": "$steps.list-branches.outputs.branches.branch.name"
+            },
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$inputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$inputs.app_name"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "branch": "$steps.list-branches.outputs.branches[0].branch.name",
+              "debug": "$inputs.debug",
+              "sourceVersion": "$inputs.sourceVersion"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "buildNumber": "$response.body",
+            "status": "$response.body",
+            "result": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "owner_name": "$steps.get-app-details.outputs.owner_name",
+        "app_name": "$steps.get-app-details.outputs.app_name",
+        "branches": "$steps.list-branches.outputs.branches",
+        "id": "$steps.trigger-build.outputs.id",
+        "trigger": "$steps.configure-branch-build.outputs.trigger",
+        "toolsets": "$steps.configure-branch-build.outputs.toolsets",
+        "buildNumber": "$steps.trigger-build.outputs.buildNumber",
+        "status": "$steps.trigger-build.outputs.status",
+        "result": "$steps.trigger-build.outputs.result"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "upload-and-distribute-new-release",
+      "summary": "Handles the multi-step process of uploading a new release binary and distributing it.",
+      "description": "Handles the multi-step process of uploading a new release binary and distributing it.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "owner_name": {
+            "type": "string"
+          },
+          "app_name": {
+            "type": "string"
+          },
+          "build_number": {
+            "type": "string"
+          },
+          "build_version": {
+            "type": "string"
+          },
+          "upload_id": {
+            "type": "string"
+          },
+          "extract": {
+            "type": "string"
+          },
+          "upload_status": {
+            "type": "string"
+          },
+          "release_id": {
+            "type": "string"
+          },
+          "destinations": {
+            "type": "string"
+          },
+          "mandatory_update": {
+            "type": "string"
+          },
+          "notify_testers": {
+            "type": "string"
+          },
+          "release_notes": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "initiate-release-upload",
+          "description": "Starts the release upload process and obtains upload parameters.",
+          "operationId": "releases_createReleaseUpload",
+          "parameters": [
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$inputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$inputs.app_name"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "build_number": "$inputs.build_number",
+              "build_version": "$inputs.build_version"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "upload_id": "$response.body",
+            "upload_url": "$response.body",
+            "package_asset_id": "$response.body",
+            "owner_name": "$response.body",
+            "app_name": "$response.body"
+          }
+        },
+        {
+          "stepId": "complete-release-upload",
+          "description": "Marks the binary upload as finished and starts processing.",
+          "operationId": "releases_updateReleaseUploadStatus",
+          "parameters": [
+            {
+              "name": "upload_id",
+              "in": "path",
+              "value": "$steps.initiate-release-upload.outputs.upload_id"
+            },
+            {
+              "name": "extract",
+              "in": "query",
+              "value": "$inputs.extract"
+            },
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$steps.initiate-release-upload.outputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$steps.initiate-release-upload.outputs.app_name"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "owner_name": "$steps.initiate-release-upload.outputs.owner_name",
+              "app_name": "$steps.initiate-release-upload.outputs.app_name",
+              "upload_id": "$steps.initiate-release-upload.outputs.upload_id",
+              "upload_status": "$inputs.upload_status"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "upload_status": "$response.body",
+            "owner_name": "$response.body",
+            "app_name": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-release-upload-status",
+          "description": "Polls the status of the release upload until it's ready to be published.",
+          "operationId": "releases_getReleaseUploadStatus",
+          "parameters": [
+            {
+              "name": "upload_id",
+              "in": "path",
+              "value": "$steps.complete-release-upload.outputs.id"
+            },
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$steps.complete-release-upload.outputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$steps.complete-release-upload.outputs.app_name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "upload_status": "$response.body",
+            "release_distinct_id": "$response.body",
+            "owner_name": "$response.body",
+            "app_name": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-release-distribution",
+          "description": "Adds distribution destinations (groups/stores) and release notes to the processed release.",
+          "operationId": "releases_update",
+          "parameters": [
+            {
+              "name": "release_id",
+              "in": "path",
+              "value": "$steps.check-release-upload-status.outputs.release_distinct_id"
+            },
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$steps.check-release-upload-status.outputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$steps.check-release-upload-status.outputs.app_name"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "owner_name": "$steps.check-release-upload-status.outputs.owner_name",
+              "app_name": "$steps.check-release-upload-status.outputs.app_name",
+              "release_id": "$steps.check-release-upload-status.outputs.release_distinct_id",
+              "destinations": "$inputs.destinations",
+              "mandatory_update": "$inputs.mandatory_update",
+              "notify_testers": "$inputs.notify_testers",
+              "release_notes": "$inputs.release_notes"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "release_notes": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.check-release-upload-status.outputs.id",
+        "upload_id": "$steps.initiate-release-upload.outputs.upload_id",
+        "upload_url": "$steps.initiate-release-upload.outputs.upload_url",
+        "package_asset_id": "$steps.initiate-release-upload.outputs.package_asset_id",
+        "owner_name": "$steps.check-release-upload-status.outputs.owner_name",
+        "app_name": "$steps.check-release-upload-status.outputs.app_name",
+        "upload_status": "$steps.check-release-upload-status.outputs.upload_status",
+        "release_distinct_id": "$steps.check-release-upload-status.outputs.release_distinct_id",
+        "release_notes": "$steps.update-release-distribution.outputs.release_notes"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "distribute-successful-build",
+      "summary": "Checks the status of a build and distributes it to specified destinations upon success.",
+      "description": "Checks the status of a build and distributes it to specified destinations upon success.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "build_id": {
+            "type": "string"
+          },
+          "owner_name": {
+            "type": "string"
+          },
+          "app_name": {
+            "type": "string"
+          },
+          "destinations": {
+            "type": "string"
+          },
+          "mandatoryUpdate": {
+            "type": "string"
+          },
+          "notifyTesters": {
+            "type": "string"
+          },
+          "releaseNotes": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-build-status",
+          "description": "Retrieve the status of a specific build.",
+          "operationId": "builds_get",
+          "parameters": [
+            {
+              "name": "build_id",
+              "in": "path",
+              "value": "$inputs.build_id"
+            },
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$inputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$inputs.app_name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "status": "$response.body",
+            "result": "$response.body",
+            "owner_name": "$response.body",
+            "app_name": "$response.body"
+          }
+        },
+        {
+          "stepId": "distribute-build",
+          "description": "Distributes the build to specified groups or stores if the build succeeded.",
+          "operationId": "builds_distribute",
+          "parameters": [
+            {
+              "name": "build_id",
+              "in": "path",
+              "value": "$steps.get-build-status.outputs.id"
+            },
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$steps.get-build-status.outputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$steps.get-build-status.outputs.app_name"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "owner_name": "$steps.get-build-status.outputs.owner_name",
+              "app_name": "$steps.get-build-status.outputs.app_name",
+              "build_id": "$steps.get-build-status.outputs.id",
+              "destinations": "$inputs.destinations",
+              "mandatoryUpdate": "$inputs.mandatoryUpdate",
+              "notifyTesters": "$inputs.notifyTesters",
+              "releaseNotes": "$inputs.releaseNotes"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body",
+            "upload_id": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.get-build-status.outputs.id",
+        "status": "$steps.distribute-build.outputs.status",
+        "result": "$steps.get-build-status.outputs.result",
+        "owner_name": "$steps.get-build-status.outputs.owner_name",
+        "app_name": "$steps.get-build-status.outputs.app_name",
+        "upload_id": "$steps.distribute-build.outputs.upload_id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "analyze-and-manage-crash-group",
+      "summary": "Retrieves details and stack trace for a crash group and allows updating its status.",
+      "description": "Retrieves details and stack trace for a crash group and allows updating its status.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "last_occurrence_from": {
+            "type": "string"
+          },
+          "last_occurrence_to": {
+            "type": "string"
+          },
+          "app_version": {
+            "type": "string"
+          },
+          "group_type": {
+            "type": "string"
+          },
+          "group_status": {
+            "type": "string"
+          },
+          "group_text_search": {
+            "type": "string"
+          },
+          "$orderby": {
+            "type": "string"
+          },
+          "continuation_token": {
+            "type": "string"
+          },
+          "owner_name": {
+            "type": "string"
+          },
+          "app_name": {
+            "type": "string"
+          },
+          "crash_group_id": {
+            "type": "string"
+          },
+          "grouping_only": {
+            "type": "string"
+          },
+          "annotation": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-crash-groups",
+          "description": "Lists crash groups for an application, potentially filtered by date or version.",
+          "operationId": "crashGroups_list",
+          "parameters": [
+            {
+              "name": "last_occurrence_from",
+              "in": "query",
+              "value": "$inputs.last_occurrence_from"
+            },
+            {
+              "name": "last_occurrence_to",
+              "in": "query",
+              "value": "$inputs.last_occurrence_to"
+            },
+            {
+              "name": "app_version",
+              "in": "query",
+              "value": "$inputs.app_version"
+            },
+            {
+              "name": "group_type",
+              "in": "query",
+              "value": "$inputs.group_type"
+            },
+            {
+              "name": "group_status",
+              "in": "query",
+              "value": "$inputs.group_status"
+            },
+            {
+              "name": "group_text_search",
+              "in": "query",
+              "value": "$inputs.group_text_search"
+            },
+            {
+              "name": "$orderby",
+              "in": "query",
+              "value": "$inputs.$orderby"
+            },
+            {
+              "name": "continuation_token",
+              "in": "query",
+              "value": "$inputs.continuation_token"
+            },
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$inputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$inputs.app_name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "crash_groups": "$response.body",
+            "owner_name": "$response.body",
+            "app_name": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-crash-group-stacktrace",
+          "description": "Retrieves the stack trace for a specific crash group.",
+          "operationId": "crashGroups_getStacktrace",
+          "parameters": [
+            {
+              "name": "crash_group_id",
+              "in": "path",
+              "value": "$steps.list-crash-groups.outputs.crash_groups.crash_group_id"
+            },
+            {
+              "name": "grouping_only",
+              "in": "query",
+              "value": "$inputs.grouping_only"
+            },
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$steps.list-crash-groups.outputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$steps.list-crash-groups.outputs.app_name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "stacktrace": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-crash-group-state",
+          "description": "Updates the status (e.g., open, closed, ignored) and annotation of a crash group.",
+          "operationId": "crashGroups_update",
+          "parameters": [
+            {
+              "name": "crash_group_id",
+              "in": "path",
+              "value": "$steps.list-crash-groups.outputs.crash_groups.crash_group_id"
+            },
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$steps.list-crash-groups.outputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$steps.list-crash-groups.outputs.app_name"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "owner_name": "$steps.list-crash-groups.outputs.owner_name",
+              "app_name": "$steps.list-crash-groups.outputs.app_name",
+              "crash_group_id": "$steps.list-crash-groups.outputs.crash_groups[0].crash_group_id",
+              "annotation": "$inputs.annotation",
+              "status": "$inputs.status"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_crash_group": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "crash_groups": "$steps.list-crash-groups.outputs.crash_groups",
+        "owner_name": "$steps.list-crash-groups.outputs.owner_name",
+        "app_name": "$steps.list-crash-groups.outputs.app_name",
+        "stacktrace": "$steps.get-crash-group-stacktrace.outputs.stacktrace",
+        "updated_crash_group": "$steps.update-crash-group-state.outputs.updated_crash_group"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-user-api-tokens",
+      "summary": "Creates, lists, and deletes API tokens for the authenticated user.",
+      "description": "Creates, lists, and deletes API tokens for the authenticated user.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "api_token_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-user-api-token",
+          "description": "Creates a new API token for the user.",
+          "operationId": "userApiTokens_new",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "api_token": "$response.body",
+            "scope": "$response.body",
+            "created_at": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-user-api-tokens",
+          "description": "Lists all API tokens associated with the user.",
+          "operationId": "userApiTokens_list",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "api_tokens_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "delete-user-api-token",
+          "description": "Deletes a specific API token.",
+          "operationId": "userApiTokens_delete",
+          "parameters": [
+            {
+              "name": "api_token_id",
+              "in": "path",
+              "value": "$steps.create-user-api-token.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_code_204": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-user-api-token.outputs.id",
+        "api_token": "$steps.create-user-api-token.outputs.api_token",
+        "scope": "$steps.create-user-api-token.outputs.scope",
+        "created_at": "$steps.create-user-api-token.outputs.created_at",
+        "api_tokens_list": "$steps.list-user-api-tokens.outputs.api_tokens_list",
+        "status_code_204": "$steps.delete-user-api-token.outputs.status_code_204"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-app-specific-api-tokens",
+      "summary": "Creates, lists, and deletes API tokens scoped to a specific application.",
+      "description": "Creates, lists, and deletes API tokens scoped to a specific application.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "owner_name": {
+            "type": "string"
+          },
+          "app_name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "api_token_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-app-api-token",
+          "description": "Creates a new API token scoped to the specified app.",
+          "operationId": "appApiTokens_new",
+          "parameters": [
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$inputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$inputs.app_name"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "description": "$inputs.description",
+              "scope": "$inputs.scope"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "api_token": "$response.body",
+            "scope": "$response.body",
+            "created_at": "$response.body",
+            "owner_name": "$response.body",
+            "app_name": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-app-api-tokens",
+          "description": "Lists all API tokens for the specified app.",
+          "operationId": "appApiTokens_list",
+          "parameters": [
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$steps.create-app-api-token.outputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$steps.create-app-api-token.outputs.app_name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "api_tokens_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "delete-app-api-token",
+          "description": "Deletes a specific API token for the app.",
+          "operationId": "appApiTokens_delete",
+          "parameters": [
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$steps.create-app-api-token.outputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$steps.create-app-api-token.outputs.app_name"
+            },
+            {
+              "name": "api_token_id",
+              "in": "path",
+              "value": "$steps.create-app-api-token.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_code_204": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-app-api-token.outputs.id",
+        "api_token": "$steps.create-app-api-token.outputs.api_token",
+        "scope": "$steps.create-app-api-token.outputs.scope",
+        "created_at": "$steps.create-app-api-token.outputs.created_at",
+        "owner_name": "$steps.create-app-api-token.outputs.owner_name",
+        "app_name": "$steps.create-app-api-token.outputs.app_name",
+        "api_tokens_list": "$steps.list-app-api-tokens.outputs.api_tokens_list",
+        "status_code_204": "$steps.delete-app-api-token.outputs.status_code_204"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-distribution-group-members",
+      "summary": "Adds or removes users from an app-specific distribution group.",
+      "description": "Adds or removes users from an app-specific distribution group.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "owner_name": {
+            "type": "string"
+          },
+          "app_name": {
+            "type": "string"
+          },
+          "distribution_group_name": {
+            "type": "string"
+          },
+          "user_emails": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-distribution-groups",
+          "description": "Retrieve the list of distribution groups for an app.",
+          "operationId": "distributionGroups_list",
+          "parameters": [
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$inputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$inputs.app_name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "distribution_groups": "$response.body",
+            "owner_name": "$response.body",
+            "app_name": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-users-to-distribution-group",
+          "description": "Adds specified users (by email) to a distribution group.",
+          "operationId": "distributionGroups_addUser",
+          "parameters": [
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$steps.list-distribution-groups.outputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$steps.list-distribution-groups.outputs.app_name"
+            },
+            {
+              "name": "distribution_group_name",
+              "in": "path",
+              "value": "$steps.list-distribution-groups.outputs.distribution_groups.name"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "owner_name": "$steps.list-distribution-groups.outputs.owner_name",
+              "app_name": "$steps.list-distribution-groups.outputs.app_name",
+              "distribution_group_name": "$steps.list-distribution-groups.outputs.distribution_groups[0].name",
+              "user_emails": "$inputs.user_emails"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "results": "$response.body"
+          }
+        },
+        {
+          "stepId": "remove-users-from-distribution-group",
+          "description": "Removes specified users (by email) from a distribution group.",
+          "operationId": "distributionGroups_removeUser",
+          "parameters": [
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$steps.list-distribution-groups.outputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$steps.list-distribution-groups.outputs.app_name"
+            },
+            {
+              "name": "distribution_group_name",
+              "in": "path",
+              "value": "$steps.list-distribution-groups.outputs.distribution_groups.name"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "owner_name": "$steps.list-distribution-groups.outputs.owner_name",
+              "app_name": "$steps.list-distribution-groups.outputs.app_name",
+              "distribution_group_name": "$steps.list-distribution-groups.outputs.distribution_groups[0].name",
+              "user_emails": "$inputs.user_emails"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "results": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "distribution_groups": "$steps.list-distribution-groups.outputs.distribution_groups",
+        "owner_name": "$steps.list-distribution-groups.outputs.owner_name",
+        "app_name": "$steps.list-distribution-groups.outputs.app_name",
+        "results": "$steps.remove-users-from-distribution-group.outputs.results"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "upload-crash-symbols",
+      "summary": "Handles the multi-step process for uploading symbol files for crash reporting.",
+      "description": "Handles the multi-step process for uploading symbol files for crash reporting.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "owner_name": {
+            "type": "string"
+          },
+          "app_name": {
+            "type": "string"
+          },
+          "symbol_type": {
+            "type": "string"
+          },
+          "symbol_upload_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "begin-symbol-upload",
+          "description": "Initiates the symbol upload process.",
+          "operationId": "symbolUploads_create",
+          "parameters": [
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$inputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$inputs.app_name"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "symbol_type": "$inputs.symbol_type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "symbol_upload_id": "$response.body",
+            "upload_url": "$response.body",
+            "expiration_date": "$response.body",
+            "owner_name": "$response.body",
+            "app_name": "$response.body"
+          }
+        },
+        {
+          "stepId": "commit-symbol-upload",
+          "description": "Commits the symbol upload after the file has been uploaded.",
+          "operationId": "symbolUploads_complete",
+          "parameters": [
+            {
+              "name": "symbol_upload_id",
+              "in": "path",
+              "value": "$steps.begin-symbol-upload.outputs.symbol_upload_id"
+            },
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$steps.begin-symbol-upload.outputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$steps.begin-symbol-upload.outputs.app_name"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "owner_name": "$steps.begin-symbol-upload.outputs.owner_name",
+              "app_name": "$steps.begin-symbol-upload.outputs.app_name",
+              "symbol_upload_id": "$steps.begin-symbol-upload.outputs.symbol_upload_id",
+              "status": "$inputs.status"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "symbol_upload_id": "$response.body",
+            "status": "$response.body",
+            "owner_name": "$response.body",
+            "app_name": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-symbol-upload-status",
+          "description": "Checks the processing status of the committed symbol upload.",
+          "operationId": "symbolUploads_get",
+          "parameters": [
+            {
+              "name": "symbol_upload_id",
+              "in": "path",
+              "value": "$steps.commit-symbol-upload.outputs.symbol_upload_id"
+            },
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$steps.commit-symbol-upload.outputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$steps.commit-symbol-upload.outputs.app_name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "symbol_upload_id": "$response.body",
+            "status": "$response.body",
+            "symbols_uploaded": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "symbol_upload_id": "$steps.check-symbol-upload-status.outputs.symbol_upload_id",
+        "upload_url": "$steps.begin-symbol-upload.outputs.upload_url",
+        "expiration_date": "$steps.begin-symbol-upload.outputs.expiration_date",
+        "owner_name": "$steps.commit-symbol-upload.outputs.owner_name",
+        "app_name": "$steps.commit-symbol-upload.outputs.app_name",
+        "status": "$steps.check-symbol-upload-status.outputs.status",
+        "symbols_uploaded": "$steps.check-symbol-upload-status.outputs.symbols_uploaded"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "deploy-code-push-update",
+      "summary": "Creates a CodePush release upload, allows for package upload (externally), and then creates the CodePush release.",
+      "description": "Creates a CodePush release upload, allows for package upload (externally), and then creates the CodePush release.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "deployment_name": {
+            "type": "string"
+          },
+          "owner_name": {
+            "type": "string"
+          },
+          "app_name": {
+            "type": "string"
+          },
+          "release_upload": {
+            "type": "string"
+          },
+          "target_binary_version": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-deployment",
+          "description": "Retrieves details of a specific CodePush deployment.",
+          "operationId": "codePushDeployments_get",
+          "parameters": [
+            {
+              "name": "deployment_name",
+              "in": "path",
+              "value": "$inputs.deployment_name"
+            },
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$inputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$inputs.app_name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "deployment_name": "$response.body",
+            "owner_name": "$response.body",
+            "app_name": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-codepush-upload",
+          "description": "Initiates an upload process for a new CodePush release package.",
+          "operationId": "codePushDeploymentUpload_create",
+          "parameters": [
+            {
+              "name": "deployment_name",
+              "in": "path",
+              "value": "$inputs.deployment_name"
+            },
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$steps.get-deployment.outputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$steps.get-deployment.outputs.app_name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "token": "$response.body",
+            "upload_domain": "$response.body",
+            "owner_name": "$response.body",
+            "app_name": "$response.body",
+            "deployment_name": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-codepush-release",
+          "description": "Creates the CodePush release after the package has been uploaded.",
+          "operationId": "codePushDeploymentReleases_create",
+          "parameters": [
+            {
+              "name": "deployment_name",
+              "in": "path",
+              "value": "$steps.create-codepush-upload.outputs.deployment_name"
+            },
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$steps.create-codepush-upload.outputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$steps.create-codepush-upload.outputs.app_name"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "owner_name": "$steps.create-codepush-upload.outputs.owner_name",
+              "app_name": "$steps.create-codepush-upload.outputs.app_name",
+              "deployment_name": "$steps.create-codepush-upload.outputs.deployment_name",
+              "release_upload": "$inputs.release_upload",
+              "target_binary_version": "$inputs.target_binary_version"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "label": "$response.body",
+            "package_hash": "$response.body",
+            "is_mandatory": "$response.body",
+            "rollout": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "deployment_name": "$steps.create-codepush-upload.outputs.deployment_name",
+        "owner_name": "$steps.create-codepush-upload.outputs.owner_name",
+        "app_name": "$steps.create-codepush-upload.outputs.app_name",
+        "id": "$steps.create-codepush-upload.outputs.id",
+        "token": "$steps.create-codepush-upload.outputs.token",
+        "upload_domain": "$steps.create-codepush-upload.outputs.upload_domain",
+        "label": "$steps.create-codepush-release.outputs.label",
+        "package_hash": "$steps.create-codepush-release.outputs.package_hash",
+        "is_mandatory": "$steps.create-codepush-release.outputs.is_mandatory",
+        "rollout": "$steps.create-codepush-release.outputs.rollout"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "get-app-analytics-overview",
+      "summary": "Retrieves key analytics metrics like active devices, session counts, and event counts for an app within a specified time range and for specific versions.",
+      "description": "Retrieves key analytics metrics like active devices, session counts, and event counts for an app within a specified time range and for specific versions.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "string"
+          },
+          "end": {
+            "type": "string"
+          },
+          "versions": {
+            "type": "string"
+          },
+          "app_build": {
+            "type": "string"
+          },
+          "owner_name": {
+            "type": "string"
+          },
+          "app_name": {
+            "type": "string"
+          },
+          "event_name": {
+            "type": "string"
+          },
+          "$top": {
+            "type": "string"
+          },
+          "$skip": {
+            "type": "string"
+          },
+          "$inlinecount": {
+            "type": "string"
+          },
+          "$orderby": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-active-device-counts",
+          "description": "Gets the count of active devices (daily, weekly, monthly) for specified versions.",
+          "operationId": "Analytics_DeviceCounts",
+          "parameters": [
+            {
+              "name": "start",
+              "in": "query",
+              "value": "$inputs.start"
+            },
+            {
+              "name": "end",
+              "in": "query",
+              "value": "$inputs.end"
+            },
+            {
+              "name": "versions",
+              "in": "query",
+              "value": "$inputs.versions"
+            },
+            {
+              "name": "app_build",
+              "in": "query",
+              "value": "$inputs.app_build"
+            },
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$inputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$inputs.app_name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "daily_counts": "$response.body",
+            "weekly_counts": "$response.body",
+            "monthly_counts": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-session-counts",
+          "description": "Gets the count of sessions over time for specified versions.",
+          "operationId": "Analytics_SessionCounts",
+          "parameters": [
+            {
+              "name": "start",
+              "in": "query",
+              "value": "$inputs.start"
+            },
+            {
+              "name": "end",
+              "in": "query",
+              "value": "$inputs.end"
+            },
+            {
+              "name": "versions",
+              "in": "query",
+              "value": "$inputs.versions"
+            },
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$inputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$inputs.app_name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "session_counts_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-top-events",
+          "description": "Gets the counts for top events for specified versions.",
+          "operationId": "Analytics_Events",
+          "parameters": [
+            {
+              "name": "start",
+              "in": "query",
+              "value": "$inputs.start"
+            },
+            {
+              "name": "end",
+              "in": "query",
+              "value": "$inputs.end"
+            },
+            {
+              "name": "versions",
+              "in": "query",
+              "value": "$inputs.versions"
+            },
+            {
+              "name": "event_name",
+              "in": "query",
+              "value": "$inputs.event_name"
+            },
+            {
+              "name": "$top",
+              "in": "query",
+              "value": "$inputs.$top"
+            },
+            {
+              "name": "$skip",
+              "in": "query",
+              "value": "$inputs.$skip"
+            },
+            {
+              "name": "$inlinecount",
+              "in": "query",
+              "value": "$inputs.$inlinecount"
+            },
+            {
+              "name": "$orderby",
+              "in": "query",
+              "value": "$inputs.$orderby"
+            },
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$inputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$inputs.app_name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "events_list": "$response.body",
+            "total_devices": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "daily_counts": "$steps.get-active-device-counts.outputs.daily_counts",
+        "weekly_counts": "$steps.get-active-device-counts.outputs.weekly_counts",
+        "monthly_counts": "$steps.get-active-device-counts.outputs.monthly_counts",
+        "session_counts_list": "$steps.get-session-counts.outputs.session_counts_list",
+        "events_list": "$steps.get-top-events.outputs.events_list",
+        "total_devices": "$steps.get-top-events.outputs.total_devices"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-organization",
+      "summary": "Creates or updates an organization and manages its users.",
+      "description": "Creates or updates an organization and manages its users.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "display_name": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "org_name": {
+            "type": "string"
+          },
+          "user_email": {
+            "type": "string"
+          },
+          "user_name": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-or-update-org",
+          "description": "Creates a new organization or updates an existing one.",
+          "operationId": "organizations_createOrUpdate",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "display_name": "$inputs.display_name",
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "display_name": "$response.body",
+            "name": "$response.body",
+            "origin": "$response.body",
+            "created_at": "$response.body",
+            "updated_at": "$response.body",
+            "org_name": "$response.body"
+          }
+        },
+        {
+          "stepId": "invite-user-to-org",
+          "description": "Invites a user to the organization.",
+          "operationId": "orgInvitations_create",
+          "parameters": [
+            {
+              "name": "org_name",
+              "in": "path",
+              "value": "$steps.create-or-update-org.outputs.name"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "org_name": "$steps.create-or-update-org.outputs.name",
+              "user_email": "$inputs.user_email"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_code_204": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-org-users",
+          "description": "Lists users currently in the organization.",
+          "operationId": "users_listForOrg",
+          "parameters": [
+            {
+              "name": "org_name",
+              "in": "path",
+              "value": "$steps.create-or-update-org.outputs.name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "users_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "remove-user-from-org",
+          "description": "Removes a user from the organization.",
+          "operationId": "users_removeFromOrg",
+          "parameters": [
+            {
+              "name": "org_name",
+              "in": "path",
+              "value": "$steps.create-or-update-org.outputs.name"
+            },
+            {
+              "name": "user_name",
+              "in": "path",
+              "value": "$steps.list-org-users.outputs.users_list.name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_code_204": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-or-update-org.outputs.id",
+        "display_name": "$steps.create-or-update-org.outputs.display_name",
+        "name": "$steps.create-or-update-org.outputs.name",
+        "origin": "$steps.create-or-update-org.outputs.origin",
+        "created_at": "$steps.create-or-update-org.outputs.created_at",
+        "updated_at": "$steps.create-or-update-org.outputs.updated_at",
+        "org_name": "$steps.create-or-update-org.outputs.org_name",
+        "status_code_204": "$steps.remove-user-from-org.outputs.status_code_204",
+        "users_list": "$steps.list-org-users.outputs.users_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "configure-and-enable-data-export",
+      "summary": "Sets up and enables continuous export of analytics or crash data to Azure Blob Storage or Application Insights.",
+      "description": "Sets up and enables continuous export of analytics or crash data to Azure Blob Storage or Application Insights.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "owner_name": {
+            "type": "string"
+          },
+          "app_name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "export_configuration_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-export-configuration",
+          "description": "Creates a new export configuration for the app.",
+          "operationId": "ExportConfigurations_Create",
+          "parameters": [
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$inputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$inputs.app_name"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "type": "$inputs.type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "export_configuration_id": "$response.body",
+            "state": "$response.body",
+            "owner_name": "$response.body",
+            "app_name": "$response.body"
+          }
+        },
+        {
+          "stepId": "enable-export-configuration",
+          "description": "Enables the created export configuration.",
+          "operationId": "ExportConfigurations_Enable",
+          "parameters": [
+            {
+              "name": "export_configuration_id",
+              "in": "path",
+              "value": "$steps.create-export-configuration.outputs.export_configuration_id"
+            },
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$steps.create-export-configuration.outputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$steps.create-export-configuration.outputs.app_name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_code_200": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-export-configuration.outputs.id",
+        "export_configuration_id": "$steps.create-export-configuration.outputs.export_configuration_id",
+        "state": "$steps.create-export-configuration.outputs.state",
+        "owner_name": "$steps.create-export-configuration.outputs.owner_name",
+        "app_name": "$steps.create-export-configuration.outputs.app_name",
+        "status_code_200": "$steps.enable-export-configuration.outputs.status_code_200"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "invite-user-to-organization-and-verify",
+      "summary": "Invites a user to an organization and then lists users to verify the addition.",
+      "description": "Invites a user to an organization and then lists users to verify the addition.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "org_name": {
+            "type": "string"
+          },
+          "user_email": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "invite-user-to-org",
+          "description": "Sends an invitation to a user to join the specified organization.",
+          "operationId": "orgInvitations_create",
+          "parameters": [
+            {
+              "name": "org_name",
+              "in": "path",
+              "value": "$inputs.org_name"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "user_email": "$inputs.user_email"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_code_204": "$response.body",
+            "org_name": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-org-users",
+          "description": "Lists users belonging to the organization (after the invited user accepts).",
+          "operationId": "users_listForOrg",
+          "parameters": [
+            {
+              "name": "org_name",
+              "in": "path",
+              "value": "$steps.invite-user-to-org.outputs.org_name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "users_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "status_code_204": "$steps.invite-user-to-org.outputs.status_code_204",
+        "org_name": "$steps.invite-user-to-org.outputs.org_name",
+        "users_list": "$steps.list-org-users.outputs.users_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "invite-user-to-app-and-verify",
+      "summary": "Invites a user to an app and then lists users to verify the addition.",
+      "description": "Invites a user to an app and then lists users to verify the addition.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "owner_name": {
+            "type": "string"
+          },
+          "app_name": {
+            "type": "string"
+          },
+          "user_email": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "invite-user-to-app",
+          "description": "Sends an invitation to a user to join the specified app.",
+          "operationId": "appInvitations_create",
+          "parameters": [
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$inputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$inputs.app_name"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "user_email": "$inputs.user_email"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_code_204": "$response.body",
+            "owner_name": "$response.body",
+            "app_name": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-app-users",
+          "description": "Lists users associated with the app (after the invited user accepts).",
+          "operationId": "users_list",
+          "parameters": [
+            {
+              "name": "owner_name",
+              "in": "path",
+              "value": "$steps.invite-user-to-app.outputs.owner_name"
+            },
+            {
+              "name": "app_name",
+              "in": "path",
+              "value": "$steps.invite-user-to-app.outputs.app_name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "users_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "status_code_204": "$steps.invite-user-to-app.outputs.status_code_204",
+        "owner_name": "$steps.invite-user-to-app.outputs.owner_name",
+        "app_name": "$steps.invite-user-to-app.outputs.app_name",
+        "users_list": "$steps.list-app-users.outputs.users_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-organization-teams",
+      "summary": "Creates a team within an organization, adds users and apps to it.",
+      "description": "Creates a team within an organization, adds users and apps to it.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "org_name": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "team_name": {
+            "type": "string"
+          },
+          "user_email": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-team",
+          "description": "Creates a new team within the specified organization.",
+          "operationId": "teams_createTeam",
+          "parameters": [
+            {
+              "name": "org_name",
+              "in": "path",
+              "value": "$inputs.org_name"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "display_name": "$inputs.display_name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "name": "$response.body",
+            "display_name": "$response.body",
+            "description": "$response.body",
+            "org_name": "$response.body",
+            "team_name": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-user-to-team",
+          "description": "Adds a user to the newly created team.",
+          "operationId": "teams_addUser",
+          "parameters": [
+            {
+              "name": "org_name",
+              "in": "path",
+              "value": "$steps.create-team.outputs.org_name"
+            },
+            {
+              "name": "team_name",
+              "in": "path",
+              "value": "$steps.create-team.outputs.name"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "org_name": "$steps.create-team.outputs.org_name",
+              "team_name": "$steps.create-team.outputs.name",
+              "user_email": "$inputs.user_email"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-app-to-team",
+          "description": "Adds an existing app (owned by the org) to the team.",
+          "operationId": "teams_addApp",
+          "parameters": [
+            {
+              "name": "org_name",
+              "in": "path",
+              "value": "$steps.create-team.outputs.org_name"
+            },
+            {
+              "name": "team_name",
+              "in": "path",
+              "value": "$steps.create-team.outputs.name"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "org_name": "$steps.create-team.outputs.org_name",
+              "team_name": "$steps.create-team.outputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "app_details_with_permissions": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-team.outputs.id",
+        "name": "$steps.create-team.outputs.name",
+        "display_name": "$steps.create-team.outputs.display_name",
+        "description": "$steps.create-team.outputs.description",
+        "org_name": "$steps.create-team.outputs.org_name",
+        "team_name": "$steps.create-team.outputs.team_name",
+        "user_details": "$steps.add-user-to-team.outputs.user_details",
+        "app_details_with_permissions": "$steps.add-app-to-team.outputs.app_details_with_permissions"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "gdpr-data-deletion-request-process",
+      "summary": "Initiates a GDPR data deletion request for the user and allows checking its status.",
+      "description": "Initiates a GDPR data deletion request for the user and allows checking its status.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "initiate-gdpr-deletion",
+          "description": "Submits a request to delete user data.",
+          "operationId": "DataSubjectRight_DeleteRequest",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "token": "$response.body",
+            "createdAt": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-gdpr-deletion-status",
+          "description": "Checks the status of an ongoing GDPR deletion request.",
+          "operationId": "DataSubjectRight_DeleteStatusRequest",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "path",
+              "value": "$steps.initiate-gdpr-deletion.outputs.token"
+            },
+            {
+              "name": "email",
+              "in": "query",
+              "value": "$inputs.email"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body",
+            "message": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "token": "$steps.initiate-gdpr-deletion.outputs.token",
+        "createdAt": "$steps.initiate-gdpr-deletion.outputs.createdAt",
+        "status": "$steps.check-gdpr-deletion-status.outputs.status",
+        "message": "$steps.check-gdpr-deletion-status.outputs.message"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "gdpr-data-export-request-process",
+      "summary": "Initiates a GDPR data export request for the user, allows checking its status, and provides a download URL.",
+      "description": "Initiates a GDPR data export request for the user, allows checking its status, and provides a download URL.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "initiate-gdpr-export",
+          "description": "Submits a request to export user data.",
+          "operationId": "DataSubjectRight_ExportRequest",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "token": "$response.body",
+            "createdAt": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-gdpr-export-status",
+          "description": "Checks the status of an ongoing GDPR export request.",
+          "operationId": "DataSubjectRight_ExportStatusRequest",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "path",
+              "value": "$steps.initiate-gdpr-export.outputs.token"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body",
+            "message": "$response.body",
+            "sasUrl": "$response.body",
+            "sasUrlExpired": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "token": "$steps.initiate-gdpr-export.outputs.token",
+        "createdAt": "$steps.initiate-gdpr-export.outputs.createdAt",
+        "status": "$steps.check-gdpr-export-status.outputs.status",
+        "message": "$steps.check-gdpr-export-status.outputs.message",
+        "sasUrl": "$steps.check-gdpr-export-status.outputs.sasUrl",
+        "sasUrlExpired": "$steps.check-gdpr-export-status.outputs.sasUrlExpired"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

@@ -1,0 +1,152 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/paypi.dev/main/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "verify-email-address-via-otp",
+      "summary": "Sends a One-Time Password (OTP) verification code to a user's email address and then validates the code entered by the user to confirm ownership of the email address. This is a standard process for user registration, password resets, or confirming contact details.",
+      "description": "Sends a One-Time Password (OTP) verification code to a user's email address and then validates the code entered by the user to confirm ownership of the email address. This is a standard process for user registration, password resets, or confirming contact details.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "send-verification-code",
+          "description": "Initiates the email verification process by requesting an OTP code to be sent to the specified email address.",
+          "operationPath": "openapi_source#/paths/~1sendCode/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "email": "$inputs.email"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "success": "$response.body",
+            "message": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-verification-code",
+          "description": "Submits the user-provided OTP code along with the email address to check if the code is valid. Successful validation confirms the user controls the email address.",
+          "operationPath": "openapi_source#/paths/~1checkCode/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "email": "$inputs.email",
+              "code": "$inputs.code"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "success": "$response.body",
+            "message": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "success": "$steps.check-verification-code.outputs.success",
+        "message": "$steps.check-verification-code.outputs.message"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

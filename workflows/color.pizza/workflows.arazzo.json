@@ -1,0 +1,354 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/color.pizza/main/1.1.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "find-color-name-and-generate-labeled-swatch",
+      "summary": "Takes a hexadecimal color value, finds the closest matching named color from the default list, and then generates a labeled SVG swatch for that specific color name and hex value.",
+      "description": "Takes a hexadecimal color value, finds the closest matching named color from the default list, and then generates a labeled SVG swatch for that specific color name and hex value.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "list": {
+            "type": "string"
+          },
+          "values": {
+            "type": "string"
+          },
+          "noduplicates": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-color-details",
+          "description": "Find the closest named color and its details for a given hex value using the default color list.",
+          "operationPath": "openapi_source#/paths/~1/get",
+          "parameters": [
+            {
+              "name": "list",
+              "in": "query",
+              "value": "$inputs.list"
+            },
+            {
+              "name": "values",
+              "in": "query",
+              "value": "$inputs.values"
+            },
+            {
+              "name": "noduplicates",
+              "in": "query",
+              "value": "$inputs.noduplicates"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "matched_color_name": "$response.body",
+            "matched_color_hex": "$response.body"
+          }
+        },
+        {
+          "stepId": "generate-labeled-swatch",
+          "description": "Generate an SVG swatch image for the color, labeled with the name found in the previous step.",
+          "operationPath": "openapi_source#/paths/~1swatch~1/get",
+          "parameters": [
+            {
+              "name": "color",
+              "in": "query",
+              "value": "$steps.get-color-details.outputs.matched_color_hex"
+            },
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$steps.get-color-details.outputs.matched_color_name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "svg_image": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "matched_color_name": "$steps.get-color-details.outputs.matched_color_name",
+        "matched_color_hex": "$steps.get-color-details.outputs.matched_color_hex",
+        "svg_image": "$steps.generate-labeled-swatch.outputs.svg_image"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "discover-and-use-specific-color-list-for-naming",
+      "summary": "First discovers the available color name lists, then uses a specific list (e.g., 'xkcd', 'ral') chosen from the discovered options to find the closest matching named colors for one or more provided hex values.",
+      "description": "First discovers the available color name lists, then uses a specific list (e.g., 'xkcd', 'ral') chosen from the discovered options to find the closest matching named colors for one or more provided hex values.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "list": {
+            "type": "string"
+          },
+          "values": {
+            "type": "string"
+          },
+          "noduplicates": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "discover-lists",
+          "description": "Retrieve the list of available color name lists and their details.",
+          "operationPath": "openapi_source#/paths/~1lists~1/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "list_keys": "$response.body",
+            "list_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-color-from-specific-list",
+          "description": "Find the closest named colors for given hex values using a specific color list identified in the previous step.",
+          "operationPath": "openapi_source#/paths/~1/get",
+          "parameters": [
+            {
+              "name": "list",
+              "in": "query",
+              "value": "$steps.discover-lists.outputs.list_keys"
+            },
+            {
+              "name": "values",
+              "in": "query",
+              "value": "$inputs.values"
+            },
+            {
+              "name": "noduplicates",
+              "in": "query",
+              "value": "$inputs.noduplicates"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "matched_colors": "$response.body",
+            "palette_title": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "list_keys": "$steps.discover-lists.outputs.list_keys",
+        "list_details": "$steps.discover-lists.outputs.list_details",
+        "matched_colors": "$steps.get-color-from-specific-list.outputs.matched_colors",
+        "palette_title": "$steps.get-color-from-specific-list.outputs.palette_title"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "find-color-hex-by-name-and-generate-swatch",
+      "summary": "Searches for a color by its name (e.g., 'sky blue') within the default list, retrieves its corresponding hex value, and then generates a labeled SVG swatch for that color.",
+      "description": "Searches for a color by its name (e.g., 'sky blue') within the default list, retrieves its corresponding hex value, and then generates a labeled SVG swatch for that color.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "list": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-color-by-name",
+          "description": "Find the hex value and other details for a color based on its name.",
+          "operationPath": "openapi_source#/paths/~1names~1/get",
+          "parameters": [
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "list",
+              "in": "query",
+              "value": "$inputs.list"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "found_color_name": "$response.body",
+            "found_color_hex": "$response.body"
+          }
+        },
+        {
+          "stepId": "generate-swatch-from-name",
+          "description": "Generate an SVG swatch image for the color found by name in the previous step.",
+          "operationPath": "openapi_source#/paths/~1swatch~1/get",
+          "parameters": [
+            {
+              "name": "color",
+              "in": "query",
+              "value": "$steps.find-color-by-name.outputs.found_color_hex"
+            },
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$steps.find-color-by-name.outputs.found_color_name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "svg_image": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "found_color_name": "$steps.find-color-by-name.outputs.found_color_name",
+        "found_color_hex": "$steps.find-color-by-name.outputs.found_color_hex",
+        "svg_image": "$steps.generate-swatch-from-name.outputs.svg_image"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

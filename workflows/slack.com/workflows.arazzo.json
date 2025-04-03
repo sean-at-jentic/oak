@@ -1,0 +1,2003 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/slack.com/main/1.7.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "oauth-v2-token-exchange",
+      "summary": "Exchanges a temporary OAuth code, obtained during the user authorization flow, for permanent bot and/or user access tokens.",
+      "description": "Exchanges a temporary OAuth code, obtained during the user authorization flow, for permanent bot and/or user access tokens.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "client_id": {
+            "type": "string"
+          },
+          "client_secret": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "redirect_uri": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "exchange-oauth-code",
+          "description": "Exchanges the temporary code for access tokens.",
+          "operationId": "oauth_v2_access",
+          "parameters": [
+            {
+              "name": "client_id",
+              "in": "query",
+              "value": "$inputs.client_id"
+            },
+            {
+              "name": "client_secret",
+              "in": "query",
+              "value": "$inputs.client_secret"
+            },
+            {
+              "name": "code",
+              "in": "query",
+              "value": "$inputs.code"
+            },
+            {
+              "name": "redirect_uri",
+              "in": "query",
+              "value": "$inputs.redirect_uri"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ok": "$response.body",
+            "app_id": "$response.body",
+            "authed_user": "$response.body",
+            "scope": "$response.body",
+            "token_type": "$response.body",
+            "access_token": "$response.body",
+            "bot_user_id": "$response.body",
+            "team": "$response.body",
+            "enterprise": "$response.body",
+            "is_enterprise_install": "$response.body"
+          }
+        },
+        {
+          "stepId": "test-exchanged-token",
+          "description": "Tests the newly obtained access token to verify authentication.",
+          "operationId": "auth_test",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "header",
+              "value": "$steps.exchange-oauth-code.outputs.access_token"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ok": "$response.body",
+            "url": "$response.body",
+            "team": "$response.body",
+            "user": "$response.body",
+            "team_id": "$response.body",
+            "user_id": "$response.body",
+            "bot_id": "$response.body",
+            "is_enterprise_install": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "ok": "$steps.test-exchanged-token.outputs.ok",
+        "app_id": "$steps.exchange-oauth-code.outputs.app_id",
+        "authed_user": "$steps.exchange-oauth-code.outputs.authed_user",
+        "scope": "$steps.exchange-oauth-code.outputs.scope",
+        "token_type": "$steps.exchange-oauth-code.outputs.token_type",
+        "access_token": "$steps.exchange-oauth-code.outputs.access_token",
+        "bot_user_id": "$steps.exchange-oauth-code.outputs.bot_user_id",
+        "team": "$steps.test-exchanged-token.outputs.team",
+        "enterprise": "$steps.exchange-oauth-code.outputs.enterprise",
+        "is_enterprise_install": "$steps.test-exchanged-token.outputs.is_enterprise_install",
+        "url": "$steps.test-exchanged-token.outputs.url",
+        "user": "$steps.test-exchanged-token.outputs.user",
+        "team_id": "$steps.test-exchanged-token.outputs.team_id",
+        "user_id": "$steps.test-exchanged-token.outputs.user_id",
+        "bot_id": "$steps.test-exchanged-token.outputs.bot_id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "approve-or-restrict-installation-request",
+      "summary": "Reviews pending app installation requests for a workspace and approves or restricts a specific app based on the request.",
+      "description": "Reviews pending app installation requests for a workspace and approves or restricts a specific app based on the request.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "team_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-app-requests",
+          "description": "Lists pending app installation requests for a specific team or the entire organization.",
+          "operationId": "admin_apps_requests_list",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "query",
+              "value": "$inputs.token"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "cursor",
+              "in": "query",
+              "value": "$inputs.cursor"
+            },
+            {
+              "name": "team_id",
+              "in": "query",
+              "value": "$inputs.team_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "app_requests": "$response.body",
+            "response_metadata": "$response.body"
+          }
+        },
+        {
+          "stepId": "approve-app-request",
+          "description": "Approves a specific app installation request.",
+          "operationId": "admin_apps_approve",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "header",
+              "value": "$inputs.token"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "request_id": "$steps.list-app-requests.outputs.app_requests[0].id",
+              "app_id": "$steps.list-app-requests.outputs.app_requests[0].app.id",
+              "team_id": "$steps.list-app-requests.outputs.app_requests[0].team.id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ok": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "app_requests": "$steps.list-app-requests.outputs.app_requests",
+        "response_metadata": "$steps.list-app-requests.outputs.response_metadata",
+        "ok": "$steps.approve-app-request.outputs.ok"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-and-configure-admin-channel",
+      "summary": "Creates a new channel as an admin, invites users, and sets specific conversation preferences.",
+      "description": "Creates a new channel as an admin, invites users, and sets specific conversation preferences.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "user_ids": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-admin-channel",
+          "description": "Creates a new public or private channel in a specified workspace or org-wide.",
+          "operationId": "admin_conversations_create",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "header",
+              "value": "$inputs.token"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "channel_id": "$response.body",
+            "ok": "$response.body"
+          }
+        },
+        {
+          "stepId": "invite-users-to-admin-channel",
+          "description": "Invites specified users to the newly created channel.",
+          "operationId": "admin_conversations_invite",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "header",
+              "value": "$inputs.token"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "channel_id": "$steps.create-admin-channel.outputs.channel_id",
+              "user_ids": "$inputs.user_ids"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ok": "$response.body"
+          }
+        },
+        {
+          "stepId": "set-admin-channel-prefs",
+          "description": "Sets posting permissions or other preferences for the channel.",
+          "operationId": "admin_conversations_setConversationPrefs",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "header",
+              "value": "$inputs.token"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "channel_id": "$steps.create-admin-channel.outputs.channel_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ok": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "channel_id": "$steps.create-admin-channel.outputs.channel_id",
+        "ok": "$steps.set-admin-channel-prefs.outputs.ok"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "invite-and-configure-guest-user",
+      "summary": "Invites a new guest user to a workspace and sets an expiration date for their account.",
+      "description": "Invites a new guest user to a workspace and sets an expiration date for their account.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "team_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "invite-guest-user",
+          "description": "Invites a user as a guest (single or multi-channel).",
+          "operationId": "admin_users_invite",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "header",
+              "value": "$inputs.token"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "team_id": "$inputs.team_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ok": "$response.body"
+          }
+        },
+        {
+          "stepId": "set-guest-expiration",
+          "description": "Sets or updates the expiration timestamp for the invited guest user.",
+          "operationId": "admin_users_setExpiration",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "header",
+              "value": "$inputs.token"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "team_id": "$inputs.team_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ok": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "ok": "$steps.set-guest-expiration.outputs.ok"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "restrict-app-installation-request",
+      "summary": "Reviews pending app installation requests and restricts a specific app based on the request.",
+      "description": "Reviews pending app installation requests and restricts a specific app based on the request.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "team_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-app-requests",
+          "description": "Lists pending app installation requests for a specific team or the entire organization.",
+          "operationId": "admin_apps_requests_list",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "query",
+              "value": "$inputs.token"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "cursor",
+              "in": "query",
+              "value": "$inputs.cursor"
+            },
+            {
+              "name": "team_id",
+              "in": "query",
+              "value": "$inputs.team_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "app_requests": "$response.body",
+            "response_metadata": "$response.body"
+          }
+        },
+        {
+          "stepId": "restrict-app-request",
+          "description": "Restricts a specific app installation request.",
+          "operationId": "admin_apps_restrict",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "header",
+              "value": "$inputs.token"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "request_id": "$steps.list-app-requests.outputs.app_requests[0].id",
+              "app_id": "$steps.list-app-requests.outputs.app_requests[0].app.id",
+              "team_id": "$steps.list-app-requests.outputs.app_requests[0].team.id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ok": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "app_requests": "$steps.list-app-requests.outputs.app_requests",
+        "response_metadata": "$steps.list-app-requests.outputs.response_metadata",
+        "ok": "$steps.restrict-app-request.outputs.ok"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-org-wide-channel-connections",
+      "summary": "Sets the workspaces an org-wide channel is connected to and verifies the connection.",
+      "description": "Sets the workspaces an org-wide channel is connected to and verifies the connection.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "channel_id": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "set-channel-teams",
+          "description": "Sets the workspaces in an Enterprise Grid org that connect to a channel.",
+          "operationId": "admin_conversations_setTeams",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "header",
+              "value": "$inputs.token"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "channel_id": "$inputs.channel_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ok": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-channel-teams",
+          "description": "Retrieves the list of workspaces the channel is connected to verify the update.",
+          "operationId": "admin_conversations_getTeams",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "header",
+              "value": "$inputs.token"
+            },
+            {
+              "name": "channel_id",
+              "in": "query",
+              "value": "$inputs.channel_id"
+            },
+            {
+              "name": "cursor",
+              "in": "query",
+              "value": "$inputs.cursor"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "team_ids": "$response.body",
+            "response_metadata": "$response.body",
+            "ok": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "ok": "$steps.get-channel-teams.outputs.ok",
+        "team_ids": "$steps.get-channel-teams.outputs.team_ids",
+        "response_metadata": "$steps.get-channel-teams.outputs.response_metadata"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "deprovision-user-and-wipe-sessions",
+      "summary": "Removes a user from a workspace and wipes their active sessions for security.",
+      "description": "Removes a user from a workspace and wipes their active sessions for security.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "team_id": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "remove-user-from-workspace",
+          "description": "Removes a specified user from the workspace.",
+          "operationId": "admin_users_remove",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "header",
+              "value": "$inputs.token"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "team_id": "$inputs.team_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ok": "$response.body"
+          }
+        },
+        {
+          "stepId": "reset-user-sessions",
+          "description": "Wipes all valid sessions on all devices for the removed user.",
+          "operationId": "admin_users_session_reset",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "header",
+              "value": "$inputs.token"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "user_id": "$inputs.user_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ok": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "ok": "$steps.reset-user-sessions.outputs.ok"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-user-group-and-add-users",
+      "summary": "Creates a new user group and populates it with an initial list of users.",
+      "description": "Creates a new user group and populates it with an initial list of users.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "channels": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "handle": {
+            "type": "string"
+          },
+          "include_count": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "users": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-usergroup",
+          "description": "Creates a new user group with a name and handle.",
+          "operationId": "usergroups_create",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "header",
+              "value": "$inputs.token"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "channels": "$inputs.channels",
+              "description": "$inputs.description",
+              "handle": "$inputs.handle",
+              "include_count": "$inputs.include_count",
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "usergroup": "$response.body",
+            "ok": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-usergroup-users",
+          "description": "Sets the list of users belonging to the newly created user group.",
+          "operationId": "usergroups_users_update",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "header",
+              "value": "$inputs.token"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "usergroup": "$steps.create-usergroup.outputs.usergroup.id",
+              "include_count": "$inputs.include_count",
+              "users": "$inputs.users"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "usergroup": "$response.body",
+            "ok": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "usergroup": "$steps.update-usergroup-users.outputs.usergroup",
+        "ok": "$steps.update-usergroup-users.outputs.ok"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "upload-file-and-manage-public-link",
+      "summary": "Uploads a file, makes it publicly accessible via a URL, and later revokes the public URL.",
+      "description": "Uploads a file, makes it publicly accessible via a URL, and later revokes the public URL.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "channels": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "file": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "filetype": {
+            "type": "string"
+          },
+          "initial_comment": {
+            "type": "string"
+          },
+          "thread_ts": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "upload-file",
+          "description": "Uploads a file to Slack.",
+          "operationId": "files_upload",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "channels": "$inputs.channels",
+              "content": "$inputs.content",
+              "file": "$inputs.file",
+              "filename": "$inputs.filename",
+              "filetype": "$inputs.filetype",
+              "initial_comment": "$inputs.initial_comment",
+              "thread_ts": "$inputs.thread_ts",
+              "title": "$inputs.title",
+              "token": "$inputs.token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "file": "$response.body",
+            "ok": "$response.body"
+          }
+        },
+        {
+          "stepId": "share-file-publicly",
+          "description": "Generates a public URL for the uploaded file.",
+          "operationId": "files_sharedPublicURL",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "header",
+              "value": "$inputs.token"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "file": "$steps.upload-file.outputs.file.id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "file": "$response.body",
+            "ok": "$response.body"
+          }
+        },
+        {
+          "stepId": "revoke-public-url",
+          "description": "Revokes the public URL for the file.",
+          "operationId": "files_revokePublicURL",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "header",
+              "value": "$inputs.token"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "file": "$steps.upload-file.outputs.file.id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "file": "$response.body",
+            "ok": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "file": "$steps.revoke-public-url.outputs.file",
+        "ok": "$steps.revoke-public-url.outputs.ok"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "find-user-by-email-and-get-presence",
+      "summary": "Looks up a user by their email address and then checks their current presence status.",
+      "description": "Looks up a user by their email address and then checks their current presence status.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "user": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "lookup-user-by-email",
+          "description": "Finds a user's profile and ID using their email address.",
+          "operationId": "users_lookupByEmail",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "query",
+              "value": "$inputs.token"
+            },
+            {
+              "name": "email",
+              "in": "query",
+              "value": "$inputs.email"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user": "$response.body",
+            "ok": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-user-presence",
+          "description": "Retrieves the presence status (e.g., active, away) for the found user.",
+          "operationId": "users_getPresence",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "query",
+              "value": "$inputs.token"
+            },
+            {
+              "name": "user",
+              "in": "query",
+              "value": "$steps.lookup-user-by-email.outputs.user.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "presence": "$response.body",
+            "online": "$response.body",
+            "auto_away": "$response.body",
+            "manual_away": "$response.body",
+            "connection_count": "$response.body",
+            "last_activity": "$response.body",
+            "ok": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "user": "$steps.lookup-user-by-email.outputs.user",
+        "ok": "$steps.get-user-presence.outputs.ok",
+        "presence": "$steps.get-user-presence.outputs.presence",
+        "online": "$steps.get-user-presence.outputs.online",
+        "auto_away": "$steps.get-user-presence.outputs.auto_away",
+        "manual_away": "$steps.get-user-presence.outputs.manual_away",
+        "connection_count": "$steps.get-user-presence.outputs.connection_count",
+        "last_activity": "$steps.get-user-presence.outputs.last_activity"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-channel-access-via-idp-group",
+      "summary": "Adds an Identity Provider (IDP) group to the allowlist for a private channel, then verifies the configuration.",
+      "description": "Adds an Identity Provider (IDP) group to the allowlist for a private channel, then verifies the configuration.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "channel_id": {
+            "type": "string"
+          },
+          "team_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-idp-group-to-channel",
+          "description": "Adds an allowlist of IDP groups for accessing a private channel.",
+          "operationId": "admin_conversations_restrictAccess_addGroup",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "token": "$inputs.token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ok": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-idp-groups-for-channel",
+          "description": "Lists the IDP groups linked to the channel to verify the addition.",
+          "operationId": "admin_conversations_restrictAccess_listGroups",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "query",
+              "value": "$inputs.token"
+            },
+            {
+              "name": "channel_id",
+              "in": "query",
+              "value": "$inputs.channel_id"
+            },
+            {
+              "name": "team_id",
+              "in": "query",
+              "value": "$inputs.team_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "group_ids": "$response.body",
+            "ok": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "ok": "$steps.list-idp-groups-for-channel.outputs.ok",
+        "group_ids": "$steps.list-idp-groups-for-channel.outputs.group_ids"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-workspace-invite-request",
+      "summary": "Lists pending workspace invite requests and approves or denies a specific request.",
+      "description": "Lists pending workspace invite requests and approves or denies a specific request.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "team_id": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-pending-invites",
+          "description": "Lists all pending workspace invite requests.",
+          "operationId": "admin_inviteRequests_list",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "header",
+              "value": "$inputs.token"
+            },
+            {
+              "name": "team_id",
+              "in": "query",
+              "value": "$inputs.team_id"
+            },
+            {
+              "name": "cursor",
+              "in": "query",
+              "value": "$inputs.cursor"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "invite_requests": "$response.body",
+            "response_metadata": "$response.body"
+          }
+        },
+        {
+          "stepId": "approve-invite-request",
+          "description": "Approves a specific workspace invite request.",
+          "operationId": "admin_inviteRequests_approve",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "header",
+              "value": "$inputs.token"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ok": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "invite_requests": "$steps.list-pending-invites.outputs.invite_requests",
+        "response_metadata": "$steps.list-pending-invites.outputs.response_metadata",
+        "ok": "$steps.approve-invite-request.outputs.ok"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "schedule-and-manage-message",
+      "summary": "Schedules a message to be sent in the future, lists scheduled messages for verification, and potentially deletes it before sending.",
+      "description": "Schedules a message to be sent in the future, lists scheduled messages for verification, and potentially deletes it before sending.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "as_user": {
+            "type": "string"
+          },
+          "attachments": {
+            "type": "string"
+          },
+          "blocks": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string"
+          },
+          "link_names": {
+            "type": "string"
+          },
+          "parse": {
+            "type": "string"
+          },
+          "post_at": {
+            "type": "string"
+          },
+          "reply_broadcast": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "thread_ts": {
+            "type": "string"
+          },
+          "unfurl_links": {
+            "type": "string"
+          },
+          "unfurl_media": {
+            "type": "string"
+          },
+          "latest": {
+            "type": "string"
+          },
+          "oldest": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "schedule-message",
+          "description": "Schedules a message for a future time.",
+          "operationId": "chat_scheduleMessage",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "header",
+              "value": "$inputs.token"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "as_user": "$inputs.as_user",
+              "attachments": "$inputs.attachments",
+              "blocks": "$inputs.blocks",
+              "channel": "$inputs.channel",
+              "link_names": "$inputs.link_names",
+              "parse": "$inputs.parse",
+              "post_at": "$inputs.post_at",
+              "reply_broadcast": "$inputs.reply_broadcast",
+              "text": "$inputs.text",
+              "thread_ts": "$inputs.thread_ts",
+              "unfurl_links": "$inputs.unfurl_links",
+              "unfurl_media": "$inputs.unfurl_media"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "channel": "$response.body",
+            "scheduled_message_id": "$response.body",
+            "post_at": "$response.body",
+            "message": "$response.body",
+            "ok": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-scheduled-messages",
+          "description": "Lists scheduled messages for the channel to confirm scheduling.",
+          "operationId": "chat_scheduledMessages_list",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "header",
+              "value": "$inputs.token"
+            },
+            {
+              "name": "channel",
+              "in": "query",
+              "value": "$steps.schedule-message.outputs.channel"
+            },
+            {
+              "name": "latest",
+              "in": "query",
+              "value": "$inputs.latest"
+            },
+            {
+              "name": "oldest",
+              "in": "query",
+              "value": "$inputs.oldest"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "cursor",
+              "in": "query",
+              "value": "$inputs.cursor"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "scheduled_messages": "$response.body",
+            "response_metadata": "$response.body",
+            "ok": "$response.body"
+          }
+        },
+        {
+          "stepId": "delete-scheduled-message",
+          "description": "Deletes the scheduled message before it is sent (optional).",
+          "operationId": "chat_deleteScheduledMessage",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "header",
+              "value": "$inputs.token"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "channel": "$steps.schedule-message.outputs.channel",
+              "scheduled_message_id": "$steps.schedule-message.outputs.scheduled_message_id",
+              "as_user": "$inputs.as_user"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ok": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "channel": "$steps.schedule-message.outputs.channel",
+        "scheduled_message_id": "$steps.schedule-message.outputs.scheduled_message_id",
+        "post_at": "$steps.schedule-message.outputs.post_at",
+        "message": "$steps.schedule-message.outputs.message",
+        "ok": "$steps.delete-scheduled-message.outputs.ok",
+        "scheduled_messages": "$steps.list-scheduled-messages.outputs.scheduled_messages",
+        "response_metadata": "$steps.list-scheduled-messages.outputs.response_metadata"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "pin-message-in-channel",
+      "summary": "Pins a message to a channel and then lists the pinned items to confirm.",
+      "description": "Pins a message to a channel and then lists the pinned items to confirm.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "pin-message",
+          "description": "Pins a message identified by its timestamp to a channel.",
+          "operationId": "pins_add",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "header",
+              "value": "$inputs.token"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "channel": "$inputs.channel"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ok": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-pinned-items",
+          "description": "Lists all items pinned to the channel to verify the pin.",
+          "operationId": "pins_list",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "query",
+              "value": "$inputs.token"
+            },
+            {
+              "name": "channel",
+              "in": "query",
+              "value": "$inputs.channel"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "items": "$response.body",
+            "ok": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "ok": "$steps.list-pinned-items.outputs.ok",
+        "items": "$steps.list-pinned-items.outputs.items"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "set-user-profile-status",
+      "summary": "Sets a custom status (text and emoji) for a user and verifies it.",
+      "description": "Sets a custom status (text and emoji) for a user and verifies it.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "user": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "include_labels": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "set-profile-status",
+          "description": "Sets the status text and emoji in the user's profile.",
+          "operationId": "users_profile_set",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "header",
+              "value": "$inputs.token"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "name": "$inputs.name",
+              "profile": "$inputs.profile",
+              "user": "$inputs.user",
+              "value": "$inputs.value"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "profile": "$response.body",
+            "ok": "$response.body",
+            "username": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-user-profile",
+          "description": "Retrieves the user's profile to verify the status update.",
+          "operationId": "users_profile_get",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "query",
+              "value": "$inputs.token"
+            },
+            {
+              "name": "include_labels",
+              "in": "query",
+              "value": "$inputs.include_labels"
+            },
+            {
+              "name": "user",
+              "in": "query",
+              "value": "$steps.set-profile-status.outputs.profile.user_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "profile": "$response.body",
+            "ok": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "profile": "$steps.get-user-profile.outputs.profile",
+        "ok": "$steps.get-user-profile.outputs.ok",
+        "username": "$steps.set-profile-status.outputs.username"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "react-to-message",
+      "summary": "Adds a reaction to a specific message and then retrieves the message to confirm the reaction.",
+      "description": "Adds a reaction to a specific message and then retrieves the message to confirm the reaction.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string"
+          },
+          "file": {
+            "type": "string"
+          },
+          "file_comment": {
+            "type": "string"
+          },
+          "full": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-reaction",
+          "description": "Adds an emoji reaction to a message.",
+          "operationId": "reactions_add",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "header",
+              "value": "$inputs.token"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "channel": "$inputs.channel"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ok": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-reactions-for-message",
+          "description": "Retrieves the reactions for the message to verify the addition.",
+          "operationId": "reactions_get",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "query",
+              "value": "$inputs.token"
+            },
+            {
+              "name": "channel",
+              "in": "query",
+              "value": "$inputs.channel"
+            },
+            {
+              "name": "file",
+              "in": "query",
+              "value": "$inputs.file"
+            },
+            {
+              "name": "file_comment",
+              "in": "query",
+              "value": "$inputs.file_comment"
+            },
+            {
+              "name": "full",
+              "in": "query",
+              "value": "$inputs.full"
+            },
+            {
+              "name": "timestamp",
+              "in": "query",
+              "value": "$inputs.timestamp"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "type": "$response.body",
+            "channel": "$response.body",
+            "message": "$response.body",
+            "ok": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "ok": "$steps.get-reactions-for-message.outputs.ok",
+        "type": "$steps.get-reactions-for-message.outputs.type",
+        "channel": "$steps.get-reactions-for-message.outputs.channel",
+        "message": "$steps.get-reactions-for-message.outputs.message"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-user-dnd-snooze",
+      "summary": "Sets the user's DND snooze for a duration, checks the status, and then ends the snooze.",
+      "description": "Sets the user's DND snooze for a duration, checks the status, and then ends the snooze.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "user": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "set-dnd-snooze",
+          "description": "Turns on Do Not Disturb snooze mode for the user.",
+          "operationId": "dnd_setSnooze",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "token": "$inputs.token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "snooze_enabled": "$response.body",
+            "snooze_endtime": "$response.body",
+            "snooze_remaining": "$response.body",
+            "ok": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-dnd-info",
+          "description": "Retrieves the user's current DND status to confirm snooze.",
+          "operationId": "dnd_info",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "query",
+              "value": "$inputs.token"
+            },
+            {
+              "name": "user",
+              "in": "query",
+              "value": "$inputs.user"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "dnd_enabled": "$response.body",
+            "next_dnd_end_ts": "$response.body",
+            "next_dnd_start_ts": "$response.body",
+            "snooze_enabled": "$response.body",
+            "snooze_endtime": "$response.body",
+            "snooze_remaining": "$response.body",
+            "ok": "$response.body"
+          }
+        },
+        {
+          "stepId": "end-dnd-snooze",
+          "description": "Ends the user's snooze mode immediately.",
+          "operationId": "dnd_endSnooze",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "header",
+              "value": "$inputs.token"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "dnd_enabled": "$response.body",
+            "next_dnd_end_ts": "$response.body",
+            "next_dnd_start_ts": "$response.body",
+            "snooze_enabled": "$response.body",
+            "ok": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "snooze_enabled": "$steps.end-dnd-snooze.outputs.snooze_enabled",
+        "snooze_endtime": "$steps.get-dnd-info.outputs.snooze_endtime",
+        "snooze_remaining": "$steps.get-dnd-info.outputs.snooze_remaining",
+        "ok": "$steps.end-dnd-snooze.outputs.ok",
+        "dnd_enabled": "$steps.end-dnd-snooze.outputs.dnd_enabled",
+        "next_dnd_end_ts": "$steps.end-dnd-snooze.outputs.next_dnd_end_ts",
+        "next_dnd_start_ts": "$steps.end-dnd-snooze.outputs.next_dnd_start_ts"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

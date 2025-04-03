@@ -1,0 +1,221 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/microsoft.com/cognitiveservices-Ocr/2.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "extract-text-from-document-image-read-api",
+      "summary": "Performs asynchronous Optical Character Recognition (OCR) on an image optimized for text-heavy documents using the Read API. It first submits the image for processing and then retrieves the results once processing is complete.",
+      "description": "Performs asynchronous Optical Character Recognition (OCR) on an image optimized for text-heavy documents using the Read API. It first submits the image for processing and then retrieves the results once processing is complete.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "operationId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "initiate-read-ocr",
+          "description": "Submits an image URL to the Read API for asynchronous OCR processing. The response includes a URL to check the operation status.",
+          "operationId": "BatchReadFile",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "operationLocationUrl": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-read-ocr-result",
+          "description": "Retrieves the results of the Read OCR operation using the operation ID extracted from the Operation-Location URL provided by the previous step. This step may need to be polled until the status is 'Succeeded' or 'Failed'.",
+          "operationId": "GetReadOperationResult",
+          "parameters": [
+            {
+              "name": "operationId",
+              "in": "path",
+              "value": "$steps.initiate-read-ocr.outputs.operationLocationUrl"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body",
+            "recognitionResults": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "operationLocationUrl": "$steps.initiate-read-ocr.outputs.operationLocationUrl",
+        "status": "$steps.get-read-ocr-result.outputs.status",
+        "recognitionResults": "$steps.get-read-ocr-result.outputs.recognitionResults"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "recognize-text-in-image-recognize-text-api",
+      "summary": "Performs asynchronous Optical Character Recognition (OCR) on an image using the Recognize Text API. It first submits the image and recognition mode for processing and then retrieves the results once processing is complete.",
+      "description": "Performs asynchronous Optical Character Recognition (OCR) on an image using the Recognize Text API. It first submits the image and recognition mode for processing and then retrieves the results once processing is complete.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string"
+          },
+          "operationId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "initiate-recognize-text",
+          "description": "Submits an image URL and recognition mode (e.g., Printed, Handwritten) to the Recognize Text API for asynchronous OCR processing. The response includes a URL to check the operation status.",
+          "operationId": "RecognizeText",
+          "parameters": [
+            {
+              "name": "mode",
+              "in": "query",
+              "value": "$inputs.mode"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "operationLocationUrl": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-recognize-text-result",
+          "description": "Retrieves the results of the Recognize Text operation using the operation ID extracted from the Operation-Location URL provided by the previous step. This step may need to be polled until the status is 'Succeeded' or 'Failed'.",
+          "operationId": "GetTextOperationResult",
+          "parameters": [
+            {
+              "name": "operationId",
+              "in": "path",
+              "value": "$steps.initiate-recognize-text.outputs.operationLocationUrl"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body",
+            "recognitionResult": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "operationLocationUrl": "$steps.initiate-recognize-text.outputs.operationLocationUrl",
+        "status": "$steps.get-recognize-text-result.outputs.status",
+        "recognitionResult": "$steps.get-recognize-text-result.outputs.recognitionResult"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

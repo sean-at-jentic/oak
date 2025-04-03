@@ -1,0 +1,191 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/freesound.org/main/2.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "find-and-inspect-sound",
+      "summary": "Search for sounds based on text criteria and then retrieve detailed information for a specific sound found in the search results. This allows users to discover relevant sounds and then examine them more closely before deciding to use or download them.",
+      "description": "Search for sounds based on text criteria and then retrieve detailed information for a specific sound found in the search results. This allows users to discover relevant sounds and then examine them more closely before deciding to use or download them.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "filter": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "string"
+          },
+          "group_by_pack": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "page_size": {
+            "type": "string"
+          },
+          "soundId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-sounds",
+          "description": "Search for sounds using text query and optional filters/sorting.",
+          "operationId": "searchText",
+          "parameters": [
+            {
+              "name": "query",
+              "in": "query",
+              "value": "$inputs.query"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            },
+            {
+              "name": "sort",
+              "in": "query",
+              "value": "$inputs.sort"
+            },
+            {
+              "name": "group_by_pack",
+              "in": "query",
+              "value": "$inputs.group_by_pack"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "page_size",
+              "in": "query",
+              "value": "$inputs.page_size"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "searchResults": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-sound-details",
+          "description": "Retrieve detailed information for a specific sound identified by its ID, typically selected from the search results.",
+          "operationId": "getSoundById",
+          "parameters": [
+            {
+              "name": "soundId",
+              "in": "path",
+              "value": "$steps.search-sounds.outputs.searchResults.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "soundDetails": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "searchResults": "$steps.search-sounds.outputs.searchResults",
+        "soundDetails": "$steps.get-sound-details.outputs.soundDetails"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

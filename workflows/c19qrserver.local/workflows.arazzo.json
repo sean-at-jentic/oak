@@ -1,0 +1,601 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/c19qrserver.local/main/1.1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "record-attendee-sign-in",
+      "summary": "A staff member logs in and records the details of an attendee signing into the premises for contact tracing purposes.",
+      "description": "A staff member logs in and records the details of an attendee signing into the premises for contact tracing purposes.",
+      "steps": [
+        {
+          "stepId": "login-staff",
+          "description": "Staff member logs in using their email and password.",
+          "operationPath": "openapi_source#/paths/~1login/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "token": "$response.body",
+            "user_id": "$response.body",
+            "is_admin": "$response.body"
+          }
+        },
+        {
+          "stepId": "record-attendee",
+          "description": "Record the attendee's name, phone number, and optionally email.",
+          "operationPath": "openapi_source#/paths/~1signin/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "result_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "token": "$steps.login-staff.outputs.token",
+        "user_id": "$steps.login-staff.outputs.user_id",
+        "is_admin": "$steps.login-staff.outputs.is_admin",
+        "result_status": "$steps.record-attendee.outputs.result_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "review-sign-in-records",
+      "summary": "An authorized user (staff or admin) logs in to view the list of attendee sign-ins for contact tracing review.",
+      "description": "An authorized user (staff or admin) logs in to view the list of attendee sign-ins for contact tracing review.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "less_than": {
+            "type": "string"
+          },
+          "return_count": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "login-viewer",
+          "description": "User logs in using their email and password.",
+          "operationPath": "openapi_source#/paths/~1login/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "token": "$response.body",
+            "user_id": "$response.body",
+            "is_admin": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-signins",
+          "description": "Retrieve a list of sign-in records, potentially filtered by ID or count.",
+          "operationPath": "openapi_source#/paths/~1signins/get",
+          "parameters": [
+            {
+              "name": "less_than",
+              "in": "query",
+              "value": "$inputs.less_than"
+            },
+            {
+              "name": "return_count",
+              "in": "query",
+              "value": "$inputs.return_count"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "signins_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "token": "$steps.login-viewer.outputs.token",
+        "user_id": "$steps.login-viewer.outputs.user_id",
+        "is_admin": "$steps.login-viewer.outputs.is_admin",
+        "signins_list": "$steps.list-signins.outputs.signins_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "admin-creates-team-member",
+      "summary": "An administrator logs in and creates a new team member account. The workflow returns a password reset code which must be securely given to the new user to set their initial password (using a separate workflow).",
+      "description": "An administrator logs in and creates a new team member account. The workflow returns a password reset code which must be securely given to the new user to set their initial password (using a separate workflow).",
+      "steps": [
+        {
+          "stepId": "login-admin",
+          "description": "Administrator logs in.",
+          "operationPath": "openapi_source#/paths/~1login/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "token": "$response.body",
+            "user_id": "$response.body",
+            "is_admin": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-team-member",
+          "description": "Create a new team member record with name, email, initial password (or setup mechanism), and admin status. Requires admin privileges.",
+          "operationPath": "openapi_source#/paths/~1user/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "created_user_email": "$response.body",
+            "password_reset_code": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "token": "$steps.login-admin.outputs.token",
+        "user_id": "$steps.login-admin.outputs.user_id",
+        "is_admin": "$steps.login-admin.outputs.is_admin",
+        "created_user_email": "$steps.create-team-member.outputs.created_user_email",
+        "password_reset_code": "$steps.create-team-member.outputs.password_reset_code"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "admin-initiates-password-reset-for-user",
+      "summary": "An administrator logs in and requests a password reset code for a team member who forgot their password. The admin must then securely provide the generated code to the user.",
+      "description": "An administrator logs in and requests a password reset code for a team member who forgot their password. The admin must then securely provide the generated code to the user.",
+      "steps": [
+        {
+          "stepId": "login-admin",
+          "description": "Administrator logs in.",
+          "operationPath": "openapi_source#/paths/~1login/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "token": "$response.body",
+            "user_id": "$response.body",
+            "is_admin": "$response.body"
+          }
+        },
+        {
+          "stepId": "request-password-reset-code",
+          "description": "Request a password reset code for a specific user email. Requires admin privileges.",
+          "operationPath": "openapi_source#/paths/~1requestPasswordReset/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "reset_user_email": "$response.body",
+            "password_reset_code": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "token": "$steps.login-admin.outputs.token",
+        "user_id": "$steps.login-admin.outputs.user_id",
+        "is_admin": "$steps.login-admin.outputs.is_admin",
+        "reset_user_email": "$steps.request-password-reset-code.outputs.reset_user_email",
+        "password_reset_code": "$steps.request-password-reset-code.outputs.password_reset_code"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "admin-removes-team-member",
+      "summary": "An administrator logs in and disables a team member's account, preventing them from logging in.",
+      "description": "An administrator logs in and disables a team member's account, preventing them from logging in.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "login-admin",
+          "description": "Administrator logs in.",
+          "operationPath": "openapi_source#/paths/~1login/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "token": "$response.body",
+            "user_id": "$response.body",
+            "is_admin": "$response.body"
+          }
+        },
+        {
+          "stepId": "disable-team-member",
+          "description": "Disable a team member's account by user ID. Requires admin privileges.",
+          "operationPath": "openapi_source#/paths/~1user~1{userId}/delete",
+          "parameters": [
+            {
+              "name": "userId",
+              "in": "path",
+              "value": "$inputs.userId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "deletion_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "token": "$steps.login-admin.outputs.token",
+        "user_id": "$steps.login-admin.outputs.user_id",
+        "is_admin": "$steps.login-admin.outputs.is_admin",
+        "deletion_status": "$steps.disable-team-member.outputs.deletion_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "user-changes-own-password",
+      "summary": "A logged-in user changes their own password by providing their old password and a new password.",
+      "description": "A logged-in user changes their own password by providing their old password and a new password.",
+      "steps": [
+        {
+          "stepId": "login-user",
+          "description": "User logs in.",
+          "operationPath": "openapi_source#/paths/~1login/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "token": "$response.body",
+            "user_id": "$response.body",
+            "is_admin": "$response.body"
+          }
+        },
+        {
+          "stepId": "change-own-password",
+          "description": "Submit the old password and the desired new password.",
+          "operationPath": "openapi_source#/paths/~1changePassword/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "success_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "token": "$steps.login-user.outputs.token",
+        "user_id": "$steps.login-user.outputs.user_id",
+        "is_admin": "$steps.login-user.outputs.is_admin",
+        "success_status": "$steps.change-own-password.outputs.success_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "correct-attendee-sign-in-record",
+      "summary": "A staff member logs in, identifies a specific sign-in record, and updates its details (e.g., correcting a typo in the name or phone number).",
+      "description": "A staff member logs in, identifies a specific sign-in record, and updates its details (e.g., correcting a typo in the name or phone number).",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "signinId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "login-staff",
+          "description": "Staff member logs in.",
+          "operationPath": "openapi_source#/paths/~1login/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "token": "$response.body",
+            "user_id": "$response.body",
+            "is_admin": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-attendee-record",
+          "description": "Update the details of a specific sign-in record identified by its ID.",
+          "operationPath": "openapi_source#/paths/~1signin~1{signinId}/put",
+          "parameters": [
+            {
+              "name": "signinId",
+              "in": "path",
+              "value": "$inputs.signinId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updater_user_record": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "token": "$steps.login-staff.outputs.token",
+        "user_id": "$steps.login-staff.outputs.user_id",
+        "is_admin": "$steps.login-staff.outputs.is_admin",
+        "updater_user_record": "$steps.update-attendee-record.outputs.updater_user_record"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "view-team-member-details",
+      "summary": "An authorized user (likely admin) logs in and retrieves the details of all team members or a specific team member.",
+      "description": "An authorized user (likely admin) logs in and retrieves the details of all team members or a specific team member.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "login-viewer",
+          "description": "User logs in.",
+          "operationPath": "openapi_source#/paths/~1login/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "token": "$response.body",
+            "user_id": "$response.body",
+            "is_admin": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-team-members",
+          "description": "Retrieve a list of all team member records.",
+          "operationPath": "openapi_source#/paths/~1users/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "users_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-member-details",
+          "description": "Retrieve details for a specific team member using their ID (obtained from list-team-members).",
+          "operationPath": "openapi_source#/paths/~1user~1{userId}/get",
+          "parameters": [
+            {
+              "name": "userId",
+              "in": "path",
+              "value": "$steps.list-team-members.outputs.users_list.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "token": "$steps.login-viewer.outputs.token",
+        "user_id": "$steps.login-viewer.outputs.user_id",
+        "is_admin": "$steps.login-viewer.outputs.is_admin",
+        "users_list": "$steps.list-team-members.outputs.users_list",
+        "user_details": "$steps.get-member-details.outputs.user_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

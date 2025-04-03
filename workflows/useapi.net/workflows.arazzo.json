@@ -1,0 +1,796 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/useapi.net/main/1.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "generate-image-from-prompt-and-retrieve-result",
+      "summary": "Submits a text prompt to Midjourney using the /imagine command, waits for completion, and retrieves the generated image grid.",
+      "description": "Submits a text prompt to Midjourney using the /imagine command, waits for completion, and retrieves the generated image grid.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string"
+          },
+          "discord": {
+            "type": "string"
+          },
+          "server": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string"
+          },
+          "jobid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "submit-imagine-job",
+          "description": "Submit a text prompt to generate an image grid.",
+          "operationPath": "openapi_source#/paths/~1jobs~1imagine/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "prompt": "$inputs.prompt",
+              "discord": "$inputs.discord",
+              "server": "$inputs.server",
+              "channel": "$inputs.channel"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "jobid": "$response.body",
+            "status": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-imagine-job-result",
+          "description": "Poll for the status of the imagine job until completed and retrieve the results (image URLs, available buttons). Note: Polling or using the callback (replyUrl) is required.",
+          "operationPath": "openapi_source#/paths/~1jobs~1/get",
+          "parameters": [
+            {
+              "name": "jobid",
+              "in": "query",
+              "value": "$steps.submit-imagine-job.outputs.jobid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "job_status": "$response.body",
+            "attachments": "$response.body",
+            "buttons": "$response.body",
+            "content": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "jobid": "$steps.submit-imagine-job.outputs.jobid",
+        "status": "$steps.submit-imagine-job.outputs.status",
+        "job_status": "$steps.get-imagine-job-result.outputs.job_status",
+        "attachments": "$steps.get-imagine-job-result.outputs.attachments",
+        "buttons": "$steps.get-imagine-job-result.outputs.buttons",
+        "content": "$steps.get-imagine-job-result.outputs.content"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "generate-image-and-upscale-a-selection",
+      "summary": "Generates an image grid from a prompt, retrieves the result, and then submits a job to upscale one of the generated images (e.g., U1). Finally, retrieves the upscaled image.",
+      "description": "Generates an image grid from a prompt, retrieves the result, and then submits a job to upscale one of the generated images (e.g., U1). Finally, retrieves the upscaled image.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string"
+          },
+          "discord": {
+            "type": "string"
+          },
+          "server": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string"
+          },
+          "jobid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "submit-imagine-job",
+          "description": "Submit a text prompt to generate an image grid.",
+          "operationPath": "openapi_source#/paths/~1jobs~1imagine/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "prompt": "$inputs.prompt",
+              "discord": "$inputs.discord",
+              "server": "$inputs.server",
+              "channel": "$inputs.channel"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "jobid": "$response.body",
+            "status": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-imagine-job-result",
+          "description": "Poll for the status of the imagine job until completed and retrieve the results, including available buttons (U1-U4, V1-V4, etc.). Note: Polling or using the callback (replyUrl) is required.",
+          "operationPath": "openapi_source#/paths/~1jobs~1/get",
+          "parameters": [
+            {
+              "name": "jobid",
+              "in": "query",
+              "value": "$steps.submit-imagine-job.outputs.jobid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "job_status": "$response.body",
+            "attachments": "$response.body",
+            "buttons": "$response.body",
+            "completed_jobid": "$response.body"
+          }
+        },
+        {
+          "stepId": "submit-upscale-job",
+          "description": "Submit a request to upscale a specific image from the completed imagine job.",
+          "operationPath": "openapi_source#/paths/~1jobs~1button/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "jobid": "$steps.get-imagine-job-result.outputs.completed_jobid",
+              "button": "$steps.get-imagine-job-result.outputs.buttons[0]"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "upscale_jobid": "$response.body",
+            "status": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-upscale-job-result",
+          "description": "Poll for the status of the upscale job until completed and retrieve the final upscaled image URL. Note: Polling or using the callback (replyUrl) is required.",
+          "operationPath": "openapi_source#/paths/~1jobs~1/get",
+          "parameters": [
+            {
+              "name": "jobid",
+              "in": "query",
+              "value": "$steps.submit-upscale-job.outputs.upscale_jobid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "job_status": "$response.body",
+            "attachments": "$response.body",
+            "buttons": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "jobid": "$steps.submit-imagine-job.outputs.jobid",
+        "status": "$steps.submit-upscale-job.outputs.status",
+        "job_status": "$steps.get-upscale-job-result.outputs.job_status",
+        "attachments": "$steps.get-upscale-job-result.outputs.attachments",
+        "buttons": "$steps.get-upscale-job-result.outputs.buttons",
+        "completed_jobid": "$steps.get-imagine-job-result.outputs.completed_jobid",
+        "upscale_jobid": "$steps.submit-upscale-job.outputs.upscale_jobid"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "generate-image-and-create-variations",
+      "summary": "Generates an image grid from a prompt, retrieves the result, submits a job to create variations of one image (e.g., V1), and retrieves the new variation grid.",
+      "description": "Generates an image grid from a prompt, retrieves the result, submits a job to create variations of one image (e.g., V1), and retrieves the new variation grid.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string"
+          },
+          "discord": {
+            "type": "string"
+          },
+          "server": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string"
+          },
+          "jobid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "submit-imagine-job",
+          "description": "Submit a text prompt to generate an image grid.",
+          "operationPath": "openapi_source#/paths/~1jobs~1imagine/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "prompt": "$inputs.prompt",
+              "discord": "$inputs.discord",
+              "server": "$inputs.server",
+              "channel": "$inputs.channel"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "jobid": "$response.body",
+            "status": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-imagine-job-result",
+          "description": "Poll for the status of the imagine job until completed and retrieve the results, including available buttons (U1-U4, V1-V4, etc.). Note: Polling or using the callback (replyUrl) is required.",
+          "operationPath": "openapi_source#/paths/~1jobs~1/get",
+          "parameters": [
+            {
+              "name": "jobid",
+              "in": "query",
+              "value": "$steps.submit-imagine-job.outputs.jobid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "job_status": "$response.body",
+            "attachments": "$response.body",
+            "buttons": "$response.body",
+            "completed_jobid": "$response.body"
+          }
+        },
+        {
+          "stepId": "submit-variation-job",
+          "description": "Submit a request to create variations of a specific image from the completed imagine job.",
+          "operationPath": "openapi_source#/paths/~1jobs~1button/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "jobid": "$steps.get-imagine-job-result.outputs.completed_jobid",
+              "button": "$steps.get-imagine-job-result.outputs.buttons[4]"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "variation_jobid": "$response.body",
+            "status": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-variation-job-result",
+          "description": "Poll for the status of the variation job until completed and retrieve the new image grid. Note: Polling or using the callback (replyUrl) is required.",
+          "operationPath": "openapi_source#/paths/~1jobs~1/get",
+          "parameters": [
+            {
+              "name": "jobid",
+              "in": "query",
+              "value": "$steps.submit-variation-job.outputs.variation_jobid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "job_status": "$response.body",
+            "attachments": "$response.body",
+            "buttons": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "jobid": "$steps.submit-imagine-job.outputs.jobid",
+        "status": "$steps.submit-variation-job.outputs.status",
+        "job_status": "$steps.get-variation-job-result.outputs.job_status",
+        "attachments": "$steps.get-variation-job-result.outputs.attachments",
+        "buttons": "$steps.get-variation-job-result.outputs.buttons",
+        "completed_jobid": "$steps.get-imagine-job-result.outputs.completed_jobid",
+        "variation_jobid": "$steps.submit-variation-job.outputs.variation_jobid"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "blend-images-and-retrieve-result",
+      "summary": "Submits multiple image URLs to Midjourney using the /blend command, waits for completion, and retrieves the blended image result.",
+      "description": "Submits multiple image URLs to Midjourney using the /blend command, waits for completion, and retrieves the blended image result.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "blendUrls": {
+            "type": "string"
+          },
+          "discord": {
+            "type": "string"
+          },
+          "server": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string"
+          },
+          "jobid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "submit-blend-job",
+          "description": "Submit 2-5 image URLs to blend.",
+          "operationPath": "openapi_source#/paths/~1jobs~1blend/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "blendUrls": "$inputs.blendUrls",
+              "discord": "$inputs.discord",
+              "server": "$inputs.server",
+              "channel": "$inputs.channel"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "jobid": "$response.body",
+            "status": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-blend-job-result",
+          "description": "Poll for the status of the blend job until completed and retrieve the results (blended image URL, available buttons). Note: Polling or using the callback (replyUrl) is required.",
+          "operationPath": "openapi_source#/paths/~1jobs~1/get",
+          "parameters": [
+            {
+              "name": "jobid",
+              "in": "query",
+              "value": "$steps.submit-blend-job.outputs.jobid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "job_status": "$response.body",
+            "attachments": "$response.body",
+            "buttons": "$response.body",
+            "content": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "jobid": "$steps.submit-blend-job.outputs.jobid",
+        "status": "$steps.submit-blend-job.outputs.status",
+        "job_status": "$steps.get-blend-job-result.outputs.job_status",
+        "attachments": "$steps.get-blend-job-result.outputs.attachments",
+        "buttons": "$steps.get-blend-job-result.outputs.buttons",
+        "content": "$steps.get-blend-job-result.outputs.content"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "describe-image-and-generate-from-description",
+      "summary": "Submits an image URL to Midjourney using the /describe command to get text prompts, retrieves the prompts, and then uses one of the prompts to generate a new image using /imagine.",
+      "description": "Submits an image URL to Midjourney using the /describe command to get text prompts, retrieves the prompts, and then uses one of the prompts to generate a new image using /imagine.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "describeUrl": {
+            "type": "string"
+          },
+          "discord": {
+            "type": "string"
+          },
+          "server": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string"
+          },
+          "jobid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "submit-describe-job",
+          "description": "Submit an image URL to get descriptive prompts.",
+          "operationPath": "openapi_source#/paths/~1jobs~1describe/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "describeUrl": "$inputs.describeUrl",
+              "discord": "$inputs.discord",
+              "server": "$inputs.server",
+              "channel": "$inputs.channel"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "jobid": "$response.body",
+            "status": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-describe-job-result",
+          "description": "Poll for the status of the describe job until completed and retrieve the generated prompts from the embeds. Note: Polling or using the callback (replyUrl) is required.",
+          "operationPath": "openapi_source#/paths/~1jobs~1/get",
+          "parameters": [
+            {
+              "name": "jobid",
+              "in": "query",
+              "value": "$steps.submit-describe-job.outputs.jobid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "job_status": "$response.body",
+            "embeds": "$response.body",
+            "content": "$response.body"
+          }
+        },
+        {
+          "stepId": "submit-imagine-from-description",
+          "description": "Submit one of the generated prompts to create a new image.",
+          "operationPath": "openapi_source#/paths/~1jobs~1imagine/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "prompt": "$steps.get-describe-job-result.outputs.embeds[0].description",
+              "discord": "$inputs.discord",
+              "server": "$inputs.server",
+              "channel": "$inputs.channel"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "imagine_jobid": "$response.body",
+            "status": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-imagine-from-description-result",
+          "description": "Poll for the status of the new imagine job until completed and retrieve the generated image grid. Note: Polling or using the callback (replyUrl) is required.",
+          "operationPath": "openapi_source#/paths/~1jobs~1/get",
+          "parameters": [
+            {
+              "name": "jobid",
+              "in": "query",
+              "value": "$steps.submit-imagine-from-description.outputs.imagine_jobid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "job_status": "$response.body",
+            "attachments": "$response.body",
+            "buttons": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "jobid": "$steps.submit-describe-job.outputs.jobid",
+        "status": "$steps.submit-imagine-from-description.outputs.status",
+        "job_status": "$steps.get-imagine-from-description-result.outputs.job_status",
+        "embeds": "$steps.get-describe-job-result.outputs.embeds",
+        "content": "$steps.get-describe-job-result.outputs.content",
+        "imagine_jobid": "$steps.submit-imagine-from-description.outputs.imagine_jobid",
+        "attachments": "$steps.get-imagine-from-description-result.outputs.attachments",
+        "buttons": "$steps.get-imagine-from-description-result.outputs.buttons"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "monitor-and-cancel-running-job",
+      "summary": "Starts an image generation job, checks its status, and then cancels it if it's still running.",
+      "description": "Starts an image generation job, checks its status, and then cancels it if it's still running.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string"
+          },
+          "discord": {
+            "type": "string"
+          },
+          "server": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string"
+          },
+          "jobid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "submit-job-to-monitor",
+          "description": "Submit a job (e.g., imagine) to be monitored.",
+          "operationPath": "openapi_source#/paths/~1jobs~1imagine/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "prompt": "$inputs.prompt",
+              "discord": "$inputs.discord",
+              "server": "$inputs.server",
+              "channel": "$inputs.channel"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "jobid": "$response.body",
+            "status": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-job-status",
+          "description": "Retrieve the current status of the submitted job.",
+          "operationPath": "openapi_source#/paths/~1jobs~1/get",
+          "parameters": [
+            {
+              "name": "jobid",
+              "in": "query",
+              "value": "$steps.submit-job-to-monitor.outputs.jobid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "job_status": "$response.body",
+            "jobid_confirmed": "$response.body"
+          }
+        },
+        {
+          "stepId": "cancel-running-job",
+          "description": "Cancel the job if it is still in a cancellable state (e.g., created, started, progress).",
+          "operationPath": "openapi_source#/paths/~1jobs~1cancel~1/get",
+          "parameters": [
+            {
+              "name": "jobid",
+              "in": "query",
+              "value": "$steps.check-job-status.outputs.jobid_confirmed"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "cancellation_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "jobid": "$steps.submit-job-to-monitor.outputs.jobid",
+        "status": "$steps.submit-job-to-monitor.outputs.status",
+        "job_status": "$steps.check-job-status.outputs.job_status",
+        "jobid_confirmed": "$steps.check-job-status.outputs.jobid_confirmed",
+        "cancellation_status": "$steps.cancel-running-job.outputs.cancellation_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

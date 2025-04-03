@@ -1,0 +1,267 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/versioneye.com/main/v1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "analyze-first-file-of-latest-scan",
+      "summary": "Retrieves the list of scans, identifies the first scan (assumed latest), and then analyzes the dependencies of the first file within that scan. Provides an automated way to check the most recent scan results for potential issues like outdated dependencies or license violations.",
+      "description": "Retrieves the list of scans, identifies the first scan (assumed latest), and then analyzes the dependencies of the first file within that scan. Provides an automated way to check the most recent scan results for potential issues like outdated dependencies or license violations.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "per_page": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "file_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-latest-scans",
+          "description": "Fetches the list of project scans. Assumes the API returns them in reverse chronological order (latest first). Extracts the ID and file IDs of the first scan.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1scans/get",
+          "parameters": [
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "per_page",
+              "in": "query",
+              "value": "$inputs.per_page"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "latest_scan_id": "$response.body",
+            "latest_scan_file_ids": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-first-file-details",
+          "description": "Retrieves detailed information and dependencies for the first file found in the latest scan.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1scans~1{id}~1files~1{file_id}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "file_id",
+              "in": "path",
+              "value": "$steps.list-latest-scans.outputs.latest_scan_id"
+            },
+            {
+              "name": "per_page",
+              "in": "query",
+              "value": "$inputs.per_page"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "file_details": "$response.body",
+            "dependencies": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "latest_scan_id": "$steps.list-latest-scans.outputs.latest_scan_id",
+        "latest_scan_file_ids": "$steps.list-latest-scans.outputs.latest_scan_file_ids",
+        "file_details": "$steps.get-first-file-details.outputs.file_details",
+        "dependencies": "$steps.get-first-file-details.outputs.dependencies"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "get-dependencies-for-a-specific-file-in-a-scan",
+      "summary": "Retrieves detailed dependency information for a specific file within a known project scan ID. Useful for targeted analysis of a component's dependencies, licenses, and vulnerabilities after identifying a scan of interest.",
+      "description": "Retrieves detailed dependency information for a specific file within a known project scan ID. Useful for targeted analysis of a component's dependencies, licenses, and vulnerabilities after identifying a scan of interest.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "file_id": {
+            "type": "string"
+          },
+          "per_page": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-scan-summary",
+          "description": "Retrieves the summary details for a specific scan using its ID to get the list of files included in it.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1scans~1{id}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "file_ids": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-specific-file-dependencies",
+          "description": "Retrieves the detailed information for a specific file within the scan, including its dependencies. Assumes analysis of the first file found in the scan summary.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1scans~1{id}~1files~1{file_id}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "file_id",
+              "in": "path",
+              "value": "$steps.get-scan-summary.outputs.file_ids"
+            },
+            {
+              "name": "per_page",
+              "in": "query",
+              "value": "$inputs.per_page"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "file_details": "$response.body",
+            "dependencies": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "file_ids": "$steps.get-scan-summary.outputs.file_ids",
+        "file_details": "$steps.get-specific-file-dependencies.outputs.file_details",
+        "dependencies": "$steps.get-specific-file-dependencies.outputs.dependencies"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

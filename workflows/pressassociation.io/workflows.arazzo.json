@@ -1,0 +1,1095 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/pressassociation.io/main/2.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "display-tv-guide-for-platformregion",
+      "summary": "Retrieves the TV schedule for channels available on a specific platform and region, enabling users to browse upcoming programs.",
+      "description": "Retrieves the TV schedule for channels available on a specific platform and region, enabling users to browse upcoming programs.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "aliases": {
+            "type": "string"
+          },
+          "platformId": {
+            "type": "string"
+          },
+          "regionId": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          },
+          "scheduleStart": {
+            "type": "string"
+          },
+          "scheduleEnd": {
+            "type": "string"
+          },
+          "scheduleUpdatedSince": {
+            "type": "string"
+          },
+          "channelId": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string"
+          },
+          "end": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-platforms",
+          "description": "Retrieve a list of available TV platforms.",
+          "operationId": "listPlatforms",
+          "parameters": [
+            {
+              "name": "aliases",
+              "in": "query",
+              "value": "$inputs.aliases"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "platform_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-platform-regions",
+          "description": "Retrieve a list of regions for the selected platform.",
+          "operationId": "listPlatformRegions",
+          "parameters": [
+            {
+              "name": "platformId",
+              "in": "path",
+              "value": "$steps.list-platforms.outputs.platform_list.item[0].id"
+            },
+            {
+              "name": "aliases",
+              "in": "query",
+              "value": "$inputs.aliases"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "region_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-platform-channels",
+          "description": "Retrieve channels available for the selected platform and region, optionally filtering by schedule update times.",
+          "operationId": "listChannels",
+          "parameters": [
+            {
+              "name": "platformId",
+              "in": "query",
+              "value": "$steps.list-platforms.outputs.platform_list.item[0].id"
+            },
+            {
+              "name": "regionId",
+              "in": "query",
+              "value": "$steps.list-platform-regions.outputs.region_list.item[0].id"
+            },
+            {
+              "name": "aliases",
+              "in": "query",
+              "value": "$inputs.aliases"
+            },
+            {
+              "name": "date",
+              "in": "query",
+              "value": "$inputs.date"
+            },
+            {
+              "name": "scheduleStart",
+              "in": "query",
+              "value": "$inputs.scheduleStart"
+            },
+            {
+              "name": "scheduleEnd",
+              "in": "query",
+              "value": "$inputs.scheduleEnd"
+            },
+            {
+              "name": "scheduleUpdatedSince",
+              "in": "query",
+              "value": "$inputs.scheduleUpdatedSince"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "channel_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-channel-schedule",
+          "description": "Retrieve the TV schedule for a specific channel within a given time range.",
+          "operationId": "listSchedule",
+          "parameters": [
+            {
+              "name": "channelId",
+              "in": "query",
+              "value": "$steps.list-platform-channels.outputs.channel_list.item[0].id"
+            },
+            {
+              "name": "start",
+              "in": "query",
+              "value": "$inputs.start"
+            },
+            {
+              "name": "end",
+              "in": "query",
+              "value": "$inputs.end"
+            },
+            {
+              "name": "aliases",
+              "in": "query",
+              "value": "$inputs.aliases"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "schedule_items": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "platform_list": "$steps.list-platforms.outputs.platform_list",
+        "region_list": "$steps.list-platform-regions.outputs.region_list",
+        "channel_list": "$steps.list-platform-channels.outputs.channel_list",
+        "schedule_items": "$steps.get-channel-schedule.outputs.schedule_items"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "get-detailed-information-about-a-tv-showmovie",
+      "summary": "Fetches comprehensive details about a specific TV asset (show, movie, episode), including its summary, media, and contributors (cast/crew).",
+      "description": "Fetches comprehensive details about a specific TV asset (show, movie, episode), including its summary, media, and contributors (cast/crew).",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "assetId": {
+            "type": "string"
+          },
+          "aliases": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-asset-details",
+          "description": "Retrieve detailed information for a specific asset using its ID.",
+          "operationId": "getAsset",
+          "parameters": [
+            {
+              "name": "assetId",
+              "in": "path",
+              "value": "$inputs.assetId"
+            },
+            {
+              "name": "aliases",
+              "in": "query",
+              "value": "$inputs.aliases"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "asset_details": "$response.body",
+            "assetId": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-asset-contributors",
+          "description": "Retrieve the list of contributors (actors, directors, etc.) associated with the asset.",
+          "operationId": "getAssetContributors",
+          "parameters": [
+            {
+              "name": "assetId",
+              "in": "path",
+              "value": "$steps.get-asset-details.outputs.assetId"
+            },
+            {
+              "name": "aliases",
+              "in": "query",
+              "value": "$inputs.aliases"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "contributors_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "asset_details": "$steps.get-asset-details.outputs.asset_details",
+        "assetId": "$steps.get-asset-details.outputs.assetId",
+        "contributors_list": "$steps.get-asset-contributors.outputs.contributors_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "browse-on-demand-catalogue-content",
+      "summary": "Allows users to discover available on-demand catalogues (like Netflix, BBC iPlayer) and browse the assets (movies, series) available within a selected catalogue.",
+      "description": "Allows users to discover available on-demand catalogues (like Netflix, BBC iPlayer) and browse the assets (movies, series) available within a selected catalogue.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "catalogueId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string"
+          },
+          "end": {
+            "type": "string"
+          },
+          "updatedAfter": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "aliases": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-catalogues",
+          "description": "Retrieve a list of available on-demand catalogues.",
+          "operationId": "listCatalogues",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "catalogue_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-catalogue-assets",
+          "description": "Retrieve a list of assets available within a specific catalogue, with options to filter by title, availability dates, or update time.",
+          "operationId": "getCatalogueAsset",
+          "parameters": [
+            {
+              "name": "catalogueId",
+              "in": "path",
+              "value": "$steps.list-catalogues.outputs.catalogue_list.items[0].id"
+            },
+            {
+              "name": "title",
+              "in": "query",
+              "value": "$inputs.title"
+            },
+            {
+              "name": "start",
+              "in": "query",
+              "value": "$inputs.start"
+            },
+            {
+              "name": "end",
+              "in": "query",
+              "value": "$inputs.end"
+            },
+            {
+              "name": "updatedAfter",
+              "in": "query",
+              "value": "$inputs.updatedAfter"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "aliases",
+              "in": "query",
+              "value": "$inputs.aliases"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "catalogue_assets": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "catalogue_list": "$steps.list-catalogues.outputs.catalogue_list",
+        "catalogue_assets": "$steps.list-catalogue-assets.outputs.catalogue_assets"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "get-full-details-for-a-scheduled-program",
+      "summary": "Retrieves the schedule for a channel, selects a specific program from the schedule, and then fetches full asset details and contributor information for that program.",
+      "description": "Retrieves the schedule for a channel, selects a specific program from the schedule, and then fetches full asset details and contributor information for that program.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "channelId": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string"
+          },
+          "end": {
+            "type": "string"
+          },
+          "aliases": {
+            "type": "string"
+          },
+          "assetId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-channel-schedule",
+          "description": "Retrieve the TV schedule for a specific channel within a given time range.",
+          "operationId": "listSchedule",
+          "parameters": [
+            {
+              "name": "channelId",
+              "in": "query",
+              "value": "$inputs.channelId"
+            },
+            {
+              "name": "start",
+              "in": "query",
+              "value": "$inputs.start"
+            },
+            {
+              "name": "end",
+              "in": "query",
+              "value": "$inputs.end"
+            },
+            {
+              "name": "aliases",
+              "in": "query",
+              "value": "$inputs.aliases"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "schedule_items": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-asset-details",
+          "description": "Retrieve detailed information for the asset associated with the selected schedule item.",
+          "operationId": "getAsset",
+          "parameters": [
+            {
+              "name": "assetId",
+              "in": "path",
+              "value": "$steps.get-channel-schedule.outputs.schedule_items.item[0].asset.id"
+            },
+            {
+              "name": "aliases",
+              "in": "query",
+              "value": "$inputs.aliases"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "asset_details": "$response.body",
+            "assetId": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-asset-contributors",
+          "description": "Retrieve the list of contributors for the selected asset.",
+          "operationId": "getAssetContributors",
+          "parameters": [
+            {
+              "name": "assetId",
+              "in": "path",
+              "value": "$steps.get-asset-details.outputs.assetId"
+            },
+            {
+              "name": "aliases",
+              "in": "query",
+              "value": "$inputs.aliases"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "contributors_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "schedule_items": "$steps.get-channel-schedule.outputs.schedule_items",
+        "asset_details": "$steps.get-asset-details.outputs.asset_details",
+        "assetId": "$steps.get-asset-details.outputs.assetId",
+        "contributors_list": "$steps.get-asset-contributors.outputs.contributors_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "get-full-details-for-an-on-demand-catalogue-item-with-deeplink",
+      "summary": "Browses assets within a specific on-demand catalogue and retrieves detailed information for a selected asset, including availability and deeplinks for playback.",
+      "description": "Browses assets within a specific on-demand catalogue and retrieves detailed information for a selected asset, including availability and deeplinks for playback.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "catalogueId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string"
+          },
+          "end": {
+            "type": "string"
+          },
+          "updatedAfter": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "aliases": {
+            "type": "string"
+          },
+          "assetId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-catalogues",
+          "description": "Retrieve a list of available on-demand catalogues.",
+          "operationId": "listCatalogues",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "catalogue_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-catalogue-assets",
+          "description": "Retrieve a list of assets available within the selected catalogue.",
+          "operationId": "getCatalogueAsset",
+          "parameters": [
+            {
+              "name": "catalogueId",
+              "in": "path",
+              "value": "$steps.list-catalogues.outputs.catalogue_list.items[0].id"
+            },
+            {
+              "name": "title",
+              "in": "query",
+              "value": "$inputs.title"
+            },
+            {
+              "name": "start",
+              "in": "query",
+              "value": "$inputs.start"
+            },
+            {
+              "name": "end",
+              "in": "query",
+              "value": "$inputs.end"
+            },
+            {
+              "name": "updatedAfter",
+              "in": "query",
+              "value": "$inputs.updatedAfter"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "aliases",
+              "in": "query",
+              "value": "$inputs.aliases"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "catalogue_assets": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-catalogue-asset-details",
+          "description": "Retrieve detailed information for a specific asset within the catalogue, including availability and deeplinks.",
+          "operationId": "getCatalogueAssetDetail",
+          "parameters": [
+            {
+              "name": "catalogueId",
+              "in": "path",
+              "value": "$steps.list-catalogues.outputs.catalogue_list.items[0].id"
+            },
+            {
+              "name": "assetId",
+              "in": "path",
+              "value": "$steps.list-catalogue-assets.outputs.catalogue_assets.item[0].asset.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "catalogue_asset_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "catalogue_list": "$steps.list-catalogues.outputs.catalogue_list",
+        "catalogue_assets": "$steps.list-catalogue-assets.outputs.catalogue_assets",
+        "catalogue_asset_details": "$steps.get-catalogue-asset-details.outputs.catalogue_asset_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "discover-featured-content-on-a-service",
+      "summary": "Allows users to find curated content features (e.g., 'Monthly Netflix Picks'), list the available features of a specific type, and view the assets included in a selected feature.",
+      "description": "Allows users to find curated content features (e.g., 'Monthly Netflix Picks'), list the available features of a specific type, and view the assets included in a selected feature.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string"
+          },
+          "end": {
+            "type": "string"
+          },
+          "featureId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-feature-types",
+          "description": "Retrieve a list of available feature types (e.g., monthly picks for different services).",
+          "operationId": "listFeatureTypes",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "feature_type_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-features-by-type",
+          "description": "Retrieve a list of features for a specific type, optionally filtering by date range.",
+          "operationId": "listFeatures",
+          "parameters": [
+            {
+              "name": "type",
+              "in": "query",
+              "value": "$steps.list-feature-types.outputs.feature_type_list.item[0].namespace"
+            },
+            {
+              "name": "date",
+              "in": "query",
+              "value": "$inputs.date"
+            },
+            {
+              "name": "start",
+              "in": "query",
+              "value": "$inputs.start"
+            },
+            {
+              "name": "end",
+              "in": "query",
+              "value": "$inputs.end"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "feature_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-feature-details",
+          "description": "Retrieve the details of a specific feature, including the curated list of assets.",
+          "operationId": "getFeature",
+          "parameters": [
+            {
+              "name": "featureId",
+              "in": "path",
+              "value": "$steps.list-features-by-type.outputs.feature_list.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "feature_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "feature_type_list": "$steps.list-feature-types.outputs.feature_type_list",
+        "feature_list": "$steps.list-features-by-type.outputs.feature_list",
+        "feature_details": "$steps.get-feature-details.outputs.feature_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "check-channel-lineup-for-platformregion",
+      "summary": "Identifies the channels available on a specific TV platform (e.g., Sky HD) and region (e.g., London), including their EPG numbers.",
+      "description": "Identifies the channels available on a specific TV platform (e.g., Sky HD) and region (e.g., London), including their EPG numbers.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "aliases": {
+            "type": "string"
+          },
+          "platformId": {
+            "type": "string"
+          },
+          "regionId": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          },
+          "scheduleStart": {
+            "type": "string"
+          },
+          "scheduleEnd": {
+            "type": "string"
+          },
+          "scheduleUpdatedSince": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-platforms",
+          "description": "Retrieve a list of available TV platforms.",
+          "operationId": "listPlatforms",
+          "parameters": [
+            {
+              "name": "aliases",
+              "in": "query",
+              "value": "$inputs.aliases"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "platform_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-platform-regions",
+          "description": "Retrieve a list of regions for the selected platform.",
+          "operationId": "listPlatformRegions",
+          "parameters": [
+            {
+              "name": "platformId",
+              "in": "path",
+              "value": "$steps.list-platforms.outputs.platform_list.item[0].id"
+            },
+            {
+              "name": "aliases",
+              "in": "query",
+              "value": "$inputs.aliases"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "region_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-platform-channels",
+          "description": "Retrieve channels available for the selected platform and region, showing EPG numbers.",
+          "operationId": "listChannels",
+          "parameters": [
+            {
+              "name": "platformId",
+              "in": "query",
+              "value": "$steps.list-platforms.outputs.platform_list.item[0].id"
+            },
+            {
+              "name": "regionId",
+              "in": "query",
+              "value": "$steps.list-platform-regions.outputs.region_list.item[0].id"
+            },
+            {
+              "name": "aliases",
+              "in": "query",
+              "value": "$inputs.aliases"
+            },
+            {
+              "name": "date",
+              "in": "query",
+              "value": "$inputs.date"
+            },
+            {
+              "name": "scheduleStart",
+              "in": "query",
+              "value": "$inputs.scheduleStart"
+            },
+            {
+              "name": "scheduleEnd",
+              "in": "query",
+              "value": "$inputs.scheduleEnd"
+            },
+            {
+              "name": "scheduleUpdatedSince",
+              "in": "query",
+              "value": "$inputs.scheduleUpdatedSince"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "channel_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "platform_list": "$steps.list-platforms.outputs.platform_list",
+        "region_list": "$steps.list-platform-regions.outputs.region_list",
+        "channel_list": "$steps.list-platform-channels.outputs.channel_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "get-details-about-a-contributor-via-asset",
+      "summary": "Finds the contributors for a specific TV asset and then retrieves detailed information (bio, DOB, etc.) about a selected contributor.",
+      "description": "Finds the contributors for a specific TV asset and then retrieves detailed information (bio, DOB, etc.) about a selected contributor.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "assetId": {
+            "type": "string"
+          },
+          "aliases": {
+            "type": "string"
+          },
+          "contributorId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-asset-contributors",
+          "description": "Retrieve the list of contributors associated with a specific asset.",
+          "operationId": "getAssetContributors",
+          "parameters": [
+            {
+              "name": "assetId",
+              "in": "path",
+              "value": "$inputs.assetId"
+            },
+            {
+              "name": "aliases",
+              "in": "query",
+              "value": "$inputs.aliases"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "contributors_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-contributor-details",
+          "description": "Retrieve detailed information about a specific contributor using their ID.",
+          "operationId": "getContributor",
+          "parameters": [
+            {
+              "name": "contributorId",
+              "in": "path",
+              "value": "$steps.get-asset-contributors.outputs.contributors_list.item[0].id"
+            },
+            {
+              "name": "aliases",
+              "in": "query",
+              "value": "$inputs.aliases"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "contributor_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "contributors_list": "$steps.get-asset-contributors.outputs.contributors_list",
+        "contributor_details": "$steps.get-contributor-details.outputs.contributor_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

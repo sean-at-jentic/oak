@@ -1,0 +1,3447 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/vercel.com/main/0.0.1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "deploy-a-new-project-from-git",
+      "summary": "Creates a new Vercel project, links it to a Git repository, triggers an initial deployment, and assigns a production alias.",
+      "description": "Creates a new Vercel project, links it to a Git repository, triggers an initial deployment, and assigns a production alias.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "teamId": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "forceNew": {
+            "type": "string"
+          },
+          "skipAutoDetectionConfirmation": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "alias": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-project",
+          "description": "Create a new project, optionally linking a Git repository.",
+          "operationId": "createProject",
+          "parameters": [
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "name": "$response.body",
+            "accountId": "$response.body",
+            "link": "$response.body"
+          }
+        },
+        {
+          "stepId": "trigger-deployment",
+          "description": "Trigger a deployment for the newly created project using its Git source.",
+          "operationId": "createDeployment",
+          "parameters": [
+            {
+              "name": "forceNew",
+              "in": "query",
+              "value": "$inputs.forceNew"
+            },
+            {
+              "name": "skipAutoDetectionConfirmation",
+              "in": "query",
+              "value": "$inputs.skipAutoDetectionConfirmation"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$steps.create-project.outputs.name",
+              "project": "$steps.create-project.outputs.id",
+              "gitSource": "$steps.create-project.outputs.link"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "url": "$response.body",
+            "readyState": "$response.body",
+            "projectId": "$response.body",
+            "ownerId": "$response.body"
+          }
+        },
+        {
+          "stepId": "assign-production-alias",
+          "description": "Assign a production alias (e.g., custom domain) to the successfully completed deployment. Requires deployment to be ready.",
+          "operationId": "assignAlias",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.trigger-deployment.outputs.id"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.trigger-deployment.outputs.id",
+              "alias": "$inputs.alias"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "uid": "$response.body",
+            "alias": "$response.body",
+            "created": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.trigger-deployment.outputs.id",
+        "name": "$steps.create-project.outputs.name",
+        "accountId": "$steps.create-project.outputs.accountId",
+        "link": "$steps.create-project.outputs.link",
+        "url": "$steps.trigger-deployment.outputs.url",
+        "readyState": "$steps.trigger-deployment.outputs.readyState",
+        "projectId": "$steps.trigger-deployment.outputs.projectId",
+        "ownerId": "$steps.trigger-deployment.outputs.ownerId",
+        "uid": "$steps.assign-production-alias.outputs.uid",
+        "alias": "$steps.assign-production-alias.outputs.alias",
+        "created": "$steps.assign-production-alias.outputs.created"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-project-domain-configuration",
+      "summary": "Adds a custom domain to a project, verifies it by creating a DNS record, and then updates its configuration (e.g., redirect).",
+      "description": "Adds a custom domain to a project, verifies it by creating a DNS record, and then updates its configuration (e.g., redirect).",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "idOrName": {
+            "type": "string"
+          },
+          "teamId": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "gitBranch": {
+            "type": "string"
+          },
+          "redirect": {
+            "type": "string"
+          },
+          "redirectStatusCode": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-project-domain",
+          "description": "Add a new domain to a specific project.",
+          "operationId": "addProjectDomain",
+          "parameters": [
+            {
+              "name": "idOrName",
+              "in": "path",
+              "value": "$inputs.idOrName"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "name": "$response.body",
+            "apexName": "$response.body",
+            "projectId": "$response.body",
+            "verified": "$response.body",
+            "verification": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-verification-record",
+          "description": "Create the necessary DNS record (e.g., TXT) to verify domain ownership for the project.",
+          "operationId": "createRecord",
+          "parameters": [
+            {
+              "name": "domain",
+              "in": "path",
+              "value": "$steps.add-project-domain.outputs.apexName"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "domain": "$steps.add-project-domain.outputs.apexName",
+              "name": "$steps.add-project-domain.outputs.verification[0].domain",
+              "value": "$steps.add-project-domain.outputs.verification[0].value",
+              "type": "$steps.add-project-domain.outputs.verification[0].type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "uid": "$response.body"
+          }
+        },
+        {
+          "stepId": "verify-project-domain",
+          "description": "Attempt to verify the domain for the project after the DNS record has propagated.",
+          "operationId": "verifyProjectDomain",
+          "parameters": [
+            {
+              "name": "idOrName",
+              "in": "path",
+              "value": "$steps.add-project-domain.outputs.projectId"
+            },
+            {
+              "name": "domain",
+              "in": "path",
+              "value": "$steps.add-project-domain.outputs.name"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "name": "$response.body",
+            "verified": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-project-domain-config",
+          "description": "Update the verified domain's configuration, such as setting a redirect.",
+          "operationId": "updateProjectDomain",
+          "parameters": [
+            {
+              "name": "idOrName",
+              "in": "path",
+              "value": "$steps.add-project-domain.outputs.projectId"
+            },
+            {
+              "name": "domain",
+              "in": "path",
+              "value": "$steps.add-project-domain.outputs.name"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "idOrName": "$steps.add-project-domain.outputs.projectId",
+              "domain": "$steps.add-project-domain.outputs.name",
+              "gitBranch": "$inputs.gitBranch",
+              "redirect": "$inputs.redirect",
+              "redirectStatusCode": "$inputs.redirectStatusCode"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "name": "$response.body",
+            "verified": "$response.body",
+            "redirect": "$response.body",
+            "redirectStatusCode": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "name": "$steps.update-project-domain-config.outputs.name",
+        "apexName": "$steps.add-project-domain.outputs.apexName",
+        "projectId": "$steps.add-project-domain.outputs.projectId",
+        "verified": "$steps.update-project-domain-config.outputs.verified",
+        "verification": "$steps.add-project-domain.outputs.verification",
+        "uid": "$steps.create-verification-record.outputs.uid",
+        "redirect": "$steps.update-project-domain-config.outputs.redirect",
+        "redirectStatusCode": "$steps.update-project-domain-config.outputs.redirectStatusCode"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-project-environment-variables",
+      "summary": "Adds, retrieves, edits, and removes environment variables for a specific project.",
+      "description": "Adds, retrieves, edits, and removes environment variables for a specific project.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "idOrName": {
+            "type": "string"
+          },
+          "upsert": {
+            "type": "string"
+          },
+          "teamId": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "create-env-var_body": {
+            "type": "object"
+          },
+          "gitBranch": {
+            "type": "string"
+          },
+          "decrypt": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "customEnvironmentId": {
+            "type": "string"
+          },
+          "customEnvironmentSlug": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "customEnvironmentIds": {
+            "type": "string"
+          },
+          "comment": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-env-var",
+          "description": "Create a new environment variable for the project.",
+          "operationId": "createProjectEnv",
+          "parameters": [
+            {
+              "name": "idOrName",
+              "in": "path",
+              "value": "$inputs.idOrName"
+            },
+            {
+              "name": "upsert",
+              "in": "query",
+              "value": "$inputs.upsert"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-env-var_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "created": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-env-vars",
+          "description": "Retrieve the list of environment variables for the project.",
+          "operationId": "filterProjectEnvs",
+          "parameters": [
+            {
+              "name": "idOrName",
+              "in": "path",
+              "value": "$steps.create-env-var.outputs.created.projectId"
+            },
+            {
+              "name": "gitBranch",
+              "in": "query",
+              "value": "$inputs.gitBranch"
+            },
+            {
+              "name": "decrypt",
+              "in": "query",
+              "value": "$inputs.decrypt"
+            },
+            {
+              "name": "source",
+              "in": "query",
+              "value": "$inputs.source"
+            },
+            {
+              "name": "customEnvironmentId",
+              "in": "query",
+              "value": "$inputs.customEnvironmentId"
+            },
+            {
+              "name": "customEnvironmentSlug",
+              "in": "query",
+              "value": "$inputs.customEnvironmentSlug"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "envs": "$response.body"
+          }
+        },
+        {
+          "stepId": "edit-env-var",
+          "description": "Edit an existing environment variable.",
+          "operationId": "editProjectEnv",
+          "parameters": [
+            {
+              "name": "idOrName",
+              "in": "path",
+              "value": "$steps.create-env-var.outputs.created.projectId"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-env-var.outputs.created.id"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "idOrName": "$steps.create-env-var.outputs.created[0].projectId",
+              "id": "$steps.create-env-var.outputs.created[0].id",
+              "target": "$inputs.target",
+              "gitBranch": "$inputs.gitBranch",
+              "value": "$inputs.value",
+              "customEnvironmentIds": "$inputs.customEnvironmentIds",
+              "comment": "$inputs.comment"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "key": "$response.body",
+            "value": "$response.body",
+            "target": "$response.body",
+            "type": "$response.body"
+          }
+        },
+        {
+          "stepId": "remove-env-var",
+          "description": "Remove an environment variable from the project.",
+          "operationId": "removeProjectEnv",
+          "parameters": [
+            {
+              "name": "idOrName",
+              "in": "path",
+              "value": "$steps.create-env-var.outputs.created.projectId"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-env-var.outputs.created.id"
+            },
+            {
+              "name": "customEnvironmentId",
+              "in": "query",
+              "value": "$inputs.customEnvironmentId"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "key": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "created": "$steps.create-env-var.outputs.created",
+        "envs": "$steps.get-env-vars.outputs.envs",
+        "id": "$steps.remove-env-var.outputs.id",
+        "key": "$steps.remove-env-var.outputs.key",
+        "value": "$steps.edit-env-var.outputs.value",
+        "target": "$steps.edit-env-var.outputs.target",
+        "type": "$steps.edit-env-var.outputs.type"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-team-membership",
+      "summary": "Invites a new user to a team, updates their role, and potentially removes them later.",
+      "description": "Invites a new user to a team, updates their role, and potentially removes them later.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "uid": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "projects": {
+            "type": "string"
+          },
+          "confirmed": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "since": {
+            "type": "string"
+          },
+          "until": {
+            "type": "string"
+          },
+          "search": {
+            "type": "string"
+          },
+          "excludeProject": {
+            "type": "string"
+          },
+          "eligibleMembersForProjectId": {
+            "type": "string"
+          },
+          "newDefaultTeamId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "invite-user",
+          "description": "Invite a new user to the team via email or UID.",
+          "operationId": "inviteUserToTeam",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "uid": "$inputs.uid",
+              "email": "$inputs.email",
+              "role": "$inputs.role",
+              "projects": "$inputs.projects"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "uid": "$response.body",
+            "role": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-member-role",
+          "description": "Update the role or confirmation status of the invited team member.",
+          "operationId": "updateTeamMember",
+          "parameters": [
+            {
+              "name": "uid",
+              "in": "path",
+              "value": "$steps.invite-user.outputs.uid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "uid": "$steps.invite-user.outputs.uid",
+              "confirmed": "$inputs.confirmed",
+              "role": "$inputs.role",
+              "projects": "$inputs.projects"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-members",
+          "description": "List members to confirm changes or identify member for removal.",
+          "operationId": "getTeamMembers",
+          "parameters": [
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "since",
+              "in": "query",
+              "value": "$inputs.since"
+            },
+            {
+              "name": "until",
+              "in": "query",
+              "value": "$inputs.until"
+            },
+            {
+              "name": "search",
+              "in": "query",
+              "value": "$inputs.search"
+            },
+            {
+              "name": "role",
+              "in": "query",
+              "value": "$inputs.role"
+            },
+            {
+              "name": "excludeProject",
+              "in": "query",
+              "value": "$inputs.excludeProject"
+            },
+            {
+              "name": "eligibleMembersForProjectId",
+              "in": "query",
+              "value": "$inputs.eligibleMembersForProjectId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "members": "$response.body",
+            "pagination": "$response.body"
+          }
+        },
+        {
+          "stepId": "remove-member",
+          "description": "Remove the member from the team.",
+          "operationId": "removeTeamMember",
+          "parameters": [
+            {
+              "name": "uid",
+              "in": "path",
+              "value": "$steps.invite-user.outputs.uid"
+            },
+            {
+              "name": "newDefaultTeamId",
+              "in": "query",
+              "value": "$inputs.newDefaultTeamId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "uid": "$steps.invite-user.outputs.uid",
+        "role": "$steps.invite-user.outputs.role",
+        "id": "$steps.remove-member.outputs.id",
+        "members": "$steps.list-members.outputs.members",
+        "pagination": "$steps.list-members.outputs.pagination"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-dns-records-for-a-domain",
+      "summary": "Lists, creates, updates, and deletes DNS records for a specific domain managed by Vercel.",
+      "description": "Lists, creates, updates, and deletes DNS records for a specific domain managed by Vercel.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "domain": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "since": {
+            "type": "string"
+          },
+          "until": {
+            "type": "string"
+          },
+          "teamId": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "recordId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "ttl": {
+            "type": "string"
+          },
+          "mxPriority": {
+            "type": "string"
+          },
+          "srv": {
+            "type": "string"
+          },
+          "https": {
+            "type": "string"
+          },
+          "comment": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-dns-records",
+          "description": "List existing DNS records for a domain.",
+          "operationId": "getRecords",
+          "parameters": [
+            {
+              "name": "domain",
+              "in": "path",
+              "value": "$inputs.domain"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "since",
+              "in": "query",
+              "value": "$inputs.since"
+            },
+            {
+              "name": "until",
+              "in": "query",
+              "value": "$inputs.until"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "records": "$response.body",
+            "pagination": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-dns-record",
+          "description": "Create a new DNS record (e.g., A, CNAME, TXT).",
+          "operationId": "createRecord",
+          "parameters": [
+            {
+              "name": "domain",
+              "in": "path",
+              "value": "$inputs.domain"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "type": "$inputs.type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "uid": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-dns-record",
+          "description": "Update an existing DNS record.",
+          "operationId": "updateRecord",
+          "parameters": [
+            {
+              "name": "recordId",
+              "in": "path",
+              "value": "$steps.create-dns-record.outputs.uid"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "recordId": "$steps.create-dns-record.outputs.uid",
+              "name": "$inputs.name",
+              "value": "$inputs.value",
+              "type": "$inputs.type",
+              "ttl": "$inputs.ttl",
+              "mxPriority": "$inputs.mxPriority",
+              "srv": "$inputs.srv",
+              "https": "$inputs.https",
+              "comment": "$inputs.comment"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "name": "$response.body",
+            "value": "$response.body",
+            "type": "$response.body"
+          }
+        },
+        {
+          "stepId": "delete-dns-record",
+          "description": "Delete a specific DNS record.",
+          "operationId": "removeRecord",
+          "parameters": [
+            {
+              "name": "domain",
+              "in": "path",
+              "value": "$inputs.domain"
+            },
+            {
+              "name": "recordId",
+              "in": "path",
+              "value": "$steps.create-dns-record.outputs.uid"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "record_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "records": "$steps.list-dns-records.outputs.records",
+        "pagination": "$steps.list-dns-records.outputs.pagination",
+        "uid": "$steps.create-dns-record.outputs.uid",
+        "id": "$steps.update-dns-record.outputs.id",
+        "name": "$steps.update-dns-record.outputs.name",
+        "value": "$steps.update-dns-record.outputs.value",
+        "type": "$steps.update-dns-record.outputs.type",
+        "record_data": "$steps.delete-dns-record.outputs.record_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-api-authentication-tokens",
+      "summary": "Creates, lists, retrieves metadata for, and deletes API authentication tokens for automation.",
+      "description": "Creates, lists, retrieves metadata for, and deletes API authentication tokens for automation.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "teamId": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "tokenId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-api-token",
+          "description": "Create a new API authentication token.",
+          "operationId": "createAuthToken",
+          "parameters": [
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "token": "$response.body",
+            "bearerToken": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-api-tokens",
+          "description": "List all active API authentication tokens.",
+          "operationId": "listAuthTokens",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tokens": "$response.body",
+            "pagination": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-api-token-metadata",
+          "description": "Get metadata for a specific API token.",
+          "operationId": "getAuthToken",
+          "parameters": [
+            {
+              "name": "tokenId",
+              "in": "path",
+              "value": "$steps.create-api-token.outputs.token.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "token": "$response.body"
+          }
+        },
+        {
+          "stepId": "delete-api-token",
+          "description": "Delete/invalidate an API authentication token.",
+          "operationId": "deleteAuthToken",
+          "parameters": [
+            {
+              "name": "tokenId",
+              "in": "path",
+              "value": "$steps.create-api-token.outputs.token.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tokenId": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "token": "$steps.get-api-token-metadata.outputs.token",
+        "bearerToken": "$steps.create-api-token.outputs.bearerToken",
+        "tokens": "$steps.list-api-tokens.outputs.tokens",
+        "pagination": "$steps.list-api-tokens.outputs.pagination",
+        "tokenId": "$steps.delete-api-token.outputs.tokenId"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "purchase-and-configure-a-domain",
+      "summary": "Checks domain availability and price, purchases the domain, lists its DNS records, and adds a new record.",
+      "description": "Checks domain availability and price, purchases the domain, lists its DNS records, and adds a new record.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "teamId": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "address1": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "postalCode": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "since": {
+            "type": "string"
+          },
+          "until": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "check-domain-availability",
+          "description": "Check if a domain name is available for purchase.",
+          "operationId": "checkDomainStatus",
+          "parameters": [
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "available": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-domain-price",
+          "description": "Check the price to purchase the domain.",
+          "operationId": "checkDomainPrice",
+          "parameters": [
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "type",
+              "in": "query",
+              "value": "$inputs.type"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "price": "$response.body",
+            "period": "$response.body"
+          }
+        },
+        {
+          "stepId": "purchase-domain",
+          "description": "Purchase the domain.",
+          "operationId": "buyDomain",
+          "parameters": [
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "expectedPrice": "$steps.check-domain-price.outputs.price",
+              "name": "$inputs.name",
+              "country": "$inputs.country",
+              "firstName": "$inputs.firstName",
+              "lastName": "$inputs.lastName",
+              "address1": "$inputs.address1",
+              "city": "$inputs.city",
+              "state": "$inputs.state",
+              "postalCode": "$inputs.postalCode",
+              "phone": "$inputs.phone",
+              "email": "$inputs.email"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "domain": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-domain-records",
+          "description": "List the default DNS records created after purchase.",
+          "operationId": "getRecords",
+          "parameters": [
+            {
+              "name": "domain",
+              "in": "path",
+              "value": "$inputs.domain"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "since",
+              "in": "query",
+              "value": "$inputs.since"
+            },
+            {
+              "name": "until",
+              "in": "query",
+              "value": "$inputs.until"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "records": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-dns-record",
+          "description": "Add a custom DNS record to the newly purchased domain.",
+          "operationId": "createRecord",
+          "parameters": [
+            {
+              "name": "domain",
+              "in": "path",
+              "value": "$inputs.domain"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "type": "$inputs.type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "uid": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "available": "$steps.check-domain-availability.outputs.available",
+        "price": "$steps.check-domain-price.outputs.price",
+        "period": "$steps.check-domain-price.outputs.period",
+        "domain": "$steps.purchase-domain.outputs.domain",
+        "records": "$steps.list-domain-records.outputs.records",
+        "uid": "$steps.add-dns-record.outputs.uid"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "integration-sso-authentication",
+      "summary": "Exchanges an SSO authorization code for an OIDC token and retrieves member information using that token context.",
+      "description": "Exchanges an SSO authorization code for an OIDC token and retrieves member information using that token context.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "client_id": {
+            "type": "string"
+          },
+          "client_secret": {
+            "type": "string"
+          },
+          "integrationConfigurationId": {
+            "type": "string"
+          },
+          "memberId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "exchange-sso-code",
+          "description": "Exchange the authorization code received during SSO flow for an OIDC token.",
+          "operationId": "exchange-sso-token",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "code": "$inputs.code",
+              "client_id": "$inputs.client_id",
+              "client_secret": "$inputs.client_secret"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id_token": "$response.body",
+            "access_token": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-integration-member-info",
+          "description": "Using the context from the OIDC token (user_id claim becomes memberId), get the member's role within the integration installation.",
+          "operationId": "get-member",
+          "parameters": [
+            {
+              "name": "integrationConfigurationId",
+              "in": "path",
+              "value": "$inputs.integrationConfigurationId"
+            },
+            {
+              "name": "memberId",
+              "in": "path",
+              "value": "$inputs.memberId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "role": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id_token": "$steps.exchange-sso-code.outputs.id_token",
+        "access_token": "$steps.exchange-sso-code.outputs.access_token",
+        "id": "$steps.get-integration-member-info.outputs.id",
+        "role": "$steps.get-integration-member-info.outputs.role"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "monitor-deployment-and-checks",
+      "summary": "Retrieves a deployment, lists its associated checks, gets details of a specific check, and potentially re-requests a failed check.",
+      "description": "Retrieves a deployment, lists its associated checks, gets details of a specific check, and potentially re-requests a failed check.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "idOrUrl": {
+            "type": "string"
+          },
+          "withGitRepoInfo": {
+            "type": "string"
+          },
+          "teamId": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "deploymentId": {
+            "type": "string"
+          },
+          "checkId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-deployment",
+          "description": "Retrieve details for a specific deployment.",
+          "operationId": "getDeployment",
+          "parameters": [
+            {
+              "name": "idOrUrl",
+              "in": "path",
+              "value": "$inputs.idOrUrl"
+            },
+            {
+              "name": "withGitRepoInfo",
+              "in": "query",
+              "value": "$inputs.withGitRepoInfo"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "projectId": "$response.body",
+            "readyState": "$response.body",
+            "checksState": "$response.body",
+            "checksConclusion": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-deployment-checks",
+          "description": "List all checks associated with the deployment.",
+          "operationId": "getAllChecks",
+          "parameters": [
+            {
+              "name": "deploymentId",
+              "in": "path",
+              "value": "$steps.get-deployment.outputs.id"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "checks": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-specific-check",
+          "description": "Get detailed information about a specific check.",
+          "operationId": "getCheck",
+          "parameters": [
+            {
+              "name": "deploymentId",
+              "in": "path",
+              "value": "$steps.get-deployment.outputs.id"
+            },
+            {
+              "name": "checkId",
+              "in": "path",
+              "value": "$steps.list-deployment-checks.outputs.checks.id"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "status": "$response.body",
+            "conclusion": "$response.body",
+            "rerequestable": "$response.body"
+          }
+        },
+        {
+          "stepId": "rerequest-failed-check",
+          "description": "Re-request a check if it failed and is rerequestable.",
+          "operationId": "rerequestCheck",
+          "parameters": [
+            {
+              "name": "deploymentId",
+              "in": "path",
+              "value": "$steps.get-deployment.outputs.id"
+            },
+            {
+              "name": "checkId",
+              "in": "path",
+              "value": "$steps.get-specific-check.outputs.id"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "check_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.get-specific-check.outputs.id",
+        "projectId": "$steps.get-deployment.outputs.projectId",
+        "readyState": "$steps.get-deployment.outputs.readyState",
+        "checksState": "$steps.get-deployment.outputs.checksState",
+        "checksConclusion": "$steps.get-deployment.outputs.checksConclusion",
+        "checks": "$steps.list-deployment-checks.outputs.checks",
+        "status": "$steps.get-specific-check.outputs.status",
+        "conclusion": "$steps.get-specific-check.outputs.conclusion",
+        "rerequestable": "$steps.get-specific-check.outputs.rerequestable",
+        "check_data": "$steps.rerequest-failed-check.outputs.check_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-project-access-via-access-groups",
+      "summary": "Creates an access group, adds members and projects to it, and lists the members/projects for verification.",
+      "description": "Creates an access group, adds members and projects to it, and lists the members/projects for verification.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "teamId": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "idOrName": {
+            "type": "string"
+          },
+          "projects": {
+            "type": "string"
+          },
+          "membersToAdd": {
+            "type": "string"
+          },
+          "membersToRemove": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "next": {
+            "type": "string"
+          },
+          "search": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-access-group",
+          "description": "Create a new access group within a team.",
+          "operationId": "createAccessGroup",
+          "parameters": [
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "accessGroupId": "$response.body",
+            "name": "$response.body",
+            "teamId": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-access-group",
+          "description": "Update the access group to add/remove members or projects.",
+          "operationId": "updateAccessGroup",
+          "parameters": [
+            {
+              "name": "idOrName",
+              "in": "path",
+              "value": "$steps.create-access-group.outputs.accessGroupId"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "idOrName": "$steps.create-access-group.outputs.accessGroupId",
+              "name": "$inputs.name",
+              "projects": "$inputs.projects",
+              "membersToAdd": "$inputs.membersToAdd",
+              "membersToRemove": "$inputs.membersToRemove"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "accessGroupId": "$response.body",
+            "name": "$response.body",
+            "membersCount": "$response.body",
+            "projectsCount": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-access-group-members",
+          "description": "List the members belonging to the access group.",
+          "operationId": "listAccessGroupMembers",
+          "parameters": [
+            {
+              "name": "idOrName",
+              "in": "path",
+              "value": "$steps.create-access-group.outputs.accessGroupId"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "next",
+              "in": "query",
+              "value": "$inputs.next"
+            },
+            {
+              "name": "search",
+              "in": "query",
+              "value": "$inputs.search"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "members": "$response.body",
+            "pagination": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-access-group-projects",
+          "description": "List the projects associated with the access group.",
+          "operationId": "listAccessGroupProjects",
+          "parameters": [
+            {
+              "name": "idOrName",
+              "in": "path",
+              "value": "$steps.create-access-group.outputs.accessGroupId"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "next",
+              "in": "query",
+              "value": "$inputs.next"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "projects": "$response.body",
+            "pagination": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "accessGroupId": "$steps.update-access-group.outputs.accessGroupId",
+        "name": "$steps.update-access-group.outputs.name",
+        "teamId": "$steps.create-access-group.outputs.teamId",
+        "membersCount": "$steps.update-access-group.outputs.membersCount",
+        "projectsCount": "$steps.update-access-group.outputs.projectsCount",
+        "members": "$steps.list-access-group-members.outputs.members",
+        "pagination": "$steps.list-access-group-projects.outputs.pagination",
+        "projects": "$steps.list-access-group-projects.outputs.projects"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-edge-config",
+      "summary": "Creates an Edge Config, adds items, creates a token for access, and retrieves the items.",
+      "description": "Creates an Edge Config, adds items, creates a token for access, and retrieves the items.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "teamId": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "edgeConfigId": {
+            "type": "string"
+          },
+          "dryRun": {
+            "type": "string"
+          },
+          "items": {
+            "type": "string"
+          },
+          "definition": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-edge-config",
+          "description": "Create a new Edge Config.",
+          "operationId": "createEdgeConfig",
+          "parameters": [
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "slug": "$inputs.slug"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "slug": "$response.body",
+            "ownerId": "$response.body",
+            "digest": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-edge-config-items",
+          "description": "Add or update items within the Edge Config.",
+          "operationId": "patchEdgeConfigItems",
+          "parameters": [
+            {
+              "name": "edgeConfigId",
+              "in": "path",
+              "value": "$steps.create-edge-config.outputs.id"
+            },
+            {
+              "name": "dryRun",
+              "in": "query",
+              "value": "$inputs.dryRun"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "edgeConfigId": "$steps.create-edge-config.outputs.id",
+              "items": "$inputs.items",
+              "definition": "$inputs.definition"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-edge-config-token",
+          "description": "Create an access token for the Edge Config.",
+          "operationId": "createEdgeConfigToken",
+          "parameters": [
+            {
+              "name": "edgeConfigId",
+              "in": "path",
+              "value": "$steps.create-edge-config.outputs.id"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "edgeConfigId": "$steps.create-edge-config.outputs.id",
+              "label": "$inputs.label"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "token": "$response.body",
+            "id": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-edge-config-items",
+          "description": "Retrieve all items stored in the Edge Config.",
+          "operationId": "getEdgeConfigItems",
+          "parameters": [
+            {
+              "name": "edgeConfigId",
+              "in": "path",
+              "value": "$steps.create-edge-config.outputs.id"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "key": "$response.body",
+            "value": "$response.body",
+            "description": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-edge-config-token.outputs.id",
+        "slug": "$steps.create-edge-config.outputs.slug",
+        "ownerId": "$steps.create-edge-config.outputs.ownerId",
+        "digest": "$steps.create-edge-config.outputs.digest",
+        "status": "$steps.update-edge-config-items.outputs.status",
+        "token": "$steps.create-edge-config-token.outputs.token",
+        "key": "$steps.get-edge-config-items.outputs.key",
+        "value": "$steps.get-edge-config-items.outputs.value",
+        "description": "$steps.get-edge-config-items.outputs.description"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "configure-log-drain-for-a-project",
+      "summary": "Creates a new log drain specifically for certain projects and events.",
+      "description": "Creates a new log drain specifically for certain projects and events.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "teamId": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "deliveryFormat": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "sources": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-log-drain",
+          "description": "Create a configurable log drain.",
+          "operationId": "createConfigurableLogDrain",
+          "parameters": [
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "deliveryFormat": "$inputs.deliveryFormat",
+              "url": "$inputs.url",
+              "sources": "$inputs.sources"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "url": "$response.body",
+            "name": "$response.body",
+            "secret": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-log-drain",
+          "description": "Retrieve the created log drain to verify configuration.",
+          "operationId": "getConfigurableLogDrain",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-log-drain.outputs.id"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "url": "$response.body",
+            "name": "$response.body",
+            "sources": "$response.body",
+            "environments": "$response.body",
+            "projectIds": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.get-log-drain.outputs.id",
+        "url": "$steps.get-log-drain.outputs.url",
+        "name": "$steps.get-log-drain.outputs.name",
+        "secret": "$steps.create-log-drain.outputs.secret",
+        "sources": "$steps.get-log-drain.outputs.sources",
+        "environments": "$steps.get-log-drain.outputs.environments",
+        "projectIds": "$steps.get-log-drain.outputs.projectIds"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-remote-caching-artifacts",
+      "summary": "Checks remote caching status, uploads a build artifact, checks its existence, and downloads it.",
+      "description": "Checks remote caching status, uploads a build artifact, checks its existence, and downloads it.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "teamId": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "Content-Length": {
+            "type": "string"
+          },
+          "x-artifact-duration": {
+            "type": "string"
+          },
+          "x-artifact-client-ci": {
+            "type": "string"
+          },
+          "x-artifact-client-interactive": {
+            "type": "string"
+          },
+          "x-artifact-tag": {
+            "type": "string"
+          },
+          "hash": {
+            "type": "string"
+          },
+          "upload-build-artifact_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "check-remote-caching-status",
+          "description": "Check if remote caching is enabled for the account/team.",
+          "operationId": "status",
+          "parameters": [
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body"
+          }
+        },
+        {
+          "stepId": "upload-build-artifact",
+          "description": "Upload a build artifact to the remote cache.",
+          "operationId": "uploadArtifact",
+          "parameters": [
+            {
+              "name": "Content-Length",
+              "in": "header",
+              "value": "$inputs.Content-Length"
+            },
+            {
+              "name": "x-artifact-duration",
+              "in": "header",
+              "value": "$inputs.x-artifact-duration"
+            },
+            {
+              "name": "x-artifact-client-ci",
+              "in": "header",
+              "value": "$inputs.x-artifact-client-ci"
+            },
+            {
+              "name": "x-artifact-client-interactive",
+              "in": "header",
+              "value": "$inputs.x-artifact-client-interactive"
+            },
+            {
+              "name": "x-artifact-tag",
+              "in": "header",
+              "value": "$inputs.x-artifact-tag"
+            },
+            {
+              "name": "hash",
+              "in": "path",
+              "value": "$inputs.hash"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/octet-stream",
+            "payload": "$inputs.upload-build-artifact_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "urls": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-artifact-exists",
+          "description": "Check if the uploaded artifact exists using its hash.",
+          "operationId": "artifactExists",
+          "parameters": [
+            {
+              "name": "hash",
+              "in": "path",
+              "value": "$inputs.hash"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "exists_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "download-build-artifact",
+          "description": "Download the build artifact from the remote cache.",
+          "operationId": "downloadArtifact",
+          "parameters": [
+            {
+              "name": "x-artifact-client-ci",
+              "in": "header",
+              "value": "$inputs.x-artifact-client-ci"
+            },
+            {
+              "name": "x-artifact-client-interactive",
+              "in": "header",
+              "value": "$inputs.x-artifact-client-interactive"
+            },
+            {
+              "name": "hash",
+              "in": "path",
+              "value": "$inputs.hash"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "body": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "status": "$steps.check-remote-caching-status.outputs.status",
+        "urls": "$steps.upload-build-artifact.outputs.urls",
+        "exists_data": "$steps.check-artifact-exists.outputs.exists_data",
+        "body": "$steps.download-build-artifact.outputs.body"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-project-members",
+      "summary": "Adds a member to a project, lists members to verify, and then removes the member.",
+      "description": "Adds a member to a project, lists members to verify, and then removes the member.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "idOrName": {
+            "type": "string"
+          },
+          "teamId": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "since": {
+            "type": "string"
+          },
+          "until": {
+            "type": "string"
+          },
+          "search": {
+            "type": "string"
+          },
+          "uid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-project-member",
+          "description": "Add a team member to a specific project with a defined role.",
+          "operationId": "addProjectMember",
+          "parameters": [
+            {
+              "name": "idOrName",
+              "in": "path",
+              "value": "$inputs.idOrName"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "role": "$inputs.role"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-project-members",
+          "description": "List members of the project to confirm addition.",
+          "operationId": "getProjectMembers",
+          "parameters": [
+            {
+              "name": "idOrName",
+              "in": "path",
+              "value": "$steps.add-project-member.outputs.id"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "since",
+              "in": "query",
+              "value": "$inputs.since"
+            },
+            {
+              "name": "until",
+              "in": "query",
+              "value": "$inputs.until"
+            },
+            {
+              "name": "search",
+              "in": "query",
+              "value": "$inputs.search"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "members": "$response.body",
+            "pagination": "$response.body"
+          }
+        },
+        {
+          "stepId": "remove-project-member",
+          "description": "Remove the member from the project.",
+          "operationId": "removeProjectMember",
+          "parameters": [
+            {
+              "name": "idOrName",
+              "in": "path",
+              "value": "$steps.add-project-member.outputs.id"
+            },
+            {
+              "name": "uid",
+              "in": "path",
+              "value": "$inputs.uid"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.remove-project-member.outputs.id",
+        "members": "$steps.list-project-members.outputs.members",
+        "pagination": "$steps.list-project-members.outputs.pagination"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-project-custom-environments",
+      "summary": "Creates a custom environment for a project, updates it, retrieves it, and then removes it.",
+      "description": "Creates a custom environment for a project, updates it, retrieves it, and then removes it.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "idOrName": {
+            "type": "string"
+          },
+          "teamId": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "branchMatcher": {
+            "type": "string"
+          },
+          "copyEnvVarsFrom": {
+            "type": "string"
+          },
+          "environmentSlugOrId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-custom-environment",
+          "description": "Create a new custom environment for a project.",
+          "operationId": "createCustomEnvironment",
+          "parameters": [
+            {
+              "name": "idOrName",
+              "in": "path",
+              "value": "$inputs.idOrName"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "slug": "$inputs.slug",
+              "description": "$inputs.description",
+              "branchMatcher": "$inputs.branchMatcher",
+              "copyEnvVarsFrom": "$inputs.copyEnvVarsFrom"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "slug": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-custom-environment",
+          "description": "Update the settings of the custom environment.",
+          "operationId": "updateCustomEnvironment",
+          "parameters": [
+            {
+              "name": "idOrName",
+              "in": "path",
+              "value": "$inputs.idOrName"
+            },
+            {
+              "name": "environmentSlugOrId",
+              "in": "path",
+              "value": "$steps.create-custom-environment.outputs.id"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "environmentSlugOrId": "$steps.create-custom-environment.outputs.id",
+              "slug": "$inputs.slug",
+              "description": "$inputs.description",
+              "branchMatcher": "$inputs.branchMatcher"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "slug": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-custom-environment",
+          "description": "Retrieve details of the custom environment.",
+          "operationId": "getCustomEnvironment",
+          "parameters": [
+            {
+              "name": "idOrName",
+              "in": "path",
+              "value": "$inputs.idOrName"
+            },
+            {
+              "name": "environmentSlugOrId",
+              "in": "path",
+              "value": "$steps.create-custom-environment.outputs.id"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "slug": "$response.body",
+            "description": "$response.body",
+            "branchMatcher": "$response.body"
+          }
+        },
+        {
+          "stepId": "remove-custom-environment",
+          "description": "Remove the custom environment from the project.",
+          "operationId": "removeCustomEnvironment",
+          "parameters": [
+            {
+              "name": "idOrName",
+              "in": "path",
+              "value": "$inputs.idOrName"
+            },
+            {
+              "name": "environmentSlugOrId",
+              "in": "path",
+              "value": "$steps.create-custom-environment.outputs.id"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "environmentSlugOrId": "$steps.create-custom-environment.outputs.id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "environment_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.get-custom-environment.outputs.id",
+        "slug": "$steps.get-custom-environment.outputs.slug",
+        "description": "$steps.get-custom-environment.outputs.description",
+        "branchMatcher": "$steps.get-custom-environment.outputs.branchMatcher",
+        "environment_data": "$steps.remove-custom-environment.outputs.environment_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-project-security-firewall",
+      "summary": "Retrieves the current firewall configuration for a project, updates it with new rules, and then retrieves the updated configuration.",
+      "description": "Retrieves the current firewall configuration for a project, updates it with new rules, and then retrieves the updated configuration.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string"
+          },
+          "teamId": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "update-firewall-config_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-firewall-config",
+          "description": "Retrieve the current firewall configuration for a project.",
+          "operationId": "getFirewallConfig",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "query",
+              "value": "$inputs.projectId"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "version": "$response.body",
+            "firewallEnabled": "$response.body",
+            "rules": "$response.body",
+            "ips": "$response.body",
+            "managedRules": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-firewall-config",
+          "description": "Update the firewall configuration with new rules or settings.",
+          "operationId": "updateFirewallConfig",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "query",
+              "value": "$inputs.projectId"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.update-firewall-config_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "config_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-updated-firewall-config",
+          "description": "Retrieve the updated firewall configuration to verify changes.",
+          "operationId": "getFirewallConfig",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "query",
+              "value": "$inputs.projectId"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "version": "$response.body",
+            "firewallEnabled": "$response.body",
+            "rules": "$response.body",
+            "ips": "$response.body",
+            "managedRules": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "version": "$steps.get-updated-firewall-config.outputs.version",
+        "firewallEnabled": "$steps.get-updated-firewall-config.outputs.firewallEnabled",
+        "rules": "$steps.get-updated-firewall-config.outputs.rules",
+        "ips": "$steps.get-updated-firewall-config.outputs.ips",
+        "managedRules": "$steps.get-updated-firewall-config.outputs.managedRules",
+        "config_data": "$steps.update-firewall-config.outputs.config_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-project-data-cache",
+      "summary": "Updates the data cache settings for a project and purges the cache if needed.",
+      "description": "Updates the data cache settings for a project and purges the cache if needed.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string"
+          },
+          "teamId": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "disabled": {
+            "type": "string"
+          },
+          "projectIdOrName": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "update-project-data-cache-settings",
+          "description": "Enable or disable the data cache feature for a specific project.",
+          "operationId": "updateProjectDataCache",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "path",
+              "value": "$inputs.projectId"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "disabled": "$inputs.disabled"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "dataCache": "$response.body"
+          }
+        },
+        {
+          "stepId": "purge-project-data-cache",
+          "description": "Purge all data cache entries for the specified project.",
+          "operationPath": "openapi_source#/paths/~1data-cache~1purge-all/delete",
+          "parameters": [
+            {
+              "name": "projectIdOrName",
+              "in": "query",
+              "value": "$steps.update-project-data-cache-settings.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "cache_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.update-project-data-cache-settings.outputs.id",
+        "dataCache": "$steps.update-project-data-cache-settings.outputs.dataCache",
+        "cache_data": "$steps.purge-project-data-cache.outputs.cache_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-ssl-certificates",
+      "summary": "Issues a new SSL certificate for a domain, retrieves its details, and then removes it.",
+      "description": "Issues a new SSL certificate for a domain, retrieves its details, and then removes it.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "teamId": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "cns": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "issue-certificate",
+          "description": "Issue a new SSL/TLS certificate for specified common names (domains).",
+          "operationId": "issueCert",
+          "parameters": [
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "cns": "$inputs.cns"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "cns": "$response.body",
+            "createdAt": "$response.body",
+            "expiresAt": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-certificate",
+          "description": "Retrieve details of the issued certificate.",
+          "operationId": "getCertById",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.issue-certificate.outputs.id"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "cns": "$response.body",
+            "createdAt": "$response.body",
+            "expiresAt": "$response.body",
+            "autoRenew": "$response.body"
+          }
+        },
+        {
+          "stepId": "remove-certificate",
+          "description": "Remove the SSL/TLS certificate.",
+          "operationId": "removeCert",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.issue-certificate.outputs.id"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "slug",
+              "in": "query",
+              "value": "$inputs.slug"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "certificate_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.get-certificate.outputs.id",
+        "cns": "$steps.get-certificate.outputs.cns",
+        "createdAt": "$steps.get-certificate.outputs.createdAt",
+        "expiresAt": "$steps.get-certificate.outputs.expiresAt",
+        "autoRenew": "$steps.get-certificate.outputs.autoRenew",
+        "certificate_data": "$steps.remove-certificate.outputs.certificate_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

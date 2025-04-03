@@ -1,0 +1,1073 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/botify.com/main/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "export-specific-url-data-from-analysis",
+      "summary": "Exports a list of URLs matching specific criteria (defined by a query) from a particular analysis to a CSV file. Allows users to download detailed data for offline analysis or reporting.",
+      "description": "Exports a list of URLs matching specific criteria (defined by a query) from a particular analysis to a CSV file. Allows users to download detailed data for offline analysis or reporting.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "project_slug": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "size": {
+            "type": "string"
+          },
+          "analysis_slug": {
+            "type": "string"
+          },
+          "area": {
+            "type": "string"
+          },
+          "url_export_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-analyses-for-export",
+          "description": "List analyses to identify the target analysis for export.",
+          "operationId": "getProjectAnalyses",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project_slug",
+              "in": "path",
+              "value": "$inputs.project_slug"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "size",
+              "in": "query",
+              "value": "$inputs.size"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "analyses_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-url-export",
+          "description": "Initiate a CSV export for URLs matching the provided query within the selected analysis.",
+          "operationId": "createUrlsExport",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project_slug",
+              "in": "path",
+              "value": "$inputs.project_slug"
+            },
+            {
+              "name": "analysis_slug",
+              "in": "path",
+              "value": "$steps.list-analyses-for-export.outputs.analyses_list.results[0].slug"
+            },
+            {
+              "name": "area",
+              "in": "query",
+              "value": "$inputs.area"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "analysis_slug": "$steps.list-analyses-for-export.outputs.analyses_list.results[0].slug"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "export_status_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-export-status",
+          "description": "Periodically check the status of the CSV export job until it is completed.",
+          "operationId": "getUrlsExportStatus",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project_slug",
+              "in": "path",
+              "value": "$inputs.project_slug"
+            },
+            {
+              "name": "analysis_slug",
+              "in": "path",
+              "value": "$steps.list-analyses-for-export.outputs.analyses_list.results[0].slug"
+            },
+            {
+              "name": "url_export_id",
+              "in": "path",
+              "value": "$steps.create-url-export.outputs.export_status_details.job_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "final_export_status": "$response.body",
+            "download_url": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "analyses_list": "$steps.list-analyses-for-export.outputs.analyses_list",
+        "export_status_details": "$steps.create-url-export.outputs.export_status_details",
+        "final_export_status": "$steps.check-export-status.outputs.final_export_status",
+        "download_url": "$steps.check-export-status.outputs.download_url"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-latest-analysis-summary-and-statistics",
+      "summary": "Finds the most recent analysis for a given project and retrieves its summary details and overall crawl statistics. Useful for quickly checking the status and results of the latest website crawl.",
+      "description": "Finds the most recent analysis for a given project and retrieves its summary details and overall crawl statistics. Useful for quickly checking the status and results of the latest website crawl.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "project_slug": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "size": {
+            "type": "string"
+          },
+          "analysis_slug": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-analyses",
+          "description": "List all analyses for a specific project to find the most recent one.",
+          "operationId": "getProjectAnalyses",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project_slug",
+              "in": "path",
+              "value": "$inputs.project_slug"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "size",
+              "in": "query",
+              "value": "$inputs.size"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "analyses_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-analysis-summary",
+          "description": "Get the detailed summary for the selected analysis.",
+          "operationId": "getAnalysisSummary",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project_slug",
+              "in": "path",
+              "value": "$inputs.project_slug"
+            },
+            {
+              "name": "analysis_slug",
+              "in": "path",
+              "value": "$steps.list-analyses.outputs.analyses_list.results[0].slug"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "analysis_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-crawl-statistics",
+          "description": "Get the global crawl statistics (page counts by status code, etc.) for the selected analysis.",
+          "operationId": "getCrawlStatistics",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project_slug",
+              "in": "path",
+              "value": "$inputs.project_slug"
+            },
+            {
+              "name": "analysis_slug",
+              "in": "path",
+              "value": "$steps.list-analyses.outputs.analyses_list.results[0].slug"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "crawl_statistics": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "analyses_list": "$steps.list-analyses.outputs.analyses_list",
+        "analysis_details": "$steps.get-analysis-summary.outputs.analysis_details",
+        "crawl_statistics": "$steps.get-crawl-statistics.outputs.crawl_statistics"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "identify-orphan-urls-from-organic-search",
+      "summary": "Identifies URLs receiving traffic from specific organic search sources (e.g., Google) according to Google Analytics, but which were not found during the Botify crawl. Helps uncover potentially valuable pages missed by crawlers.",
+      "description": "Identifies URLs receiving traffic from specific organic search sources (e.g., Google) according to Google Analytics, but which were not found during the Botify crawl. Helps uncover potentially valuable pages missed by crawlers.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "project_slug": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "size": {
+            "type": "string"
+          },
+          "analysis_slug": {
+            "type": "string"
+          },
+          "medium": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-analyses-for-orphan-check",
+          "description": "List analyses to choose the one for checking orphan URLs.",
+          "operationId": "getProjectAnalyses",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project_slug",
+              "in": "path",
+              "value": "$inputs.project_slug"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "size",
+              "in": "query",
+              "value": "$inputs.size"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "analyses_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-organic-orphan-urls",
+          "description": "Retrieve the list of orphan URLs for a specified organic search medium and source.",
+          "operationId": "getGanalyticsOrphanURLs",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project_slug",
+              "in": "path",
+              "value": "$inputs.project_slug"
+            },
+            {
+              "name": "analysis_slug",
+              "in": "path",
+              "value": "$steps.list-analyses-for-orphan-check.outputs.analyses_list.results[0].slug"
+            },
+            {
+              "name": "medium",
+              "in": "path",
+              "value": "$inputs.medium"
+            },
+            {
+              "name": "source",
+              "in": "path",
+              "value": "$inputs.source"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "size",
+              "in": "query",
+              "value": "$inputs.size"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "orphan_urls_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "analyses_list": "$steps.list-analyses-for-orphan-check.outputs.analyses_list",
+        "orphan_urls_list": "$steps.get-organic-orphan-urls.outputs.orphan_urls_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "analyze-sitemap-coverage-and-issues",
+      "summary": "Retrieves a comprehensive sitemap report for an analysis, including identified sitemaps, errors, and counts. Then, fetches sample URLs that are listed in sitemaps but were either missed by the crawl or are outside the defined crawl scope, highlighting potential sitemap or configuration issues.",
+      "description": "Retrieves a comprehensive sitemap report for an analysis, including identified sitemaps, errors, and counts. Then, fetches sample URLs that are listed in sitemaps but were either missed by the crawl or are outside the defined crawl scope, highlighting potential sitemap or configuration issues.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "project_slug": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "size": {
+            "type": "string"
+          },
+          "analysis_slug": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-analyses-for-sitemap",
+          "description": "List analyses to select the one for sitemap analysis.",
+          "operationId": "getProjectAnalyses",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project_slug",
+              "in": "path",
+              "value": "$inputs.project_slug"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "size",
+              "in": "query",
+              "value": "$inputs.size"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "analyses_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-sitemap-report",
+          "description": "Get the global sitemap report detailing found sitemaps, errors, and URL counts.",
+          "operationId": "getSitemapsReport",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project_slug",
+              "in": "path",
+              "value": "$inputs.project_slug"
+            },
+            {
+              "name": "analysis_slug",
+              "in": "path",
+              "value": "$steps.list-analyses-for-sitemap.outputs.analyses_list.results[0].slug"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sitemap_report": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-sitemap-only-urls",
+          "description": "Get a sample list of URLs found in sitemaps but not crawled.",
+          "operationId": "getSitemapsSamplesSitemapsOnly",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project_slug",
+              "in": "path",
+              "value": "$inputs.project_slug"
+            },
+            {
+              "name": "analysis_slug",
+              "in": "path",
+              "value": "$steps.list-analyses-for-sitemap.outputs.analyses_list.results[0].slug"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "size",
+              "in": "query",
+              "value": "$inputs.size"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sitemap_only_urls": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-sitemap-outofconfig-urls",
+          "description": "Get a sample list of URLs found in sitemaps but outside the project's crawl configuration.",
+          "operationId": "getSitemapsSamplesOutOfConfig",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project_slug",
+              "in": "path",
+              "value": "$inputs.project_slug"
+            },
+            {
+              "name": "analysis_slug",
+              "in": "path",
+              "value": "$steps.list-analyses-for-sitemap.outputs.analyses_list.results[0].slug"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "size",
+              "in": "query",
+              "value": "$inputs.size"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sitemap_outofconfig_urls": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "analyses_list": "$steps.list-analyses-for-sitemap.outputs.analyses_list",
+        "sitemap_report": "$steps.get-sitemap-report.outputs.sitemap_report",
+        "sitemap_only_urls": "$steps.get-sitemap-only-urls.outputs.sitemap_only_urls",
+        "sitemap_outofconfig_urls": "$steps.get-sitemap-outofconfig-urls.outputs.sitemap_outofconfig_urls"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "perform-advanced-url-aggregation-within-an-analysis",
+      "summary": "Executes multiple complex aggregation queries against the URL data of a specific analysis. Useful for generating custom reports and insights, like counting URLs by status code and depth simultaneously.",
+      "description": "Executes multiple complex aggregation queries against the URL data of a specific analysis. Useful for generating custom reports and insights, like counting URLs by status code and depth simultaneously.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "project_slug": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "size": {
+            "type": "string"
+          },
+          "analysis_slug": {
+            "type": "string"
+          },
+          "area": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-analyses-for-aggregation",
+          "description": "List analyses to identify the target analysis for aggregation.",
+          "operationId": "getProjectAnalyses",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project_slug",
+              "in": "path",
+              "value": "$inputs.project_slug"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "size",
+              "in": "query",
+              "value": "$inputs.size"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "analyses_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-url-datamodel",
+          "description": "Retrieve the data model to understand available fields for filtering and aggregation.",
+          "operationId": "getUrlsDatamodel",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project_slug",
+              "in": "path",
+              "value": "$inputs.project_slug"
+            },
+            {
+              "name": "analysis_slug",
+              "in": "path",
+              "value": "$steps.list-analyses-for-aggregation.outputs.analyses_list.results[0].slug"
+            },
+            {
+              "name": "area",
+              "in": "query",
+              "value": "$inputs.area"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "datamodel": "$response.body"
+          }
+        },
+        {
+          "stepId": "run-url-aggregations",
+          "description": "Execute multiple aggregation queries based on the datamodel.",
+          "operationId": "getUrlsAggs",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project_slug",
+              "in": "path",
+              "value": "$inputs.project_slug"
+            },
+            {
+              "name": "analysis_slug",
+              "in": "path",
+              "value": "$steps.list-analyses-for-aggregation.outputs.analyses_list.results[0].slug"
+            },
+            {
+              "name": "area",
+              "in": "query",
+              "value": "$inputs.area"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "analysis_slug": "$steps.list-analyses-for-aggregation.outputs.analyses_list.results[0].slug"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "aggregation_results": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "analyses_list": "$steps.list-analyses-for-aggregation.outputs.analyses_list",
+        "datamodel": "$steps.get-url-datamodel.outputs.datamodel",
+        "aggregation_results": "$steps.run-url-aggregations.outputs.aggregation_results"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-and-apply-a-saved-filter",
+      "summary": "Fetches a previously saved filter definition for a project and applies it to query URLs within a specific analysis. Streamlines the process of reusing common or complex filtering criteria.",
+      "description": "Fetches a previously saved filter definition for a project and applies it to query URLs within a specific analysis. Streamlines the process of reusing common or complex filtering criteria.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "project_slug": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "size": {
+            "type": "string"
+          },
+          "identifier": {
+            "type": "string"
+          },
+          "analysis_slug": {
+            "type": "string"
+          },
+          "area": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-saved-filters",
+          "description": "List all saved filters for the project to find the desired one.",
+          "operationId": "getSavedFilters",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project_slug",
+              "in": "path",
+              "value": "$inputs.project_slug"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "size",
+              "in": "query",
+              "value": "$inputs.size"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "saved_filters_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-specific-saved-filter",
+          "description": "Retrieve the details (including the filter definition) of a specific saved filter.",
+          "operationId": "getSavedFilter",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project_slug",
+              "in": "path",
+              "value": "$inputs.project_slug"
+            },
+            {
+              "name": "identifier",
+              "in": "path",
+              "value": "$steps.list-saved-filters.outputs.saved_filters_list.results[0].identifier"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "saved_filter_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-analyses-for-filtered-query",
+          "description": "List analyses to choose the one for applying the saved filter.",
+          "operationId": "getProjectAnalyses",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project_slug",
+              "in": "path",
+              "value": "$inputs.project_slug"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "size",
+              "in": "query",
+              "value": "$inputs.size"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "analyses_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "query-urls-with-saved-filter",
+          "description": "Execute a URL query using the retrieved saved filter definition.",
+          "operationId": "getUrls",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project_slug",
+              "in": "path",
+              "value": "$inputs.project_slug"
+            },
+            {
+              "name": "analysis_slug",
+              "in": "path",
+              "value": "$steps.list-analyses-for-filtered-query.outputs.analyses_list.results[0].slug"
+            },
+            {
+              "name": "area",
+              "in": "query",
+              "value": "$inputs.area"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "size",
+              "in": "query",
+              "value": "$inputs.size"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "analysis_slug": "$steps.list-analyses-for-filtered-query.outputs.analyses_list.results[0].slug"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "filtered_url_results": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "saved_filters_list": "$steps.list-saved-filters.outputs.saved_filters_list",
+        "saved_filter_details": "$steps.get-specific-saved-filter.outputs.saved_filter_details",
+        "analyses_list": "$steps.list-analyses-for-filtered-query.outputs.analyses_list",
+        "filtered_url_results": "$steps.query-urls-with-saved-filter.outputs.filtered_url_results"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

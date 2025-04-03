@@ -1,0 +1,365 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/keyserv.solutions/main/1.4.5/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "validate-license-key",
+      "summary": "Checks if a given license key serial is currently active and retrieves its expiry date. Essential for client applications to verify license status.",
+      "description": "Checks if a given license key serial is currently active and retrieves its expiry date. Essential for client applications to verify license status.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "serial": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "check-key-current",
+          "description": "Check if the key associated with the serial is currently active.",
+          "operationId": "KeysApi_Current",
+          "parameters": [
+            {
+              "name": "serial",
+              "in": "path",
+              "value": "$inputs.serial"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "is_current": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-key-expiry",
+          "description": "Retrieve the expiry date and time remaining for the key.",
+          "operationId": "KeysApi_Expiry",
+          "parameters": [
+            {
+              "name": "serial",
+              "in": "path",
+              "value": "$inputs.serial"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "expires_at": "$response.body",
+            "time_remaining": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "is_current": "$steps.check-key-current.outputs.is_current",
+        "expires_at": "$steps.get-key-expiry.outputs.expires_at",
+        "time_remaining": "$steps.get-key-expiry.outputs.time_remaining"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-product-and-initial-subscription",
+      "summary": "Sets up a new licensable product and creates the first subscription for it, which typically generates an initial license key. A core administrative setup task.",
+      "description": "Sets up a new licensable product and creates the first subscription for it, which typically generates an initial license key. A core administrative setup task.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-product_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-product",
+          "description": "Create a new product definition.",
+          "operationId": "ProductsApi_Save",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-product_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "product_serial": "$response.body",
+            "product_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-subscription",
+          "description": "Create a subscription associated with the newly created product. This returns the details of the initial key generated for the subscription.",
+          "operationId": "SubscriptionsApi_Save",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "product_serial": "$steps.create-product.outputs.product_serial"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "key_serial": "$response.body",
+            "key_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "product_serial": "$steps.create-product.outputs.product_serial",
+        "product_details": "$steps.create-product.outputs.product_details",
+        "key_serial": "$steps.create-subscription.outputs.key_serial",
+        "key_details": "$steps.create-subscription.outputs.key_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "find-and-disable-subscription",
+      "summary": "Finds a specific subscription using its serial number and then disables it. Used by administrators to revoke access.",
+      "description": "Finds a specific subscription using its serial number and then disables it. Used by administrators to revoke access.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "find-subscription_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-subscription",
+          "description": "Find subscription details using API key and subscription serial.",
+          "operationId": "SubscriptionsApi_Find",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.find-subscription_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "subscription_details": "$response.body",
+            "subscription_serial": "$response.body"
+          }
+        },
+        {
+          "stepId": "disable-subscription",
+          "description": "Disable the specified subscription.",
+          "operationId": "SubscriptionsApi_Disable",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "serial": "$steps.find-subscription.outputs.subscription_serial"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "disable_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "subscription_details": "$steps.find-subscription.outputs.subscription_details",
+        "subscription_serial": "$steps.find-subscription.outputs.subscription_serial",
+        "disable_status": "$steps.disable-subscription.outputs.disable_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "find-and-enable-subscription",
+      "summary": "Finds a specific subscription using its serial number and then enables it. Used by administrators to restore access.",
+      "description": "Finds a specific subscription using its serial number and then enables it. Used by administrators to restore access.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "find-subscription_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-subscription",
+          "description": "Find subscription details using API key and subscription serial.",
+          "operationId": "SubscriptionsApi_Find",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.find-subscription_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "subscription_details": "$response.body",
+            "subscription_serial": "$response.body"
+          }
+        },
+        {
+          "stepId": "enable-subscription",
+          "description": "Enable the specified subscription.",
+          "operationId": "SubscriptionsApi_Enable",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "serial": "$steps.find-subscription.outputs.subscription_serial"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "enable_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "subscription_details": "$steps.find-subscription.outputs.subscription_details",
+        "subscription_serial": "$steps.find-subscription.outputs.subscription_serial",
+        "enable_status": "$steps.enable-subscription.outputs.enable_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

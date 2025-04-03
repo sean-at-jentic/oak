@@ -1,0 +1,1018 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/brandlovers.com/main/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "process-approved-orders-single-order-flow",
+      "summary": "Retrieves newly approved orders one by one, fetches details, updates shipment status to 'sent', and finally updates status to 'delivered'. This represents the core order fulfillment process for a seller.",
+      "description": "Retrieves newly approved orders one by one, fetches details, updates shipment status to 'sent', and finally updates status to 'delivered'. This represents the core order fulfillment process for a seller.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "authorization": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "orderId": {
+            "type": "string"
+          },
+          "occurredAt": {
+            "type": "string"
+          },
+          "sellerShipmentId": {
+            "type": "string"
+          },
+          "courier": {
+            "type": "string"
+          },
+          "invoice": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-approved-orders",
+          "description": "Get a list of orders ready for fulfillment.",
+          "operationPath": "openapi_source#/paths/~1orders~1status~1approved/get",
+          "parameters": [
+            {
+              "name": "authorization",
+              "in": "header",
+              "value": "$inputs.authorization"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "orders": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-order-details",
+          "description": "Get full details for a specific approved order.",
+          "operationPath": "openapi_source#/paths/~1order~1{orderId}/get",
+          "parameters": [
+            {
+              "name": "authorization",
+              "in": "header",
+              "value": "$inputs.authorization"
+            },
+            {
+              "name": "orderId",
+              "in": "path",
+              "value": "$steps.get-approved-orders.outputs.orders.orderId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "order_details": "$response.body",
+            "orderId": "$response.body"
+          }
+        },
+        {
+          "stepId": "mark-order-shipped",
+          "description": "Update the order with shipment information (tracking, invoice, items shipped). Requires seller-provided shipment details.",
+          "operationPath": "openapi_source#/paths/~1order~1{orderId}~1shipment~1sent/post",
+          "parameters": [
+            {
+              "name": "authorization",
+              "in": "header",
+              "value": "$inputs.authorization"
+            },
+            {
+              "name": "orderId",
+              "in": "path",
+              "value": "$steps.get-order-details.outputs.orderId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "orderId": "$steps.get-order-details.outputs.orderId",
+              "items": "$steps.get-order-details.outputs.order_details.items[*].id",
+              "occurredAt": "$inputs.occurredAt",
+              "sellerShipmentId": "$inputs.sellerShipmentId",
+              "courier": "$inputs.courier",
+              "invoice": "$inputs.invoice"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "shipment_sent_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "mark-order-delivered",
+          "description": "Confirm the shipment associated with the order has been delivered. Requires seller-provided delivery confirmation details.",
+          "operationPath": "openapi_source#/paths/~1order~1{orderId}~1shipment~1delivered/post",
+          "parameters": [
+            {
+              "name": "authorization",
+              "in": "header",
+              "value": "$inputs.authorization"
+            },
+            {
+              "name": "orderId",
+              "in": "path",
+              "value": "$steps.get-order-details.outputs.orderId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "orderId": "$steps.get-order-details.outputs.orderId",
+              "items": "$steps.get-order-details.outputs.order_details.items[*].id",
+              "occurredAt": "$inputs.occurredAt",
+              "sellerShipmentId": "$inputs.sellerShipmentId",
+              "courier": "$inputs.courier"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "shipment_delivered_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "orders": "$steps.get-approved-orders.outputs.orders",
+        "order_details": "$steps.get-order-details.outputs.order_details",
+        "orderId": "$steps.get-order-details.outputs.orderId",
+        "shipment_sent_status": "$steps.mark-order-shipped.outputs.shipment_sent_status",
+        "shipment_delivered_status": "$steps.mark-order-delivered.outputs.shipment_delivered_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "onboard-and-activate-new-products-bulk",
+      "summary": "Adds multiple new products to the marketplace, sets their initial stock and price, and then activates them for sale. Streamlines the process of introducing new items.",
+      "description": "Adds multiple new products to the marketplace, sets their initial stock and price, and then activates them for sale. Streamlines the process of introducing new items.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "authorization": {
+            "type": "string"
+          },
+          "create-bulk-products_body": {
+            "type": "object"
+          },
+          "set-bulk-stock_body": {
+            "type": "object"
+          },
+          "set-bulk-prices_body": {
+            "type": "object"
+          },
+          "activate-bulk-products_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-bulk-products",
+          "description": "Upload definitions for multiple new products.",
+          "operationPath": "openapi_source#/paths/~1products/post",
+          "parameters": [
+            {
+              "name": "authorization",
+              "in": "header",
+              "value": "$inputs.authorization"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-bulk-products_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "creation_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "set-bulk-stock",
+          "description": "Set initial stock levels for the newly created products.",
+          "operationPath": "openapi_source#/paths/~1products~1stocks/put",
+          "parameters": [
+            {
+              "name": "authorization",
+              "in": "header",
+              "value": "$inputs.authorization"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.set-bulk-stock_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "stock_update_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "set-bulk-prices",
+          "description": "Set initial prices for the newly created products.",
+          "operationPath": "openapi_source#/paths/~1products~1prices/put",
+          "parameters": [
+            {
+              "name": "authorization",
+              "in": "header",
+              "value": "$inputs.authorization"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.set-bulk-prices_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "price_update_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "activate-bulk-products",
+          "description": "Enable the newly created and configured products for sale in the marketplace.",
+          "operationPath": "openapi_source#/paths/~1products~1status/put",
+          "parameters": [
+            {
+              "name": "authorization",
+              "in": "header",
+              "value": "$inputs.authorization"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.activate-bulk-products_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "activation_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "creation_status": "$steps.create-bulk-products.outputs.creation_status",
+        "stock_update_status": "$steps.set-bulk-stock.outputs.stock_update_status",
+        "price_update_status": "$steps.set-bulk-prices.outputs.price_update_status",
+        "activation_status": "$steps.activate-bulk-products.outputs.activation_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "monitor-and-fulfill-partially-shipped-orders",
+      "summary": "Identifies orders where some items have been shipped but others remain pending, retrieves order details to see which items still need shipping, and updates the order with the shipment information for the remaining items.",
+      "description": "Identifies orders where some items have been shipped but others remain pending, retrieves order details to see which items still need shipping, and updates the order with the shipment information for the remaining items.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "authorization": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "orderId": {
+            "type": "string"
+          },
+          "occurredAt": {
+            "type": "string"
+          },
+          "sellerShipmentId": {
+            "type": "string"
+          },
+          "courier": {
+            "type": "string"
+          },
+          "invoice": {
+            "type": "string"
+          },
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-partially-sent-orders",
+          "description": "Get a list of orders with pending items to be shipped.",
+          "operationPath": "openapi_source#/paths/~1orders~1status~1partiallySent/get",
+          "parameters": [
+            {
+              "name": "authorization",
+              "in": "header",
+              "value": "$inputs.authorization"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "orders": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-full-order-details",
+          "description": "Retrieve the complete details for a partially shipped order to identify unshipped items.",
+          "operationPath": "openapi_source#/paths/~1order~1{orderId}/get",
+          "parameters": [
+            {
+              "name": "authorization",
+              "in": "header",
+              "value": "$inputs.authorization"
+            },
+            {
+              "name": "orderId",
+              "in": "path",
+              "value": "$steps.get-partially-sent-orders.outputs.orders.orderId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "order_details": "$response.body",
+            "orderId": "$response.body"
+          }
+        },
+        {
+          "stepId": "ship-remaining-items",
+          "description": "Update the order with shipment information for the items that were not previously sent. Requires seller-provided shipment details.",
+          "operationPath": "openapi_source#/paths/~1order~1{orderId}~1shipment~1sent/post",
+          "parameters": [
+            {
+              "name": "authorization",
+              "in": "header",
+              "value": "$inputs.authorization"
+            },
+            {
+              "name": "orderId",
+              "in": "path",
+              "value": "$steps.get-full-order-details.outputs.orderId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "orderId": "$steps.get-full-order-details.outputs.orderId",
+              "items": "$steps.get-full-order-details.outputs.order_details.items[?(@.sent==false)].id",
+              "occurredAt": "$inputs.occurredAt",
+              "sellerShipmentId": "$inputs.sellerShipmentId",
+              "courier": "$inputs.courier",
+              "invoice": "$inputs.invoice"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "shipment_sent_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "confirm-delivery-of-remaining",
+          "description": "Confirm delivery of the subsequently shipped items. Requires seller-provided delivery confirmation details.",
+          "operationPath": "openapi_source#/paths/~1order~1{orderId}~1shipment~1delivered/post",
+          "parameters": [
+            {
+              "name": "authorization",
+              "in": "header",
+              "value": "$inputs.authorization"
+            },
+            {
+              "name": "orderId",
+              "in": "path",
+              "value": "$steps.get-full-order-details.outputs.orderId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "orderId": "$steps.get-full-order-details.outputs.orderId",
+              "items": "$inputs.items",
+              "occurredAt": "$inputs.occurredAt",
+              "sellerShipmentId": "$inputs.sellerShipmentId",
+              "courier": "$inputs.courier"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "shipment_delivered_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "orders": "$steps.get-partially-sent-orders.outputs.orders",
+        "order_details": "$steps.get-full-order-details.outputs.order_details",
+        "orderId": "$steps.get-full-order-details.outputs.orderId",
+        "shipment_sent_status": "$steps.ship-remaining-items.outputs.shipment_sent_status",
+        "shipment_delivered_status": "$steps.confirm-delivery-of-remaining.outputs.shipment_delivered_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "handle-customer-return-via-ticket",
+      "summary": "Identifies an open customer ticket requesting a return, reviews the communication, processes the return shipment confirmation for the related order, informs the customer via the ticket, and closes the ticket.",
+      "description": "Identifies an open customer ticket requesting a return, reviews the communication, processes the return shipment confirmation for the related order, informs the customer via the ticket, and closes the ticket.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "authorization": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "ticketId": {
+            "type": "string"
+          },
+          "orderId": {
+            "type": "string"
+          },
+          "items": {
+            "type": "string"
+          },
+          "info": {
+            "type": "string"
+          },
+          "visibility": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "ticketStatus": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-open-return-tickets",
+          "description": "Retrieve open trouble tickets (potentially filtering by type if possible).",
+          "operationPath": "openapi_source#/paths/~1tickets/get",
+          "parameters": [
+            {
+              "name": "authorization",
+              "in": "header",
+              "value": "$inputs.authorization"
+            },
+            {
+              "name": "status",
+              "in": "query",
+              "value": "$inputs.status"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tickets": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-ticket-messages",
+          "description": "Get the message history for a specific ticket to understand the return request.",
+          "operationPath": "openapi_source#/paths/~1ticket~1{ticketId}~1messages/get",
+          "parameters": [
+            {
+              "name": "authorization",
+              "in": "header",
+              "value": "$inputs.authorization"
+            },
+            {
+              "name": "ticketId",
+              "in": "path",
+              "value": "$steps.find-open-return-tickets.outputs.tickets.ticketId"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "messages": "$response.body",
+            "ticketId": "$response.body"
+          }
+        },
+        {
+          "stepId": "confirm-order-return",
+          "description": "Confirm the return of items for the order associated with the ticket. Requires seller context for items being returned.",
+          "operationPath": "openapi_source#/paths/~1order~1{orderId}~1shipment~1return/post",
+          "parameters": [
+            {
+              "name": "authorization",
+              "in": "header",
+              "value": "$inputs.authorization"
+            },
+            {
+              "name": "orderId",
+              "in": "path",
+              "value": "$steps.find-open-return-tickets.outputs.tickets.orderId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "orderId": "$steps.find-open-return-tickets.outputs.tickets[0].orderId",
+              "items": "$inputs.items",
+              "info": "$inputs.info"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "return_confirmation_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-return-confirmation-message",
+          "description": "Add a message to the ticket confirming the return has been processed.",
+          "operationPath": "openapi_source#/paths/~1ticket~1{ticketId}~1message/post",
+          "parameters": [
+            {
+              "name": "authorization",
+              "in": "header",
+              "value": "$inputs.authorization"
+            },
+            {
+              "name": "ticketId",
+              "in": "path",
+              "value": "$steps.get-ticket-messages.outputs.ticketId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "ticketId": "$steps.get-ticket-messages.outputs.ticketId",
+              "visibility": "$inputs.visibility",
+              "body": "$inputs.body"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "message_add_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "close-ticket",
+          "description": "Update the ticket status to 'CLOSED'.",
+          "operationPath": "openapi_source#/paths/~1ticket~1{ticketId}~1status/put",
+          "parameters": [
+            {
+              "name": "authorization",
+              "in": "header",
+              "value": "$inputs.authorization"
+            },
+            {
+              "name": "ticketId",
+              "in": "path",
+              "value": "$steps.get-ticket-messages.outputs.ticketId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "ticketId": "$steps.get-ticket-messages.outputs.ticketId",
+              "ticketStatus": "$inputs.ticketStatus"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ticket_update_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "tickets": "$steps.find-open-return-tickets.outputs.tickets",
+        "messages": "$steps.get-ticket-messages.outputs.messages",
+        "ticketId": "$steps.get-ticket-messages.outputs.ticketId",
+        "return_confirmation_status": "$steps.confirm-order-return.outputs.return_confirmation_status",
+        "message_add_status": "$steps.add-return-confirmation-message.outputs.message_add_status",
+        "ticket_update_status": "$steps.close-ticket.outputs.ticket_update_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "respond-to-customer-inquiry-via-ticket",
+      "summary": "Finds open customer support tickets, retrieves the conversation history, allows the seller to add a response, and optionally close the ticket if the inquiry is resolved.",
+      "description": "Finds open customer support tickets, retrieves the conversation history, allows the seller to add a response, and optionally close the ticket if the inquiry is resolved.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "authorization": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "ticketId": {
+            "type": "string"
+          },
+          "visibility": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "ticketStatus": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-open-tickets",
+          "description": "Retrieve open trouble tickets needing attention.",
+          "operationPath": "openapi_source#/paths/~1tickets/get",
+          "parameters": [
+            {
+              "name": "authorization",
+              "in": "header",
+              "value": "$inputs.authorization"
+            },
+            {
+              "name": "status",
+              "in": "query",
+              "value": "$inputs.status"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tickets": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-ticket-conversation",
+          "description": "Get the message history for a specific ticket to understand the inquiry.",
+          "operationPath": "openapi_source#/paths/~1ticket~1{ticketId}~1messages/get",
+          "parameters": [
+            {
+              "name": "authorization",
+              "in": "header",
+              "value": "$inputs.authorization"
+            },
+            {
+              "name": "ticketId",
+              "in": "path",
+              "value": "$steps.find-open-tickets.outputs.tickets.ticketId"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "messages": "$response.body",
+            "ticketId": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-response-message",
+          "description": "Add a response message to the ticket for the customer or internal notes.",
+          "operationPath": "openapi_source#/paths/~1ticket~1{ticketId}~1message/post",
+          "parameters": [
+            {
+              "name": "authorization",
+              "in": "header",
+              "value": "$inputs.authorization"
+            },
+            {
+              "name": "ticketId",
+              "in": "path",
+              "value": "$steps.get-ticket-conversation.outputs.ticketId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "ticketId": "$steps.get-ticket-conversation.outputs.ticketId",
+              "visibility": "$inputs.visibility",
+              "body": "$inputs.body"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "message_add_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-ticket-status",
+          "description": "Update the ticket status (e.g., to 'CLOSED' if resolved).",
+          "operationPath": "openapi_source#/paths/~1ticket~1{ticketId}~1status/put",
+          "parameters": [
+            {
+              "name": "authorization",
+              "in": "header",
+              "value": "$inputs.authorization"
+            },
+            {
+              "name": "ticketId",
+              "in": "path",
+              "value": "$steps.get-ticket-conversation.outputs.ticketId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "ticketId": "$steps.get-ticket-conversation.outputs.ticketId",
+              "ticketStatus": "$inputs.ticketStatus"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ticket_update_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "tickets": "$steps.find-open-tickets.outputs.tickets",
+        "messages": "$steps.get-ticket-conversation.outputs.messages",
+        "ticketId": "$steps.get-ticket-conversation.outputs.ticketId",
+        "message_add_status": "$steps.add-response-message.outputs.message_add_status",
+        "ticket_update_status": "$steps.update-ticket-status.outputs.ticket_update_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

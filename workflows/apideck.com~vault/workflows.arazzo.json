@@ -1,0 +1,801 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/apideck.com/vault/10.14.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "onboard-consumer-and-initiate-hosted-vault-session",
+      "summary": "Creates a new consumer record in Apideck Vault and then generates a session URL for that consumer to manage their integrations via the Hosted Vault UI.",
+      "description": "Creates a new consumer record in Apideck Vault and then generates a session URL for that consumer to manage their integrations via the Hosted Vault UI.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "x-apideck-app-id": {
+            "type": "string"
+          },
+          "consumer_id": {
+            "type": "string"
+          },
+          "x-apideck-consumer-id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-consumer",
+          "description": "Create a new consumer record representing a user or account in your system.",
+          "operationId": "consumersAdd",
+          "parameters": [
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "consumer_id": "$inputs.consumer_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "consumer_id": "$response.body",
+            "application_id": "$response.body",
+            "created_consumer_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-hosted-session",
+          "description": "Generate a short-lived session URL for the created consumer to access Hosted Vault.",
+          "operationId": "sessionsCreate",
+          "parameters": [
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "consumer_id": "$steps.create-consumer.outputs.consumer_id",
+              "application_id": "$steps.create-consumer.outputs.application_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "session_uri": "$response.body",
+            "session_token": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "consumer_id": "$steps.create-consumer.outputs.consumer_id",
+        "application_id": "$steps.create-consumer.outputs.application_id",
+        "created_consumer_details": "$steps.create-consumer.outputs.created_consumer_details",
+        "session_uri": "$steps.create-hosted-session.outputs.session_uri",
+        "session_token": "$steps.create-hosted-session.outputs.session_token"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "add-api-keybasic-auth-connection-via-api",
+      "summary": "Allows a consumer (identified by consumer_id) to establish a connection to a service that uses API Key or Basic Authentication, managing the process entirely through the Vault API.",
+      "description": "Allows a consumer (identified by consumer_id) to establish a connection to a service that uses API Key or Basic Authentication, managing the process entirely through the Vault API.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "x-apideck-consumer-id": {
+            "type": "string"
+          },
+          "x-apideck-app-id": {
+            "type": "string"
+          },
+          "service_id": {
+            "type": "string"
+          },
+          "unified_api": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-connection-details",
+          "description": "Retrieve connection details, including the necessary form fields (like API key fields) required for authentication.",
+          "operationId": "connectionsOne",
+          "parameters": [
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "service_id",
+              "in": "path",
+              "value": "$inputs.service_id"
+            },
+            {
+              "name": "unified_api",
+              "in": "path",
+              "value": "$inputs.unified_api"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "connection_details": "$response.body",
+            "form_fields": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-api-key-connection",
+          "description": "Create the connection by providing the necessary credentials (e.g., API key) in the 'settings' field.",
+          "operationId": "connectionsAdd",
+          "parameters": [
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "service_id",
+              "in": "path",
+              "value": "$inputs.service_id"
+            },
+            {
+              "name": "unified_api",
+              "in": "path",
+              "value": "$inputs.unified_api"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "service_id": "$inputs.service_id",
+              "unified_api": "$inputs.unified_api"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "created_connection_details": "$response.body",
+            "connection_state": "$response.body"
+          }
+        },
+        {
+          "stepId": "verify-connection-status",
+          "description": "Verify that the connection state is now 'authorized' or 'callable'.",
+          "operationId": "connectionsOne",
+          "parameters": [
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "service_id",
+              "in": "path",
+              "value": "$inputs.service_id"
+            },
+            {
+              "name": "unified_api",
+              "in": "path",
+              "value": "$inputs.unified_api"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "connection_details": "$response.body",
+            "connection_state": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "connection_details": "$steps.verify-connection-status.outputs.connection_details",
+        "form_fields": "$steps.get-connection-details.outputs.form_fields",
+        "created_connection_details": "$steps.create-api-key-connection.outputs.created_connection_details",
+        "connection_state": "$steps.verify-connection-status.outputs.connection_state"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "validate-connection-and-refresh-token-oauth",
+      "summary": "Checks the validity of an existing OAuth connection and forces a token refresh if necessary, ensuring the connection remains active.",
+      "description": "Checks the validity of an existing OAuth connection and forces a token refresh if necessary, ensuring the connection remains active.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "x-apideck-consumer-id": {
+            "type": "string"
+          },
+          "x-apideck-app-id": {
+            "type": "string"
+          },
+          "service_id": {
+            "type": "string"
+          },
+          "unified_api": {
+            "type": "string"
+          },
+          "validate-and-refresh-connection_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-connection-to-validate",
+          "description": "Retrieve the current details and state of the connection.",
+          "operationId": "connectionsOne",
+          "parameters": [
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "service_id",
+              "in": "path",
+              "value": "$inputs.service_id"
+            },
+            {
+              "name": "unified_api",
+              "in": "path",
+              "value": "$inputs.unified_api"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "connection_id": "$response.body",
+            "initial_connection_state": "$response.body"
+          }
+        },
+        {
+          "stepId": "validate-and-refresh-connection",
+          "description": "Trigger the validation process, which includes attempting to refresh the OAuth token if applicable.",
+          "operationId": "validateConnectionState",
+          "parameters": [
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "service_id",
+              "in": "path",
+              "value": "$inputs.service_id"
+            },
+            {
+              "name": "unified_api",
+              "in": "path",
+              "value": "$inputs.unified_api"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.validate-and-refresh-connection_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "validation_result_state": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-validated-connection-status",
+          "description": "Retrieve the connection details again to confirm the updated state after validation/refresh.",
+          "operationId": "connectionsOne",
+          "parameters": [
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "service_id",
+              "in": "path",
+              "value": "$inputs.service_id"
+            },
+            {
+              "name": "unified_api",
+              "in": "path",
+              "value": "$inputs.unified_api"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "final_connection_state": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "connection_id": "$steps.get-connection-to-validate.outputs.connection_id",
+        "initial_connection_state": "$steps.get-connection-to-validate.outputs.initial_connection_state",
+        "validation_result_state": "$steps.validate-and-refresh-connection.outputs.validation_result_state",
+        "final_connection_state": "$steps.get-validated-connection-status.outputs.final_connection_state"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "import-existing-oauth-connection",
+      "summary": "Migrates an existing OAuth connection (with its tokens) into Apideck Vault for a specific consumer.",
+      "description": "Migrates an existing OAuth connection (with its tokens) into Apideck Vault for a specific consumer.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "x-apideck-consumer-id": {
+            "type": "string"
+          },
+          "x-apideck-app-id": {
+            "type": "string"
+          },
+          "service_id": {
+            "type": "string"
+          },
+          "unified_api": {
+            "type": "string"
+          },
+          "import-oauth-connection_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "import-oauth-connection",
+          "description": "Import an existing connection by providing the access token, refresh token, and issuance/expiry details.",
+          "operationId": "connectionsImport",
+          "parameters": [
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "service_id",
+              "in": "path",
+              "value": "$inputs.service_id"
+            },
+            {
+              "name": "unified_api",
+              "in": "path",
+              "value": "$inputs.unified_api"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.import-oauth-connection_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "imported_connection_details": "$response.body",
+            "connection_state": "$response.body"
+          }
+        },
+        {
+          "stepId": "verify-imported-connection",
+          "description": "Retrieve the imported connection details to verify its state.",
+          "operationId": "connectionsOne",
+          "parameters": [
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "service_id",
+              "in": "path",
+              "value": "$inputs.service_id"
+            },
+            {
+              "name": "unified_api",
+              "in": "path",
+              "value": "$inputs.unified_api"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "connection_details": "$response.body",
+            "connection_state": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "imported_connection_details": "$steps.import-oauth-connection.outputs.imported_connection_details",
+        "connection_state": "$steps.verify-imported-connection.outputs.connection_state",
+        "connection_details": "$steps.verify-imported-connection.outputs.connection_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "configure-custom-field-mapping-for-a-connection-resource",
+      "summary": "Defines how a specific downstream field should be mapped to a custom field within the Apideck Unified API for a given connection and resource.",
+      "description": "Defines how a specific downstream field should be mapped to a custom field within the Apideck Unified API for a given connection and resource.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "x-apideck-consumer-id": {
+            "type": "string"
+          },
+          "x-apideck-app-id": {
+            "type": "string"
+          },
+          "unified_api": {
+            "type": "string"
+          },
+          "service_id": {
+            "type": "string"
+          },
+          "resource": {
+            "type": "string"
+          },
+          "resource_id": {
+            "type": "string"
+          },
+          "target_field_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-custom-field",
+          "description": "List available custom fields for a specific resource (e.g., 'leads') within a connection to identify the target field.",
+          "operationId": "customFieldsAll",
+          "parameters": [
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "unified_api",
+              "in": "path",
+              "value": "$inputs.unified_api"
+            },
+            {
+              "name": "service_id",
+              "in": "path",
+              "value": "$inputs.service_id"
+            },
+            {
+              "name": "resource",
+              "in": "path",
+              "value": "$inputs.resource"
+            },
+            {
+              "name": "resource_id",
+              "in": "query",
+              "value": "$inputs.resource_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "custom_fields_list": "$response.body",
+            "target_field_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-custom-mapping",
+          "description": "Create the mapping rule, specifying the JSONPath expression to find the value in the downstream system.",
+          "operationId": "customMappingsAdd",
+          "parameters": [
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "unified_api",
+              "in": "path",
+              "value": "$inputs.unified_api"
+            },
+            {
+              "name": "service_id",
+              "in": "path",
+              "value": "$inputs.service_id"
+            },
+            {
+              "name": "target_field_id",
+              "in": "path",
+              "value": "$steps.find-custom-field.outputs.target_field_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "target_field_id": "$steps.find-custom-field.outputs.target_field_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "created_mapping_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "verify-custom-mapping",
+          "description": "Retrieve the created custom mapping to verify its details.",
+          "operationId": "customMappingsOne",
+          "parameters": [
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "unified_api",
+              "in": "path",
+              "value": "$inputs.unified_api"
+            },
+            {
+              "name": "service_id",
+              "in": "path",
+              "value": "$inputs.service_id"
+            },
+            {
+              "name": "target_field_id",
+              "in": "path",
+              "value": "$inputs.target_field_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "verified_mapping_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "custom_fields_list": "$steps.find-custom-field.outputs.custom_fields_list",
+        "target_field_id": "$steps.find-custom-field.outputs.target_field_id",
+        "created_mapping_details": "$steps.create-custom-mapping.outputs.created_mapping_details",
+        "verified_mapping_details": "$steps.verify-custom-mapping.outputs.verified_mapping_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

@@ -1,0 +1,672 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/pinecone.io/main/20230406.1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "setup-new-vector-index-and-populate-initial-data",
+      "summary": "Creates a new Pinecone index, waits for it to be ready, and then adds the first batch of vectors (upsert). This is a fundamental workflow for starting a new vector search project.",
+      "description": "Creates a new Pinecone index, waits for it to be ready, and then adds the first batch of vectors (upsert). This is a fundamental workflow for starting a new vector search project.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "dimension": {
+            "type": "string"
+          },
+          "indexName": {
+            "type": "string"
+          },
+          "vectors": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-new-index",
+          "description": "Define and create a new vector index with specified dimensions, metric, and configuration.",
+          "operationId": "create_index",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name",
+              "dimension": "$inputs.dimension"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "index_creation_status": "$response.body",
+            "index_name": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-index-readiness",
+          "description": "Check the status of the newly created index until it becomes ready. This step might need to be polled.",
+          "operationId": "describe_index",
+          "parameters": [
+            {
+              "name": "indexName",
+              "in": "path",
+              "value": "$steps.create-new-index.outputs.index_name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "index_status": "$response.body",
+            "index_details": "$response.body",
+            "index_host": "$response.body"
+          }
+        },
+        {
+          "stepId": "upsert-initial-vectors",
+          "description": "Add the initial set of vectors (including their IDs, vector data, and optional metadata) to the ready index. Assumes request is routed to the correct index host obtained from 'check-index-readiness'.",
+          "operationId": "Upsert",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "indexName": "$steps.create-new-index.outputs.index_name",
+              "vectors": "$inputs.vectors"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "upserted_count": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "index_creation_status": "$steps.create-new-index.outputs.index_creation_status",
+        "index_name": "$steps.create-new-index.outputs.index_name",
+        "index_status": "$steps.check-index-readiness.outputs.index_status",
+        "index_details": "$steps.check-index-readiness.outputs.index_details",
+        "index_host": "$steps.check-index-readiness.outputs.index_host",
+        "upserted_count": "$steps.upsert-initial-vectors.outputs.upserted_count"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "vector-search-and-retrieval",
+      "summary": "Performs a vector similarity search (query) within a specific index and namespace, then retrieves the full vector data for some of the matching IDs.",
+      "description": "Performs a vector similarity search (query) within a specific index and namespace, then retrieves the full vector data for some of the matching IDs.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "topK": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "query-similar-vectors",
+          "description": "Search the index for vectors most similar to the provided query vector, optionally filtering by metadata. Assumes request is routed to the correct index host.",
+          "operationId": "Query",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "topK": "$inputs.topK"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "matches": "$response.body",
+            "namespace_queried": "$response.body"
+          }
+        },
+        {
+          "stepId": "fetch-matched-vectors",
+          "description": "Retrieve the full vector data and metadata for specific vector IDs returned by the query. Assumes request is routed to the correct index host.",
+          "operationId": "Fetch",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "ids": "$steps.query-similar-vectors.outputs.matches[*].id",
+              "namespace": "$steps.query-similar-vectors.outputs.namespace_queried"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "fetched_vectors": "$response.body",
+            "namespace_fetched": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "matches": "$steps.query-similar-vectors.outputs.matches",
+        "namespace_queried": "$steps.query-similar-vectors.outputs.namespace_queried",
+        "fetched_vectors": "$steps.fetch-matched-vectors.outputs.fetched_vectors",
+        "namespace_fetched": "$steps.fetch-matched-vectors.outputs.namespace_fetched"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "index-backup-create-collection",
+      "summary": "Creates a static backup (collection) of an existing, ready index. Useful for disaster recovery or creating copies.",
+      "description": "Creates a static backup (collection) of an existing, ready index. Useful for disaster recovery or creating copies.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "indexName": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "collectionName": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-source-index-details",
+          "description": "Retrieve details of the index to be backed up, ensuring it exists and is ready.",
+          "operationId": "describe_index",
+          "parameters": [
+            {
+              "name": "indexName",
+              "in": "path",
+              "value": "$inputs.indexName"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "index_details": "$response.body",
+            "index_name": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-backup-collection",
+          "description": "Initiate the creation of a collection from the specified source index.",
+          "operationId": "create_collection",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "source": "$steps.get-source-index-details.outputs.index_name",
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "collection_creation_status": "$response.body",
+            "collection_name": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-collection-status",
+          "description": "Monitor the status of the collection creation until it is ready. This step might need to be polled.",
+          "operationId": "describe_collection",
+          "parameters": [
+            {
+              "name": "collectionName",
+              "in": "path",
+              "value": "$steps.create-backup-collection.outputs.collection_name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "collection_status": "$response.body",
+            "collection_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "index_details": "$steps.get-source-index-details.outputs.index_details",
+        "index_name": "$steps.get-source-index-details.outputs.index_name",
+        "collection_creation_status": "$steps.create-backup-collection.outputs.collection_creation_status",
+        "collection_name": "$steps.create-backup-collection.outputs.collection_name",
+        "collection_status": "$steps.check-collection-status.outputs.collection_status",
+        "collection_details": "$steps.check-collection-status.outputs.collection_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-index-from-backup-collection",
+      "summary": "Creates a new index populated with data from an existing collection (backup). Useful for restoring or cloning an index.",
+      "description": "Creates a new index populated with data from an existing collection (backup). Useful for restoring or cloning an index.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "collectionName": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "dimension": {
+            "type": "string"
+          },
+          "indexName": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-source-collection-details",
+          "description": "Retrieve details of the collection to restore from, ensuring it exists and is ready.",
+          "operationId": "describe_collection",
+          "parameters": [
+            {
+              "name": "collectionName",
+              "in": "path",
+              "value": "$inputs.collectionName"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "collection_details": "$response.body",
+            "collection_name": "$response.body",
+            "collection_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-index-from-collection",
+          "description": "Create a new index using the specified collection as the data source. Requires knowing the dimension of the original index.",
+          "operationId": "create_index",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "source_collection": "$steps.get-source-collection-details.outputs.collection_name",
+              "name": "$inputs.name",
+              "dimension": "$inputs.dimension"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "index_creation_status": "$response.body",
+            "index_name": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-restored-index-readiness",
+          "description": "Check the status of the newly created index until it becomes ready. This step might need to be polled.",
+          "operationId": "describe_index",
+          "parameters": [
+            {
+              "name": "indexName",
+              "in": "path",
+              "value": "$steps.create-index-from-collection.outputs.index_name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "index_status": "$response.body",
+            "index_details": "$response.body",
+            "index_host": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "collection_details": "$steps.get-source-collection-details.outputs.collection_details",
+        "collection_name": "$steps.get-source-collection-details.outputs.collection_name",
+        "collection_status": "$steps.get-source-collection-details.outputs.collection_status",
+        "index_creation_status": "$steps.create-index-from-collection.outputs.index_creation_status",
+        "index_name": "$steps.create-index-from-collection.outputs.index_name",
+        "index_status": "$steps.check-restored-index-readiness.outputs.index_status",
+        "index_details": "$steps.check-restored-index-readiness.outputs.index_details",
+        "index_host": "$steps.check-restored-index-readiness.outputs.index_host"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "scale-index-resources",
+      "summary": "Adjusts the resources (replicas or pod type) allocated to an existing index to manage performance and cost.",
+      "description": "Adjusts the resources (replicas or pod type) allocated to an existing index to manage performance and cost.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "indexName": {
+            "type": "string"
+          },
+          "replicas": {
+            "type": "string"
+          },
+          "pod_type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-current-index-config",
+          "description": "Retrieve the current configuration and status of the index before scaling.",
+          "operationId": "describe_index",
+          "parameters": [
+            {
+              "name": "indexName",
+              "in": "path",
+              "value": "$inputs.indexName"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "index_details": "$response.body",
+            "current_replicas": "$response.body",
+            "current_pod_type": "$response.body",
+            "index_name": "$response.body"
+          }
+        },
+        {
+          "stepId": "configure-index-scaling",
+          "description": "Apply new scaling configuration (replicas, pod type) to the index.",
+          "operationId": "configure_index",
+          "parameters": [
+            {
+              "name": "indexName",
+              "in": "path",
+              "value": "$steps.get-current-index-config.outputs.index_name"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "indexName": "$steps.get-current-index-config.outputs.index_name",
+              "replicas": "$inputs.replicas",
+              "pod_type": "$inputs.pod_type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "scaling_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-index-scaling-status",
+          "description": "Monitor the index status until the scaling operation completes and the index returns to a ready state. This step might need to be polled.",
+          "operationId": "describe_index",
+          "parameters": [
+            {
+              "name": "indexName",
+              "in": "path",
+              "value": "$steps.get-current-index-config.outputs.index_name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "index_status": "$response.body",
+            "updated_index_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "index_details": "$steps.get-current-index-config.outputs.index_details",
+        "current_replicas": "$steps.get-current-index-config.outputs.current_replicas",
+        "current_pod_type": "$steps.get-current-index-config.outputs.current_pod_type",
+        "index_name": "$steps.get-current-index-config.outputs.index_name",
+        "scaling_status": "$steps.configure-index-scaling.outputs.scaling_status",
+        "index_status": "$steps.check-index-scaling-status.outputs.index_status",
+        "updated_index_details": "$steps.check-index-scaling-status.outputs.updated_index_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "cleanup-resources-index-and-collection",
+      "summary": "Deletes a specified index and a related collection, useful for cleaning up resources after they are no longer needed.",
+      "description": "Deletes a specified index and a related collection, useful for cleaning up resources after they are no longer needed.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "indexName": {
+            "type": "string"
+          },
+          "collectionName": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "delete-target-index",
+          "description": "Delete the specified Pinecone index.",
+          "operationId": "delete_index",
+          "parameters": [
+            {
+              "name": "indexName",
+              "in": "path",
+              "value": "$inputs.indexName"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "index_deletion_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "delete-target-collection",
+          "description": "Delete the specified Pinecone collection.",
+          "operationId": "delete_collection",
+          "parameters": [
+            {
+              "name": "collectionName",
+              "in": "path",
+              "value": "$inputs.collectionName"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "collection_deletion_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "index_deletion_status": "$steps.delete-target-index.outputs.index_deletion_status",
+        "collection_deletion_status": "$steps.delete-target-collection.outputs.collection_deletion_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

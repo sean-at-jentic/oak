@@ -1,0 +1,370 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/va.gov/benefits/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "validate-submit-and-track-single-document-package",
+      "summary": "Validates individual PDF documents, submits them along with metadata for a VA benefits claim, and tracks the submission status until completion. This is the core process for submitting documents via the API.",
+      "description": "Validates individual PDF documents, submits them along with metadata for a VA benefits claim, and tracks the submission status until completion. This is the core process for submitting documents via the API.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Content-MD5": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "validate-main-document",
+          "description": "Optional: Validates the main PDF document against system requirements (size, format, password) before submission.",
+          "operationId": "postBenefitsDocumentUploadValidateDocument",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "main_validation_result": "$response.body"
+          }
+        },
+        {
+          "stepId": "validate-attachment-document",
+          "description": "Optional: Validates an attachment PDF document against system requirements. Repeat this step for each attachment.",
+          "operationId": "postBenefitsDocumentUploadValidateDocument",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "attachment_validation_result": "$response.body"
+          }
+        },
+        {
+          "stepId": "initiate-upload",
+          "description": "Requests a secure location and unique ID (GUID) to upload the document package.",
+          "operationId": "postBenefitsDocumentUpload",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "location": "$response.body"
+          }
+        },
+        {
+          "stepId": "upload-documents",
+          "description": "Uploads the multipart payload (metadata JSON, main PDF, attachment PDFs) to the location provided by the 'initiate-upload' step. Note: The actual path used is the dynamic 'location' URL.",
+          "operationId": "putBenefitsDocumentUpload",
+          "parameters": [
+            {
+              "name": "Content-MD5",
+              "in": "header",
+              "value": "$inputs.Content-MD5"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "upload_confirmation": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-submission-status",
+          "description": "Retrieves the current status of the document submission using the ID (GUID). Poll this endpoint until 'final_status' is true.",
+          "operationId": "getBenefitsDocumentUploadStatus",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.initiate-upload.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "main_validation_result": "$steps.validate-main-document.outputs.main_validation_result",
+        "attachment_validation_result": "$steps.validate-attachment-document.outputs.attachment_validation_result",
+        "id": "$steps.initiate-upload.outputs.id",
+        "location": "$steps.initiate-upload.outputs.location",
+        "upload_confirmation": "$steps.upload-documents.outputs.upload_confirmation",
+        "status_details": "$steps.check-submission-status.outputs.status_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "validate-submit-and-track-multiple-document-packages",
+      "summary": "Efficiently validates documents, submits multiple benefit document packages, and tracks their statuses in bulk. Ideal for high-volume submitters like VSOs.",
+      "description": "Efficiently validates documents, submits multiple benefit document packages, and tracks their statuses in bulk. Ideal for high-volume submitters like VSOs.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Content-MD5": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "validate-document-set",
+          "description": "Optional: Validates a PDF document (main or attachment) against system requirements. Repeat for all documents across all packages before initiating uploads.",
+          "operationId": "postBenefitsDocumentUploadValidateDocument",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "validation_result": "$response.body"
+          }
+        },
+        {
+          "stepId": "initiate-multiple-uploads",
+          "description": "Requests a secure location and unique ID (GUID) for a document package upload. Repeat this step for each package being submitted, collecting the IDs.",
+          "operationId": "postBenefitsDocumentUpload",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "location": "$response.body"
+          }
+        },
+        {
+          "stepId": "upload-multiple-documents",
+          "description": "Uploads the multipart payload for a single package to its designated location. Repeat this step for each package using its corresponding location URL. Note: The actual path used is the dynamic 'location' URL.",
+          "operationId": "putBenefitsDocumentUpload",
+          "parameters": [
+            {
+              "name": "Content-MD5",
+              "in": "header",
+              "value": "$inputs.Content-MD5"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "upload_confirmation": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-bulk-submission-status",
+          "description": "Retrieves the current status for a list of submitted document packages using their IDs (GUIDs). Useful for monitoring multiple submissions efficiently.",
+          "operationId": "getBenefitsDocumentUploadStatusReport",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "ids": "$steps.initiate-multiple-uploads.outputs.id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_report_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "validation_result": "$steps.validate-document-set.outputs.validation_result",
+        "id": "$steps.initiate-multiple-uploads.outputs.id",
+        "location": "$steps.initiate-multiple-uploads.outputs.location",
+        "upload_confirmation": "$steps.upload-multiple-documents.outputs.upload_confirmation",
+        "status_report_data": "$steps.check-bulk-submission-status.outputs.status_report_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "debug-failed-upload-testing-environment",
+      "summary": "Downloads the server's view of a submitted document package as a zip file to help diagnose submission errors. This endpoint is only available in testing environments.",
+      "description": "Downloads the server's view of a submitted document package as a zip file to help diagnose submission errors. This endpoint is only available in testing environments.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-failed-submission-status",
+          "description": "Optional: Check the status of a specific submission to confirm it failed or is in an unexpected state.",
+          "operationId": "getBenefitsDocumentUploadStatus",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "download-submission-content",
+          "description": "Downloads the submitted metadata and documents as a zip file for debugging purposes.",
+          "operationId": "getBenefitsDocumentUploadDownload",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "submission_zip": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "status_details": "$steps.get-failed-submission-status.outputs.status_details",
+        "submission_zip": "$steps.download-submission-content.outputs.submission_zip"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

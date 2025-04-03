@@ -1,0 +1,1027 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/agco-ats.com/main/v1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "generate-and-track-authorization-code",
+      "summary": "Generate an authorization code based on a predefined definition, retrieve its details, and add contact information for tracking purposes.",
+      "description": "Generate an authorization code based on a predefined definition, retrieve its details, and add contact information for tracking purposes.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "createdByUserID": {
+            "type": "string"
+          },
+          "deletedByUserID": {
+            "type": "string"
+          },
+          "includeDeleted": {
+            "type": "string"
+          },
+          "categoryID": {
+            "type": "string"
+          },
+          "generate-auth-code_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          },
+          "add-auth-code-contact-info_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-auth-code-definition",
+          "description": "Search for and select an appropriate Authorization Code Definition.",
+          "operationId": "AuthorizationCodeDefinitions_GetAuthorizationCodeDefinition",
+          "parameters": [
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "createdByUserID",
+              "in": "query",
+              "value": "$inputs.createdByUserID"
+            },
+            {
+              "name": "deletedByUserID",
+              "in": "query",
+              "value": "$inputs.deletedByUserID"
+            },
+            {
+              "name": "includeDeleted",
+              "in": "query",
+              "value": "$inputs.includeDeleted"
+            },
+            {
+              "name": "categoryID",
+              "in": "query",
+              "value": "$inputs.categoryID"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "AuthorizationCodeDefinition_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "generate-auth-code",
+          "description": "Generate an authorization code using a specific definition and parameters.",
+          "operationId": "AuthorizationCodes_PostAuthorizationCode",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.generate-auth-code_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "authorization_code_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-generated-auth-code",
+          "description": "Retrieve the details of the generated authorization code, including the actual code.",
+          "operationId": "AuthorizationCodes_GetAuthorizationCode",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.generate-auth-code.outputs.authorization_code_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "AuthorizationCode_object_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-auth-code-contact-info",
+          "description": "Add contact information associated with the generated authorization code for tracking.",
+          "operationId": "AuthorizationContactInformation_Post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.add-auth-code-contact-info_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "contact_information_id": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "AuthorizationCodeDefinition_list": "$steps.find-auth-code-definition.outputs.AuthorizationCodeDefinition_list",
+        "authorization_code_id": "$steps.generate-auth-code.outputs.authorization_code_id",
+        "AuthorizationCode_object_details": "$steps.get-generated-auth-code.outputs.AuthorizationCode_object_details",
+        "contact_information_id": "$steps.add-auth-code-contact-info.outputs.contact_information_id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "password-reset-request-and-completion",
+      "summary": "Allows a user to request a password reset email and then use the token from the email to set a new password.",
+      "description": "Allows a user to request a password reset email and then use the token from the email to set a new password.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Username": {
+            "type": "string"
+          },
+          "Url": {
+            "type": "string"
+          },
+          "ParameterName": {
+            "type": "string"
+          },
+          "Token": {
+            "type": "string"
+          },
+          "NewPassword": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "request-password-reset",
+          "description": "Request a password reset link/token to be sent for a given username.",
+          "operationId": "Authentication_RequestPasswordReset",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "Username": "$inputs.Username",
+              "Url": "$inputs.Url",
+              "ParameterName": "$inputs.ParameterName"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_code_204": "$response.body"
+          }
+        },
+        {
+          "stepId": "reset-password",
+          "description": "Submit the password reset token and the new password to complete the reset process.",
+          "operationId": "Authentication_ResetPasword",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "Token": "$inputs.Token",
+              "NewPassword": "$inputs.NewPassword"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_code_204": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "status_code_204": "$steps.reset-password.outputs.status_code_204"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-software-package-lifecycle",
+      "summary": "Define a package type, create a package version, associate it with a bundle for distribution.",
+      "description": "Define a package type, create a package version, associate it with a bundle for distribution.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "define-package-type_body": {
+            "type": "object"
+          },
+          "create-package-version_body": {
+            "type": "object"
+          },
+          "UpdateGroupID": {
+            "type": "string"
+          },
+          "Active": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "BundleNumber": {
+            "type": "string"
+          },
+          "add-package-to-bundle_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "define-package-type",
+          "description": "Define a new type of software package if it doesn't exist.",
+          "operationId": "PackageTypes_Post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.define-package-type_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "PackageTypeID": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-package-version",
+          "description": "Create a specific version of a software package, providing URL, CRC, version number etc.",
+          "operationId": "Packages_PostPackage",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-package-version_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "PackageID": "$response.body"
+          }
+        },
+        {
+          "stepId": "find-distribution-bundle",
+          "description": "Find an existing software bundle to add the new package version to.",
+          "operationId": "Bundles_GetBundles",
+          "parameters": [
+            {
+              "name": "UpdateGroupID",
+              "in": "query",
+              "value": "$inputs.UpdateGroupID"
+            },
+            {
+              "name": "Active",
+              "in": "query",
+              "value": "$inputs.Active"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "BundleNumber",
+              "in": "query",
+              "value": "$inputs.BundleNumber"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Bundle_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-package-to-bundle",
+          "description": "Associate the created package version with the selected bundle.",
+          "operationId": "PackageTypetoBundles_Post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.add-package-to-bundle_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_code_204": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "PackageTypeID": "$steps.define-package-type.outputs.PackageTypeID",
+        "PackageID": "$steps.create-package-version.outputs.PackageID",
+        "Bundle_list": "$steps.find-distribution-bundle.outputs.Bundle_list",
+        "status_code_204": "$steps.add-package-to-bundle.outputs.status_code_204"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "engine-injector-code-iqa-update",
+      "summary": "Allows a service technician using an EDT to retrieve the current Injector Quantity Adjustment (IQA) codes for an engine and report new codes after replacing injectors.",
+      "description": "Allows a service technician using an EDT to retrieve the current Injector Quantity Adjustment (IQA) codes for an engine and report new codes after replacing injectors.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "serialNumber": {
+            "type": "string"
+          },
+          "EDTInstanceId": {
+            "type": "string"
+          },
+          "update-engine-iqa-codes_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-engine-iqa-codes",
+          "description": "Retrieve the current IQA codes for a specific engine.",
+          "operationId": "AftermarketServices_GetEngineIQACodes",
+          "parameters": [
+            {
+              "name": "serialNumber",
+              "in": "path",
+              "value": "$inputs.serialNumber"
+            },
+            {
+              "name": "EDTInstanceId",
+              "in": "query",
+              "value": "$inputs.EDTInstanceId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "iqa_codes_array": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-engine-iqa-codes",
+          "description": "Report the new IQA codes (in physical order) for a specific engine after service.",
+          "operationId": "AftermarketServices_PutIQACodes",
+          "parameters": [
+            {
+              "name": "serialNumber",
+              "in": "path",
+              "value": "$inputs.serialNumber"
+            },
+            {
+              "name": "EDTInstanceId",
+              "in": "query",
+              "value": "$inputs.EDTInstanceId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.update-engine-iqa-codes_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "success_boolean": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "iqa_codes_array": "$steps.get-engine-iqa-codes.outputs.iqa_codes_array",
+        "success_boolean": "$steps.update-engine-iqa-codes.outputs.success_boolean"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-user-and-assign-role-admin",
+      "summary": "Administrative workflow to create a new user and assign them to a specific role.",
+      "description": "Administrative workflow to create a new user and assign them to a specific role.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-user_body": {
+            "type": "object"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "permissionID": {
+            "type": "string"
+          },
+          "permissionName": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-user",
+          "description": "Create a new user account.",
+          "operationId": "Users_Post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-user_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "created_User_object": "$response.body"
+          }
+        },
+        {
+          "stepId": "find-role",
+          "description": "Find the role to assign to the user.",
+          "operationId": "Roles_GetRoles",
+          "parameters": [
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "permissionID",
+              "in": "query",
+              "value": "$inputs.permissionID"
+            },
+            {
+              "name": "permissionName",
+              "in": "query",
+              "value": "$inputs.permissionName"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Role_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "assign-user-role",
+          "description": "Assign the found role to the newly created user.",
+          "operationId": "UserPermissions_Put",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-user.outputs.created_User_object.UserID"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.create-user.outputs.created_User_object.UserID"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_code_204": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "created_User_object": "$steps.create-user.outputs.created_User_object",
+        "Role_list": "$steps.find-role.outputs.Role_list",
+        "status_code_204": "$steps.assign-user-role.outputs.status_code_204"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "content-submission-and-build-monitoring",
+      "summary": "Submit content for processing/packaging via the build system and monitor its status.",
+      "description": "Submit content for processing/packaging via the build system and monitor its status.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "userID": {
+            "type": "string"
+          },
+          "includeAttributes": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "typeID": {
+            "type": "string"
+          },
+          "packageTypeID": {
+            "type": "string"
+          },
+          "submit-content_body": {
+            "type": "object"
+          },
+          "contentSubmissionID": {
+            "type": "string"
+          },
+          "includeActivityRunDetails": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-content-definition",
+          "description": "Find the appropriate Content Definition for the submission.",
+          "operationId": "ContentDefinitions_GetContentDefinitions",
+          "parameters": [
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "userID",
+              "in": "query",
+              "value": "$inputs.userID"
+            },
+            {
+              "name": "includeAttributes",
+              "in": "query",
+              "value": "$inputs.includeAttributes"
+            },
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "typeID",
+              "in": "query",
+              "value": "$inputs.typeID"
+            },
+            {
+              "name": "packageTypeID",
+              "in": "query",
+              "value": "$inputs.packageTypeID"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ContentDefinition_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "submit-content",
+          "description": "Submit content details (repository, revision, etc.) based on a Content Definition.",
+          "operationId": "ContentSubmissions_PostContentSubmission",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.submit-content_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "contentSubmissionID": "$response.body"
+          }
+        },
+        {
+          "stepId": "monitor-submission-status",
+          "description": "Periodically check the status of the content submission build job.",
+          "operationId": "ContentSubmissions_GetContentSubmissionStatus",
+          "parameters": [
+            {
+              "name": "contentSubmissionID",
+              "in": "path",
+              "value": "$steps.submit-content.outputs.contentSubmissionID"
+            },
+            {
+              "name": "includeActivityRunDetails",
+              "in": "query",
+              "value": "$inputs.includeActivityRunDetails"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "JobRun_status_object": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "ContentDefinition_list": "$steps.find-content-definition.outputs.ContentDefinition_list",
+        "contentSubmissionID": "$steps.submit-content.outputs.contentSubmissionID",
+        "JobRun_status_object": "$steps.monitor-submission-status.outputs.JobRun_status_object"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "upload-file",
+      "summary": "Upload a file by first creating its metadata record, then uploading the content, and finally marking it as available.",
+      "description": "Upload a file by first creating its metadata record, then uploading the content, and finally marking it as available.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-file-metadata_body": {
+            "type": "object"
+          },
+          "ID": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-file-metadata",
+          "description": "Create the metadata entry for the file to be uploaded. State must be 'Created'.",
+          "operationId": "Files_PostFile",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-file-metadata_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "file_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "upload-file-content",
+          "description": "Upload the actual file content.",
+          "operationId": "Files_PutFileContents",
+          "parameters": [
+            {
+              "name": "ID",
+              "in": "path",
+              "value": "$steps.create-file-metadata.outputs.file_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "upload_response_object": "$response.body"
+          }
+        },
+        {
+          "stepId": "publish-file",
+          "description": "Update the file metadata, setting the state to 'Available' to make it downloadable.",
+          "operationId": "Files_PutFile",
+          "parameters": [
+            {
+              "name": "ID",
+              "in": "path",
+              "value": "$steps.create-file-metadata.outputs.file_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "ID": "$steps.create-file-metadata.outputs.file_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_code_204": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "file_id": "$steps.create-file-metadata.outputs.file_id",
+        "upload_response_object": "$steps.upload-file-content.outputs.upload_response_object",
+        "status_code_204": "$steps.publish-file.outputs.status_code_204"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "download-file",
+      "summary": "Download a file by first retrieving its metadata and then downloading the content.",
+      "description": "Download a file by first retrieving its metadata and then downloading the content.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "ID": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-file-metadata",
+          "description": "Retrieve the metadata for a specific file.",
+          "operationId": "Files_GetFile",
+          "parameters": [
+            {
+              "name": "ID",
+              "in": "path",
+              "value": "$inputs.ID"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "FileDownload_object_metadata": "$response.body"
+          }
+        },
+        {
+          "stepId": "download-file-content",
+          "description": "Download the actual content of the file. Requires file state to be 'Available'.",
+          "operationId": "Files_GetFileContents",
+          "parameters": [
+            {
+              "name": "ID",
+              "in": "path",
+              "value": "$steps.get-file-metadata.outputs.FileDownload_object_metadata.Id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "file_content": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "FileDownload_object_metadata": "$steps.get-file-metadata.outputs.FileDownload_object_metadata",
+        "file_content": "$steps.download-file-content.outputs.file_content"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

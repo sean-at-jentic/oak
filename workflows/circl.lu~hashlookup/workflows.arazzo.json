@@ -1,0 +1,343 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/circl.lu/hashlookup/1.3/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "explore-file-relationships-sha1",
+      "summary": "Given a SHA1 hash of a file (e.g., an archive), find related files such as containers (parents) it might be part of, and files contained within it (children). Useful for understanding file context in malware analysis or digital forensics.",
+      "description": "Given a SHA1 hash of a file (e.g., an archive), find related files such as containers (parents) it might be part of, and files contained within it (children). Useful for understanding file context in malware analysis or digital forensics.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "sha1": {
+            "type": "string"
+          },
+          "count": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "lookup-sha1",
+          "description": "Lookup a specific SHA1 hash to confirm its existence and retrieve basic information.",
+          "operationId": "get_lookup_sha1",
+          "parameters": [
+            {
+              "name": "sha1",
+              "in": "path",
+              "value": "$inputs.sha1"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sha1_info": "$response.body",
+            "sha1_from_lookup": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-parents",
+          "description": "Retrieve the first page of parent files (containers) for the given SHA1 hash. Requires count (e.g., 100) and starting cursor (e.g., '0').",
+          "operationId": "get_parents",
+          "parameters": [
+            {
+              "name": "sha1",
+              "in": "path",
+              "value": "$steps.lookup-sha1.outputs.sha1_from_lookup"
+            },
+            {
+              "name": "count",
+              "in": "path",
+              "value": "$inputs.count"
+            },
+            {
+              "name": "cursor",
+              "in": "path",
+              "value": "$inputs.cursor"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "parents_list": "$response.body",
+            "next_parent_cursor": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-children",
+          "description": "Retrieve the first page of child files (contents) for the given SHA1 hash. Requires count (e.g., 100) and starting cursor (e.g., '0').",
+          "operationId": "get_children",
+          "parameters": [
+            {
+              "name": "sha1",
+              "in": "path",
+              "value": "$steps.lookup-sha1.outputs.sha1_from_lookup"
+            },
+            {
+              "name": "count",
+              "in": "path",
+              "value": "$inputs.count"
+            },
+            {
+              "name": "cursor",
+              "in": "path",
+              "value": "$inputs.cursor"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "children_list": "$response.body",
+            "next_child_cursor": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "sha1_info": "$steps.lookup-sha1.outputs.sha1_info",
+        "sha1_from_lookup": "$steps.lookup-sha1.outputs.sha1_from_lookup",
+        "parents_list": "$steps.get-parents.outputs.parents_list",
+        "next_parent_cursor": "$steps.get-parents.outputs.next_parent_cursor",
+        "children_list": "$steps.get-children.outputs.children_list",
+        "next_child_cursor": "$steps.get-children.outputs.next_child_cursor"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "session-based-bulk-lookup-analysis",
+      "summary": "Create a session to track multiple hash lookups (e.g., a bulk SHA1 lookup), perform the lookups within that session context by setting the 'hashlookup_session' header, and then retrieve a summary of matched and unmatched hashes from the session. Useful for analyzing large sets of hashes from an incident or investigation.",
+      "description": "Create a session to track multiple hash lookups (e.g., a bulk SHA1 lookup), perform the lookups within that session context by setting the 'hashlookup_session' header, and then retrieve a summary of matched and unmatched hashes from the session. Useful for analyzing large sets of hashes from an incident or investigation.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-session",
+          "description": "Create a named session to store the context of subsequent lookups.",
+          "operationId": "get_session_create",
+          "parameters": [
+            {
+              "name": "name",
+              "in": "path",
+              "value": "$inputs.name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "session_name_created": "$response.body",
+            "session_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "bulk-lookup-sha1-in-session",
+          "description": "Perform a bulk SHA1 lookup. The 'hashlookup_session' header MUST be set using the session name from the previous step for results to be tracked.",
+          "operationId": "post_bulksha1",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "bulk_results": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-session-results",
+          "description": "Retrieve the set of matching and non-matching hashes tracked within the specified session.",
+          "operationId": "get_session_matches",
+          "parameters": [
+            {
+              "name": "name",
+              "in": "path",
+              "value": "$steps.create-session.outputs.session_name_created"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "session_matches": "$response.body",
+            "session_non_matches": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "session_name_created": "$steps.create-session.outputs.session_name_created",
+        "session_status": "$steps.create-session.outputs.session_status",
+        "bulk_results": "$steps.bulk-lookup-sha1-in-session.outputs.bulk_results",
+        "session_matches": "$steps.get-session-results.outputs.session_matches",
+        "session_non_matches": "$steps.get-session-results.outputs.session_non_matches"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "check-api-status-and-usage-trends",
+      "summary": "Retrieve information about the hashlookup database status and identify the most frequently queried hashes. Useful for monitoring service health and understanding current trends or common indicators.",
+      "description": "Retrieve information about the hashlookup database status and identify the most frequently queried hashes. Useful for monitoring service health and understanding current trends or common indicators.",
+      "steps": [
+        {
+          "stepId": "get-database-info",
+          "description": "Get metadata and status information about the hashlookup database.",
+          "operationId": "get_info",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "database_info": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-top-hashes",
+          "description": "Retrieve the list of the top 100 most frequently queried hash values.",
+          "operationId": "get_stattop",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "top_hashes_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "database_info": "$steps.get-database-info.outputs.database_info",
+        "top_hashes_list": "$steps.get-top-hashes.outputs.top_hashes_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

@@ -1,0 +1,718 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/runscope.com/main/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "setup-basic-api-test",
+      "summary": "Creates a new bucket and a basic API test within it, including adding an initial test step. This workflow automates the initial setup for monitoring a new API.",
+      "description": "Creates a new bucket and a basic API test within it, including adding an initial test step. This workflow automates the initial setup for monitoring a new API.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "bucketKey": {
+            "type": "string"
+          },
+          "testId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-account-info",
+          "description": "Retrieve account details to get the team ID.",
+          "operationPath": "openapi_source#/paths/~1account/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "teamId": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-bucket",
+          "description": "Create a new bucket for organizing tests.",
+          "operationPath": "openapi_source#/paths/~1buckets/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "teamId": "$steps.get-account-info.outputs.teamId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "bucketKey": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-test",
+          "description": "Create a new test within the specified bucket.",
+          "operationPath": "openapi_source#/paths/~1buckets~1{bucketKey}~1tests/post",
+          "parameters": [
+            {
+              "name": "bucketKey",
+              "in": "path",
+              "value": "$steps.create-bucket.outputs.bucketKey"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "bucketKey": "$steps.create-bucket.outputs.bucketKey"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "testId": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-test-step",
+          "description": "Add a request step (e.g., a GET request) to the newly created test.",
+          "operationPath": "openapi_source#/paths/~1buckets~1{bucketKey}~1tests~1{testId}~1steps/post",
+          "parameters": [
+            {
+              "name": "bucketKey",
+              "in": "path",
+              "value": "$steps.create-bucket.outputs.bucketKey"
+            },
+            {
+              "name": "testId",
+              "in": "path",
+              "value": "$steps.create-test.outputs.testId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "bucketKey": "$steps.create-bucket.outputs.bucketKey",
+              "testId": "$steps.create-test.outputs.testId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "stepId": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "teamId": "$steps.get-account-info.outputs.teamId",
+        "bucketKey": "$steps.create-bucket.outputs.bucketKey",
+        "testId": "$steps.create-test.outputs.testId",
+        "stepId": "$steps.add-test-step.outputs.stepId"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "check-test-performance-and-errors",
+      "summary": "Retrieves performance metrics for a specific test and checks for recent errors within its bucket. Useful for monitoring test health and diagnosing failures.",
+      "description": "Retrieves performance metrics for a specific test and checks for recent errors within its bucket. Useful for monitoring test health and diagnosing failures.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "bucketKey": {
+            "type": "string"
+          },
+          "testId": {
+            "type": "string"
+          },
+          "count": {
+            "type": "string"
+          },
+          "since": {
+            "type": "string"
+          },
+          "before": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-buckets",
+          "description": "List available buckets to identify the target bucket.",
+          "operationPath": "openapi_source#/paths/~1buckets/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "bucketList": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-tests-in-bucket",
+          "description": "List tests within a specific bucket to identify the target test.",
+          "operationPath": "openapi_source#/paths/~1buckets~1{bucketKey}~1tests/get",
+          "parameters": [
+            {
+              "name": "bucketKey",
+              "in": "path",
+              "value": "$steps.list-buckets.outputs.bucketList.key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "testList": "$response.body",
+            "bucketKey": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-test-metrics",
+          "description": "Retrieve performance metrics (like response times) for the specified test.",
+          "operationPath": "openapi_source#/paths/~1buckets~1{bucketKey}~1tests~1{testId}~1metrics/get",
+          "parameters": [
+            {
+              "name": "bucketKey",
+              "in": "path",
+              "value": "$steps.list-tests-in-bucket.outputs.bucketKey"
+            },
+            {
+              "name": "testId",
+              "in": "path",
+              "value": "$steps.list-tests-in-bucket.outputs.testList.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "testMetrics": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-bucket-errors",
+          "description": "Retrieve recent error messages logged in the test's bucket.",
+          "operationPath": "openapi_source#/paths/~1buckets~1{bucketKey}~1errors/get",
+          "parameters": [
+            {
+              "name": "bucketKey",
+              "in": "path",
+              "value": "$steps.list-tests-in-bucket.outputs.bucketKey"
+            },
+            {
+              "name": "count",
+              "in": "query",
+              "value": "$inputs.count"
+            },
+            {
+              "name": "since",
+              "in": "query",
+              "value": "$inputs.since"
+            },
+            {
+              "name": "before",
+              "in": "query",
+              "value": "$inputs.before"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "errorMessages": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "bucketList": "$steps.list-buckets.outputs.bucketList",
+        "testList": "$steps.list-tests-in-bucket.outputs.testList",
+        "bucketKey": "$steps.list-tests-in-bucket.outputs.bucketKey",
+        "testMetrics": "$steps.get-test-metrics.outputs.testMetrics",
+        "errorMessages": "$steps.get-bucket-errors.outputs.errorMessages"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "configure-test-with-shared-environment",
+      "summary": "Creates a bucket, a shared environment within it, a test, and configures the test to use the shared environment. This allows multiple tests to reuse common settings.",
+      "description": "Creates a bucket, a shared environment within it, a test, and configures the test to use the shared environment. This allows multiple tests to reuse common settings.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "bucketKey": {
+            "type": "string"
+          },
+          "testId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-user-account",
+          "description": "Retrieve account details to get the team ID.",
+          "operationPath": "openapi_source#/paths/~1account/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "teamId": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-new-bucket",
+          "description": "Create a new bucket.",
+          "operationPath": "openapi_source#/paths/~1buckets/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "teamId": "$steps.get-user-account.outputs.teamId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "bucketKey": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-shared-environment",
+          "description": "Create a shared environment within the bucket.",
+          "operationPath": "openapi_source#/paths/~1buckets~1{bucketKey}~1environments/post",
+          "parameters": [
+            {
+              "name": "bucketKey",
+              "in": "path",
+              "value": "$steps.create-new-bucket.outputs.bucketKey"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "bucketKey": "$steps.create-new-bucket.outputs.bucketKey"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "environmentId": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-new-test",
+          "description": "Create a new test within the bucket.",
+          "operationPath": "openapi_source#/paths/~1buckets~1{bucketKey}~1tests/post",
+          "parameters": [
+            {
+              "name": "bucketKey",
+              "in": "path",
+              "value": "$steps.create-new-bucket.outputs.bucketKey"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "bucketKey": "$steps.create-new-bucket.outputs.bucketKey"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "testId": "$response.body",
+            "testDetails": "$response.body"
+          }
+        },
+        {
+          "stepId": "configure-test-environment",
+          "description": "Update the test to use the created shared environment as its default.",
+          "operationPath": "openapi_source#/paths/~1buckets~1{bucketKey}~1tests~1{testId}/put",
+          "parameters": [
+            {
+              "name": "bucketKey",
+              "in": "path",
+              "value": "$steps.create-new-bucket.outputs.bucketKey"
+            },
+            {
+              "name": "testId",
+              "in": "path",
+              "value": "$steps.create-new-test.outputs.testId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updatedTestDetails": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "teamId": "$steps.get-user-account.outputs.teamId",
+        "bucketKey": "$steps.create-new-bucket.outputs.bucketKey",
+        "environmentId": "$steps.create-shared-environment.outputs.environmentId",
+        "testId": "$steps.create-new-test.outputs.testId",
+        "testDetails": "$steps.create-new-test.outputs.testDetails",
+        "updatedTestDetails": "$steps.configure-test-environment.outputs.updatedTestDetails"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-team-information",
+      "summary": "Retrieves information about the user's account, associated teams, team members, integrations, and connected agents.",
+      "description": "Retrieves information about the user's account, associated teams, team members, integrations, and connected agents.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "teamId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-account-details",
+          "description": "Get the authenticated user's account information, including team memberships.",
+          "operationPath": "openapi_source#/paths/~1account/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "accountInfo": "$response.body",
+            "teamId": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-team-members",
+          "description": "List the people associated with a specific team.",
+          "operationPath": "openapi_source#/paths/~1teams~1{teamId}~1people/get",
+          "parameters": [
+            {
+              "name": "teamId",
+              "in": "path",
+              "value": "$steps.get-account-details.outputs.teamId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "teamMembers": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-team-integrations",
+          "description": "List the integrations configured for a specific team.",
+          "operationPath": "openapi_source#/paths/~1teams~1{teamId}~1integrations/get",
+          "parameters": [
+            {
+              "name": "teamId",
+              "in": "path",
+              "value": "$steps.get-account-details.outputs.teamId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "teamIntegrations": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-team-agents",
+          "description": "List the connected private agents associated with a specific team.",
+          "operationPath": "openapi_source#/paths/~1teams~1{teamId}~1agents/get",
+          "parameters": [
+            {
+              "name": "teamId",
+              "in": "path",
+              "value": "$steps.get-account-details.outputs.teamId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "teamAgents": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "accountInfo": "$steps.get-account-details.outputs.accountInfo",
+        "teamId": "$steps.get-account-details.outputs.teamId",
+        "teamMembers": "$steps.list-team-members.outputs.teamMembers",
+        "teamIntegrations": "$steps.list-team-integrations.outputs.teamIntegrations",
+        "teamAgents": "$steps.list-team-agents.outputs.teamAgents"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "bucket-message-management",
+      "summary": "Retrieves messages from a bucket, potentially filtering them, and then clears all messages from that bucket. Useful for managing test result history or traffic logs.",
+      "description": "Retrieves messages from a bucket, potentially filtering them, and then clears all messages from that bucket. Useful for managing test result history or traffic logs.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "bucketKey": {
+            "type": "string"
+          },
+          "count": {
+            "type": "string"
+          },
+          "since": {
+            "type": "string"
+          },
+          "before": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-bucket",
+          "description": "List buckets to find the key of the target bucket.",
+          "operationPath": "openapi_source#/paths/~1buckets/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "bucketList": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-bucket-messages",
+          "description": "Retrieve a list of messages (e.g., test results, captured traffic) from the specified bucket.",
+          "operationPath": "openapi_source#/paths/~1buckets~1{bucketKey}~1messages/get",
+          "parameters": [
+            {
+              "name": "bucketKey",
+              "in": "path",
+              "value": "$steps.find-bucket.outputs.bucketList.key"
+            },
+            {
+              "name": "count",
+              "in": "query",
+              "value": "$inputs.count"
+            },
+            {
+              "name": "since",
+              "in": "query",
+              "value": "$inputs.since"
+            },
+            {
+              "name": "before",
+              "in": "query",
+              "value": "$inputs.before"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "messageList": "$response.body",
+            "bucketKey": "$response.body"
+          }
+        },
+        {
+          "stepId": "clear-bucket-messages",
+          "description": "Delete all messages currently stored within the specified bucket.",
+          "operationPath": "openapi_source#/paths/~1buckets~1{bucketKey}~1messages/delete",
+          "parameters": [
+            {
+              "name": "bucketKey",
+              "in": "path",
+              "value": "$steps.get-bucket-messages.outputs.bucketKey"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "deletionStatus": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "bucketList": "$steps.find-bucket.outputs.bucketList",
+        "messageList": "$steps.get-bucket-messages.outputs.messageList",
+        "bucketKey": "$steps.get-bucket-messages.outputs.bucketKey",
+        "deletionStatus": "$steps.clear-bucket-messages.outputs.deletionStatus"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

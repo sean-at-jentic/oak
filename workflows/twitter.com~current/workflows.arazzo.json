@@ -1,0 +1,2011 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/twitter.com/current/2.132/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "post-tweet-with-uploaded-media",
+      "summary": "Upload a media file (image/video) in chunks and then create a new tweet attaching the uploaded media.",
+      "description": "Upload a media file (image/video) in chunks and then create a new tweet attaching the uploaded media.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "media_id": {
+            "type": "string"
+          },
+          "total_bytes": {
+            "type": "string"
+          },
+          "media_type": {
+            "type": "string"
+          },
+          "media_category": {
+            "type": "string"
+          },
+          "additional_owners": {
+            "type": "string"
+          },
+          "command": {
+            "type": "string"
+          },
+          "initialize-media-upload_body": {
+            "type": "object"
+          },
+          "media": {
+            "type": "string"
+          },
+          "segment_index": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "initialize-media-upload",
+          "description": "Initialize media upload session with total bytes and media type.",
+          "operationId": "uploadMedia",
+          "parameters": [
+            {
+              "name": "media_id",
+              "in": "query",
+              "value": "$inputs.media_id"
+            },
+            {
+              "name": "total_bytes",
+              "in": "query",
+              "value": "$inputs.total_bytes"
+            },
+            {
+              "name": "media_type",
+              "in": "query",
+              "value": "$inputs.media_type"
+            },
+            {
+              "name": "media_category",
+              "in": "query",
+              "value": "$inputs.media_category"
+            },
+            {
+              "name": "additional_owners",
+              "in": "query",
+              "value": "$inputs.additional_owners"
+            },
+            {
+              "name": "command",
+              "in": "query",
+              "value": "$inputs.command"
+            }
+          ],
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": "$inputs.initialize-media-upload_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "media_id": "$response.body",
+            "expires_after_secs": "$response.body"
+          }
+        },
+        {
+          "stepId": "append-media-chunk",
+          "description": "Append a chunk of the media file to the upload session.",
+          "operationId": "uploadMedia",
+          "parameters": [
+            {
+              "name": "media_id",
+              "in": "query",
+              "value": "$steps.initialize-media-upload.outputs.media_id"
+            },
+            {
+              "name": "total_bytes",
+              "in": "query",
+              "value": "$inputs.total_bytes"
+            },
+            {
+              "name": "media_type",
+              "in": "query",
+              "value": "$inputs.media_type"
+            },
+            {
+              "name": "media_category",
+              "in": "query",
+              "value": "$inputs.media_category"
+            },
+            {
+              "name": "additional_owners",
+              "in": "query",
+              "value": "$inputs.additional_owners"
+            },
+            {
+              "name": "command",
+              "in": "query",
+              "value": "$inputs.command"
+            }
+          ],
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "media_id": "$steps.initialize-media-upload.outputs.media_id",
+              "media": "$inputs.media",
+              "segment_index": "$inputs.segment_index"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "chunk_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "finalize-media-upload",
+          "description": "Finalize the media upload after all chunks are appended.",
+          "operationId": "uploadMedia",
+          "parameters": [
+            {
+              "name": "media_id",
+              "in": "query",
+              "value": "$steps.initialize-media-upload.outputs.media_id"
+            },
+            {
+              "name": "total_bytes",
+              "in": "query",
+              "value": "$inputs.total_bytes"
+            },
+            {
+              "name": "media_type",
+              "in": "query",
+              "value": "$inputs.media_type"
+            },
+            {
+              "name": "media_category",
+              "in": "query",
+              "value": "$inputs.media_category"
+            },
+            {
+              "name": "additional_owners",
+              "in": "query",
+              "value": "$inputs.additional_owners"
+            },
+            {
+              "name": "command",
+              "in": "query",
+              "value": "$inputs.command"
+            }
+          ],
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "media_id": "$steps.initialize-media-upload.outputs.media_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "media_id": "$response.body",
+            "size": "$response.body",
+            "processing_info": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-media-status",
+          "description": "Check the processing status of the finalized media upload (poll until 'succeeded').",
+          "operationId": "uploadMediaStatus",
+          "parameters": [
+            {
+              "name": "media_id",
+              "in": "query",
+              "value": "$steps.finalize-media-upload.outputs.media_id"
+            },
+            {
+              "name": "command",
+              "in": "query",
+              "value": "$inputs.command"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "processing_state": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-tweet-with-media",
+          "description": "Create a tweet and attach the successfully processed media.",
+          "operationId": "createTweet",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "media.media_ids": "$steps.finalize-media-upload.outputs.media_id",
+              "text": "$inputs.text"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tweet_id": "$response.body",
+            "tweet_text": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "media_id": "$steps.finalize-media-upload.outputs.media_id",
+        "expires_after_secs": "$steps.initialize-media-upload.outputs.expires_after_secs",
+        "chunk_data": "$steps.append-media-chunk.outputs.chunk_data",
+        "size": "$steps.finalize-media-upload.outputs.size",
+        "processing_info": "$steps.finalize-media-upload.outputs.processing_info",
+        "processing_state": "$steps.check-media-status.outputs.processing_state",
+        "tweet_id": "$steps.create-tweet-with-media.outputs.tweet_id",
+        "tweet_text": "$steps.create-tweet-with-media.outputs.tweet_text"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "monitor-brand-mentions-and-reply",
+      "summary": "Search for recent tweets mentioning a specific username (e.g., a brand) and post a reply to one of the found tweets.",
+      "description": "Search for recent tweets mentioning a specific username (e.g., a brand) and post a reply to one of the found tweets.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "start_time": {
+            "type": "string"
+          },
+          "end_time": {
+            "type": "string"
+          },
+          "since_id": {
+            "type": "string"
+          },
+          "until_id": {
+            "type": "string"
+          },
+          "max_results": {
+            "type": "string"
+          },
+          "next_token": {
+            "type": "string"
+          },
+          "pagination_token": {
+            "type": "string"
+          },
+          "sort_order": {
+            "type": "string"
+          },
+          "tweet.fields": {
+            "type": "string"
+          },
+          "expansions": {
+            "type": "string"
+          },
+          "media.fields": {
+            "type": "string"
+          },
+          "poll.fields": {
+            "type": "string"
+          },
+          "user.fields": {
+            "type": "string"
+          },
+          "place.fields": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-recent-mentions",
+          "description": "Search for recent tweets containing a specific query (e.g., @brandname).",
+          "operationId": "tweetsRecentSearch",
+          "parameters": [
+            {
+              "name": "query",
+              "in": "query",
+              "value": "$inputs.query"
+            },
+            {
+              "name": "start_time",
+              "in": "query",
+              "value": "$inputs.start_time"
+            },
+            {
+              "name": "end_time",
+              "in": "query",
+              "value": "$inputs.end_time"
+            },
+            {
+              "name": "since_id",
+              "in": "query",
+              "value": "$inputs.since_id"
+            },
+            {
+              "name": "until_id",
+              "in": "query",
+              "value": "$inputs.until_id"
+            },
+            {
+              "name": "max_results",
+              "in": "query",
+              "value": "$inputs.max_results"
+            },
+            {
+              "name": "next_token",
+              "in": "query",
+              "value": "$inputs.next_token"
+            },
+            {
+              "name": "pagination_token",
+              "in": "query",
+              "value": "$inputs.pagination_token"
+            },
+            {
+              "name": "sort_order",
+              "in": "query",
+              "value": "$inputs.sort_order"
+            },
+            {
+              "name": "tweet.fields",
+              "in": "query",
+              "value": "$inputs.tweet.fields"
+            },
+            {
+              "name": "expansions",
+              "in": "query",
+              "value": "$inputs.expansions"
+            },
+            {
+              "name": "media.fields",
+              "in": "query",
+              "value": "$inputs.media.fields"
+            },
+            {
+              "name": "poll.fields",
+              "in": "query",
+              "value": "$inputs.poll.fields"
+            },
+            {
+              "name": "user.fields",
+              "in": "query",
+              "value": "$inputs.user.fields"
+            },
+            {
+              "name": "place.fields",
+              "in": "query",
+              "value": "$inputs.place.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tweets": "$response.body",
+            "tweet_ids": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-reply-to-mention",
+          "description": "Post a reply to a specific tweet identified in the search results.",
+          "operationId": "createTweet",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "reply.in_reply_to_tweet_id": "$steps.search-recent-mentions.outputs.tweet_ids[0]",
+              "text": "$inputs.text"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "reply_tweet_id": "$response.body",
+            "reply_tweet_text": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "tweets": "$steps.search-recent-mentions.outputs.tweets",
+        "tweet_ids": "$steps.search-recent-mentions.outputs.tweet_ids",
+        "reply_tweet_id": "$steps.create-reply-to-mention.outputs.reply_tweet_id",
+        "reply_tweet_text": "$steps.create-reply-to-mention.outputs.reply_tweet_text"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "curate-and-view-a-user-list",
+      "summary": "Create a new list, find relevant users via search, add one user to the list, and then view the tweets from that list's timeline.",
+      "description": "Create a new list, find relevant users via search, add one user to the list, and then view the tweets from that list's timeline.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "query": {
+            "type": "string"
+          },
+          "max_results": {
+            "type": "string"
+          },
+          "next_token": {
+            "type": "string"
+          },
+          "user.fields": {
+            "type": "string"
+          },
+          "expansions": {
+            "type": "string"
+          },
+          "tweet.fields": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "pagination_token": {
+            "type": "string"
+          },
+          "media.fields": {
+            "type": "string"
+          },
+          "poll.fields": {
+            "type": "string"
+          },
+          "place.fields": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-new-list",
+          "description": "Create a new list with a name and description.",
+          "operationId": "listIdCreate",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "list_id": "$response.body",
+            "list_name": "$response.body"
+          }
+        },
+        {
+          "stepId": "search-users-for-list",
+          "description": "Search for users based on a query relevant to the list's topic.",
+          "operationId": "searchUserByQuery",
+          "parameters": [
+            {
+              "name": "query",
+              "in": "query",
+              "value": "$inputs.query"
+            },
+            {
+              "name": "max_results",
+              "in": "query",
+              "value": "$inputs.max_results"
+            },
+            {
+              "name": "next_token",
+              "in": "query",
+              "value": "$inputs.next_token"
+            },
+            {
+              "name": "user.fields",
+              "in": "query",
+              "value": "$inputs.user.fields"
+            },
+            {
+              "name": "expansions",
+              "in": "query",
+              "value": "$inputs.expansions"
+            },
+            {
+              "name": "tweet.fields",
+              "in": "query",
+              "value": "$inputs.tweet.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "users": "$response.body",
+            "user_ids": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-user-to-list",
+          "description": "Add a user found in the search results to the newly created list.",
+          "operationId": "listAddMember",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-new-list.outputs.list_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.create-new-list.outputs.list_id",
+              "user_id": "$steps.search-users-for-list.outputs.user_ids[0]"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "is_member": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-list-tweet-timeline",
+          "description": "Retrieve the timeline of tweets from the members of the created list.",
+          "operationId": "listsIdTweets",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-new-list.outputs.list_id"
+            },
+            {
+              "name": "max_results",
+              "in": "query",
+              "value": "$inputs.max_results"
+            },
+            {
+              "name": "pagination_token",
+              "in": "query",
+              "value": "$inputs.pagination_token"
+            },
+            {
+              "name": "tweet.fields",
+              "in": "query",
+              "value": "$inputs.tweet.fields"
+            },
+            {
+              "name": "expansions",
+              "in": "query",
+              "value": "$inputs.expansions"
+            },
+            {
+              "name": "media.fields",
+              "in": "query",
+              "value": "$inputs.media.fields"
+            },
+            {
+              "name": "poll.fields",
+              "in": "query",
+              "value": "$inputs.poll.fields"
+            },
+            {
+              "name": "user.fields",
+              "in": "query",
+              "value": "$inputs.user.fields"
+            },
+            {
+              "name": "place.fields",
+              "in": "query",
+              "value": "$inputs.place.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tweets": "$response.body",
+            "includes": "$response.body",
+            "meta": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "list_id": "$steps.create-new-list.outputs.list_id",
+        "list_name": "$steps.create-new-list.outputs.list_name",
+        "users": "$steps.search-users-for-list.outputs.users",
+        "user_ids": "$steps.search-users-for-list.outputs.user_ids",
+        "is_member": "$steps.add-user-to-list.outputs.is_member",
+        "tweets": "$steps.get-list-tweet-timeline.outputs.tweets",
+        "includes": "$steps.get-list-tweet-timeline.outputs.includes",
+        "meta": "$steps.get-list-tweet-timeline.outputs.meta"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "set-up-and-consume-filtered-tweet-stream",
+      "summary": "Define filtering rules for the tweet stream, optionally verify them, and then connect to the stream to receive tweets matching those rules in real-time.",
+      "description": "Define filtering rules for the tweet stream, optionally verify them, and then connect to the stream to receive tweets matching those rules in real-time.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "dry_run": {
+            "type": "string"
+          },
+          "delete_all": {
+            "type": "string"
+          },
+          "add-or-delete-stream-rules_body": {
+            "type": "object"
+          },
+          "ids": {
+            "type": "string"
+          },
+          "max_results": {
+            "type": "string"
+          },
+          "pagination_token": {
+            "type": "string"
+          },
+          "backfill_minutes": {
+            "type": "string"
+          },
+          "start_time": {
+            "type": "string"
+          },
+          "end_time": {
+            "type": "string"
+          },
+          "tweet.fields": {
+            "type": "string"
+          },
+          "expansions": {
+            "type": "string"
+          },
+          "media.fields": {
+            "type": "string"
+          },
+          "poll.fields": {
+            "type": "string"
+          },
+          "user.fields": {
+            "type": "string"
+          },
+          "place.fields": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-or-delete-stream-rules",
+          "description": "Add new filtering rules (or delete existing ones) for the filtered stream.",
+          "operationId": "addOrDeleteRules",
+          "parameters": [
+            {
+              "name": "dry_run",
+              "in": "query",
+              "value": "$inputs.dry_run"
+            },
+            {
+              "name": "delete_all",
+              "in": "query",
+              "value": "$inputs.delete_all"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.add-or-delete-stream-rules_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "rules": "$response.body",
+            "meta": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-active-stream-rules",
+          "description": "Retrieve the currently active filtering rules (optional verification step).",
+          "operationId": "getRules",
+          "parameters": [
+            {
+              "name": "ids",
+              "in": "query",
+              "value": "$inputs.ids"
+            },
+            {
+              "name": "max_results",
+              "in": "query",
+              "value": "$inputs.max_results"
+            },
+            {
+              "name": "pagination_token",
+              "in": "query",
+              "value": "$inputs.pagination_token"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "rules": "$response.body",
+            "meta": "$response.body"
+          }
+        },
+        {
+          "stepId": "connect-to-filtered-stream",
+          "description": "Connect to the filtered stream endpoint to receive real-time tweets matching the active rules.",
+          "operationId": "searchStream",
+          "parameters": [
+            {
+              "name": "backfill_minutes",
+              "in": "query",
+              "value": "$inputs.backfill_minutes"
+            },
+            {
+              "name": "start_time",
+              "in": "query",
+              "value": "$inputs.start_time"
+            },
+            {
+              "name": "end_time",
+              "in": "query",
+              "value": "$inputs.end_time"
+            },
+            {
+              "name": "tweet.fields",
+              "in": "query",
+              "value": "$inputs.tweet.fields"
+            },
+            {
+              "name": "expansions",
+              "in": "query",
+              "value": "$inputs.expansions"
+            },
+            {
+              "name": "media.fields",
+              "in": "query",
+              "value": "$inputs.media.fields"
+            },
+            {
+              "name": "poll.fields",
+              "in": "query",
+              "value": "$inputs.poll.fields"
+            },
+            {
+              "name": "user.fields",
+              "in": "query",
+              "value": "$inputs.user.fields"
+            },
+            {
+              "name": "place.fields",
+              "in": "query",
+              "value": "$inputs.place.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "stream_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "rules": "$steps.get-active-stream-rules.outputs.rules",
+        "meta": "$steps.get-active-stream-rules.outputs.meta",
+        "stream_data": "$steps.connect-to-filtered-stream.outputs.stream_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "analyze-historical-tweet-performance",
+      "summary": "Retrieve the most recent tweets for a specific user and then fetch historical engagement metrics for those tweets over a specified time range.",
+      "description": "Retrieve the most recent tweets for a specific user and then fetch historical engagement metrics for those tweets over a specified time range.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "since_id": {
+            "type": "string"
+          },
+          "until_id": {
+            "type": "string"
+          },
+          "max_results": {
+            "type": "string"
+          },
+          "pagination_token": {
+            "type": "string"
+          },
+          "exclude": {
+            "type": "string"
+          },
+          "start_time": {
+            "type": "string"
+          },
+          "end_time": {
+            "type": "string"
+          },
+          "tweet.fields": {
+            "type": "string"
+          },
+          "expansions": {
+            "type": "string"
+          },
+          "media.fields": {
+            "type": "string"
+          },
+          "poll.fields": {
+            "type": "string"
+          },
+          "user.fields": {
+            "type": "string"
+          },
+          "place.fields": {
+            "type": "string"
+          },
+          "tweet_ids": {
+            "type": "string"
+          },
+          "granularity": {
+            "type": "string"
+          },
+          "requested_metrics": {
+            "type": "string"
+          },
+          "engagement.fields": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-user-recent-tweets",
+          "description": "Get the most recent tweets authored by a specific user ID.",
+          "operationId": "usersIdTweets",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "since_id",
+              "in": "query",
+              "value": "$inputs.since_id"
+            },
+            {
+              "name": "until_id",
+              "in": "query",
+              "value": "$inputs.until_id"
+            },
+            {
+              "name": "max_results",
+              "in": "query",
+              "value": "$inputs.max_results"
+            },
+            {
+              "name": "pagination_token",
+              "in": "query",
+              "value": "$inputs.pagination_token"
+            },
+            {
+              "name": "exclude",
+              "in": "query",
+              "value": "$inputs.exclude"
+            },
+            {
+              "name": "start_time",
+              "in": "query",
+              "value": "$inputs.start_time"
+            },
+            {
+              "name": "end_time",
+              "in": "query",
+              "value": "$inputs.end_time"
+            },
+            {
+              "name": "tweet.fields",
+              "in": "query",
+              "value": "$inputs.tweet.fields"
+            },
+            {
+              "name": "expansions",
+              "in": "query",
+              "value": "$inputs.expansions"
+            },
+            {
+              "name": "media.fields",
+              "in": "query",
+              "value": "$inputs.media.fields"
+            },
+            {
+              "name": "poll.fields",
+              "in": "query",
+              "value": "$inputs.poll.fields"
+            },
+            {
+              "name": "user.fields",
+              "in": "query",
+              "value": "$inputs.user.fields"
+            },
+            {
+              "name": "place.fields",
+              "in": "query",
+              "value": "$inputs.place.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tweets": "$response.body",
+            "tweet_ids": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-historical-tweet-metrics",
+          "description": "Fetch historical engagement metrics for the retrieved tweet IDs within a specified date range.",
+          "operationId": "HistoricalEngagementApi",
+          "parameters": [
+            {
+              "name": "tweet_ids",
+              "in": "query",
+              "value": "$steps.get-user-recent-tweets.outputs.tweet_ids"
+            },
+            {
+              "name": "end_time",
+              "in": "query",
+              "value": "$inputs.end_time"
+            },
+            {
+              "name": "start_time",
+              "in": "query",
+              "value": "$inputs.start_time"
+            },
+            {
+              "name": "granularity",
+              "in": "query",
+              "value": "$inputs.granularity"
+            },
+            {
+              "name": "requested_metrics",
+              "in": "query",
+              "value": "$inputs.requested_metrics"
+            },
+            {
+              "name": "engagement.fields",
+              "in": "query",
+              "value": "$inputs.engagement.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "engagement_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "tweets": "$steps.get-user-recent-tweets.outputs.tweets",
+        "tweet_ids": "$steps.get-user-recent-tweets.outputs.tweet_ids",
+        "engagement_data": "$steps.get-historical-tweet-metrics.outputs.engagement_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "find-and-follow-user-by-interest",
+      "summary": "Search for recent tweets about a specific topic, identify an author from the results, get the authenticated user's ID, and follow the identified author.",
+      "description": "Search for recent tweets about a specific topic, identify an author from the results, get the authenticated user's ID, and follow the identified author.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "start_time": {
+            "type": "string"
+          },
+          "end_time": {
+            "type": "string"
+          },
+          "since_id": {
+            "type": "string"
+          },
+          "until_id": {
+            "type": "string"
+          },
+          "max_results": {
+            "type": "string"
+          },
+          "next_token": {
+            "type": "string"
+          },
+          "pagination_token": {
+            "type": "string"
+          },
+          "sort_order": {
+            "type": "string"
+          },
+          "tweet.fields": {
+            "type": "string"
+          },
+          "expansions": {
+            "type": "string"
+          },
+          "media.fields": {
+            "type": "string"
+          },
+          "poll.fields": {
+            "type": "string"
+          },
+          "user.fields": {
+            "type": "string"
+          },
+          "place.fields": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-tweets-by-topic",
+          "description": "Search for recent tweets matching a specific topic or keyword.",
+          "operationId": "tweetsRecentSearch",
+          "parameters": [
+            {
+              "name": "query",
+              "in": "query",
+              "value": "$inputs.query"
+            },
+            {
+              "name": "start_time",
+              "in": "query",
+              "value": "$inputs.start_time"
+            },
+            {
+              "name": "end_time",
+              "in": "query",
+              "value": "$inputs.end_time"
+            },
+            {
+              "name": "since_id",
+              "in": "query",
+              "value": "$inputs.since_id"
+            },
+            {
+              "name": "until_id",
+              "in": "query",
+              "value": "$inputs.until_id"
+            },
+            {
+              "name": "max_results",
+              "in": "query",
+              "value": "$inputs.max_results"
+            },
+            {
+              "name": "next_token",
+              "in": "query",
+              "value": "$inputs.next_token"
+            },
+            {
+              "name": "pagination_token",
+              "in": "query",
+              "value": "$inputs.pagination_token"
+            },
+            {
+              "name": "sort_order",
+              "in": "query",
+              "value": "$inputs.sort_order"
+            },
+            {
+              "name": "tweet.fields",
+              "in": "query",
+              "value": "$inputs.tweet.fields"
+            },
+            {
+              "name": "expansions",
+              "in": "query",
+              "value": "$inputs.expansions"
+            },
+            {
+              "name": "media.fields",
+              "in": "query",
+              "value": "$inputs.media.fields"
+            },
+            {
+              "name": "poll.fields",
+              "in": "query",
+              "value": "$inputs.poll.fields"
+            },
+            {
+              "name": "user.fields",
+              "in": "query",
+              "value": "$inputs.user.fields"
+            },
+            {
+              "name": "place.fields",
+              "in": "query",
+              "value": "$inputs.place.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tweets": "$response.body",
+            "author_ids": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-my-user-id",
+          "description": "Retrieve the ID of the currently authenticated user.",
+          "operationId": "findMyUser",
+          "parameters": [
+            {
+              "name": "user.fields",
+              "in": "query",
+              "value": "$inputs.user.fields"
+            },
+            {
+              "name": "expansions",
+              "in": "query",
+              "value": "$inputs.expansions"
+            },
+            {
+              "name": "tweet.fields",
+              "in": "query",
+              "value": "$inputs.tweet.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "follow-target-user",
+          "description": "Follow a target user identified from the tweet search.",
+          "operationId": "usersIdFollow",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-my-user-id.outputs.user_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.get-my-user-id.outputs.user_id",
+              "target_user_id": "$steps.search-tweets-by-topic.outputs.author_ids[0]"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "following_status": "$response.body",
+            "pending_follow": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "tweets": "$steps.search-tweets-by-topic.outputs.tweets",
+        "author_ids": "$steps.search-tweets-by-topic.outputs.author_ids",
+        "user_id": "$steps.get-my-user-id.outputs.user_id",
+        "following_status": "$steps.follow-target-user.outputs.following_status",
+        "pending_follow": "$steps.follow-target-user.outputs.pending_follow"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "initiate-direct-message-with-a-user",
+      "summary": "Find a specific user by their username and send them a direct message, initiating a new DM conversation.",
+      "description": "Find a specific user by their username and send them a direct message, initiating a new DM conversation.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "user.fields": {
+            "type": "string"
+          },
+          "expansions": {
+            "type": "string"
+          },
+          "tweet.fields": {
+            "type": "string"
+          },
+          "participant_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-user-by-username",
+          "description": "Look up a user's details, including their ID, by their username.",
+          "operationId": "findUserByUsername",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "user.fields",
+              "in": "query",
+              "value": "$inputs.user.fields"
+            },
+            {
+              "name": "expansions",
+              "in": "query",
+              "value": "$inputs.expansions"
+            },
+            {
+              "name": "tweet.fields",
+              "in": "query",
+              "value": "$inputs.tweet.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_id": "$response.body",
+            "user_name": "$response.body",
+            "user_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "send-direct-message",
+          "description": "Send a direct message to the user found by username.",
+          "operationId": "dmConversationWithUserEventIdCreate",
+          "parameters": [
+            {
+              "name": "participant_id",
+              "in": "path",
+              "value": "$steps.find-user-by-username.outputs.user_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "participant_id": "$steps.find-user-by-username.outputs.user_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "dm_event_id": "$response.body",
+            "dm_conversation_id": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "user_id": "$steps.find-user-by-username.outputs.user_id",
+        "user_name": "$steps.find-user-by-username.outputs.user_name",
+        "user_details": "$steps.find-user-by-username.outputs.user_details",
+        "dm_event_id": "$steps.send-direct-message.outputs.dm_event_id",
+        "dm_conversation_id": "$steps.send-direct-message.outputs.dm_conversation_id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "request-and-monitor-compliance-job",
+      "summary": "Create a batch compliance job (e.g., for tweet deletions), upload the required IDs (manual step), and monitor the job's status until completion.",
+      "description": "Create a batch compliance job (e.g., for tweet deletions), upload the required IDs (manual step), and monitor the job's status until completion.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "compliance_job.fields": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-compliance-job",
+          "description": "Create a new compliance job for a specific type (tweets or users).",
+          "operationId": "createBatchComplianceJob",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "type": "$inputs.type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "job_id": "$response.body",
+            "upload_url": "$response.body",
+            "download_url": "$response.body",
+            "status": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-compliance-job-status",
+          "description": "Retrieve the status of a specific compliance job (poll until 'complete' or 'failed').",
+          "operationId": "getBatchComplianceJob",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-compliance-job.outputs.job_id"
+            },
+            {
+              "name": "compliance_job.fields",
+              "in": "query",
+              "value": "$inputs.compliance_job.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "job_details": "$response.body",
+            "status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "job_id": "$steps.create-compliance-job.outputs.job_id",
+        "upload_url": "$steps.create-compliance-job.outputs.upload_url",
+        "download_url": "$steps.create-compliance-job.outputs.download_url",
+        "status": "$steps.get-compliance-job-status.outputs.status",
+        "job_details": "$steps.get-compliance-job-status.outputs.job_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "bookmark-a-tweet-and-view-bookmarks",
+      "summary": "Find the authenticated user's ID, bookmark a specific tweet, and then retrieve the list of all bookmarked tweets for that user.",
+      "description": "Find the authenticated user's ID, bookmark a specific tweet, and then retrieve the list of all bookmarked tweets for that user.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "user.fields": {
+            "type": "string"
+          },
+          "expansions": {
+            "type": "string"
+          },
+          "tweet.fields": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "tweet_id": {
+            "type": "string"
+          },
+          "max_results": {
+            "type": "string"
+          },
+          "pagination_token": {
+            "type": "string"
+          },
+          "media.fields": {
+            "type": "string"
+          },
+          "poll.fields": {
+            "type": "string"
+          },
+          "place.fields": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-authenticated-user-info",
+          "description": "Retrieve the profile information for the currently authenticated user.",
+          "operationId": "findMyUser",
+          "parameters": [
+            {
+              "name": "user.fields",
+              "in": "query",
+              "value": "$inputs.user.fields"
+            },
+            {
+              "name": "expansions",
+              "in": "query",
+              "value": "$inputs.expansions"
+            },
+            {
+              "name": "tweet.fields",
+              "in": "query",
+              "value": "$inputs.tweet.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_id": "$response.body",
+            "username": "$response.body",
+            "user_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-tweet-to-bookmarks",
+          "description": "Add a specific tweet (by ID) to the authenticated user's bookmarks.",
+          "operationId": "postUsersIdBookmarks",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-authenticated-user-info.outputs.user_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.get-authenticated-user-info.outputs.user_id",
+              "tweet_id": "$inputs.tweet_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "bookmarked_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-user-bookmarks",
+          "description": "Retrieve the list of tweets bookmarked by the authenticated user.",
+          "operationId": "getUsersIdBookmarks",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-authenticated-user-info.outputs.user_id"
+            },
+            {
+              "name": "max_results",
+              "in": "query",
+              "value": "$inputs.max_results"
+            },
+            {
+              "name": "pagination_token",
+              "in": "query",
+              "value": "$inputs.pagination_token"
+            },
+            {
+              "name": "tweet.fields",
+              "in": "query",
+              "value": "$inputs.tweet.fields"
+            },
+            {
+              "name": "expansions",
+              "in": "query",
+              "value": "$inputs.expansions"
+            },
+            {
+              "name": "media.fields",
+              "in": "query",
+              "value": "$inputs.media.fields"
+            },
+            {
+              "name": "poll.fields",
+              "in": "query",
+              "value": "$inputs.poll.fields"
+            },
+            {
+              "name": "user.fields",
+              "in": "query",
+              "value": "$inputs.user.fields"
+            },
+            {
+              "name": "place.fields",
+              "in": "query",
+              "value": "$inputs.place.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "bookmarked_tweets": "$response.body",
+            "includes": "$response.body",
+            "meta": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "user_id": "$steps.get-authenticated-user-info.outputs.user_id",
+        "username": "$steps.get-authenticated-user-info.outputs.username",
+        "user_details": "$steps.get-authenticated-user-info.outputs.user_details",
+        "bookmarked_status": "$steps.add-tweet-to-bookmarks.outputs.bookmarked_status",
+        "bookmarked_tweets": "$steps.get-user-bookmarks.outputs.bookmarked_tweets",
+        "includes": "$steps.get-user-bookmarks.outputs.includes",
+        "meta": "$steps.get-user-bookmarks.outputs.meta"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "discover-and-explore-a-space",
+      "summary": "Search for Spaces based on a query, retrieve detailed information about a specific Space, and get the tweets shared within that Space.",
+      "description": "Search for Spaces based on a query, retrieve detailed information about a specific Space, and get the tweets shared within that Space.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "max_results": {
+            "type": "string"
+          },
+          "space.fields": {
+            "type": "string"
+          },
+          "expansions": {
+            "type": "string"
+          },
+          "user.fields": {
+            "type": "string"
+          },
+          "topic.fields": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "tweet.fields": {
+            "type": "string"
+          },
+          "media.fields": {
+            "type": "string"
+          },
+          "poll.fields": {
+            "type": "string"
+          },
+          "place.fields": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-spaces-by-query",
+          "description": "Search for live or scheduled Spaces matching a specific query.",
+          "operationId": "searchSpaces",
+          "parameters": [
+            {
+              "name": "query",
+              "in": "query",
+              "value": "$inputs.query"
+            },
+            {
+              "name": "state",
+              "in": "query",
+              "value": "$inputs.state"
+            },
+            {
+              "name": "max_results",
+              "in": "query",
+              "value": "$inputs.max_results"
+            },
+            {
+              "name": "space.fields",
+              "in": "query",
+              "value": "$inputs.space.fields"
+            },
+            {
+              "name": "expansions",
+              "in": "query",
+              "value": "$inputs.expansions"
+            },
+            {
+              "name": "user.fields",
+              "in": "query",
+              "value": "$inputs.user.fields"
+            },
+            {
+              "name": "topic.fields",
+              "in": "query",
+              "value": "$inputs.topic.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "spaces": "$response.body",
+            "space_ids": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-space-details",
+          "description": "Retrieve detailed information about a specific Space using its ID.",
+          "operationId": "findSpaceById",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.search-spaces-by-query.outputs.spaces"
+            },
+            {
+              "name": "space.fields",
+              "in": "query",
+              "value": "$inputs.space.fields"
+            },
+            {
+              "name": "expansions",
+              "in": "query",
+              "value": "$inputs.expansions"
+            },
+            {
+              "name": "user.fields",
+              "in": "query",
+              "value": "$inputs.user.fields"
+            },
+            {
+              "name": "topic.fields",
+              "in": "query",
+              "value": "$inputs.topic.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "space_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-tweets-from-space",
+          "description": "Retrieve the tweets that have been shared within the specified Space.",
+          "operationId": "spaceTweets",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.search-spaces-by-query.outputs.spaces"
+            },
+            {
+              "name": "max_results",
+              "in": "query",
+              "value": "$inputs.max_results"
+            },
+            {
+              "name": "tweet.fields",
+              "in": "query",
+              "value": "$inputs.tweet.fields"
+            },
+            {
+              "name": "expansions",
+              "in": "query",
+              "value": "$inputs.expansions"
+            },
+            {
+              "name": "media.fields",
+              "in": "query",
+              "value": "$inputs.media.fields"
+            },
+            {
+              "name": "poll.fields",
+              "in": "query",
+              "value": "$inputs.poll.fields"
+            },
+            {
+              "name": "user.fields",
+              "in": "query",
+              "value": "$inputs.user.fields"
+            },
+            {
+              "name": "place.fields",
+              "in": "query",
+              "value": "$inputs.place.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tweets": "$response.body",
+            "includes": "$response.body",
+            "meta": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "spaces": "$steps.search-spaces-by-query.outputs.spaces",
+        "space_ids": "$steps.search-spaces-by-query.outputs.space_ids",
+        "space_details": "$steps.get-space-details.outputs.space_details",
+        "tweets": "$steps.get-tweets-from-space.outputs.tweets",
+        "includes": "$steps.get-tweets-from-space.outputs.includes",
+        "meta": "$steps.get-tweets-from-space.outputs.meta"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

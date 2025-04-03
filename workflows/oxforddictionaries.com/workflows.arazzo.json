@@ -1,0 +1,837 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/oxforddictionaries.com/main/1.11.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "comprehensive-word-lookup-handling-inflections",
+      "summary": "Looks up the full dictionary information (definition, sentences, synonyms, antonyms) for a word, correctly handling inflected forms (e.g., finding 'run' from 'running') first.",
+      "description": "Looks up the full dictionary information (definition, sentences, synonyms, antonyms) for a word, correctly handling inflected forms (e.g., finding 'run' from 'running') first.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "source_lang": {
+            "type": "string"
+          },
+          "filters": {
+            "type": "string"
+          },
+          "word_id": {
+            "type": "string"
+          },
+          "app_id": {
+            "type": "string"
+          },
+          "app_key": {
+            "type": "string"
+          },
+          "source_language": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "lemmatize-word",
+          "description": "Find the base form (lemma) of the input word.",
+          "operationPath": "openapi_source#/paths/~1inflections~1{source_lang}~1{word_id}~1{filters}/get",
+          "parameters": [
+            {
+              "name": "source_lang",
+              "in": "path",
+              "value": "$inputs.source_lang"
+            },
+            {
+              "name": "filters",
+              "in": "path",
+              "value": "$inputs.filters"
+            },
+            {
+              "name": "word_id",
+              "in": "path",
+              "value": "$inputs.word_id"
+            },
+            {
+              "name": "app_id",
+              "in": "header",
+              "value": "$inputs.app_id"
+            },
+            {
+              "name": "app_key",
+              "in": "header",
+              "value": "$inputs.app_key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "lemma_id": "$response.body",
+            "lemma_word": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-entry-details",
+          "description": "Retrieve the main dictionary entry (definitions, pronunciations, etymology) for the lemma.",
+          "operationPath": "openapi_source#/paths/~1entries~1{source_lang}~1{word_id}/get",
+          "parameters": [
+            {
+              "name": "source_lang",
+              "in": "path",
+              "value": "$inputs.source_lang"
+            },
+            {
+              "name": "word_id",
+              "in": "path",
+              "value": "$steps.lemmatize-word.outputs.lemma_id"
+            },
+            {
+              "name": "app_id",
+              "in": "header",
+              "value": "$inputs.app_id"
+            },
+            {
+              "name": "app_key",
+              "in": "header",
+              "value": "$inputs.app_key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "entry_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-example-sentences",
+          "description": "Retrieve example sentences for the lemma.",
+          "operationPath": "openapi_source#/paths/~1entries~1{source_language}~1{word_id}~1sentences/get",
+          "parameters": [
+            {
+              "name": "source_language",
+              "in": "path",
+              "value": "$inputs.source_language"
+            },
+            {
+              "name": "word_id",
+              "in": "path",
+              "value": "$steps.lemmatize-word.outputs.lemma_id"
+            },
+            {
+              "name": "app_id",
+              "in": "header",
+              "value": "$inputs.app_id"
+            },
+            {
+              "name": "app_key",
+              "in": "header",
+              "value": "$inputs.app_key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sentence_examples": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-synonyms-antonyms",
+          "description": "Retrieve synonyms and antonyms for the lemma.",
+          "operationPath": "openapi_source#/paths/~1entries~1{source_lang}~1{word_id}~1synonyms;antonyms/get",
+          "parameters": [
+            {
+              "name": "source_lang",
+              "in": "path",
+              "value": "$inputs.source_lang"
+            },
+            {
+              "name": "word_id",
+              "in": "path",
+              "value": "$steps.lemmatize-word.outputs.lemma_id"
+            },
+            {
+              "name": "app_id",
+              "in": "header",
+              "value": "$inputs.app_id"
+            },
+            {
+              "name": "app_key",
+              "in": "header",
+              "value": "$inputs.app_key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "thesaurus_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "lemma_id": "$steps.lemmatize-word.outputs.lemma_id",
+        "lemma_word": "$steps.lemmatize-word.outputs.lemma_word",
+        "entry_details": "$steps.get-entry-details.outputs.entry_details",
+        "sentence_examples": "$steps.get-example-sentences.outputs.sentence_examples",
+        "thesaurus_data": "$steps.get-synonyms-antonyms.outputs.thesaurus_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "translate-word-handling-inflections",
+      "summary": "Finds the base form (lemma) of a word and then retrieves its translation in the target language.",
+      "description": "Finds the base form (lemma) of a word and then retrieves its translation in the target language.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "source_lang": {
+            "type": "string"
+          },
+          "filters": {
+            "type": "string"
+          },
+          "word_id": {
+            "type": "string"
+          },
+          "app_id": {
+            "type": "string"
+          },
+          "app_key": {
+            "type": "string"
+          },
+          "source_translation_language": {
+            "type": "string"
+          },
+          "target_translation_language": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "lemmatize-word-for-translation",
+          "description": "Find the base form (lemma) of the word to be translated.",
+          "operationPath": "openapi_source#/paths/~1inflections~1{source_lang}~1{word_id}~1{filters}/get",
+          "parameters": [
+            {
+              "name": "source_lang",
+              "in": "path",
+              "value": "$inputs.source_lang"
+            },
+            {
+              "name": "filters",
+              "in": "path",
+              "value": "$inputs.filters"
+            },
+            {
+              "name": "word_id",
+              "in": "path",
+              "value": "$inputs.word_id"
+            },
+            {
+              "name": "app_id",
+              "in": "header",
+              "value": "$inputs.app_id"
+            },
+            {
+              "name": "app_key",
+              "in": "header",
+              "value": "$inputs.app_key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "lemma_id": "$response.body",
+            "source_lang_out": "$response.body"
+          }
+        },
+        {
+          "stepId": "translate-lemma",
+          "description": "Retrieve the translation for the identified lemma.",
+          "operationPath": "openapi_source#/paths/~1entries~1{source_translation_language}~1{word_id}~1translations={target_translation_language}/get",
+          "parameters": [
+            {
+              "name": "source_translation_language",
+              "in": "path",
+              "value": "$steps.lemmatize-word-for-translation.outputs.source_lang_out"
+            },
+            {
+              "name": "word_id",
+              "in": "path",
+              "value": "$steps.lemmatize-word-for-translation.outputs.lemma_id"
+            },
+            {
+              "name": "target_translation_language",
+              "in": "path",
+              "value": "$inputs.target_translation_language"
+            },
+            {
+              "name": "app_id",
+              "in": "header",
+              "value": "$inputs.app_id"
+            },
+            {
+              "name": "app_key",
+              "in": "header",
+              "value": "$inputs.app_key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "translation_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "lemma_id": "$steps.lemmatize-word-for-translation.outputs.lemma_id",
+        "source_lang_out": "$steps.lemmatize-word-for-translation.outputs.source_lang_out",
+        "translation_details": "$steps.translate-lemma.outputs.translation_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "word-discovery-and-definition-lookup",
+      "summary": "Searches for potential word matches based on user input (e.g., prefix, fuzzy match) and then retrieves the full dictionary entry for a selected word.",
+      "description": "Searches for potential word matches based on user input (e.g., prefix, fuzzy match) and then retrieves the full dictionary entry for a selected word.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "source_lang": {
+            "type": "string"
+          },
+          "q": {
+            "type": "string"
+          },
+          "prefix": {
+            "type": "string"
+          },
+          "regions": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "app_id": {
+            "type": "string"
+          },
+          "app_key": {
+            "type": "string"
+          },
+          "word_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-for-words",
+          "description": "Search for possible headword matches based on a query string.",
+          "operationPath": "openapi_source#/paths/~1search~1{source_lang}/get",
+          "parameters": [
+            {
+              "name": "source_lang",
+              "in": "path",
+              "value": "$inputs.source_lang"
+            },
+            {
+              "name": "q",
+              "in": "query",
+              "value": "$inputs.q"
+            },
+            {
+              "name": "prefix",
+              "in": "query",
+              "value": "$inputs.prefix"
+            },
+            {
+              "name": "regions",
+              "in": "query",
+              "value": "$inputs.regions"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "app_id",
+              "in": "header",
+              "value": "$inputs.app_id"
+            },
+            {
+              "name": "app_key",
+              "in": "header",
+              "value": "$inputs.app_key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "word_list_results": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-definition-for-search-result",
+          "description": "Retrieve the dictionary entry for a specific word ID found in the search results.",
+          "operationPath": "openapi_source#/paths/~1entries~1{source_lang}~1{word_id}/get",
+          "parameters": [
+            {
+              "name": "source_lang",
+              "in": "path",
+              "value": "$inputs.source_lang"
+            },
+            {
+              "name": "word_id",
+              "in": "path",
+              "value": "$steps.search-for-words.outputs.word_list_results.results[0].id"
+            },
+            {
+              "name": "app_id",
+              "in": "header",
+              "value": "$inputs.app_id"
+            },
+            {
+              "name": "app_key",
+              "in": "header",
+              "value": "$inputs.app_key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "entry_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "word_list_results": "$steps.search-for-words.outputs.word_list_results",
+        "entry_details": "$steps.get-definition-for-search-result.outputs.entry_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "analyze-word-usage-frequency",
+      "summary": "Finds the base form (lemma) of a word and then retrieves its frequency statistics from a corpus, optionally filtering or collating results.",
+      "description": "Finds the base form (lemma) of a word and then retrieves its frequency statistics from a corpus, optionally filtering or collating results.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "source_lang": {
+            "type": "string"
+          },
+          "filters": {
+            "type": "string"
+          },
+          "word_id": {
+            "type": "string"
+          },
+          "app_id": {
+            "type": "string"
+          },
+          "app_key": {
+            "type": "string"
+          },
+          "corpus": {
+            "type": "string"
+          },
+          "wordform": {
+            "type": "string"
+          },
+          "trueCase": {
+            "type": "string"
+          },
+          "lemma": {
+            "type": "string"
+          },
+          "lexicalCategory": {
+            "type": "string"
+          },
+          "grammaticalFeatures": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "string"
+          },
+          "collate": {
+            "type": "string"
+          },
+          "minFrequency": {
+            "type": "string"
+          },
+          "maxFrequency": {
+            "type": "string"
+          },
+          "minNormalizedFrequency": {
+            "type": "string"
+          },
+          "maxNormalizedFrequency": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "lemmatize-word-for-stats",
+          "description": "Find the base form (lemma) of the word for frequency analysis.",
+          "operationPath": "openapi_source#/paths/~1inflections~1{source_lang}~1{word_id}~1{filters}/get",
+          "parameters": [
+            {
+              "name": "source_lang",
+              "in": "path",
+              "value": "$inputs.source_lang"
+            },
+            {
+              "name": "filters",
+              "in": "path",
+              "value": "$inputs.filters"
+            },
+            {
+              "name": "word_id",
+              "in": "path",
+              "value": "$inputs.word_id"
+            },
+            {
+              "name": "app_id",
+              "in": "header",
+              "value": "$inputs.app_id"
+            },
+            {
+              "name": "app_key",
+              "in": "header",
+              "value": "$inputs.app_key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "lemma_id": "$response.body",
+            "source_lang_out": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-aggregated-word-frequency",
+          "description": "Retrieve the aggregated frequency for the lemma.",
+          "operationPath": "openapi_source#/paths/~1stats~1frequency~1word~1{source_lang}~1/get",
+          "parameters": [
+            {
+              "name": "source_lang",
+              "in": "path",
+              "value": "$steps.lemmatize-word-for-stats.outputs.source_lang_out"
+            },
+            {
+              "name": "corpus",
+              "in": "query",
+              "value": "$inputs.corpus"
+            },
+            {
+              "name": "wordform",
+              "in": "query",
+              "value": "$inputs.wordform"
+            },
+            {
+              "name": "trueCase",
+              "in": "query",
+              "value": "$inputs.trueCase"
+            },
+            {
+              "name": "lemma",
+              "in": "query",
+              "value": "$steps.lemmatize-word-for-stats.outputs.lemma_id"
+            },
+            {
+              "name": "lexicalCategory",
+              "in": "query",
+              "value": "$inputs.lexicalCategory"
+            },
+            {
+              "name": "app_id",
+              "in": "header",
+              "value": "$inputs.app_id"
+            },
+            {
+              "name": "app_key",
+              "in": "header",
+              "value": "$inputs.app_key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "aggregated_frequency_stats": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-detailed-word-frequency-list",
+          "description": "Retrieve a detailed list of frequencies for the lemma, broken down by form, case, etc.",
+          "operationPath": "openapi_source#/paths/~1stats~1frequency~1words~1{source_lang}~1/get",
+          "parameters": [
+            {
+              "name": "source_lang",
+              "in": "path",
+              "value": "$steps.lemmatize-word-for-stats.outputs.source_lang_out"
+            },
+            {
+              "name": "corpus",
+              "in": "query",
+              "value": "$inputs.corpus"
+            },
+            {
+              "name": "wordform",
+              "in": "query",
+              "value": "$inputs.wordform"
+            },
+            {
+              "name": "trueCase",
+              "in": "query",
+              "value": "$inputs.trueCase"
+            },
+            {
+              "name": "lemma",
+              "in": "query",
+              "value": "$steps.lemmatize-word-for-stats.outputs.lemma_id"
+            },
+            {
+              "name": "lexicalCategory",
+              "in": "query",
+              "value": "$inputs.lexicalCategory"
+            },
+            {
+              "name": "grammaticalFeatures",
+              "in": "query",
+              "value": "$inputs.grammaticalFeatures"
+            },
+            {
+              "name": "sort",
+              "in": "query",
+              "value": "$inputs.sort"
+            },
+            {
+              "name": "collate",
+              "in": "query",
+              "value": "$inputs.collate"
+            },
+            {
+              "name": "minFrequency",
+              "in": "query",
+              "value": "$inputs.minFrequency"
+            },
+            {
+              "name": "maxFrequency",
+              "in": "query",
+              "value": "$inputs.maxFrequency"
+            },
+            {
+              "name": "minNormalizedFrequency",
+              "in": "query",
+              "value": "$inputs.minNormalizedFrequency"
+            },
+            {
+              "name": "maxNormalizedFrequency",
+              "in": "query",
+              "value": "$inputs.maxNormalizedFrequency"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "app_id",
+              "in": "header",
+              "value": "$inputs.app_id"
+            },
+            {
+              "name": "app_key",
+              "in": "header",
+              "value": "$inputs.app_key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "detailed_frequency_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "lemma_id": "$steps.lemmatize-word-for-stats.outputs.lemma_id",
+        "source_lang_out": "$steps.lemmatize-word-for-stats.outputs.source_lang_out",
+        "aggregated_frequency_stats": "$steps.get-aggregated-word-frequency.outputs.aggregated_frequency_stats",
+        "detailed_frequency_list": "$steps.get-detailed-word-frequency-list.outputs.detailed_frequency_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

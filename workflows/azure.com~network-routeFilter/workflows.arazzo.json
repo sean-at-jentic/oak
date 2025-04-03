@@ -1,0 +1,610 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/azure.com/network-routeFilter/2018-08-01/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "create-and-configure-route-filter",
+      "summary": "Creates a new Azure Route Filter and adds an initial rule to it, defining which BGP communities are allowed or denied for ExpressRoute peering.",
+      "description": "Creates a new Azure Route Filter and adds an initial rule to it, defining which BGP communities are allowed or denied for ExpressRoute peering.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "resourceGroupName": {
+            "type": "string"
+          },
+          "routeFilterName": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "ruleName": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-route-filter",
+          "description": "Creates or updates a route filter resource.",
+          "operationId": "RouteFilters_CreateOrUpdate",
+          "parameters": [
+            {
+              "name": "resourceGroupName",
+              "in": "path",
+              "value": "$inputs.resourceGroupName"
+            },
+            {
+              "name": "routeFilterName",
+              "in": "path",
+              "value": "$inputs.routeFilterName"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "location": "$inputs.location"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "routeFilterId": "$response.body",
+            "routeFilterName": "$response.body",
+            "resourceGroupName": "$response.body",
+            "provisioningState": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-route-filter-rule",
+          "description": "Adds a rule to the newly created route filter.",
+          "operationId": "RouteFilterRules_CreateOrUpdate",
+          "parameters": [
+            {
+              "name": "resourceGroupName",
+              "in": "path",
+              "value": "$steps.create-route-filter.outputs.resourceGroupName"
+            },
+            {
+              "name": "routeFilterName",
+              "in": "path",
+              "value": "$steps.create-route-filter.outputs.routeFilterName"
+            },
+            {
+              "name": "ruleName",
+              "in": "path",
+              "value": "$inputs.ruleName"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "resourceGroupName": "$steps.create-route-filter.outputs.resourceGroupName",
+              "routeFilterName": "$steps.create-route-filter.outputs.routeFilterName"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ruleId": "$response.body",
+            "ruleName": "$response.body",
+            "provisioningState": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "routeFilterId": "$steps.create-route-filter.outputs.routeFilterId",
+        "routeFilterName": "$steps.create-route-filter.outputs.routeFilterName",
+        "resourceGroupName": "$steps.create-route-filter.outputs.resourceGroupName",
+        "provisioningState": "$steps.add-route-filter-rule.outputs.provisioningState",
+        "ruleId": "$steps.add-route-filter-rule.outputs.ruleId",
+        "ruleName": "$steps.add-route-filter-rule.outputs.ruleName"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "add-rule-to-existing-route-filter",
+      "summary": "Adds a new filtering rule (based on BGP communities) to an existing Azure Route Filter.",
+      "description": "Adds a new filtering rule (based on BGP communities) to an existing Azure Route Filter.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "resourceGroupName": {
+            "type": "string"
+          },
+          "routeFilterName": {
+            "type": "string"
+          },
+          "$expand": {
+            "type": "string"
+          },
+          "ruleName": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-route-filter",
+          "description": "Retrieves details of the target route filter to ensure it exists.",
+          "operationId": "RouteFilters_Get",
+          "parameters": [
+            {
+              "name": "resourceGroupName",
+              "in": "path",
+              "value": "$inputs.resourceGroupName"
+            },
+            {
+              "name": "routeFilterName",
+              "in": "path",
+              "value": "$inputs.routeFilterName"
+            },
+            {
+              "name": "$expand",
+              "in": "query",
+              "value": "$inputs.$expand"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "routeFilterId": "$response.body",
+            "routeFilterName": "$response.body",
+            "resourceGroupName": "$response.body",
+            "existingRules": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-new-rule",
+          "description": "Creates or updates a specific rule within the route filter.",
+          "operationId": "RouteFilterRules_CreateOrUpdate",
+          "parameters": [
+            {
+              "name": "resourceGroupName",
+              "in": "path",
+              "value": "$steps.get-route-filter.outputs.resourceGroupName"
+            },
+            {
+              "name": "routeFilterName",
+              "in": "path",
+              "value": "$steps.get-route-filter.outputs.routeFilterName"
+            },
+            {
+              "name": "ruleName",
+              "in": "path",
+              "value": "$inputs.ruleName"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "resourceGroupName": "$steps.get-route-filter.outputs.resourceGroupName",
+              "routeFilterName": "$steps.get-route-filter.outputs.routeFilterName"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ruleId": "$response.body",
+            "ruleName": "$response.body",
+            "provisioningState": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "routeFilterId": "$steps.get-route-filter.outputs.routeFilterId",
+        "routeFilterName": "$steps.get-route-filter.outputs.routeFilterName",
+        "resourceGroupName": "$steps.get-route-filter.outputs.resourceGroupName",
+        "existingRules": "$steps.get-route-filter.outputs.existingRules",
+        "ruleId": "$steps.add-new-rule.outputs.ruleId",
+        "ruleName": "$steps.add-new-rule.outputs.ruleName",
+        "provisioningState": "$steps.add-new-rule.outputs.provisioningState"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "remove-rule-from-route-filter",
+      "summary": "Identifies and removes a specific rule from an Azure Route Filter.",
+      "description": "Identifies and removes a specific rule from an Azure Route Filter.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "resourceGroupName": {
+            "type": "string"
+          },
+          "routeFilterName": {
+            "type": "string"
+          },
+          "ruleName": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-rule-to-delete",
+          "description": "Retrieves a specific rule to confirm its existence before deletion.",
+          "operationId": "RouteFilterRules_Get",
+          "parameters": [
+            {
+              "name": "resourceGroupName",
+              "in": "path",
+              "value": "$inputs.resourceGroupName"
+            },
+            {
+              "name": "routeFilterName",
+              "in": "path",
+              "value": "$inputs.routeFilterName"
+            },
+            {
+              "name": "ruleName",
+              "in": "path",
+              "value": "$inputs.ruleName"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ruleId": "$response.body",
+            "ruleName": "$response.body",
+            "routeFilterName": "$response.body",
+            "resourceGroupName": "$response.body"
+          }
+        },
+        {
+          "stepId": "delete-filter-rule",
+          "description": "Deletes the specified rule from the route filter.",
+          "operationId": "RouteFilterRules_Delete",
+          "parameters": [
+            {
+              "name": "resourceGroupName",
+              "in": "path",
+              "value": "$steps.find-rule-to-delete.outputs.resourceGroupName"
+            },
+            {
+              "name": "routeFilterName",
+              "in": "path",
+              "value": "$steps.find-rule-to-delete.outputs.routeFilterName"
+            },
+            {
+              "name": "ruleName",
+              "in": "path",
+              "value": "$steps.find-rule-to-delete.outputs.ruleName"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "deletionStatus": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "ruleId": "$steps.find-rule-to-delete.outputs.ruleId",
+        "ruleName": "$steps.find-rule-to-delete.outputs.ruleName",
+        "routeFilterName": "$steps.find-rule-to-delete.outputs.routeFilterName",
+        "resourceGroupName": "$steps.find-rule-to-delete.outputs.resourceGroupName",
+        "deletionStatus": "$steps.delete-filter-rule.outputs.deletionStatus"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "audit-route-filter-configuration",
+      "summary": "Lists all route filters within a specific resource group and then retrieves the detailed rules for a selected filter.",
+      "description": "Lists all route filters within a specific resource group and then retrieves the detailed rules for a selected filter.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "resourceGroupName": {
+            "type": "string"
+          },
+          "routeFilterName": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-route-filters",
+          "description": "Lists all route filters within the specified resource group.",
+          "operationId": "RouteFilters_ListByResourceGroup",
+          "parameters": [
+            {
+              "name": "resourceGroupName",
+              "in": "path",
+              "value": "$inputs.resourceGroupName"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "routeFilterList": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-filter-rules",
+          "description": "Retrieves all rules associated with a specific route filter identified in the previous step.",
+          "operationId": "RouteFilterRules_ListByRouteFilter",
+          "parameters": [
+            {
+              "name": "resourceGroupName",
+              "in": "path",
+              "value": "$inputs.resourceGroupName"
+            },
+            {
+              "name": "routeFilterName",
+              "in": "path",
+              "value": "$steps.list-route-filters.outputs.routeFilterList.name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "routeFilterRuleList": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "routeFilterList": "$steps.list-route-filters.outputs.routeFilterList",
+        "routeFilterRuleList": "$steps.get-filter-rules.outputs.routeFilterRuleList"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "update-route-filter-tags",
+      "summary": "Updates the tags associated with a specific Azure Route Filter for better resource organization or cost tracking.",
+      "description": "Updates the tags associated with a specific Azure Route Filter for better resource organization or cost tracking.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "resourceGroupName": {
+            "type": "string"
+          },
+          "routeFilterName": {
+            "type": "string"
+          },
+          "$expand": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-target-route-filter",
+          "description": "Retrieves the current details of the route filter, including existing tags.",
+          "operationId": "RouteFilters_Get",
+          "parameters": [
+            {
+              "name": "resourceGroupName",
+              "in": "path",
+              "value": "$inputs.resourceGroupName"
+            },
+            {
+              "name": "routeFilterName",
+              "in": "path",
+              "value": "$inputs.routeFilterName"
+            },
+            {
+              "name": "$expand",
+              "in": "query",
+              "value": "$inputs.$expand"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "routeFilterId": "$response.body",
+            "routeFilterName": "$response.body",
+            "resourceGroupName": "$response.body",
+            "currentTags": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-filter-tags",
+          "description": "Applies new or updated tags to the route filter.",
+          "operationId": "RouteFilters_Update",
+          "parameters": [
+            {
+              "name": "resourceGroupName",
+              "in": "path",
+              "value": "$steps.get-target-route-filter.outputs.resourceGroupName"
+            },
+            {
+              "name": "routeFilterName",
+              "in": "path",
+              "value": "$steps.get-target-route-filter.outputs.routeFilterName"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "resourceGroupName": "$steps.get-target-route-filter.outputs.resourceGroupName",
+              "routeFilterName": "$steps.get-target-route-filter.outputs.routeFilterName",
+              "tags": "$inputs.tags"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updatedRouteFilter": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "routeFilterId": "$steps.get-target-route-filter.outputs.routeFilterId",
+        "routeFilterName": "$steps.get-target-route-filter.outputs.routeFilterName",
+        "resourceGroupName": "$steps.get-target-route-filter.outputs.resourceGroupName",
+        "currentTags": "$steps.get-target-route-filter.outputs.currentTags",
+        "updatedRouteFilter": "$steps.update-filter-tags.outputs.updatedRouteFilter"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

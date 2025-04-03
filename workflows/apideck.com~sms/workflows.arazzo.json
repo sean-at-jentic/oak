@@ -1,0 +1,645 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/apideck.com/sms/10.14.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "send-sms-and-verify-delivery-status",
+      "summary": "Sends a new SMS message and then retrieves its details to check the delivery status and any potential errors.",
+      "description": "Sends a new SMS message and then retrieves its details to check the delivery status and any potential errors.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "raw": {
+            "type": "string"
+          },
+          "x-apideck-consumer-id": {
+            "type": "string"
+          },
+          "x-apideck-app-id": {
+            "type": "string"
+          },
+          "x-apideck-service-id": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "send-sms",
+          "description": "Create and send a new SMS message.",
+          "operationId": "messagesAdd",
+          "parameters": [
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "from": "$inputs.from",
+              "to": "$inputs.to",
+              "body": "$inputs.body"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "messageId": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-message-status",
+          "description": "Retrieve the details of the sent message, including its delivery status and error information if applicable.",
+          "operationId": "messagesOne",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            },
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "messageDetails": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "messageId": "$steps.send-sms.outputs.messageId",
+        "messageDetails": "$steps.get-message-status.outputs.messageDetails"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "investigate-failed-message-delivery",
+      "summary": "Retrieves a list of messages, identifies a failed message, and then fetches its specific details to investigate the cause of the failure using the error information.",
+      "description": "Retrieves a list of messages, identifies a failed message, and then fetches its specific details to investigate the cause of the failure using the error information.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "raw": {
+            "type": "string"
+          },
+          "x-apideck-consumer-id": {
+            "type": "string"
+          },
+          "x-apideck-app-id": {
+            "type": "string"
+          },
+          "x-apideck-service-id": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-failed-messages",
+          "description": "List messages to identify any with a 'failed' or 'undelivered' status. Requires client-side filtering or iterating through pages.",
+          "operationId": "messagesAll",
+          "parameters": [
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            },
+            {
+              "name": "cursor",
+              "in": "query",
+              "value": "$inputs.cursor"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "messageList": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-failed-message-details",
+          "description": "Retrieve the full details of a specific message identified as failed, focusing on the 'status' and 'error' fields.",
+          "operationId": "messagesOne",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            },
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "failedMessageDetails": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "messageList": "$steps.find-failed-messages.outputs.messageList",
+        "failedMessageDetails": "$steps.get-failed-message-details.outputs.failedMessageDetails"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "schedule-sms-and-cancel-before-sending",
+      "summary": "Schedules an SMS message to be sent at a future time and then cancels it before the scheduled time.",
+      "description": "Schedules an SMS message to be sent at a future time and then cancels it before the scheduled time.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "raw": {
+            "type": "string"
+          },
+          "x-apideck-consumer-id": {
+            "type": "string"
+          },
+          "x-apideck-app-id": {
+            "type": "string"
+          },
+          "x-apideck-service-id": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "schedule-sms",
+          "description": "Create an SMS message scheduled for future delivery by providing the 'scheduled_at' parameter.",
+          "operationId": "messagesAdd",
+          "parameters": [
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "from": "$inputs.from",
+              "to": "$inputs.to",
+              "body": "$inputs.body"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "scheduledMessageId": "$response.body"
+          }
+        },
+        {
+          "stepId": "cancel-scheduled-sms",
+          "description": "Delete the previously scheduled SMS message using its ID to prevent it from being sent.",
+          "operationId": "messagesDelete",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            },
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "deletionResponse": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "scheduledMessageId": "$steps.schedule-sms.outputs.scheduledMessageId",
+        "deletionResponse": "$steps.cancel-scheduled-sms.outputs.deletionResponse"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "update-scheduled-message-eg-reschedule",
+      "summary": "Retrieves a scheduled message and updates its properties, such as the scheduled time.",
+      "description": "Retrieves a scheduled message and updates its properties, such as the scheduled time.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "x-apideck-consumer-id": {
+            "type": "string"
+          },
+          "x-apideck-app-id": {
+            "type": "string"
+          },
+          "x-apideck-service-id": {
+            "type": "string"
+          },
+          "raw": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-scheduled-message",
+          "description": "Retrieve the details of a specific scheduled message.",
+          "operationId": "messagesOne",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            },
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "messageDetails": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-schedule",
+          "description": "Update the scheduled message, for example, by changing the 'scheduled_at' time or adding a 'reference'.",
+          "operationId": "messagesUpdate",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            },
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "messageId": "$steps.get-scheduled-message.outputs.messageDetails.id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updateResponse": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "messageDetails": "$steps.get-scheduled-message.outputs.messageDetails",
+        "updateResponse": "$steps.update-schedule.outputs.updateResponse"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

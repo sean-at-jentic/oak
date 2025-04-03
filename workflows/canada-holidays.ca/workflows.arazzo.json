@@ -1,0 +1,230 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/canada-holidays.ca/main/1.8.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "compare-holidays-between-two-provinces",
+      "summary": "Retrieves holiday lists for two different provinces for comparison. This requires two separate API calls and client-side logic to perform the comparison.",
+      "description": "Retrieves holiday lists for two different provinces for comparison. This requires two separate API calls and client-side logic to perform the comparison.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "provinceId": {
+            "type": "string"
+          },
+          "year": {
+            "type": "string"
+          },
+          "optional": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-first-province-holidays",
+          "description": "Fetches the list of holidays for the first province.",
+          "operationId": "Province",
+          "parameters": [
+            {
+              "name": "provinceId",
+              "in": "path",
+              "value": "$inputs.provinceId"
+            },
+            {
+              "name": "year",
+              "in": "query",
+              "value": "$inputs.year"
+            },
+            {
+              "name": "optional",
+              "in": "query",
+              "value": "$inputs.optional"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "province.holidays": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-second-province-holidays",
+          "description": "Fetches the list of holidays for the second province.",
+          "operationId": "Province",
+          "parameters": [
+            {
+              "name": "provinceId",
+              "in": "path",
+              "value": "$inputs.provinceId"
+            },
+            {
+              "name": "year",
+              "in": "query",
+              "value": "$inputs.year"
+            },
+            {
+              "name": "optional",
+              "in": "query",
+              "value": "$inputs.optional"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "province.holidays": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "province.holidays": "$steps.get-second-province-holidays.outputs.province.holidays"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "api-discovery-and-specification-retrieval",
+      "summary": "Allows a developer to discover the API's main endpoints and retrieve its detailed OpenAPI specification.",
+      "description": "Allows a developer to discover the API's main endpoints and retrieve its detailed OpenAPI specification.",
+      "steps": [
+        {
+          "stepId": "discover-api-endpoints",
+          "description": "Gets the root welcome message and links to main resource collections.",
+          "operationId": "Root",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "message": "$response.body",
+            "_links.holidays.href": "$response.body",
+            "_links.provinces.href": "$response.body",
+            "_links.spec.href": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-api-specification",
+          "description": "Retrieves the OpenAPI specification file (YAML).",
+          "operationId": "Spec",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "openapi_spec_yaml": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "message": "$steps.discover-api-endpoints.outputs.message",
+        "_links.holidays.href": "$steps.discover-api-endpoints.outputs._links.holidays.href",
+        "_links.provinces.href": "$steps.discover-api-endpoints.outputs._links.provinces.href",
+        "_links.spec.href": "$steps.discover-api-endpoints.outputs._links.spec.href",
+        "openapi_spec_yaml": "$steps.get-api-specification.outputs.openapi_spec_yaml"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

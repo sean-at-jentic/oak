@@ -1,0 +1,1664 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/docker.com/engine/1.33/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "run-batch-job-container",
+      "summary": "Creates a container, starts it, waits for it to complete, retrieves its logs, and then removes it. Useful for running batch tasks.",
+      "description": "Creates a container, starts it, waits for it to complete, retrieves its logs, and then removes it. Useful for running batch tasks.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "create-batch-container_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          },
+          "detachKeys": {
+            "type": "string"
+          },
+          "condition": {
+            "type": "string"
+          },
+          "follow": {
+            "type": "string"
+          },
+          "stdout": {
+            "type": "string"
+          },
+          "stderr": {
+            "type": "string"
+          },
+          "since": {
+            "type": "string"
+          },
+          "timestamps": {
+            "type": "string"
+          },
+          "tail": {
+            "type": "string"
+          },
+          "v": {
+            "type": "string"
+          },
+          "force": {
+            "type": "string"
+          },
+          "link": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-batch-container",
+          "description": "Create a new container instance from a specified image and command.",
+          "operationId": "ContainerCreate",
+          "parameters": [
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-batch-container_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Id": "$response.body",
+            "Warnings": "$response.body"
+          }
+        },
+        {
+          "stepId": "start-batch-container",
+          "description": "Start the created container.",
+          "operationId": "ContainerStart",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-batch-container.outputs.Id"
+            },
+            {
+              "name": "detachKeys",
+              "in": "query",
+              "value": "$inputs.detachKeys"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_code": "$response.body"
+          }
+        },
+        {
+          "stepId": "wait-for-container",
+          "description": "Block until the container stops and retrieve its exit code.",
+          "operationId": "ContainerWait",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-batch-container.outputs.Id"
+            },
+            {
+              "name": "condition",
+              "in": "query",
+              "value": "$inputs.condition"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "StatusCode": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-container-logs",
+          "description": "Retrieve the logs (stdout/stderr) from the completed container.",
+          "operationId": "ContainerLogs",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-batch-container.outputs.Id"
+            },
+            {
+              "name": "follow",
+              "in": "query",
+              "value": "$inputs.follow"
+            },
+            {
+              "name": "stdout",
+              "in": "query",
+              "value": "$inputs.stdout"
+            },
+            {
+              "name": "stderr",
+              "in": "query",
+              "value": "$inputs.stderr"
+            },
+            {
+              "name": "since",
+              "in": "query",
+              "value": "$inputs.since"
+            },
+            {
+              "name": "timestamps",
+              "in": "query",
+              "value": "$inputs.timestamps"
+            },
+            {
+              "name": "tail",
+              "in": "query",
+              "value": "$inputs.tail"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "logs": "$response.body"
+          }
+        },
+        {
+          "stepId": "remove-container",
+          "description": "Remove the container instance.",
+          "operationId": "ContainerDelete",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-batch-container.outputs.Id"
+            },
+            {
+              "name": "v",
+              "in": "query",
+              "value": "$inputs.v"
+            },
+            {
+              "name": "force",
+              "in": "query",
+              "value": "$inputs.force"
+            },
+            {
+              "name": "link",
+              "in": "query",
+              "value": "$inputs.link"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_code": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "Id": "$steps.create-batch-container.outputs.Id",
+        "Warnings": "$steps.create-batch-container.outputs.Warnings",
+        "status_code": "$steps.remove-container.outputs.status_code",
+        "StatusCode": "$steps.wait-for-container.outputs.StatusCode",
+        "logs": "$steps.get-container-logs.outputs.logs"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "build-and-push-custom-image",
+      "summary": "Builds a Docker image from a Dockerfile context, optionally tags it, authenticates with a registry, and pushes the image.",
+      "description": "Builds a Docker image from a Dockerfile context, optionally tags it, authenticates with a registry, and pushes the image.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "dockerfile": {
+            "type": "string"
+          },
+          "t": {
+            "type": "string"
+          },
+          "extrahosts": {
+            "type": "string"
+          },
+          "remote": {
+            "type": "string"
+          },
+          "q": {
+            "type": "string"
+          },
+          "nocache": {
+            "type": "string"
+          },
+          "cachefrom": {
+            "type": "string"
+          },
+          "pull": {
+            "type": "string"
+          },
+          "rm": {
+            "type": "string"
+          },
+          "forcerm": {
+            "type": "string"
+          },
+          "memory": {
+            "type": "string"
+          },
+          "memswap": {
+            "type": "string"
+          },
+          "cpushares": {
+            "type": "string"
+          },
+          "cpusetcpus": {
+            "type": "string"
+          },
+          "cpuperiod": {
+            "type": "string"
+          },
+          "cpuquota": {
+            "type": "string"
+          },
+          "buildargs": {
+            "type": "string"
+          },
+          "shmsize": {
+            "type": "string"
+          },
+          "squash": {
+            "type": "string"
+          },
+          "labels": {
+            "type": "string"
+          },
+          "networkmode": {
+            "type": "string"
+          },
+          "Content-type": {
+            "type": "string"
+          },
+          "X-Registry-Config": {
+            "type": "string"
+          },
+          "build-image_body": {
+            "type": "object"
+          },
+          "check-registry-auth_body": {
+            "type": "object"
+          },
+          "name": {
+            "type": "string"
+          },
+          "tag": {
+            "type": "string"
+          },
+          "X-Registry-Auth": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "build-image",
+          "description": "Build a Docker image from a provided tar archive containing a Dockerfile.",
+          "operationId": "ImageBuild",
+          "parameters": [
+            {
+              "name": "dockerfile",
+              "in": "query",
+              "value": "$inputs.dockerfile"
+            },
+            {
+              "name": "t",
+              "in": "query",
+              "value": "$inputs.t"
+            },
+            {
+              "name": "extrahosts",
+              "in": "query",
+              "value": "$inputs.extrahosts"
+            },
+            {
+              "name": "remote",
+              "in": "query",
+              "value": "$inputs.remote"
+            },
+            {
+              "name": "q",
+              "in": "query",
+              "value": "$inputs.q"
+            },
+            {
+              "name": "nocache",
+              "in": "query",
+              "value": "$inputs.nocache"
+            },
+            {
+              "name": "cachefrom",
+              "in": "query",
+              "value": "$inputs.cachefrom"
+            },
+            {
+              "name": "pull",
+              "in": "query",
+              "value": "$inputs.pull"
+            },
+            {
+              "name": "rm",
+              "in": "query",
+              "value": "$inputs.rm"
+            },
+            {
+              "name": "forcerm",
+              "in": "query",
+              "value": "$inputs.forcerm"
+            },
+            {
+              "name": "memory",
+              "in": "query",
+              "value": "$inputs.memory"
+            },
+            {
+              "name": "memswap",
+              "in": "query",
+              "value": "$inputs.memswap"
+            },
+            {
+              "name": "cpushares",
+              "in": "query",
+              "value": "$inputs.cpushares"
+            },
+            {
+              "name": "cpusetcpus",
+              "in": "query",
+              "value": "$inputs.cpusetcpus"
+            },
+            {
+              "name": "cpuperiod",
+              "in": "query",
+              "value": "$inputs.cpuperiod"
+            },
+            {
+              "name": "cpuquota",
+              "in": "query",
+              "value": "$inputs.cpuquota"
+            },
+            {
+              "name": "buildargs",
+              "in": "query",
+              "value": "$inputs.buildargs"
+            },
+            {
+              "name": "shmsize",
+              "in": "query",
+              "value": "$inputs.shmsize"
+            },
+            {
+              "name": "squash",
+              "in": "query",
+              "value": "$inputs.squash"
+            },
+            {
+              "name": "labels",
+              "in": "query",
+              "value": "$inputs.labels"
+            },
+            {
+              "name": "networkmode",
+              "in": "query",
+              "value": "$inputs.networkmode"
+            },
+            {
+              "name": "Content-type",
+              "in": "header",
+              "value": "$inputs.Content-type"
+            },
+            {
+              "name": "X-Registry-Config",
+              "in": "header",
+              "value": "$inputs.X-Registry-Config"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.build-image_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "build_stream": "$response.body",
+            "image_id_implicit": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-registry-auth",
+          "description": "Validate credentials for the target Docker registry.",
+          "operationId": "SystemAuth",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.check-registry-auth_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Status": "$response.body",
+            "IdentityToken": "$response.body"
+          }
+        },
+        {
+          "stepId": "push-image",
+          "description": "Push the newly built image to the specified Docker registry.",
+          "operationId": "ImagePush",
+          "parameters": [
+            {
+              "name": "name",
+              "in": "path",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "tag",
+              "in": "query",
+              "value": "$inputs.tag"
+            },
+            {
+              "name": "X-Registry-Auth",
+              "in": "header",
+              "value": "$steps.check-registry-auth.outputs.IdentityToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "push_stream": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "build_stream": "$steps.build-image.outputs.build_stream",
+        "image_id_implicit": "$steps.build-image.outputs.image_id_implicit",
+        "Status": "$steps.check-registry-auth.outputs.Status",
+        "IdentityToken": "$steps.check-registry-auth.outputs.IdentityToken",
+        "push_stream": "$steps.push-image.outputs.push_stream"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "deploy-application-container-from-registry",
+      "summary": "Pulls a specified image from a registry, creates a container based on it with specific configurations (like port mapping), starts the container, and inspects it to confirm.",
+      "description": "Pulls a specified image from a registry, creates a container based on it with specific configurations (like port mapping), starts the container, and inspects it to confirm.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "fromImage": {
+            "type": "string"
+          },
+          "fromSrc": {
+            "type": "string"
+          },
+          "repo": {
+            "type": "string"
+          },
+          "tag": {
+            "type": "string"
+          },
+          "X-Registry-Auth": {
+            "type": "string"
+          },
+          "pull-image_body": {
+            "type": "object"
+          },
+          "name": {
+            "type": "string"
+          },
+          "create-app-container_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          },
+          "detachKeys": {
+            "type": "string"
+          },
+          "size": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "pull-image",
+          "description": "Pull an image from a Docker registry.",
+          "operationId": "ImageCreate",
+          "parameters": [
+            {
+              "name": "fromImage",
+              "in": "query",
+              "value": "$inputs.fromImage"
+            },
+            {
+              "name": "fromSrc",
+              "in": "query",
+              "value": "$inputs.fromSrc"
+            },
+            {
+              "name": "repo",
+              "in": "query",
+              "value": "$inputs.repo"
+            },
+            {
+              "name": "tag",
+              "in": "query",
+              "value": "$inputs.tag"
+            },
+            {
+              "name": "X-Registry-Auth",
+              "in": "header",
+              "value": "$inputs.X-Registry-Auth"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.pull-image_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pull_stream": "$response.body",
+            "image_id_implicit": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-app-container",
+          "description": "Create a container using the pulled image and specified configuration.",
+          "operationId": "ContainerCreate",
+          "parameters": [
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-app-container_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Id": "$response.body",
+            "Warnings": "$response.body"
+          }
+        },
+        {
+          "stepId": "start-app-container",
+          "description": "Start the application container.",
+          "operationId": "ContainerStart",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-app-container.outputs.Id"
+            },
+            {
+              "name": "detachKeys",
+              "in": "query",
+              "value": "$inputs.detachKeys"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_code": "$response.body"
+          }
+        },
+        {
+          "stepId": "inspect-app-container",
+          "description": "Inspect the running container to verify its state and configuration.",
+          "operationId": "ContainerInspect",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-app-container.outputs.Id"
+            },
+            {
+              "name": "size",
+              "in": "query",
+              "value": "$inputs.size"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "container_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "pull_stream": "$steps.pull-image.outputs.pull_stream",
+        "image_id_implicit": "$steps.pull-image.outputs.image_id_implicit",
+        "Id": "$steps.create-app-container.outputs.Id",
+        "Warnings": "$steps.create-app-container.outputs.Warnings",
+        "status_code": "$steps.start-app-container.outputs.status_code",
+        "container_details": "$steps.inspect-app-container.outputs.container_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "troubleshoot-container",
+      "summary": "Lists containers (optionally filtered), inspects a specific container for detailed configuration and state, retrieves its logs, and lists running processes inside it (Unix only).",
+      "description": "Lists containers (optionally filtered), inspects a specific container for detailed configuration and state, retrieves its logs, and lists running processes inside it (Unix only).",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "all": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "size": {
+            "type": "string"
+          },
+          "filters": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "follow": {
+            "type": "string"
+          },
+          "stdout": {
+            "type": "string"
+          },
+          "stderr": {
+            "type": "string"
+          },
+          "since": {
+            "type": "string"
+          },
+          "timestamps": {
+            "type": "string"
+          },
+          "tail": {
+            "type": "string"
+          },
+          "ps_args": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-containers-for-troubleshooting",
+          "description": "List containers, potentially filtering by name, status, etc.",
+          "operationId": "ContainerList",
+          "parameters": [
+            {
+              "name": "all",
+              "in": "query",
+              "value": "$inputs.all"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "size",
+              "in": "query",
+              "value": "$inputs.size"
+            },
+            {
+              "name": "filters",
+              "in": "query",
+              "value": "$inputs.filters"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "containers_array": "$response.body"
+          }
+        },
+        {
+          "stepId": "inspect-target-container",
+          "description": "Get detailed information about a specific container.",
+          "operationId": "ContainerInspect",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.list-containers-for-troubleshooting.outputs.containers_array.Id"
+            },
+            {
+              "name": "size",
+              "in": "query",
+              "value": "$inputs.size"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "container_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-target-container-logs",
+          "description": "Retrieve logs for the specific container.",
+          "operationId": "ContainerLogs",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.list-containers-for-troubleshooting.outputs.containers_array.Id"
+            },
+            {
+              "name": "follow",
+              "in": "query",
+              "value": "$inputs.follow"
+            },
+            {
+              "name": "stdout",
+              "in": "query",
+              "value": "$inputs.stdout"
+            },
+            {
+              "name": "stderr",
+              "in": "query",
+              "value": "$inputs.stderr"
+            },
+            {
+              "name": "since",
+              "in": "query",
+              "value": "$inputs.since"
+            },
+            {
+              "name": "timestamps",
+              "in": "query",
+              "value": "$inputs.timestamps"
+            },
+            {
+              "name": "tail",
+              "in": "query",
+              "value": "$inputs.tail"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "logs": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-target-container-processes",
+          "description": "List processes running inside the container (Unix only).",
+          "operationId": "ContainerTop",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.list-containers-for-troubleshooting.outputs.containers_array.Id"
+            },
+            {
+              "name": "ps_args",
+              "in": "query",
+              "value": "$inputs.ps_args"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "process_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "containers_array": "$steps.list-containers-for-troubleshooting.outputs.containers_array",
+        "container_details": "$steps.inspect-target-container.outputs.container_details",
+        "logs": "$steps.get-target-container-logs.outputs.logs",
+        "process_list": "$steps.get-target-container-processes.outputs.process_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "deploy-swarm-service-with-configuration",
+      "summary": "Creates necessary configurations (Secrets and Configs) in the Swarm, then deploys a new service utilizing them.",
+      "description": "Creates necessary configurations (Secrets and Configs) in the Swarm, then deploys a new service utilizing them.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-secret_body": {
+            "type": "object"
+          },
+          "create-config_body": {
+            "type": "object"
+          },
+          "X-Registry-Auth": {
+            "type": "string"
+          },
+          "create-service_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          },
+          "insertDefaults": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-secret",
+          "description": "Create a secret in the Swarm.",
+          "operationId": "SecretCreate",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-secret_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ID": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-config",
+          "description": "Create a config object in the Swarm.",
+          "operationId": "ConfigCreate",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-config_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ID": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-service",
+          "description": "Create a new service in the Swarm, referencing the created secret and config.",
+          "operationId": "ServiceCreate",
+          "parameters": [
+            {
+              "name": "X-Registry-Auth",
+              "in": "header",
+              "value": "$inputs.X-Registry-Auth"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-service_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ID": "$response.body",
+            "Warning": "$response.body"
+          }
+        },
+        {
+          "stepId": "inspect-created-service",
+          "description": "Inspect the newly created service to verify its details.",
+          "operationId": "ServiceInspect",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-service.outputs.ID"
+            },
+            {
+              "name": "insertDefaults",
+              "in": "query",
+              "value": "$inputs.insertDefaults"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "service_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "ID": "$steps.create-service.outputs.ID",
+        "Warning": "$steps.create-service.outputs.Warning",
+        "service_details": "$steps.inspect-created-service.outputs.service_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "safely-remove-swarm-node",
+      "summary": "Lists Swarm nodes, inspects a specific node to get its version, updates the node to 'drain' state to safely evict tasks, and then removes the node from the Swarm.",
+      "description": "Lists Swarm nodes, inspects a specific node to get its version, updates the node to 'drain' state to safely evict tasks, and then removes the node from the Swarm.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "filters": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "force": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-nodes",
+          "description": "List all nodes currently in the Swarm.",
+          "operationId": "NodeList",
+          "parameters": [
+            {
+              "name": "filters",
+              "in": "query",
+              "value": "$inputs.filters"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "nodes_array": "$response.body"
+          }
+        },
+        {
+          "stepId": "inspect-node",
+          "description": "Inspect a specific node to retrieve its details and current version.",
+          "operationId": "NodeInspect",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.list-nodes.outputs.nodes_array.ID"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "node_details": "$response.body",
+            "Version.Index": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-node-drain",
+          "description": "Update the node's availability to 'drain' to gracefully stop tasks before removal.",
+          "operationId": "NodeUpdate",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.list-nodes.outputs.nodes_array.ID"
+            },
+            {
+              "name": "version",
+              "in": "query",
+              "value": "$inputs.version"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.list-nodes.outputs.nodes_array[0].ID"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_code": "$response.body"
+          }
+        },
+        {
+          "stepId": "delete-node",
+          "description": "Remove the drained node from the Swarm.",
+          "operationId": "NodeDelete",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.list-nodes.outputs.nodes_array.ID"
+            },
+            {
+              "name": "force",
+              "in": "query",
+              "value": "$inputs.force"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_code": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "nodes_array": "$steps.list-nodes.outputs.nodes_array",
+        "node_details": "$steps.inspect-node.outputs.node_details",
+        "Version.Index": "$steps.inspect-node.outputs.Version.Index",
+        "status_code": "$steps.delete-node.outputs.status_code"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "monitor-container-resource-usage",
+      "summary": "Creates and starts a container, then streams its live resource usage statistics (CPU, memory, network, I/O). Finally stops and removes the container.",
+      "description": "Creates and starts a container, then streams its live resource usage statistics (CPU, memory, network, I/O). Finally stops and removes the container.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "create-monitored-container_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          },
+          "detachKeys": {
+            "type": "string"
+          },
+          "stream": {
+            "type": "string"
+          },
+          "t": {
+            "type": "string"
+          },
+          "v": {
+            "type": "string"
+          },
+          "force": {
+            "type": "string"
+          },
+          "link": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-monitored-container",
+          "description": "Create a container to monitor.",
+          "operationId": "ContainerCreate",
+          "parameters": [
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-monitored-container_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Id": "$response.body",
+            "Warnings": "$response.body"
+          }
+        },
+        {
+          "stepId": "start-monitored-container",
+          "description": "Start the container.",
+          "operationId": "ContainerStart",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-monitored-container.outputs.Id"
+            },
+            {
+              "name": "detachKeys",
+              "in": "query",
+              "value": "$inputs.detachKeys"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_code": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-container-stats-stream",
+          "description": "Stream live resource usage statistics for the container.",
+          "operationId": "ContainerStats",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-monitored-container.outputs.Id"
+            },
+            {
+              "name": "stream",
+              "in": "query",
+              "value": "$inputs.stream"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "stats_stream": "$response.body"
+          }
+        },
+        {
+          "stepId": "stop-monitored-container",
+          "description": "Stop the container after monitoring.",
+          "operationId": "ContainerStop",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-monitored-container.outputs.Id"
+            },
+            {
+              "name": "t",
+              "in": "query",
+              "value": "$inputs.t"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_code": "$response.body"
+          }
+        },
+        {
+          "stepId": "remove-monitored-container",
+          "description": "Remove the container.",
+          "operationId": "ContainerDelete",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-monitored-container.outputs.Id"
+            },
+            {
+              "name": "v",
+              "in": "query",
+              "value": "$inputs.v"
+            },
+            {
+              "name": "force",
+              "in": "query",
+              "value": "$inputs.force"
+            },
+            {
+              "name": "link",
+              "in": "query",
+              "value": "$inputs.link"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_code": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "Id": "$steps.create-monitored-container.outputs.Id",
+        "Warnings": "$steps.create-monitored-container.outputs.Warnings",
+        "status_code": "$steps.remove-monitored-container.outputs.status_code",
+        "stats_stream": "$steps.get-container-stats-stream.outputs.stats_stream"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "initialize-swarm-cluster",
+      "summary": "Initializes a new Swarm cluster on the current node, making it the first manager, and then inspects the Swarm to retrieve details like join tokens.",
+      "description": "Initializes a new Swarm cluster on the current node, making it the first manager, and then inspects the Swarm to retrieve details like join tokens.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "AdvertiseAddr": {
+            "type": "string"
+          },
+          "ForceNewCluster": {
+            "type": "string"
+          },
+          "ListenAddr": {
+            "type": "string"
+          },
+          "Spec": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "init-swarm",
+          "description": "Initialize a new Swarm cluster.",
+          "operationId": "SwarmInit",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "AdvertiseAddr": "$inputs.AdvertiseAddr",
+              "ForceNewCluster": "$inputs.ForceNewCluster",
+              "ListenAddr": "$inputs.ListenAddr",
+              "Spec": "$inputs.Spec"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "node_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "inspect-swarm",
+          "description": "Inspect the newly initialized Swarm to get its ID, configuration, and join tokens.",
+          "operationId": "SwarmInspect",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "swarm_details": "$response.body",
+            "JoinTokens": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "node_id": "$steps.init-swarm.outputs.node_id",
+        "swarm_details": "$steps.inspect-swarm.outputs.swarm_details",
+        "JoinTokens": "$steps.inspect-swarm.outputs.JoinTokens"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "install-and-enable-docker-plugin",
+      "summary": "Checks the required privileges for a plugin from a registry, pulls (installs) the plugin accepting those privileges, and then enables it.",
+      "description": "Checks the required privileges for a plugin from a registry, pulls (installs) the plugin accepting those privileges, and then enables it.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "remote": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "X-Registry-Auth": {
+            "type": "string"
+          },
+          "timeout": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-plugin-privileges",
+          "description": "Retrieve the list of privileges required by the plugin.",
+          "operationId": "GetPluginPrivileges",
+          "parameters": [
+            {
+              "name": "remote",
+              "in": "query",
+              "value": "$inputs.remote"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "privileges_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "pull-plugin",
+          "description": "Pull and install the plugin from the registry, granting the necessary privileges.",
+          "operationId": "PluginPull",
+          "parameters": [
+            {
+              "name": "remote",
+              "in": "query",
+              "value": "$inputs.remote"
+            },
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "X-Registry-Auth",
+              "in": "header",
+              "value": "$inputs.X-Registry-Auth"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_code": "$response.body"
+          }
+        },
+        {
+          "stepId": "enable-plugin",
+          "description": "Enable the installed plugin.",
+          "operationId": "PluginEnable",
+          "parameters": [
+            {
+              "name": "name",
+              "in": "path",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "timeout",
+              "in": "query",
+              "value": "$inputs.timeout"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_code": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "privileges_list": "$steps.get-plugin-privileges.outputs.privileges_list",
+        "status_code": "$steps.enable-plugin.outputs.status_code"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

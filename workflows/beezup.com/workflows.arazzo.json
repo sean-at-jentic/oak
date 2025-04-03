@@ -1,0 +1,1504 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/beezup.com/main/2.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "initial-catalog-import-and-configuration",
+      "summary": "Perform the first manual import of a product catalog for a store, configure column mappings, and commit the importation.",
+      "description": "Perform the first manual import of a product catalog for a store, configure column mappings, and commit the importation.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "storeId": {
+            "type": "string"
+          },
+          "start-manual-import_body": {
+            "type": "object"
+          },
+          "executionId": {
+            "type": "string"
+          },
+          "columnId": {
+            "type": "string"
+          },
+          "map-catalog-column_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "start-manual-import",
+          "description": "Start a new manual catalog importation process with specified input configuration.",
+          "operationId": "Importation_StartManualUpdate",
+          "parameters": [
+            {
+              "name": "storeId",
+              "in": "path",
+              "value": "$inputs.storeId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.start-manual-import_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "executionId": "$response.body",
+            "links": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-import-monitoring",
+          "description": "Monitor the status of the ongoing catalog importation. Loop until 'success' is true and relevant steps (e.g., read step) are completed.",
+          "operationId": "Importation_GetImportationMonitoring",
+          "parameters": [
+            {
+              "name": "storeId",
+              "in": "path",
+              "value": "$inputs.storeId"
+            },
+            {
+              "name": "executionId",
+              "in": "path",
+              "value": "$steps.start-manual-import.outputs.executionId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "importationMonitoring": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-detected-columns",
+          "description": "Retrieve the list of catalog columns detected during the importation process.",
+          "operationId": "Importation_GetDetectedCatalogColumns",
+          "parameters": [
+            {
+              "name": "storeId",
+              "in": "path",
+              "value": "$inputs.storeId"
+            },
+            {
+              "name": "executionId",
+              "in": "path",
+              "value": "$inputs.executionId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "detectedCatalogColumnList": "$response.body"
+          }
+        },
+        {
+          "stepId": "map-catalog-column",
+          "description": "Map a detected catalog column to a BeezUP column. Repeat this step for all required BeezUP columns.",
+          "operationId": "Importation_MapCatalogColumn",
+          "parameters": [
+            {
+              "name": "storeId",
+              "in": "path",
+              "value": "$inputs.storeId"
+            },
+            {
+              "name": "executionId",
+              "in": "path",
+              "value": "$inputs.executionId"
+            },
+            {
+              "name": "columnId",
+              "in": "path",
+              "value": "$inputs.columnId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.map-catalog-column_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "column_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "commit-columns",
+          "description": "Commit the configured column mappings for the importation.",
+          "operationId": "Importation_CommitColumns",
+          "parameters": [
+            {
+              "name": "storeId",
+              "in": "path",
+              "value": "$inputs.storeId"
+            },
+            {
+              "name": "executionId",
+              "in": "path",
+              "value": "$inputs.executionId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "columns_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "commit-importation",
+          "description": "Commit the entire importation process, applying the changes to the store's catalog.",
+          "operationId": "Importation_Commit",
+          "parameters": [
+            {
+              "name": "storeId",
+              "in": "path",
+              "value": "$inputs.storeId"
+            },
+            {
+              "name": "executionId",
+              "in": "path",
+              "value": "$inputs.executionId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "importation_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "executionId": "$steps.start-manual-import.outputs.executionId",
+        "links": "$steps.start-manual-import.outputs.links",
+        "importationMonitoring": "$steps.get-import-monitoring.outputs.importationMonitoring",
+        "detectedCatalogColumnList": "$steps.get-detected-columns.outputs.detectedCatalogColumnList",
+        "column_data": "$steps.map-catalog-column.outputs.column_data",
+        "columns_data": "$steps.commit-columns.outputs.columns_data",
+        "importation_data": "$steps.commit-importation.outputs.importation_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "channel-catalog-setup-and-configuration",
+      "summary": "Add a new channel catalog for a store, configure its settings (general, cost, mappings), and optionally publish it if it's a marketplace.",
+      "description": "Add a new channel catalog for a store, configure its settings (general, cost, mappings), and optionally publish it if it's a marketplace.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "add-channel-catalog_body": {
+            "type": "object"
+          },
+          "channelCatalogId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-channel-catalog",
+          "description": "Create a new channel catalog linking a store to a specific channel.",
+          "operationId": "AddChannelCatalog",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.add-channel-catalog_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "channelCatalogId": "$response.body",
+            "links": "$response.body"
+          }
+        },
+        {
+          "stepId": "configure-general-settings",
+          "description": "Configure general settings like tracking and out-of-stock product export.",
+          "operationId": "ConfigureChannelCatalogGeneralSettings",
+          "parameters": [
+            {
+              "name": "channelCatalogId",
+              "in": "path",
+              "value": "$steps.add-channel-catalog.outputs.channelCatalogId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "channelCatalogId": "$steps.add-channel-catalog.outputs.channelCatalogId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "settings_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "configure-cost-settings",
+          "description": "Configure cost settings (e.g., CPC, CPA) for the channel catalog.",
+          "operationId": "ConfigureChannelCatalogCostSettings",
+          "parameters": [
+            {
+              "name": "channelCatalogId",
+              "in": "path",
+              "value": "$steps.add-channel-catalog.outputs.channelCatalogId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "channelCatalogId": "$steps.add-channel-catalog.outputs.channelCatalogId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "settings_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "configure-column-mappings",
+          "description": "Define the mapping between catalog columns and channel columns.",
+          "operationId": "ConfigureChannelCatalogColumnMappings",
+          "parameters": [
+            {
+              "name": "channelCatalogId",
+              "in": "path",
+              "value": "$steps.add-channel-catalog.outputs.channelCatalogId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "channelCatalogId": "$steps.add-channel-catalog.outputs.channelCatalogId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "mappings_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "configure-category-mappings",
+          "description": "Map store categories to the channel's category structure.",
+          "operationId": "ConfigureChannelCatalogCategory",
+          "parameters": [
+            {
+              "name": "channelCatalogId",
+              "in": "path",
+              "value": "$steps.add-channel-catalog.outputs.channelCatalogId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "channelCatalogId": "$steps.add-channel-catalog.outputs.channelCatalogId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "mappings_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "set-marketplace-settings",
+          "description": "Configure marketplace-specific settings (e.g., shipping, payment methods) if the channel is a marketplace.",
+          "operationId": "SetChannelCatalogMarketplaceSettings",
+          "parameters": [
+            {
+              "name": "channelCatalogId",
+              "in": "path",
+              "value": "$steps.add-channel-catalog.outputs.channelCatalogId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "channelCatalogId": "$steps.add-channel-catalog.outputs.channelCatalogId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "settings_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "enable-channel-catalog",
+          "description": "Enable the configured channel catalog for publication/export.",
+          "operationId": "EnableChannelCatalog",
+          "parameters": [
+            {
+              "name": "channelCatalogId",
+              "in": "path",
+              "value": "$steps.add-channel-catalog.outputs.channelCatalogId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "catalog_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "channelCatalogId": "$steps.add-channel-catalog.outputs.channelCatalogId",
+        "links": "$steps.add-channel-catalog.outputs.links",
+        "settings_data": "$steps.set-marketplace-settings.outputs.settings_data",
+        "mappings_data": "$steps.configure-category-mappings.outputs.mappings_data",
+        "catalog_data": "$steps.enable-channel-catalog.outputs.catalog_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "basic-order-processing-v3",
+      "summary": "Fetch new orders from marketplaces, retrieve details for a specific order, and update its status (e.g., accept, ship). Uses V3 endpoints.",
+      "description": "Fetch new orders from marketplaces, retrieve details for a specific order, and update its status (e.g., accept, ship). Uses V3 endpoints.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "storeId": {
+            "type": "string"
+          },
+          "marketplaceTechnicalCode": {
+            "type": "string"
+          },
+          "accountId": {
+            "type": "string"
+          },
+          "beezUPOrderId": {
+            "type": "string"
+          },
+          "If-None-Match": {
+            "type": "string"
+          },
+          "changeOrderType": {
+            "type": "string"
+          },
+          "userName": {
+            "type": "string"
+          },
+          "testMode": {
+            "type": "string"
+          },
+          "ship-order_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "harvest-all-orders",
+          "description": "Initiate order harvesting from all connected marketplaces for the user or a specific store.",
+          "operationId": "HarvestAllV3",
+          "parameters": [
+            {
+              "name": "storeId",
+              "in": "query",
+              "value": "$inputs.storeId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "orders_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-light-order-list",
+          "description": "Retrieve a paginated list of orders (light version) based on specified filters (e.g., date range, status).",
+          "operationId": "GetOrderListLightV3",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "orderListLightWithLinks": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-full-order",
+          "description": "Get the full details, including items, for a specific order identified in the list.",
+          "operationId": "GetOrderV3",
+          "parameters": [
+            {
+              "name": "marketplaceTechnicalCode",
+              "in": "path",
+              "value": "$inputs.marketplaceTechnicalCode"
+            },
+            {
+              "name": "accountId",
+              "in": "path",
+              "value": "$inputs.accountId"
+            },
+            {
+              "name": "beezUPOrderId",
+              "in": "path",
+              "value": "$inputs.beezUPOrderId"
+            },
+            {
+              "name": "If-None-Match",
+              "in": "header",
+              "value": "$inputs.If-None-Match"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "orderWithLinks": "$response.body",
+            "etag": "$response.body",
+            "lastModified": "$response.body"
+          }
+        },
+        {
+          "stepId": "accept-order",
+          "description": "Change the order status to 'accept'. Requires ETag for concurrency control.",
+          "operationId": "ChangeOrderV3",
+          "parameters": [
+            {
+              "name": "marketplaceTechnicalCode",
+              "in": "path",
+              "value": "$inputs.marketplaceTechnicalCode"
+            },
+            {
+              "name": "accountId",
+              "in": "path",
+              "value": "$inputs.accountId"
+            },
+            {
+              "name": "beezUPOrderId",
+              "in": "path",
+              "value": "$inputs.beezUPOrderId"
+            },
+            {
+              "name": "changeOrderType",
+              "in": "path",
+              "value": "$inputs.changeOrderType"
+            },
+            {
+              "name": "userName",
+              "in": "query",
+              "value": "$inputs.userName"
+            },
+            {
+              "name": "testMode",
+              "in": "query",
+              "value": "$inputs.testMode"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "ifMatch": "$steps.get-full-order.outputs.etag"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "location": "$response.body"
+          }
+        },
+        {
+          "stepId": "ship-order",
+          "description": "Change the order status to 'ship', providing shipping details. Requires ETag.",
+          "operationId": "ChangeOrderV3",
+          "parameters": [
+            {
+              "name": "marketplaceTechnicalCode",
+              "in": "path",
+              "value": "$inputs.marketplaceTechnicalCode"
+            },
+            {
+              "name": "accountId",
+              "in": "path",
+              "value": "$inputs.accountId"
+            },
+            {
+              "name": "beezUPOrderId",
+              "in": "path",
+              "value": "$inputs.beezUPOrderId"
+            },
+            {
+              "name": "changeOrderType",
+              "in": "path",
+              "value": "$inputs.changeOrderType"
+            },
+            {
+              "name": "userName",
+              "in": "query",
+              "value": "$inputs.userName"
+            },
+            {
+              "name": "testMode",
+              "in": "query",
+              "value": "$inputs.testMode"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.ship-order_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "location": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-order-history",
+          "description": "Retrieve the history of harvests and changes for the processed order.",
+          "operationId": "GetOrderHistoryV3",
+          "parameters": [
+            {
+              "name": "marketplaceTechnicalCode",
+              "in": "path",
+              "value": "$inputs.marketplaceTechnicalCode"
+            },
+            {
+              "name": "accountId",
+              "in": "path",
+              "value": "$inputs.accountId"
+            },
+            {
+              "name": "beezUPOrderId",
+              "in": "path",
+              "value": "$inputs.beezUPOrderId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "orderHistory": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "orders_data": "$steps.harvest-all-orders.outputs.orders_data",
+        "orderListLightWithLinks": "$steps.get-light-order-list.outputs.orderListLightWithLinks",
+        "orderWithLinks": "$steps.get-full-order.outputs.orderWithLinks",
+        "etag": "$steps.get-full-order.outputs.etag",
+        "lastModified": "$steps.get-full-order.outputs.lastModified",
+        "location": "$steps.ship-order.outputs.location",
+        "orderHistory": "$steps.get-order-history.outputs.orderHistory"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "batch-order-processing-v3",
+      "summary": "Efficiently process multiple orders (accept, ship, etc.) in a single API call using V3 batch endpoints.",
+      "description": "Efficiently process multiple orders (accept, ship, etc.) in a single API call using V3 batch endpoints.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "storeId": {
+            "type": "string"
+          },
+          "userName": {
+            "type": "string"
+          },
+          "testMode": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "harvest-all-orders-batch",
+          "description": "Initiate order harvesting from all connected marketplaces.",
+          "operationId": "HarvestAllV3",
+          "parameters": [
+            {
+              "name": "storeId",
+              "in": "query",
+              "value": "$inputs.storeId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "batch_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-light-order-list-batch",
+          "description": "Retrieve a list of orders to identify those needing processing.",
+          "operationId": "GetOrderListLightV3",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "orderListLightWithLinks": "$response.body"
+          }
+        },
+        {
+          "stepId": "batch-change-orders",
+          "description": "Send a batch of change operations (e.g., accept, ship) for multiple orders.",
+          "operationId": "ChangeOrderListV3",
+          "parameters": [
+            {
+              "name": "userName",
+              "in": "query",
+              "value": "$inputs.userName"
+            },
+            {
+              "name": "testMode",
+              "in": "query",
+              "value": "$inputs.testMode"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "batchOrderOperationResponse": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "batch_data": "$steps.harvest-all-orders-batch.outputs.batch_data",
+        "orderListLightWithLinks": "$steps.get-light-order-list-batch.outputs.orderListLightWithLinks",
+        "batchOrderOperationResponse": "$steps.batch-change-orders.outputs.batchOrderOperationResponse"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "automated-catalog-import-setup",
+      "summary": "Configure and activate the automatic importation of a catalog, typically after a successful manual import.",
+      "description": "Configure and activate the automatic importation of a catalog, typically after a successful manual import.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "storeId": {
+            "type": "string"
+          },
+          "configure-auto-import-interval_body": {
+            "type": "object"
+          },
+          "schedule-auto-import_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "activate-auto-import",
+          "description": "Activate auto-import based on the last successful manual importation configuration.",
+          "operationId": "Importation_ActivateAutoImport",
+          "parameters": [
+            {
+              "name": "storeId",
+              "in": "path",
+              "value": "$inputs.storeId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "import_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "configure-auto-import-interval",
+          "description": "Configure the interval for automatic catalog imports (alternative to specific schedules).",
+          "operationId": "Auto_ConfigureAutoImportInterval",
+          "parameters": [
+            {
+              "name": "storeId",
+              "in": "path",
+              "value": "$inputs.storeId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.configure-auto-import-interval_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "interval_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "schedule-auto-import",
+          "description": "Configure specific schedules for automatic catalog imports (alternative to interval).",
+          "operationId": "Auto_ScheduleAutoImport",
+          "parameters": [
+            {
+              "name": "storeId",
+              "in": "path",
+              "value": "$inputs.storeId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.schedule-auto-import_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "import_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "import_data": "$steps.schedule-auto-import.outputs.import_data",
+        "interval_data": "$steps.configure-auto-import-interval.outputs.interval_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "performance-analysis-and-rule-creation",
+      "summary": "Analyze product performance using reports, create a custom report filter based on the analysis, and then define an optimization rule using that filter.",
+      "description": "Analyze product performance using reports, create a custom report filter based on the analysis, and then define an optimization rule using that filter.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "storeId": {
+            "type": "string"
+          },
+          "get-report-by-product_body": {
+            "type": "object"
+          },
+          "reportFilterId": {
+            "type": "string"
+          },
+          "save-report-filter_body": {
+            "type": "object"
+          },
+          "create-optimization-rule_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-report-by-product",
+          "description": "Retrieve a performance report segmented by product for a specific store.",
+          "operationId": "GetStoreReportByProduct",
+          "parameters": [
+            {
+              "name": "storeId",
+              "in": "path",
+              "value": "$inputs.storeId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.get-report-by-product_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "reportByProductResponse": "$response.body"
+          }
+        },
+        {
+          "stepId": "save-report-filter",
+          "description": "Create or update a report filter based on performance criteria identified in the report (e.g., low ROI, high cost).",
+          "operationId": "SaveReportFilter",
+          "parameters": [
+            {
+              "name": "storeId",
+              "in": "path",
+              "value": "$inputs.storeId"
+            },
+            {
+              "name": "reportFilterId",
+              "in": "path",
+              "value": "$inputs.reportFilterId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.save-report-filter_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "filter_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-optimization-rule",
+          "description": "Create a new optimization rule that uses the previously saved report filter to automatically perform an action (e.g., disable) on matching products.",
+          "operationId": "CreateRule",
+          "parameters": [
+            {
+              "name": "storeId",
+              "in": "path",
+              "value": "$inputs.storeId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-optimization-rule_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "rule_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "reportByProductResponse": "$steps.get-report-by-product.outputs.reportByProductResponse",
+        "filter_data": "$steps.save-report-filter.outputs.filter_data",
+        "rule_data": "$steps.create-optimization-rule.outputs.rule_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "product-value-override",
+      "summary": "Find a specific product within a channel catalog and override one or more of its values for that specific channel.",
+      "description": "Find a specific product within a channel catalog and override one or more of its values for that specific channel.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "channelCatalogId": {
+            "type": "string"
+          },
+          "get-channel-catalog-products_body": {
+            "type": "object"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "override-product-values_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-channel-catalog-products",
+          "description": "Retrieve a list of products for a specific channel catalog, potentially using filters to find the target product.",
+          "operationId": "GetChannelCatalogProductInfoList",
+          "parameters": [
+            {
+              "name": "channelCatalogId",
+              "in": "path",
+              "value": "$inputs.channelCatalogId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.get-channel-catalog-products_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "channelCatalogProductInfoList": "$response.body"
+          }
+        },
+        {
+          "stepId": "override-product-values",
+          "description": "Override specific channel column values for the identified product.",
+          "operationId": "OverrideChannelCatalogProductValues",
+          "parameters": [
+            {
+              "name": "channelCatalogId",
+              "in": "path",
+              "value": "$inputs.channelCatalogId"
+            },
+            {
+              "name": "productId",
+              "in": "path",
+              "value": "$inputs.productId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.override-product-values_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "values_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "verify-product-override",
+          "description": "Retrieve the product information again to verify that the overrides have been applied.",
+          "operationId": "GetChannelCatalogProductInfo",
+          "parameters": [
+            {
+              "name": "channelCatalogId",
+              "in": "path",
+              "value": "$inputs.channelCatalogId"
+            },
+            {
+              "name": "productId",
+              "in": "path",
+              "value": "$inputs.productId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "channelCatalogProductInfo": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "channelCatalogProductInfoList": "$steps.get-channel-catalog-products.outputs.channelCatalogProductInfoList",
+        "values_data": "$steps.override-product-values.outputs.values_data",
+        "channelCatalogProductInfo": "$steps.verify-product-override.outputs.channelCatalogProductInfo"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "order-invoice-generation",
+      "summary": "Generate an invoice for a specific marketplace order.",
+      "description": "Generate an invoice for a specific marketplace order.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "marketplaceTechnicalCode": {
+            "type": "string"
+          },
+          "accountId": {
+            "type": "string"
+          },
+          "beezUPOrderId": {
+            "type": "string"
+          },
+          "If-None-Match": {
+            "type": "string"
+          },
+          "beezUPOrderUUID": {
+            "type": "string"
+          },
+          "userName": {
+            "type": "string"
+          },
+          "generate-invoice_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-order-for-invoice",
+          "description": "Retrieve order details required for invoice generation.",
+          "operationId": "GetOrderV3",
+          "parameters": [
+            {
+              "name": "marketplaceTechnicalCode",
+              "in": "path",
+              "value": "$inputs.marketplaceTechnicalCode"
+            },
+            {
+              "name": "accountId",
+              "in": "path",
+              "value": "$inputs.accountId"
+            },
+            {
+              "name": "beezUPOrderId",
+              "in": "path",
+              "value": "$inputs.beezUPOrderId"
+            },
+            {
+              "name": "If-None-Match",
+              "in": "header",
+              "value": "$inputs.If-None-Match"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "orderWithLinks": "$response.body"
+          }
+        },
+        {
+          "stepId": "generate-invoice",
+          "description": "Request the generation of an invoice for the specified order.",
+          "operationId": "GenerateOrderInvoice",
+          "parameters": [
+            {
+              "name": "marketplaceTechnicalCode",
+              "in": "path",
+              "value": "$inputs.marketplaceTechnicalCode"
+            },
+            {
+              "name": "accountId",
+              "in": "path",
+              "value": "$inputs.accountId"
+            },
+            {
+              "name": "beezUPOrderUUID",
+              "in": "path",
+              "value": "$inputs.beezUPOrderUUID"
+            },
+            {
+              "name": "userName",
+              "in": "query",
+              "value": "$inputs.userName"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.generate-invoice_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "location": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "orderWithLinks": "$steps.get-order-for-invoice.outputs.orderWithLinks",
+        "location": "$steps.generate-invoice.outputs.location"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-store-alerts",
+      "summary": "Retrieve current alert settings for a store and update them.",
+      "description": "Retrieve current alert settings for a store and update them.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "storeId": {
+            "type": "string"
+          },
+          "If-None-Match": {
+            "type": "string"
+          },
+          "save-store-alerts_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-store-alerts",
+          "description": "Get the current alert configuration for a specific store.",
+          "operationId": "GetStoreAlerts",
+          "parameters": [
+            {
+              "name": "storeId",
+              "in": "path",
+              "value": "$inputs.storeId"
+            },
+            {
+              "name": "If-None-Match",
+              "in": "header",
+              "value": "$inputs.If-None-Match"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "storeAlerts": "$response.body"
+          }
+        },
+        {
+          "stepId": "save-store-alerts",
+          "description": "Update the alert settings for the store (partial update accepted).",
+          "operationId": "SaveStoreAlerts",
+          "parameters": [
+            {
+              "name": "storeId",
+              "in": "path",
+              "value": "$inputs.storeId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.save-store-alerts_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "alerts_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "storeAlerts": "$steps.get-store-alerts.outputs.storeAlerts",
+        "alerts_data": "$steps.save-store-alerts.outputs.alerts_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "public-channel-discovery",
+      "summary": "Discover available BeezUP channels, optionally filtering by country.",
+      "description": "Discover available BeezUP channels, optionally filtering by country.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "If-None-Match": {
+            "type": "string"
+          },
+          "countryIsoCode": {
+            "type": "string"
+          },
+          "Accept-Encoding": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-channel-index",
+          "description": "Get the index of available channels, grouped by country, and links to LOVs.",
+          "operationId": "GetChannelsIndex",
+          "parameters": [
+            {
+              "name": "If-None-Match",
+              "in": "header",
+              "value": "$inputs.If-None-Match"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "publicChannelIndex": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-channels-by-country",
+          "description": "Retrieve the list of channels available for a specific country.",
+          "operationId": "GetChannels",
+          "parameters": [
+            {
+              "name": "countryIsoCode",
+              "in": "path",
+              "value": "$inputs.countryIsoCode"
+            },
+            {
+              "name": "Accept-Encoding",
+              "in": "header",
+              "value": "$inputs.Accept-Encoding"
+            },
+            {
+              "name": "If-None-Match",
+              "in": "header",
+              "value": "$inputs.If-None-Match"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "publicChannelInfoList": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "publicChannelIndex": "$steps.get-channel-index.outputs.publicChannelIndex",
+        "publicChannelInfoList": "$steps.get-channels-by-country.outputs.publicChannelInfoList"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

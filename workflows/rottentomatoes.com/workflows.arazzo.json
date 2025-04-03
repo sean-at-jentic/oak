@@ -1,0 +1,912 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/rottentomatoes.com/main/1.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "search-movie-and-get-full-details",
+      "summary": "Allows a user to search for a movie by title, select a result, and then retrieve comprehensive details about that movie including general information, cast, reviews, and similar movie recommendations.",
+      "description": "Allows a user to search for a movie by title, select a result, and then retrieve comprehensive details about that movie including general information, cast, reviews, and similar movie recommendations.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string"
+          },
+          "page_limit": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "review_type": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-movies",
+          "description": "Search for movies based on a query string.",
+          "operationId": "MoviesSearchSearch",
+          "parameters": [
+            {
+              "name": "q",
+              "in": "query",
+              "value": "$inputs.q"
+            },
+            {
+              "name": "page_limit",
+              "in": "query",
+              "value": "$inputs.page_limit"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "movie_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-movie-info",
+          "description": "Retrieve detailed information for a specific movie using its ID.",
+          "operationId": "MoviesInfoDetailedInfo",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.search-movies.outputs.movie_list.movies[0].id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "movie_details": "$response.body",
+            "movie_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-movie-cast",
+          "description": "Retrieve the cast list for the selected movie.",
+          "operationId": "CastInfoDetailedInfo",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-movie-info.outputs.movie_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "cast_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-movie-reviews",
+          "description": "Retrieve reviews for the selected movie, optionally filtering by type.",
+          "operationId": "MoviesReviewsDetailedInfo",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-movie-info.outputs.movie_id"
+            },
+            {
+              "name": "review_type",
+              "in": "query",
+              "value": "$inputs.review_type"
+            },
+            {
+              "name": "page_limit",
+              "in": "query",
+              "value": "$inputs.page_limit"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "country",
+              "in": "query",
+              "value": "$inputs.country"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "reviews_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-similar-movies",
+          "description": "Retrieve a list of movies similar to the selected movie.",
+          "operationId": "MoviesSimilarDetailedInfo",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-movie-info.outputs.movie_id"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "similar_movies_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "movie_list": "$steps.search-movies.outputs.movie_list",
+        "movie_details": "$steps.get-movie-info.outputs.movie_details",
+        "movie_id": "$steps.get-movie-info.outputs.movie_id",
+        "cast_list": "$steps.get-movie-cast.outputs.cast_list",
+        "reviews_list": "$steps.get-movie-reviews.outputs.reviews_list",
+        "similar_movies_list": "$steps.get-similar-movies.outputs.similar_movies_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "explore-box-office-hits-and-get-details",
+      "summary": "Fetches the current top box office movies and allows retrieving detailed information and reviews for a selected movie from the list.",
+      "description": "Fetches the current top box office movies and allows retrieving detailed information and reviews for a selected movie from the list.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "review_type": {
+            "type": "string"
+          },
+          "page_limit": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-box-office-list",
+          "description": "Get the list of current top-grossing movies at the box office.",
+          "operationId": "BoxOfficeMovieLists",
+          "parameters": [
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "country",
+              "in": "query",
+              "value": "$inputs.country"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "movie_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-movie-info",
+          "description": "Retrieve detailed information for a selected box office movie.",
+          "operationId": "MoviesInfoDetailedInfo",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-box-office-list.outputs.movie_list.movies[0].id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "movie_details": "$response.body",
+            "movie_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-movie-reviews",
+          "description": "Retrieve reviews for the selected box office movie.",
+          "operationId": "MoviesReviewsDetailedInfo",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-movie-info.outputs.movie_id"
+            },
+            {
+              "name": "review_type",
+              "in": "query",
+              "value": "$inputs.review_type"
+            },
+            {
+              "name": "page_limit",
+              "in": "query",
+              "value": "$inputs.page_limit"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "country",
+              "in": "query",
+              "value": "$inputs.country"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "reviews_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "movie_list": "$steps.get-box-office-list.outputs.movie_list",
+        "movie_details": "$steps.get-movie-info.outputs.movie_details",
+        "movie_id": "$steps.get-movie-info.outputs.movie_id",
+        "reviews_list": "$steps.get-movie-reviews.outputs.reviews_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "discover-new-dvd-releases-and-get-details",
+      "summary": "Fetches the list of newly released DVDs and allows retrieving detailed information and cast for a selected DVD.",
+      "description": "Fetches the list of newly released DVDs and allows retrieving detailed information and cast for a selected DVD.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "page_limit": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-new-dvds",
+          "description": "Get the list of new DVD releases.",
+          "operationId": "NewReleaseDVDsDVDLists",
+          "parameters": [
+            {
+              "name": "page_limit",
+              "in": "query",
+              "value": "$inputs.page_limit"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "country",
+              "in": "query",
+              "value": "$inputs.country"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "movie_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-movie-info-from-dvd",
+          "description": "Retrieve detailed information for a movie available on a new DVD release.",
+          "operationId": "MoviesInfoDetailedInfo",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-new-dvds.outputs.movie_list.movies[0].id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "movie_details": "$response.body",
+            "movie_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-movie-cast-from-dvd",
+          "description": "Retrieve the cast list for the selected movie from the new DVD list.",
+          "operationId": "CastInfoDetailedInfo",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-movie-info-from-dvd.outputs.movie_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "cast_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "movie_list": "$steps.get-new-dvds.outputs.movie_list",
+        "movie_details": "$steps.get-movie-info-from-dvd.outputs.movie_details",
+        "movie_id": "$steps.get-movie-info-from-dvd.outputs.movie_id",
+        "cast_list": "$steps.get-movie-cast-from-dvd.outputs.cast_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "explore-upcoming-movies-and-get-details",
+      "summary": "Fetches the list of upcoming movies and allows retrieving detailed information and cast for a selected movie.",
+      "description": "Fetches the list of upcoming movies and allows retrieving detailed information and cast for a selected movie.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "page_limit": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-upcoming-movies",
+          "description": "Get the list of upcoming movies.",
+          "operationId": "UpcomingMoviesMovieLists",
+          "parameters": [
+            {
+              "name": "page_limit",
+              "in": "query",
+              "value": "$inputs.page_limit"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "country",
+              "in": "query",
+              "value": "$inputs.country"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "movie_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-upcoming-movie-info",
+          "description": "Retrieve detailed information for a selected upcoming movie.",
+          "operationId": "MoviesInfoDetailedInfo",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-upcoming-movies.outputs.movie_list.movies[0].id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "movie_details": "$response.body",
+            "movie_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-upcoming-movie-cast",
+          "description": "Retrieve the cast list for the selected upcoming movie.",
+          "operationId": "CastInfoDetailedInfo",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-upcoming-movie-info.outputs.movie_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "cast_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "movie_list": "$steps.get-upcoming-movies.outputs.movie_list",
+        "movie_details": "$steps.get-upcoming-movie-info.outputs.movie_details",
+        "movie_id": "$steps.get-upcoming-movie-info.outputs.movie_id",
+        "cast_list": "$steps.get-upcoming-movie-cast.outputs.cast_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "find-movie-by-imdb-id-and-get-details",
+      "summary": "Looks up a movie using its IMDB ID to find the corresponding Rotten Tomatoes ID and then retrieves detailed information like reviews and similar movies.",
+      "description": "Looks up a movie using its IMDB ID to find the corresponding Rotten Tomatoes ID and then retrieves detailed information like reviews and similar movies.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "review_type": {
+            "type": "string"
+          },
+          "page_limit": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-movie-by-imdb",
+          "description": "Find a movie's Rotten Tomatoes details using its IMDB ID.",
+          "operationId": "MoviesAliasDetailedInfo",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "query",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "type",
+              "in": "query",
+              "value": "$inputs.type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "movie_details": "$response.body",
+            "movie_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-movie-reviews-by-alias",
+          "description": "Retrieve reviews for the movie found via IMDB ID.",
+          "operationId": "MoviesReviewsDetailedInfo",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.find-movie-by-imdb.outputs.movie_id"
+            },
+            {
+              "name": "review_type",
+              "in": "query",
+              "value": "$inputs.review_type"
+            },
+            {
+              "name": "page_limit",
+              "in": "query",
+              "value": "$inputs.page_limit"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "country",
+              "in": "query",
+              "value": "$inputs.country"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "reviews_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-similar-movies-by-alias",
+          "description": "Retrieve similar movies for the movie found via IMDB ID.",
+          "operationId": "MoviesSimilarDetailedInfo",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.find-movie-by-imdb.outputs.movie_id"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "similar_movies_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "movie_details": "$steps.find-movie-by-imdb.outputs.movie_details",
+        "movie_id": "$steps.find-movie-by-imdb.outputs.movie_id",
+        "reviews_list": "$steps.get-movie-reviews-by-alias.outputs.reviews_list",
+        "similar_movies_list": "$steps.get-similar-movies-by-alias.outputs.similar_movies_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "explore-top-dvd-rentals-and-get-details",
+      "summary": "Fetches the list of top DVD rentals and allows retrieving detailed information for a selected movie.",
+      "description": "Fetches the list of top DVD rentals and allows retrieving detailed information for a selected movie.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "review_type": {
+            "type": "string"
+          },
+          "page_limit": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-top-rentals",
+          "description": "Get the list of top rented DVDs.",
+          "operationId": "TopRentalsDVDLists",
+          "parameters": [
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "country",
+              "in": "query",
+              "value": "$inputs.country"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "movie_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-rental-movie-info",
+          "description": "Retrieve detailed information for a selected top rental movie.",
+          "operationId": "MoviesInfoDetailedInfo",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-top-rentals.outputs.movie_list.movies[0].id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "movie_details": "$response.body",
+            "movie_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-rental-movie-reviews",
+          "description": "Retrieve reviews for the selected top rental movie.",
+          "operationId": "MoviesReviewsDetailedInfo",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-rental-movie-info.outputs.movie_id"
+            },
+            {
+              "name": "review_type",
+              "in": "query",
+              "value": "$inputs.review_type"
+            },
+            {
+              "name": "page_limit",
+              "in": "query",
+              "value": "$inputs.page_limit"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "country",
+              "in": "query",
+              "value": "$inputs.country"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "reviews_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "movie_list": "$steps.get-top-rentals.outputs.movie_list",
+        "movie_details": "$steps.get-rental-movie-info.outputs.movie_details",
+        "movie_id": "$steps.get-rental-movie-info.outputs.movie_id",
+        "reviews_list": "$steps.get-rental-movie-reviews.outputs.reviews_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

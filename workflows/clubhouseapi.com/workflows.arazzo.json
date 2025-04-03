@@ -1,0 +1,735 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/clubhouseapi.com/main/1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "user-signup-and-onboarding",
+      "summary": "Complete user registration via phone number verification, set initial profile details like username, and follow suggested users/topics to personalize the experience.",
+      "description": "Complete user registration via phone number verification, set initial profile details like username, and follow suggested users/topics to personalize the experience.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "start-phone-auth_body": {
+            "type": "object"
+          },
+          "complete-phone-auth_body": {
+            "type": "object"
+          },
+          "in_onboarding": {
+            "type": "string"
+          },
+          "page_size": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "start-phone-auth",
+          "description": "Initiate the phone number verification process.",
+          "operationPath": "openapi_source#/paths/~1start_phone_number_auth/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.start-phone-auth_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "success": "$response.body",
+            "is_blocked": "$response.body",
+            "error_message": "$response.body"
+          }
+        },
+        {
+          "stepId": "complete-phone-auth",
+          "description": "Submit the verification code received via SMS/call to complete authentication.",
+          "operationPath": "openapi_source#/paths/~1complete_phone_number_auth/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.complete-phone-auth_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "success": "$response.body",
+            "is_verified": "$response.body",
+            "user_profile": "$response.body",
+            "auth_token": "$response.body",
+            "refresh_token": "$response.body",
+            "access_token": "$response.body",
+            "is_waitlisted": "$response.body",
+            "is_onboarding": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-waitlist",
+          "description": "Check if the newly authenticated user is still on the waitlist.",
+          "operationPath": "openapi_source#/paths/~1check_waitlist_status/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "is_waitlisted": "$response.body",
+            "is_onboarding": "$response.body",
+            "success": "$response.body"
+          }
+        },
+        {
+          "stepId": "set-username",
+          "description": "Set the user's unique username during the onboarding process (assuming not waitlisted).",
+          "operationPath": "openapi_source#/paths/~1update_username/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "auth_token": "$steps.complete-phone-auth.outputs.auth_token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "success": "$response.body",
+            "error_message": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-onboarding-follows",
+          "description": "Retrieve suggested users to follow during onboarding.",
+          "operationPath": "openapi_source#/paths/~1get_suggested_follows_all/get",
+          "parameters": [
+            {
+              "name": "in_onboarding",
+              "in": "query",
+              "value": "$inputs.in_onboarding"
+            },
+            {
+              "name": "page_size",
+              "in": "query",
+              "value": "$inputs.page_size"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "users": "$response.body",
+            "count": "$response.body",
+            "next": "$response.body",
+            "previous": "$response.body",
+            "success": "$response.body"
+          }
+        },
+        {
+          "stepId": "follow-user",
+          "description": "Follow a suggested user.",
+          "operationPath": "openapi_source#/paths/~1follow/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "user_id": "$steps.get-onboarding-follows.outputs.users[0].user_id",
+              "auth_token": "$steps.complete-phone-auth.outputs.auth_token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "get-profile-after-onboarding",
+          "description": "Retrieve the user's full profile details after completing onboarding steps.",
+          "operationPath": "openapi_source#/paths/~1me/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "auth_token": "$steps.complete-phone-auth.outputs.auth_token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_profile": "$response.body",
+            "auth_token": "$response.body",
+            "refresh_token": "$response.body",
+            "access_token": "$response.body",
+            "num_invites": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "success": "$steps.get-onboarding-follows.outputs.success",
+        "is_blocked": "$steps.start-phone-auth.outputs.is_blocked",
+        "error_message": "$steps.set-username.outputs.error_message",
+        "is_verified": "$steps.complete-phone-auth.outputs.is_verified",
+        "user_profile": "$steps.get-profile-after-onboarding.outputs.user_profile",
+        "auth_token": "$steps.get-profile-after-onboarding.outputs.auth_token",
+        "refresh_token": "$steps.get-profile-after-onboarding.outputs.refresh_token",
+        "access_token": "$steps.get-profile-after-onboarding.outputs.access_token",
+        "is_waitlisted": "$steps.check-waitlist.outputs.is_waitlisted",
+        "is_onboarding": "$steps.check-waitlist.outputs.is_onboarding",
+        "users": "$steps.get-onboarding-follows.outputs.users",
+        "count": "$steps.get-onboarding-follows.outputs.count",
+        "next": "$steps.get-onboarding-follows.outputs.next",
+        "previous": "$steps.get-onboarding-follows.outputs.previous",
+        "num_invites": "$steps.get-profile-after-onboarding.outputs.num_invites"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "user-login-and-profile-check",
+      "summary": "Authenticate an existing user using their phone number and retrieve their current profile information and authentication tokens.",
+      "description": "Authenticate an existing user using their phone number and retrieve their current profile information and authentication tokens.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "start-login-auth_body": {
+            "type": "object"
+          },
+          "complete-login-auth_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "start-login-auth",
+          "description": "Initiate the phone number verification process for login.",
+          "operationPath": "openapi_source#/paths/~1start_phone_number_auth/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.start-login-auth_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "success": "$response.body",
+            "is_blocked": "$response.body",
+            "error_message": "$response.body"
+          }
+        },
+        {
+          "stepId": "complete-login-auth",
+          "description": "Submit the verification code to complete authentication and receive tokens.",
+          "operationPath": "openapi_source#/paths/~1complete_phone_number_auth/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.complete-login-auth_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "success": "$response.body",
+            "is_verified": "$response.body",
+            "user_profile": "$response.body",
+            "auth_token": "$response.body",
+            "refresh_token": "$response.body",
+            "access_token": "$response.body",
+            "is_waitlisted": "$response.body",
+            "is_onboarding": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-own-profile",
+          "description": "Retrieve the authenticated user's full profile details.",
+          "operationPath": "openapi_source#/paths/~1me/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "auth_token": "$steps.complete-login-auth.outputs.auth_token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_profile": "$response.body",
+            "auth_token": "$response.body",
+            "refresh_token": "$response.body",
+            "access_token": "$response.body",
+            "num_invites": "$response.body",
+            "following_ids": "$response.body",
+            "blocked_ids": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "success": "$steps.complete-login-auth.outputs.success",
+        "is_blocked": "$steps.start-login-auth.outputs.is_blocked",
+        "error_message": "$steps.start-login-auth.outputs.error_message",
+        "is_verified": "$steps.complete-login-auth.outputs.is_verified",
+        "user_profile": "$steps.get-own-profile.outputs.user_profile",
+        "auth_token": "$steps.get-own-profile.outputs.auth_token",
+        "refresh_token": "$steps.get-own-profile.outputs.refresh_token",
+        "access_token": "$steps.get-own-profile.outputs.access_token",
+        "is_waitlisted": "$steps.complete-login-auth.outputs.is_waitlisted",
+        "is_onboarding": "$steps.complete-login-auth.outputs.is_onboarding",
+        "num_invites": "$steps.get-own-profile.outputs.num_invites",
+        "following_ids": "$steps.get-own-profile.outputs.following_ids",
+        "blocked_ids": "$steps.get-own-profile.outputs.blocked_ids"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "discover-and-join-channel",
+      "summary": "Find available public channels (rooms) and join a specific one to participate.",
+      "description": "Find available public channels (rooms) and join a specific one to participate.",
+      "steps": [
+        {
+          "stepId": "list-channels",
+          "description": "Retrieve a list of currently active public channels.",
+          "operationPath": "openapi_source#/paths/~1get_channels/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "channels": "$response.body",
+            "success": "$response.body"
+          }
+        },
+        {
+          "stepId": "join-specific-channel",
+          "description": "Join a selected channel using its identifier.",
+          "operationPath": "openapi_source#/paths/~1join_channel/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "channel": "$steps.list-channels.outputs.channels[0].channel"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "channel_details": "$response.body",
+            "token": "$response.body",
+            "rtm_token": "$response.body",
+            "pubnub_token": "$response.body",
+            "success": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "channels": "$steps.list-channels.outputs.channels",
+        "success": "$steps.join-specific-channel.outputs.success",
+        "channel_details": "$steps.join-specific-channel.outputs.channel_details",
+        "token": "$steps.join-specific-channel.outputs.token",
+        "rtm_token": "$steps.join-specific-channel.outputs.rtm_token",
+        "pubnub_token": "$steps.join-specific-channel.outputs.pubnub_token"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "explore-topic-and-find-related-content",
+      "summary": "Discover topics, view details for a specific topic, and find related clubs and users.",
+      "description": "Discover topics, view details for a specific topic, and find related clubs and users.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "topic_id": {
+            "type": "string"
+          },
+          "page_size": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-all-topics",
+          "description": "Retrieve the list of all available topics on Clubhouse.",
+          "operationPath": "openapi_source#/paths/~1get_all_topics/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "topics": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-specific-topic",
+          "description": "Get detailed information about a specific topic by its ID.",
+          "operationPath": "openapi_source#/paths/~1get_topic/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "topic_id": "$steps.get-all-topics.outputs.topics[0].topics[0].id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "topic": "$response.body",
+            "success": "$response.body"
+          }
+        },
+        {
+          "stepId": "find-clubs-for-topic",
+          "description": "Find clubs associated with the selected topic.",
+          "operationPath": "openapi_source#/paths/~1get_clubs_for_topic/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "topic_id": "$steps.get-specific-topic.outputs.topic.id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "clubs": "$response.body",
+            "count": "$response.body",
+            "next": "$response.body",
+            "previous": "$response.body",
+            "success": "$response.body"
+          }
+        },
+        {
+          "stepId": "find-users-for-topic",
+          "description": "Find users interested in the selected topic.",
+          "operationPath": "openapi_source#/paths/~1get_users_for_topic/get",
+          "parameters": [
+            {
+              "name": "topic_id",
+              "in": "query",
+              "value": "$steps.get-specific-topic.outputs.topic.id"
+            },
+            {
+              "name": "page_size",
+              "in": "query",
+              "value": "$inputs.page_size"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "users": "$response.body",
+            "count": "$response.body",
+            "next": "$response.body",
+            "previous": "$response.body",
+            "success": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "topics": "$steps.get-all-topics.outputs.topics",
+        "topic": "$steps.get-specific-topic.outputs.topic",
+        "success": "$steps.find-users-for-topic.outputs.success",
+        "clubs": "$steps.find-clubs-for-topic.outputs.clubs",
+        "count": "$steps.find-users-for-topic.outputs.count",
+        "next": "$steps.find-users-for-topic.outputs.next",
+        "previous": "$steps.find-users-for-topic.outputs.previous",
+        "users": "$steps.find-users-for-topic.outputs.users"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "find-and-follow-user",
+      "summary": "Search for a specific user by query and then follow them.",
+      "description": "Search for a specific user by query and then follow them.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "search-for-user_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-for-user",
+          "description": "Search for users based on a query string.",
+          "operationPath": "openapi_source#/paths/~1search_users/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.search-for-user_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "users": "$response.body",
+            "count": "$response.body",
+            "success": "$response.body"
+          }
+        },
+        {
+          "stepId": "follow-searched-user",
+          "description": "Follow a user found via search.",
+          "operationPath": "openapi_source#/paths/~1follow/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "user_id": "$steps.search-for-user.outputs.users[0].user_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        }
+      ],
+      "outputs": {
+        "users": "$steps.search-for-user.outputs.users",
+        "count": "$steps.search-for-user.outputs.count",
+        "success": "$steps.search-for-user.outputs.success"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-notification-settings",
+      "summary": "Retrieve current notification settings and update them.",
+      "description": "Retrieve current notification settings and update them.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "update-notification-settings_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-notification-settings",
+          "description": "Retrieve the user's current notification preferences.",
+          "operationPath": "openapi_source#/paths/~1get_settings/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "notifications_enable_trending": "$response.body",
+            "notifications_frequency": "$response.body",
+            "notifications_is_paused": "$response.body",
+            "success": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-notification-settings",
+          "description": "Update the user's notification preferences.",
+          "operationPath": "openapi_source#/paths/~1update_notifications/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.update-notification-settings_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        }
+      ],
+      "outputs": {
+        "notifications_enable_trending": "$steps.get-notification-settings.outputs.notifications_enable_trending",
+        "notifications_frequency": "$steps.get-notification-settings.outputs.notifications_frequency",
+        "notifications_is_paused": "$steps.get-notification-settings.outputs.notifications_is_paused",
+        "success": "$steps.get-notification-settings.outputs.success"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

@@ -1,0 +1,2020 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/plaid.com/main/2020-09-14_1.631.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "generate-asset-report-for-lending",
+      "summary": "Creates a comprehensive Asset Report for a user, often used in lending scenarios for asset verification. The workflow includes creating the report, waiting for it to be ready, and retrieving it in JSON or PDF format.",
+      "description": "Creates a comprehensive Asset Report for a user, often used in lending scenarios for asset verification. The workflow includes creating the report, waiting for it to be ready, and retrieving it in JSON or PDF format.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "days_requested": {
+            "type": "string"
+          },
+          "include_insights": {
+            "type": "string"
+          },
+          "fast_report": {
+            "type": "string"
+          },
+          "options": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-asset-report",
+          "description": "Initiate the creation of an Asset Report for specified items (access tokens) and history duration.",
+          "operationId": "assetReportCreate",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "days_requested": "$inputs.days_requested"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "asset_report_token": "$response.body",
+            "asset_report_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-asset-report-json",
+          "description": "Retrieve the generated Asset Report in JSON format after receiving a PRODUCT_READY webhook.",
+          "operationId": "assetReportGet",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "asset_report_token": "$steps.create-asset-report.outputs.asset_report_token",
+              "include_insights": "$inputs.include_insights",
+              "fast_report": "$inputs.fast_report",
+              "options": "$inputs.options"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "report": "$response.body",
+            "warnings": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-asset-report-pdf",
+          "description": "Retrieve the generated Asset Report in PDF format after receiving a PRODUCT_READY webhook.",
+          "operationId": "assetReportPdfGet",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "asset_report_token": "$steps.create-asset-report.outputs.asset_report_token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pdf_binary_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "asset_report_token": "$steps.create-asset-report.outputs.asset_report_token",
+        "asset_report_id": "$steps.create-asset-report.outputs.asset_report_id",
+        "report": "$steps.get-asset-report-json.outputs.report",
+        "warnings": "$steps.get-asset-report-json.outputs.warnings",
+        "pdf_binary_data": "$steps.get-asset-report-pdf.outputs.pdf_binary_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "initiate-and-track-us-ach-transfer",
+      "summary": "Authorizes and creates a new ACH transfer, then monitors its status using events.",
+      "description": "Authorizes and creates a new ACH transfer, then monitors its status using events.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "network": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "user": {
+            "type": "string"
+          },
+          "access_token": {
+            "type": "string"
+          },
+          "account_id": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "after_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "authorize-transfer",
+          "description": "Authorize a transfer based on risk assessment and user consent.",
+          "operationId": "transferAuthorizationCreate",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "type": "$inputs.type",
+              "network": "$inputs.network",
+              "amount": "$inputs.amount",
+              "user": "$inputs.user",
+              "access_token": "$inputs.access_token",
+              "account_id": "$inputs.account_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "authorization": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-transfer",
+          "description": "Initiate the transfer using the obtained authorization ID.",
+          "operationId": "transferCreate",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "authorization_id": "$steps.authorize-transfer.outputs.authorization.id",
+              "access_token": "$steps.authorize-transfer.outputs.authorization.proposed_transfer.access_token",
+              "account_id": "$steps.authorize-transfer.outputs.authorization.proposed_transfer.account_id",
+              "description": "$inputs.description"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "transfer": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-transfer-status",
+          "description": "Retrieve the details and current status of the created transfer.",
+          "operationId": "transferGet",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "transfer_id": "$steps.create-transfer.outputs.transfer.id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "transfer": "$response.body"
+          }
+        },
+        {
+          "stepId": "sync-transfer-events",
+          "description": "Fetch transfer events incrementally to track status changes (e.g., posted, settled, returned).",
+          "operationId": "transferEventSync",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "after_id": "$inputs.after_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "transfer_events": "$response.body",
+            "has_more": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "authorization": "$steps.authorize-transfer.outputs.authorization",
+        "transfer": "$steps.get-transfer-status.outputs.transfer",
+        "transfer_events": "$steps.sync-transfer-events.outputs.transfer_events",
+        "has_more": "$steps.sync-transfer-events.outputs.has_more"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "income-verification-using-bank-data",
+      "summary": "Verifies a user's income by analyzing their bank transaction history after they connect their account(s) via Plaid Link.",
+      "description": "Verifies a user's income by analyzing their bank transaction history after they connect their account(s) via Plaid Link.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "client_user_id": {
+            "type": "string"
+          },
+          "client_name": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "country_codes": {
+            "type": "string"
+          },
+          "user": {
+            "type": "string"
+          },
+          "public_token": {
+            "type": "string"
+          },
+          "options": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-user-for-income",
+          "description": "Create a Plaid user entity required for income verification products.",
+          "operationId": "userCreate",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "client_user_id": "$inputs.client_user_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_token": "$response.body",
+            "user_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-link-token-for-bank-income",
+          "description": "Create a Link token configured for Income Verification with bank source.",
+          "operationId": "linkTokenCreate",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "client_name": "$inputs.client_name",
+              "language": "$inputs.language",
+              "country_codes": "$inputs.country_codes",
+              "user": "$inputs.user"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "link_token": "$response.body",
+            "expiration": "$response.body"
+          }
+        },
+        {
+          "stepId": "exchange-token-after-link",
+          "description": "Exchange the public_token obtained from Link success for an access_token.",
+          "operationId": "itemPublicTokenExchange",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "public_token": "$inputs.public_token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "access_token": "$response.body",
+            "item_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-bank-income-report",
+          "description": "Retrieve the Bank Income report after receiving the BANK_INCOME_COMPLETE webhook.",
+          "operationId": "creditBankIncomeGet",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "user_token": "$steps.create-user-for-income.outputs.user_token",
+              "options": "$inputs.options"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "bank_income": "$response.body",
+            "warnings": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "user_token": "$steps.create-user-for-income.outputs.user_token",
+        "user_id": "$steps.create-user-for-income.outputs.user_id",
+        "link_token": "$steps.create-link-token-for-bank-income.outputs.link_token",
+        "expiration": "$steps.create-link-token-for-bank-income.outputs.expiration",
+        "access_token": "$steps.exchange-token-after-link.outputs.access_token",
+        "item_id": "$steps.exchange-token-after-link.outputs.item_id",
+        "bank_income": "$steps.get-bank-income-report.outputs.bank_income",
+        "warnings": "$steps.get-bank-income-report.outputs.warnings"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "income-verification-using-payroll-connection",
+      "summary": "Verifies a user's income by connecting directly to their payroll provider via Plaid Link.",
+      "description": "Verifies a user's income by connecting directly to their payroll provider via Plaid Link.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "client_user_id": {
+            "type": "string"
+          },
+          "access_tokens": {
+            "type": "string"
+          },
+          "employer": {
+            "type": "string"
+          },
+          "us_military_info": {
+            "type": "string"
+          },
+          "payroll_institution": {
+            "type": "string"
+          },
+          "client_name": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "country_codes": {
+            "type": "string"
+          },
+          "user": {
+            "type": "string"
+          },
+          "public_token": {
+            "type": "string"
+          },
+          "options": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-user-for-payroll",
+          "description": "Create a Plaid user entity required for income verification products.",
+          "operationId": "userCreate",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "client_user_id": "$inputs.client_user_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_token": "$response.body",
+            "user_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "precheck-payroll-income",
+          "description": "Optionally check if the user's employer is supported for digital payroll income verification.",
+          "operationId": "creditPayrollIncomePrecheck",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "user_token": "$steps.create-user-for-payroll.outputs.user_token",
+              "access_tokens": "$inputs.access_tokens",
+              "employer": "$inputs.employer",
+              "us_military_info": "$inputs.us_military_info",
+              "payroll_institution": "$inputs.payroll_institution"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "confidence": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-link-token-for-payroll-income",
+          "description": "Create a Link token configured for Income Verification with payroll source.",
+          "operationId": "linkTokenCreate",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "client_name": "$inputs.client_name",
+              "language": "$inputs.language",
+              "country_codes": "$inputs.country_codes",
+              "user": "$inputs.user"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "link_token": "$response.body",
+            "expiration": "$response.body"
+          }
+        },
+        {
+          "stepId": "exchange-token-after-payroll-link",
+          "description": "Exchange the public_token obtained from Link success for an access_token.",
+          "operationId": "itemPublicTokenExchange",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "public_token": "$inputs.public_token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "access_token": "$response.body",
+            "item_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-payroll-income",
+          "description": "Retrieve the payroll income data after receiving the relevant webhook (e.g., INCOME_VERIFICATION).",
+          "operationId": "creditPayrollIncomeGet",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "user_token": "$steps.create-user-for-payroll.outputs.user_token",
+              "options": "$inputs.options"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "items": "$response.body",
+            "error": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "user_token": "$steps.create-user-for-payroll.outputs.user_token",
+        "user_id": "$steps.create-user-for-payroll.outputs.user_id",
+        "confidence": "$steps.precheck-payroll-income.outputs.confidence",
+        "link_token": "$steps.create-link-token-for-payroll-income.outputs.link_token",
+        "expiration": "$steps.create-link-token-for-payroll-income.outputs.expiration",
+        "access_token": "$steps.exchange-token-after-payroll-link.outputs.access_token",
+        "item_id": "$steps.exchange-token-after-payroll-link.outputs.item_id",
+        "items": "$steps.get-payroll-income.outputs.items",
+        "error": "$steps.get-payroll-income.outputs.error"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "generate-cra-check-report",
+      "summary": "Creates a user, initiates Link for CRA products, and retrieves the generated Base Report after receiving a webhook notification.",
+      "description": "Creates a user, initiates Link for CRA products, and retrieves the generated Base Report after receiving a webhook notification.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "client_user_id": {
+            "type": "string"
+          },
+          "client_name": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "country_codes": {
+            "type": "string"
+          },
+          "user": {
+            "type": "string"
+          },
+          "public_token": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-cra-user",
+          "description": "Create a Plaid user, providing necessary identity info for CRA reports.",
+          "operationId": "userCreate",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "client_user_id": "$inputs.client_user_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_token": "$response.body",
+            "user_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-link-token-for-cra",
+          "description": "Create a Link token configured for CRA products (e.g., cra_base_report) and specifying the permissible purpose.",
+          "operationId": "linkTokenCreate",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "client_name": "$inputs.client_name",
+              "language": "$inputs.language",
+              "country_codes": "$inputs.country_codes",
+              "user": "$inputs.user"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "link_token": "$response.body",
+            "expiration": "$response.body"
+          }
+        },
+        {
+          "stepId": "exchange-cra-public-token",
+          "description": "Exchange the public_token obtained from Link success for an access_token.",
+          "operationId": "itemPublicTokenExchange",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "public_token": "$inputs.public_token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "access_token": "$response.body",
+            "item_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-cra-base-report",
+          "description": "Retrieve the CRA Base Report after receiving the CHECK_REPORT_READY webhook.",
+          "operationId": "craCheckReportBaseReportGet",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "user_token": "$steps.create-cra-user.outputs.user_token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "report": "$response.body",
+            "warnings": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "user_token": "$steps.create-cra-user.outputs.user_token",
+        "user_id": "$steps.create-cra-user.outputs.user_id",
+        "link_token": "$steps.create-link-token-for-cra.outputs.link_token",
+        "expiration": "$steps.create-link-token-for-cra.outputs.expiration",
+        "access_token": "$steps.exchange-cra-public-token.outputs.access_token",
+        "item_id": "$steps.exchange-cra-public-token.outputs.item_id",
+        "report": "$steps.get-cra-base-report.outputs.report",
+        "warnings": "$steps.get-cra-base-report.outputs.warnings"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "synchronize-transactions",
+      "summary": "Fetches initial transaction history for an Item and then incrementally syncs new, updated, or removed transactions using a cursor.",
+      "description": "Fetches initial transaction history for an Item and then incrementally syncs new, updated, or removed transactions using a cursor.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "initial-transaction-sync",
+          "description": "Fetch the initial batch of transactions for a newly linked Item.",
+          "operationId": "transactionsSync",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "access_token": "$inputs.access_token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "added": "$response.body",
+            "modified": "$response.body",
+            "removed": "$response.body",
+            "next_cursor": "$response.body",
+            "has_more": "$response.body"
+          }
+        },
+        {
+          "stepId": "incremental-transaction-sync",
+          "description": "Fetch incremental transaction updates since the last sync using the stored cursor. Typically triggered after receiving a SYNC_UPDATES_AVAILABLE webhook.",
+          "operationId": "transactionsSync",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "cursor": "$steps.initial-transaction-sync.outputs.next_cursor",
+              "access_token": "$inputs.access_token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "added": "$response.body",
+            "modified": "$response.body",
+            "removed": "$response.body",
+            "next_cursor": "$response.body",
+            "has_more": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "added": "$steps.incremental-transaction-sync.outputs.added",
+        "modified": "$steps.incremental-transaction-sync.outputs.modified",
+        "removed": "$steps.incremental-transaction-sync.outputs.removed",
+        "next_cursor": "$steps.incremental-transaction-sync.outputs.next_cursor",
+        "has_more": "$steps.incremental-transaction-sync.outputs.has_more"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "identity-verification-flow",
+      "summary": "Guides a user through an identity verification process using Plaid Link, potentially involving document uploads, selfie checks, and KYC checks based on the configured template.",
+      "description": "Guides a user through an identity verification process using Plaid Link, potentially involving document uploads, selfie checks, and KYC checks based on the configured template.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "is_shareable": {
+            "type": "string"
+          },
+          "template_id": {
+            "type": "string"
+          },
+          "gave_consent": {
+            "type": "string"
+          },
+          "client_name": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "country_codes": {
+            "type": "string"
+          },
+          "user": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-identity-verification",
+          "description": "Create a new Identity Verification attempt for a user, specifying the template and optionally pre-filling user data.",
+          "operationId": "identityVerificationCreate",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "is_shareable": "$inputs.is_shareable",
+              "template_id": "$inputs.template_id",
+              "gave_consent": "$inputs.gave_consent"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "client_user_id": "$response.body",
+            "status": "$response.body",
+            "shareable_url": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-link-token-for-identity-verification",
+          "description": "Create a Link token to initialize the Identity Verification flow for the user.",
+          "operationId": "linkTokenCreate",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "client_name": "$inputs.client_name",
+              "language": "$inputs.language",
+              "country_codes": "$inputs.country_codes",
+              "user": "$inputs.user"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "link_token": "$response.body",
+            "expiration": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-identity-verification-status",
+          "description": "Retrieve the status and results of the Identity Verification attempt after the user completes the Link flow or upon receiving status update webhooks.",
+          "operationId": "identityVerificationGet",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "identity_verification_id": "$steps.create-identity-verification.outputs.id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "status": "$response.body",
+            "steps": "$response.body",
+            "user": "$response.body",
+            "documentary_verification": "$response.body",
+            "selfie_check": "$response.body",
+            "kyc_check": "$response.body",
+            "risk_check": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.get-identity-verification-status.outputs.id",
+        "client_user_id": "$steps.create-identity-verification.outputs.client_user_id",
+        "status": "$steps.get-identity-verification-status.outputs.status",
+        "shareable_url": "$steps.create-identity-verification.outputs.shareable_url",
+        "link_token": "$steps.create-link-token-for-identity-verification.outputs.link_token",
+        "expiration": "$steps.create-link-token-for-identity-verification.outputs.expiration",
+        "steps": "$steps.get-identity-verification-status.outputs.steps",
+        "user": "$steps.get-identity-verification-status.outputs.user",
+        "documentary_verification": "$steps.get-identity-verification-status.outputs.documentary_verification",
+        "selfie_check": "$steps.get-identity-verification-status.outputs.selfie_check",
+        "kyc_check": "$steps.get-identity-verification-status.outputs.kyc_check",
+        "risk_check": "$steps.get-identity-verification-status.outputs.risk_check"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "assess-ach-return-risk-with-signal",
+      "summary": "Evaluates the risk of return for a planned ACH transaction using Plaid Signal, reports the decision to initiate, and reports any subsequent returns.",
+      "description": "Evaluates the risk of return for a planned ACH transaction using Plaid Signal, reports the decision to initiate, and reports any subsequent returns.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "account_id": {
+            "type": "string"
+          },
+          "client_transaction_id": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "initiated": {
+            "type": "string"
+          },
+          "return_code": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "prepare-signal-data",
+          "description": "Opt-in an Item to Signal data collection to improve score accuracy if not initialized with Signal.",
+          "operationId": "signalPrepare",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "access_token": "$inputs.access_token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "data_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "evaluate-transaction-risk",
+          "description": "Evaluate a planned ACH transaction to get a return risk assessment.",
+          "operationId": "signalEvaluate",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "access_token": "$inputs.access_token",
+              "account_id": "$inputs.account_id",
+              "client_transaction_id": "$inputs.client_transaction_id",
+              "amount": "$inputs.amount"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "scores": "$response.body",
+            "core_attributes": "$response.body",
+            "warnings": "$response.body"
+          }
+        },
+        {
+          "stepId": "report-initiation-decision",
+          "description": "Report whether the transaction evaluated by Signal was actually initiated.",
+          "operationId": "signalDecisionReport",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "client_transaction_id": "$inputs.client_transaction_id",
+              "initiated": "$inputs.initiated"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "decision_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "report-transaction-return",
+          "description": "Report if the initiated transaction was returned by the bank.",
+          "operationId": "signalReturnReport",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "client_transaction_id": "$inputs.client_transaction_id",
+              "return_code": "$inputs.return_code"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "return_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "data_data": "$steps.prepare-signal-data.outputs.data_data",
+        "scores": "$steps.evaluate-transaction-risk.outputs.scores",
+        "core_attributes": "$steps.evaluate-transaction-risk.outputs.core_attributes",
+        "warnings": "$steps.evaluate-transaction-risk.outputs.warnings",
+        "decision_data": "$steps.report-initiation-decision.outputs.decision_data",
+        "return_data": "$steps.report-transaction-return.outputs.return_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-processor-token-for-partner",
+      "summary": "Creates an Item, exchanges the public token for an access token, and then creates a processor-specific token to share with a Plaid partner (e.g., Dwolla, Galileo).",
+      "description": "Creates an Item, exchanges the public token for an access token, and then creates a processor-specific token to share with a Plaid partner (e.g., Dwolla, Galileo).",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "client_name": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "country_codes": {
+            "type": "string"
+          },
+          "user": {
+            "type": "string"
+          },
+          "public_token": {
+            "type": "string"
+          },
+          "processor": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-link-token-for-processor",
+          "description": "Create a Link token for the desired products (e.g., Auth, Transactions).",
+          "operationId": "linkTokenCreate",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "client_name": "$inputs.client_name",
+              "language": "$inputs.language",
+              "country_codes": "$inputs.country_codes",
+              "user": "$inputs.user"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "link_token": "$response.body",
+            "expiration": "$response.body"
+          }
+        },
+        {
+          "stepId": "exchange-public-token-for-processor",
+          "description": "Exchange the public_token from Link success for an access_token.",
+          "operationId": "itemPublicTokenExchange",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "public_token": "$inputs.public_token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "access_token": "$response.body",
+            "item_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-accounts-for-processor",
+          "description": "Retrieve accounts associated with the Item to identify the specific account ID needed for the processor token.",
+          "operationId": "accountsGet",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "access_token": "$steps.exchange-public-token-for-processor.outputs.access_token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "accounts": "$response.body",
+            "item": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-processor-token",
+          "description": "Create a processor token for a specific account and partner.",
+          "operationId": "processorTokenCreate",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "access_token": "$steps.exchange-public-token-for-processor.outputs.access_token",
+              "account_id": "$steps.get-accounts-for-processor.outputs.accounts[0].account_id",
+              "processor": "$inputs.processor"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "processor_token": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "link_token": "$steps.create-link-token-for-processor.outputs.link_token",
+        "expiration": "$steps.create-link-token-for-processor.outputs.expiration",
+        "access_token": "$steps.exchange-public-token-for-processor.outputs.access_token",
+        "item_id": "$steps.exchange-public-token-for-processor.outputs.item_id",
+        "accounts": "$steps.get-accounts-for-processor.outputs.accounts",
+        "item": "$steps.get-accounts-for-processor.outputs.item",
+        "processor_token": "$steps.create-processor-token.outputs.processor_token"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "screen-individual-against-watchlists",
+      "summary": "Creates a watchlist screening for an individual, retrieves the screening details and hits, and allows for review submission.",
+      "description": "Creates a watchlist screening for an individual, retrieves the screening details and hits, and allows for review submission.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "search_terms": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-individual-screening",
+          "description": "Create a new watchlist screening for an individual using their search terms.",
+          "operationId": "watchlistScreeningIndividualCreate",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "search_terms": "$inputs.search_terms"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "search_terms": "$response.body",
+            "assignee": "$response.body",
+            "status": "$response.body",
+            "client_user_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-individual-screening-hits",
+          "description": "List all potential hits found for the individual screening.",
+          "operationId": "watchlistScreeningIndividualHitList",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "watchlist_screening_id": "$steps.create-individual-screening.outputs.id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "watchlist_screening_hits": "$response.body",
+            "next_cursor": "$response.body"
+          }
+        },
+        {
+          "stepId": "review-screening-hits",
+          "description": "Submit a review for the screening, confirming or dismissing hits.",
+          "operationId": "watchlistScreeningIndividualReviewCreate",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "watchlist_screening_id": "$steps.create-individual-screening.outputs.id",
+              "confirmed_hits": "$steps.get-individual-screening-hits.outputs.watchlist_screening_hits[*].id",
+              "dismissed_hits": "$steps.get-individual-screening-hits.outputs.watchlist_screening_hits[*].id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "confirmed_hits": "$response.body",
+            "dismissed_hits": "$response.body",
+            "comment": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.review-screening-hits.outputs.id",
+        "search_terms": "$steps.create-individual-screening.outputs.search_terms",
+        "assignee": "$steps.create-individual-screening.outputs.assignee",
+        "status": "$steps.create-individual-screening.outputs.status",
+        "client_user_id": "$steps.create-individual-screening.outputs.client_user_id",
+        "watchlist_screening_hits": "$steps.get-individual-screening-hits.outputs.watchlist_screening_hits",
+        "next_cursor": "$steps.get-individual-screening-hits.outputs.next_cursor",
+        "confirmed_hits": "$steps.review-screening-hits.outputs.confirmed_hits",
+        "dismissed_hits": "$steps.review-screening-hits.outputs.dismissed_hits",
+        "comment": "$steps.review-screening-hits.outputs.comment"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-bank-statements",
+      "summary": "Connects an item with the Statements product, lists available statements, and downloads a specific statement PDF.",
+      "description": "Connects an item with the Statements product, lists available statements, and downloads a specific statement PDF.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "client_name": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "country_codes": {
+            "type": "string"
+          },
+          "user": {
+            "type": "string"
+          },
+          "public_token": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-link-token-for-statements",
+          "description": "Create a Link token configured for the Statements product, specifying the date range.",
+          "operationId": "linkTokenCreate",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "client_name": "$inputs.client_name",
+              "language": "$inputs.language",
+              "country_codes": "$inputs.country_codes",
+              "user": "$inputs.user"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "link_token": "$response.body",
+            "expiration": "$response.body"
+          }
+        },
+        {
+          "stepId": "exchange-token-for-statements",
+          "description": "Exchange the public_token obtained from Link success for an access_token.",
+          "operationId": "itemPublicTokenExchange",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "public_token": "$inputs.public_token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "access_token": "$response.body",
+            "item_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-statements",
+          "description": "Retrieve a list of available statements for the connected Item.",
+          "operationId": "statementsList",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "access_token": "$steps.exchange-token-for-statements.outputs.access_token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "accounts": "$response.body"
+          }
+        },
+        {
+          "stepId": "download-statement",
+          "description": "Download a specific statement PDF using its statement_id.",
+          "operationId": "statementsDownload",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "access_token": "$steps.exchange-token-for-statements.outputs.access_token",
+              "statement_id": "$steps.list-statements.outputs.accounts[0].statements[0].statement_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pdf_binary_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "link_token": "$steps.create-link-token-for-statements.outputs.link_token",
+        "expiration": "$steps.create-link-token-for-statements.outputs.expiration",
+        "access_token": "$steps.exchange-token-for-statements.outputs.access_token",
+        "item_id": "$steps.exchange-token-for-statements.outputs.item_id",
+        "accounts": "$steps.list-statements.outputs.accounts",
+        "pdf_binary_data": "$steps.download-statement.outputs.pdf_binary_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "refresh-asset-report",
+      "summary": "Refreshes an existing Asset Report to get the latest available data based on the original report's parameters.",
+      "description": "Refreshes an existing Asset Report to get the latest available data based on the original report's parameters.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "asset_report_token": {
+            "type": "string"
+          },
+          "include_insights": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "refresh-asset-report",
+          "description": "Initiate the refresh of an existing Asset Report using its token.",
+          "operationId": "assetReportRefresh",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "asset_report_token": "$inputs.asset_report_token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "asset_report_id": "$response.body",
+            "asset_report_token": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-refreshed-asset-report",
+          "description": "Retrieve the newly generated (refreshed) Asset Report in JSON format after receiving a PRODUCT_READY webhook.",
+          "operationId": "assetReportGet",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "asset_report_token": "$steps.refresh-asset-report.outputs.asset_report_token",
+              "include_insights": "$inputs.include_insights"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "report": "$response.body",
+            "warnings": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "asset_report_id": "$steps.refresh-asset-report.outputs.asset_report_id",
+        "asset_report_token": "$steps.refresh-asset-report.outputs.asset_report_token",
+        "report": "$steps.get-refreshed-asset-report.outputs.report",
+        "warnings": "$steps.get-refreshed-asset-report.outputs.warnings"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "share-asset-report-with-third-party-relay",
+      "summary": "Creates an Asset Report and generates a Relay Token to securely share it with a specified third-party partner.",
+      "description": "Creates an Asset Report and generates a Relay Token to securely share it with a specified third-party partner.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "days_requested": {
+            "type": "string"
+          },
+          "secondary_client_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-asset-report-for-relay",
+          "description": "Initiate the creation of an Asset Report.",
+          "operationId": "assetReportCreate",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "days_requested": "$inputs.days_requested"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "asset_report_token": "$response.body",
+            "asset_report_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-relay-token",
+          "description": "Create a Relay Token for the generated Asset Report to share with a specific secondary client.",
+          "operationId": "creditRelayCreate",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "report_tokens": "$steps.create-asset-report-for-relay.outputs.asset_report_token",
+              "secondary_client_id": "$inputs.secondary_client_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "relay_token": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "asset_report_token": "$steps.create-asset-report-for-relay.outputs.asset_report_token",
+        "asset_report_id": "$steps.create-asset-report-for-relay.outputs.asset_report_id",
+        "relay_token": "$steps.create-relay-token.outputs.relay_token"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-relayed-asset-report-third-party",
+      "summary": "Allows a third party (who received a Relay Token) to retrieve the Asset Report shared with them.",
+      "description": "Allows a third party (who received a Relay Token) to retrieve the Asset Report shared with them.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "relay_token": {
+            "type": "string"
+          },
+          "report_type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-relayed-asset-report",
+          "description": "Retrieve the Asset Report using the provided Relay Token.",
+          "operationId": "creditRelayGet",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "relay_token": "$inputs.relay_token",
+              "report_type": "$inputs.report_type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "report": "$response.body",
+            "warnings": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-relayed-asset-report-pdf",
+          "description": "Retrieve the Asset Report in PDF format using the provided Relay Token.",
+          "operationId": "creditRelayPdfGet",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "relay_token": "$inputs.relay_token",
+              "report_type": "$inputs.report_type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pdf_binary_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "report": "$steps.get-relayed-asset-report.outputs.report",
+        "warnings": "$steps.get-relayed-asset-report.outputs.warnings",
+        "pdf_binary_data": "$steps.get-relayed-asset-report-pdf.outputs.pdf_binary_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "verify-account-holder-identity",
+      "summary": "Retrieves identity information (names, addresses, emails, phone numbers) associated with accounts and optionally matches it against provided user data.",
+      "description": "Retrieves identity information (names, addresses, emails, phone numbers) associated with accounts and optionally matches it against provided user data.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-identity",
+          "description": "Retrieve identity information for accounts associated with an Item.",
+          "operationId": "identityGet",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "access_token": "$inputs.access_token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "accounts": "$response.body",
+            "item": "$response.body"
+          }
+        },
+        {
+          "stepId": "match-identity",
+          "description": "Compare provided user data (name, address, phone, email) against the identity information on file for the accounts and receive match scores.",
+          "operationId": "identityMatch",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "access_token": "$steps.get-identity.outputs.item.access_token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "accounts": "$response.body",
+            "item": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "accounts": "$steps.match-identity.outputs.accounts",
+        "item": "$steps.match-identity.outputs.item"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-and-manage-e-wallet-transactions-ukeu",
+      "summary": "Creates an e-wallet, executes a transaction from it to a counterparty, and retrieves transaction details.",
+      "description": "Creates an e-wallet, executes a transaction from it to a counterparty, and retrieves transaction details.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "iso_currency_code": {
+            "type": "string"
+          },
+          "idempotency_key": {
+            "type": "string"
+          },
+          "counterparty": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-wallet",
+          "description": "Create a new e-wallet for a specific currency.",
+          "operationId": "walletCreate",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "iso_currency_code": "$inputs.iso_currency_code"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "wallet_id": "$response.body",
+            "balance": "$response.body",
+            "numbers": "$response.body",
+            "recipient_id": "$response.body",
+            "status": "$response.body"
+          }
+        },
+        {
+          "stepId": "execute-wallet-transaction",
+          "description": "Execute a transaction from the created e-wallet to a specified counterparty.",
+          "operationId": "walletTransactionExecute",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "wallet_id": "$steps.create-wallet.outputs.wallet_id",
+              "idempotency_key": "$inputs.idempotency_key",
+              "counterparty": "$inputs.counterparty",
+              "amount": "$inputs.amount",
+              "reference": "$inputs.reference"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "transaction_id": "$response.body",
+            "status": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-wallet-transaction",
+          "description": "Retrieve the details and status of the executed wallet transaction.",
+          "operationId": "walletTransactionGet",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "transaction_id": "$steps.execute-wallet-transaction.outputs.transaction_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "transaction_id": "$response.body",
+            "wallet_id": "$response.body",
+            "reference": "$response.body",
+            "type": "$response.body",
+            "amount": "$response.body",
+            "counterparty": "$response.body",
+            "status": "$response.body",
+            "created_at": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "wallet_id": "$steps.get-wallet-transaction.outputs.wallet_id",
+        "balance": "$steps.create-wallet.outputs.balance",
+        "numbers": "$steps.create-wallet.outputs.numbers",
+        "recipient_id": "$steps.create-wallet.outputs.recipient_id",
+        "status": "$steps.get-wallet-transaction.outputs.status",
+        "transaction_id": "$steps.get-wallet-transaction.outputs.transaction_id",
+        "reference": "$steps.get-wallet-transaction.outputs.reference",
+        "type": "$steps.get-wallet-transaction.outputs.type",
+        "amount": "$steps.get-wallet-transaction.outputs.amount",
+        "counterparty": "$steps.get-wallet-transaction.outputs.counterparty",
+        "created_at": "$steps.get-wallet-transaction.outputs.created_at"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-user-connection-scopes",
+      "summary": "Lists applications connected to an item and allows updating the data access scopes for a specific application.",
+      "description": "Lists applications connected to an item and allows updating the data access scopes for a specific application.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "scopes": {
+            "type": "string"
+          },
+          "context": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-item-applications",
+          "description": "List all applications connected to a given item (access token).",
+          "operationId": "itemApplicationList",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "access_token": "$inputs.access_token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "applications": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-application-scopes",
+          "description": "Update the data access scopes (permissions) for a specific application connected to the item.",
+          "operationId": "itemApplicationScopesUpdate",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "application_id": "$steps.list-item-applications.outputs.applications[0].application_id",
+              "access_token": "$inputs.access_token",
+              "scopes": "$inputs.scopes",
+              "context": "$inputs.context"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "scopes_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "applications": "$steps.list-item-applications.outputs.applications",
+        "scopes_data": "$steps.update-application-scopes.outputs.scopes_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

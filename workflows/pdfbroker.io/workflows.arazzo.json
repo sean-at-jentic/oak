@@ -1,0 +1,352 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/pdfbroker.io/main/v1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "assemble-multi-part-pdf-document",
+      "summary": "Generates multiple individual PDF documents (e.g., cover page from HTML, main content from XSL-FO transform) and then concatenates them into a single final PDF.",
+      "description": "Generates multiple individual PDF documents (e.g., cover page from HTML, main content from XSL-FO transform) and then concatenates them into a single final PDF.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "htmlBase64String": {
+            "type": "string"
+          },
+          "resources": {
+            "type": "string"
+          },
+          "foDocumentBase64String": {
+            "type": "string"
+          },
+          "xmlDataDocumentBase64String": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "generate-cover-page",
+          "description": "Generate the first PDF part (e.g., a cover page from HTML).",
+          "operationPath": "openapi_source#/paths/~1api~1pdf~1weasyprint/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "htmlBase64String": "$inputs.htmlBase64String",
+              "resources": "$inputs.resources"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "coverPagePdfBase64String": "$response.body"
+          }
+        },
+        {
+          "stepId": "generate-report-body",
+          "description": "Generate the second PDF part (e.g., the main report body from XML/XSL-FO).",
+          "operationPath": "openapi_source#/paths/~1api~1pdf~1xslfowithtransform/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "foDocumentBase64String": "$inputs.foDocumentBase64String",
+              "resources": "$inputs.resources",
+              "xmlDataDocumentBase64String": "$inputs.xmlDataDocumentBase64String"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "reportBodyPdfBase64String": "$response.body"
+          }
+        },
+        {
+          "stepId": "concatenate-pdfs",
+          "description": "Combine the generated PDF parts into a single document.",
+          "operationPath": "openapi_source#/paths/~1api~1pdf~1pdfconcat/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "pdfDocumentsAsBase64String": "$steps.generate-report-body.outputs.reportBodyPdfBase64String"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "finalPdfBase64String": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "coverPagePdfBase64String": "$steps.generate-cover-page.outputs.coverPagePdfBase64String",
+        "reportBodyPdfBase64String": "$steps.generate-report-body.outputs.reportBodyPdfBase64String",
+        "finalPdfBase64String": "$steps.concatenate-pdfs.outputs.finalPdfBase64String"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "watermark-generated-pdf",
+      "summary": "Generates a PDF document (e.g., from HTML) and then adds a text watermark (like 'DRAFT' or 'CONFIDENTIAL') onto its pages.",
+      "description": "Generates a PDF document (e.g., from HTML) and then adds a text watermark (like 'DRAFT' or 'CONFIDENTIAL') onto its pages.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "htmlBase64String": {
+            "type": "string"
+          },
+          "resources": {
+            "type": "string"
+          },
+          "wkHtmlToPdfArguments": {
+            "type": "string"
+          },
+          "options": {
+            "type": "string"
+          },
+          "fontFileBase64String": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "generate-base-pdf",
+          "description": "Generate the initial PDF document.",
+          "operationPath": "openapi_source#/paths/~1api~1pdf~1wkhtmltopdf/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "url": "$inputs.url",
+              "htmlBase64String": "$inputs.htmlBase64String",
+              "resources": "$inputs.resources",
+              "wkHtmlToPdfArguments": "$inputs.wkHtmlToPdfArguments"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "basePdfBase64String": "$response.body"
+          }
+        },
+        {
+          "stepId": "apply-watermark",
+          "description": "Write specified text onto a page of the generated PDF.",
+          "operationPath": "openapi_source#/paths/~1api~1pdf~1pdfwritestring/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "pdfFileBase64String": "$steps.generate-base-pdf.outputs.basePdfBase64String",
+              "options": "$inputs.options",
+              "fontFileBase64String": "$inputs.fontFileBase64String"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "watermarkedPdfBase64String": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "basePdfBase64String": "$steps.generate-base-pdf.outputs.basePdfBase64String",
+        "watermarkedPdfBase64String": "$steps.apply-watermark.outputs.watermarkedPdfBase64String"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "generate-pdf-preview-image",
+      "summary": "Creates a PDF document and then generates an image preview (e.g., a thumbnail) of a specific page (typically the first page).",
+      "description": "Creates a PDF document and then generates an image preview (e.g., a thumbnail) of a specific page (typically the first page).",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "foDocumentBase64String": {
+            "type": "string"
+          },
+          "resources": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "string"
+          },
+          "options": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "generate-document-pdf",
+          "description": "Generate the PDF document from an XSL-FO source.",
+          "operationPath": "openapi_source#/paths/~1api~1pdf~1xslfo/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "foDocumentBase64String": "$inputs.foDocumentBase64String",
+              "resources": "$inputs.resources",
+              "metadata": "$inputs.metadata"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "documentPdfBase64String": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-preview-image",
+          "description": "Convert a specified page of the generated PDF into an image.",
+          "operationPath": "openapi_source#/paths/~1api~1pdf~1pdftoimage/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "pdfFileBase64String": "$steps.generate-document-pdf.outputs.documentPdfBase64String",
+              "options": "$inputs.options"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "previewImageBase64String": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "documentPdfBase64String": "$steps.generate-document-pdf.outputs.documentPdfBase64String",
+        "previewImageBase64String": "$steps.create-preview-image.outputs.previewImageBase64String"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

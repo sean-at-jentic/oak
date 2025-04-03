@@ -1,0 +1,294 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/cnab-online.herokuapp.com/main/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "process-cnab-for-reconciliation",
+      "summary": "Uploads a CNAB return file and retrieves the processed payment occurrence data (settlements, rejections, etc.) for financial reconciliation. This is the primary workflow for extracting meaningful business data from the CNAB file.",
+      "description": "Uploads a CNAB return file and retrieves the processed payment occurrence data (settlements, rejections, etc.) for financial reconciliation. This is the primary workflow for extracting meaningful business data from the CNAB file.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "upload-cnab-file_body": {
+            "type": "object"
+          },
+          "fileId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "upload-cnab-file",
+          "description": "Uploads the binary CNAB file to initiate processing.",
+          "operationPath": "openapi_source#/paths/~1file/post",
+          "requestBody": {
+            "contentType": "application/octet-stream",
+            "payload": "$inputs.upload-cnab-file_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "fileId": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-payment-occurrences",
+          "description": "Retrieves the structured list of payment occurrences (e.g., paid amounts, dates, document numbers) based on the processed file.",
+          "operationPath": "openapi_source#/paths/~1file~1{fileId}~1occurrences/get",
+          "parameters": [
+            {
+              "name": "fileId",
+              "in": "path",
+              "value": "$steps.upload-cnab-file.outputs.fileId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "occurrences_array": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "fileId": "$steps.upload-cnab-file.outputs.fileId",
+        "occurrences_array": "$steps.get-payment-occurrences.outputs.occurrences_array"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "inspect-raw-cnab-structure",
+      "summary": "Uploads a CNAB return file and retrieves the raw lines with identified fields. This workflow is useful for debugging parsing issues or performing low-level analysis of the file content without focusing on the fully processed business events.",
+      "description": "Uploads a CNAB return file and retrieves the raw lines with identified fields. This workflow is useful for debugging parsing issues or performing low-level analysis of the file content without focusing on the fully processed business events.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "upload-cnab-file_body": {
+            "type": "object"
+          },
+          "fileId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "upload-cnab-file",
+          "description": "Uploads the binary CNAB file to initiate processing.",
+          "operationPath": "openapi_source#/paths/~1file/post",
+          "requestBody": {
+            "contentType": "application/octet-stream",
+            "payload": "$inputs.upload-cnab-file_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "fileId": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-raw-lines",
+          "description": "Retrieves all lines from the file, showing the raw text and how fields were identified based on the CNAB layout.",
+          "operationPath": "openapi_source#/paths/~1file~1{fileId}~1lines/get",
+          "parameters": [
+            {
+              "name": "fileId",
+              "in": "path",
+              "value": "$steps.upload-cnab-file.outputs.fileId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "lines_array": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "fileId": "$steps.upload-cnab-file.outputs.fileId",
+        "lines_array": "$steps.get-raw-lines.outputs.lines_array"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-full-processed-file-information",
+      "summary": "Retrieves both the basic metadata (bank, company, date) and the processed payment occurrences for a CNAB file using its known temporary ID. Useful for getting a complete picture of a previously processed file without re-uploading.",
+      "description": "Retrieves both the basic metadata (bank, company, date) and the processed payment occurrences for a CNAB file using its known temporary ID. Useful for getting a complete picture of a previously processed file without re-uploading.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-file-metadata",
+          "description": "Retrieves basic file information like bank name, company name, and generation date using a known file ID.",
+          "operationPath": "openapi_source#/paths/~1file~1{fileId}/get",
+          "parameters": [
+            {
+              "name": "fileId",
+              "in": "path",
+              "value": "$inputs.fileId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "file_object": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-payment-occurrences-by-id",
+          "description": "Retrieves the structured list of payment occurrences using a known file ID.",
+          "operationPath": "openapi_source#/paths/~1file~1{fileId}~1occurrences/get",
+          "parameters": [
+            {
+              "name": "fileId",
+              "in": "path",
+              "value": "$inputs.fileId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "occurrences_array": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "file_object": "$steps.get-file-metadata.outputs.file_object",
+        "occurrences_array": "$steps.get-payment-occurrences-by-id.outputs.occurrences_array"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

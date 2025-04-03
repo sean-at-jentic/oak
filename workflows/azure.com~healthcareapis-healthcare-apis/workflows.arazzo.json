@@ -1,0 +1,521 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/azure.com/healthcareapis-healthcare-apis/2018-08-20-preview/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "provision-healthcare-api-service",
+      "summary": "Checks if a desired service name is available, creates a new Healthcare API service instance if available, and monitors the creation process until completion. This is a fundamental workflow for setting up healthcare data capabilities in Azure.",
+      "description": "Checks if a desired service name is available, creates a new Healthcare API service instance if available, and monitors the creation process until completion. This is a fundamental workflow for setting up healthcare data capabilities in Azure.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "api-version": {
+            "type": "string"
+          },
+          "subscriptionId": {
+            "type": "string"
+          },
+          "check-service-name_body": {
+            "type": "object"
+          },
+          "resourceGroupName": {
+            "type": "string"
+          },
+          "resourceName": {
+            "type": "string"
+          },
+          "create-service_body": {
+            "type": "object"
+          },
+          "locationName": {
+            "type": "string"
+          },
+          "operationResultId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "check-service-name",
+          "description": "Check if the desired service name is available within the Azure subscription.",
+          "operationId": "Services_CheckNameAvailability",
+          "parameters": [
+            {
+              "name": "api-version",
+              "in": "query",
+              "value": "$inputs.api-version"
+            },
+            {
+              "name": "subscriptionId",
+              "in": "path",
+              "value": "$inputs.subscriptionId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.check-service-name_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "nameAvailable": "$response.body",
+            "reason": "$response.body",
+            "message": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-service",
+          "description": "Initiate the creation of a new Healthcare API service instance. This is an asynchronous operation.",
+          "operationId": "Services_CreateOrUpdate",
+          "parameters": [
+            {
+              "name": "api-version",
+              "in": "query",
+              "value": "$inputs.api-version"
+            },
+            {
+              "name": "subscriptionId",
+              "in": "path",
+              "value": "$inputs.subscriptionId"
+            },
+            {
+              "name": "resourceGroupName",
+              "in": "path",
+              "value": "$inputs.resourceGroupName"
+            },
+            {
+              "name": "resourceName",
+              "in": "path",
+              "value": "$inputs.resourceName"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-service_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ServicesDescription": "$response.body",
+            "operationResultId": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-creation-status",
+          "description": "Poll the status of the asynchronous service creation operation until it reaches a terminal state (Succeeded, Failed, Canceled).",
+          "operationId": "OperationResults_Get",
+          "parameters": [
+            {
+              "name": "api-version",
+              "in": "query",
+              "value": "$inputs.api-version"
+            },
+            {
+              "name": "subscriptionId",
+              "in": "path",
+              "value": "$inputs.subscriptionId"
+            },
+            {
+              "name": "locationName",
+              "in": "path",
+              "value": "$inputs.locationName"
+            },
+            {
+              "name": "operationResultId",
+              "in": "path",
+              "value": "$steps.create-service.outputs.operationResultId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "OperationResultsDescription": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "nameAvailable": "$steps.check-service-name.outputs.nameAvailable",
+        "reason": "$steps.check-service-name.outputs.reason",
+        "message": "$steps.check-service-name.outputs.message",
+        "ServicesDescription": "$steps.create-service.outputs.ServicesDescription",
+        "operationResultId": "$steps.create-service.outputs.operationResultId",
+        "OperationResultsDescription": "$steps.get-creation-status.outputs.OperationResultsDescription"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "decommission-healthcare-api-service",
+      "summary": "Deletes an existing Healthcare API service instance and monitors the deletion process until completion. Essential for cleaning up resources.",
+      "description": "Deletes an existing Healthcare API service instance and monitors the deletion process until completion. Essential for cleaning up resources.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "api-version": {
+            "type": "string"
+          },
+          "subscriptionId": {
+            "type": "string"
+          },
+          "resourceGroupName": {
+            "type": "string"
+          },
+          "resourceName": {
+            "type": "string"
+          },
+          "locationName": {
+            "type": "string"
+          },
+          "operationResultId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "delete-service",
+          "description": "Initiate the deletion of a specific Healthcare API service instance. This is an asynchronous operation.",
+          "operationId": "Services_Delete",
+          "parameters": [
+            {
+              "name": "api-version",
+              "in": "query",
+              "value": "$inputs.api-version"
+            },
+            {
+              "name": "subscriptionId",
+              "in": "path",
+              "value": "$inputs.subscriptionId"
+            },
+            {
+              "name": "resourceGroupName",
+              "in": "path",
+              "value": "$inputs.resourceGroupName"
+            },
+            {
+              "name": "resourceName",
+              "in": "path",
+              "value": "$inputs.resourceName"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "operationResultId": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-deletion-status",
+          "description": "Poll the status of the asynchronous service deletion operation until it reaches a terminal state.",
+          "operationId": "OperationResults_Get",
+          "parameters": [
+            {
+              "name": "api-version",
+              "in": "query",
+              "value": "$inputs.api-version"
+            },
+            {
+              "name": "subscriptionId",
+              "in": "path",
+              "value": "$inputs.subscriptionId"
+            },
+            {
+              "name": "locationName",
+              "in": "path",
+              "value": "$inputs.locationName"
+            },
+            {
+              "name": "operationResultId",
+              "in": "path",
+              "value": "$steps.delete-service.outputs.operationResultId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "OperationResultsDescription": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "operationResultId": "$steps.delete-service.outputs.operationResultId",
+        "OperationResultsDescription": "$steps.get-deletion-status.outputs.OperationResultsDescription"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "update-healthcare-api-service-configuration",
+      "summary": "Retrieves the current configuration of a Healthcare API service, allows modification (e.g., updating access policies, CORS settings), applies the changes via PUT, and monitors the update operation. Note: PATCH only supports tags, so PUT is used for broader configuration updates.",
+      "description": "Retrieves the current configuration of a Healthcare API service, allows modification (e.g., updating access policies, CORS settings), applies the changes via PUT, and monitors the update operation. Note: PATCH only supports tags, so PUT is used for broader configuration updates.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "api-version": {
+            "type": "string"
+          },
+          "subscriptionId": {
+            "type": "string"
+          },
+          "resourceGroupName": {
+            "type": "string"
+          },
+          "resourceName": {
+            "type": "string"
+          },
+          "locationName": {
+            "type": "string"
+          },
+          "operationResultId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-service-details",
+          "description": "Retrieve the current metadata and configuration of a specific Healthcare API service instance.",
+          "operationId": "Services_Get",
+          "parameters": [
+            {
+              "name": "api-version",
+              "in": "query",
+              "value": "$inputs.api-version"
+            },
+            {
+              "name": "subscriptionId",
+              "in": "path",
+              "value": "$inputs.subscriptionId"
+            },
+            {
+              "name": "resourceGroupName",
+              "in": "path",
+              "value": "$inputs.resourceGroupName"
+            },
+            {
+              "name": "resourceName",
+              "in": "path",
+              "value": "$inputs.resourceName"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ServicesDescription": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-service-configuration",
+          "description": "Apply updated configuration to the Healthcare API service instance using the PUT method. This replaces the existing configuration and is an asynchronous operation.",
+          "operationId": "Services_CreateOrUpdate",
+          "parameters": [
+            {
+              "name": "api-version",
+              "in": "query",
+              "value": "$inputs.api-version"
+            },
+            {
+              "name": "subscriptionId",
+              "in": "path",
+              "value": "$steps.get-service-details.outputs.ServicesDescription.id (extract subscriptionId)"
+            },
+            {
+              "name": "resourceGroupName",
+              "in": "path",
+              "value": "$steps.get-service-details.outputs.ServicesDescription.id (extract resourceGroupName)"
+            },
+            {
+              "name": "resourceName",
+              "in": "path",
+              "value": "$steps.get-service-details.outputs.ServicesDescription.name"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "subscriptionId": "$steps.get-service-details.outputs.ServicesDescription.id (extract subscriptionId)",
+              "resourceGroupName": "$steps.get-service-details.outputs.ServicesDescription.id (extract resourceGroupName)",
+              "resourceName": "$steps.get-service-details.outputs.ServicesDescription.name",
+              "ServicesDescription": "$steps.get-service-details.outputs.ServicesDescription"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ServicesDescription": "$response.body",
+            "operationResultId": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-update-status",
+          "description": "Poll the status of the asynchronous service update operation until it completes.",
+          "operationId": "OperationResults_Get",
+          "parameters": [
+            {
+              "name": "api-version",
+              "in": "query",
+              "value": "$inputs.api-version"
+            },
+            {
+              "name": "subscriptionId",
+              "in": "path",
+              "value": "$inputs.subscriptionId"
+            },
+            {
+              "name": "locationName",
+              "in": "path",
+              "value": "$inputs.locationName"
+            },
+            {
+              "name": "operationResultId",
+              "in": "path",
+              "value": "$steps.update-service-configuration.outputs.operationResultId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "OperationResultsDescription": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "ServicesDescription": "$steps.update-service-configuration.outputs.ServicesDescription",
+        "operationResultId": "$steps.update-service-configuration.outputs.operationResultId",
+        "OperationResultsDescription": "$steps.get-update-status.outputs.OperationResultsDescription"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

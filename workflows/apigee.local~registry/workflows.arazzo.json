@@ -1,0 +1,1178 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/apigee.local/registry/0.0.1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "register-new-api-version-with-specification",
+      "summary": "Registers a new API entity, creates a specific version for it, and uploads its specification (e.g., OpenAPI document). This is a fundamental workflow for adding a new manageable API to the registry.",
+      "description": "Registers a new API entity, creates a specific version for it, and uploads its specification (e.g., OpenAPI document). This is a fundamental workflow for adding a new manageable API to the registry.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "apiId": {
+            "type": "string"
+          },
+          "create-api_body": {
+            "type": "object"
+          },
+          "api": {
+            "type": "string"
+          },
+          "apiVersionId": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "apiSpecId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-api",
+          "description": "Create the top-level API resource.",
+          "operationId": "Registry_CreateApi",
+          "parameters": [
+            {
+              "name": "project",
+              "in": "path",
+              "value": "$inputs.project"
+            },
+            {
+              "name": "location",
+              "in": "path",
+              "value": "$inputs.location"
+            },
+            {
+              "name": "apiId",
+              "in": "query",
+              "value": "$inputs.apiId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-api_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "api_name": "$response.body",
+            "api_object": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-api-version",
+          "description": "Create a version for the newly created API.",
+          "operationId": "Registry_CreateApiVersion",
+          "parameters": [
+            {
+              "name": "project",
+              "in": "path",
+              "value": "$inputs.project"
+            },
+            {
+              "name": "location",
+              "in": "path",
+              "value": "$inputs.location"
+            },
+            {
+              "name": "api",
+              "in": "path",
+              "value": "$inputs.api"
+            },
+            {
+              "name": "apiVersionId",
+              "in": "query",
+              "value": "$inputs.apiVersionId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "api_name (from create-api)": "$steps.create-api.outputs.api_name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "version_name": "$response.body",
+            "version_object": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-api-spec",
+          "description": "Upload the API specification document for the created version.",
+          "operationId": "Registry_CreateApiSpec",
+          "parameters": [
+            {
+              "name": "project",
+              "in": "path",
+              "value": "$inputs.project"
+            },
+            {
+              "name": "location",
+              "in": "path",
+              "value": "$inputs.location"
+            },
+            {
+              "name": "api",
+              "in": "path",
+              "value": "$inputs.api"
+            },
+            {
+              "name": "version",
+              "in": "path",
+              "value": "$inputs.version"
+            },
+            {
+              "name": "apiSpecId",
+              "in": "query",
+              "value": "$inputs.apiSpecId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "api_name (from create-api)": "$steps.create-api.outputs.api_name",
+              "version_name (from create-api-version)": "$steps.create-api-version.outputs.version_name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "spec_name": "$response.body",
+            "spec_object": "$response.body",
+            "spec_revision_id": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "api_name": "$steps.create-api.outputs.api_name",
+        "api_object": "$steps.create-api.outputs.api_object",
+        "version_name": "$steps.create-api-version.outputs.version_name",
+        "version_object": "$steps.create-api-version.outputs.version_object",
+        "spec_name": "$steps.create-api-spec.outputs.spec_name",
+        "spec_object": "$steps.create-api-spec.outputs.spec_object",
+        "spec_revision_id": "$steps.create-api-spec.outputs.spec_revision_id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "discover-and-download-api-specification",
+      "summary": "Allows a user or tool to browse APIs, select a specific version and specification, and download its content (e.g., an OpenAPI file).",
+      "description": "Allows a user or tool to browse APIs, select a specific version and specification, and download its content (e.g., an OpenAPI file).",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "pageSize": {
+            "type": "string"
+          },
+          "pageToken": {
+            "type": "string"
+          },
+          "filter": {
+            "type": "string"
+          },
+          "api": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "spec": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-apis",
+          "description": "List available APIs in the project and location.",
+          "operationId": "Registry_ListApis",
+          "parameters": [
+            {
+              "name": "project",
+              "in": "path",
+              "value": "$inputs.project"
+            },
+            {
+              "name": "location",
+              "in": "path",
+              "value": "$inputs.location"
+            },
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            },
+            {
+              "name": "pageToken",
+              "in": "query",
+              "value": "$inputs.pageToken"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "apis_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-api-versions",
+          "description": "List versions for a selected API.",
+          "operationId": "Registry_ListApiVersions",
+          "parameters": [
+            {
+              "name": "project",
+              "in": "path",
+              "value": "$inputs.project"
+            },
+            {
+              "name": "location",
+              "in": "path",
+              "value": "$inputs.location"
+            },
+            {
+              "name": "api",
+              "in": "path",
+              "value": "$inputs.api"
+            },
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            },
+            {
+              "name": "pageToken",
+              "in": "query",
+              "value": "$inputs.pageToken"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "versions_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-api-specs",
+          "description": "List specifications for a selected API version.",
+          "operationId": "Registry_ListApiSpecs",
+          "parameters": [
+            {
+              "name": "project",
+              "in": "path",
+              "value": "$inputs.project"
+            },
+            {
+              "name": "location",
+              "in": "path",
+              "value": "$inputs.location"
+            },
+            {
+              "name": "api",
+              "in": "path",
+              "value": "$inputs.api"
+            },
+            {
+              "name": "version",
+              "in": "path",
+              "value": "$inputs.version"
+            },
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            },
+            {
+              "name": "pageToken",
+              "in": "query",
+              "value": "$inputs.pageToken"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "specs_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-api-spec-contents",
+          "description": "Download the content of the selected API specification.",
+          "operationId": "Registry_GetApiSpecContents",
+          "parameters": [
+            {
+              "name": "project",
+              "in": "path",
+              "value": "$inputs.project"
+            },
+            {
+              "name": "location",
+              "in": "path",
+              "value": "$inputs.location"
+            },
+            {
+              "name": "api",
+              "in": "path",
+              "value": "$inputs.api"
+            },
+            {
+              "name": "version",
+              "in": "path",
+              "value": "$inputs.version"
+            },
+            {
+              "name": "spec",
+              "in": "path",
+              "value": "$inputs.spec"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "spec_contents": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "apis_list": "$steps.list-apis.outputs.apis_list",
+        "versions_list": "$steps.list-api-versions.outputs.versions_list",
+        "specs_list": "$steps.list-api-specs.outputs.specs_list",
+        "spec_contents": "$steps.get-api-spec-contents.outputs.spec_contents"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "deploy-api-version-from-specification",
+      "summary": "Finds a specific API version's specification and creates a deployment resource pointing to that specification revision, effectively making that API version available at a specified endpoint.",
+      "description": "Finds a specific API version's specification and creates a deployment resource pointing to that specification revision, effectively making that API version available at a specified endpoint.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "api": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "spec": {
+            "type": "string"
+          },
+          "apiDeploymentId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-api-spec",
+          "description": "Retrieve the specific API specification to be deployed.",
+          "operationId": "Registry_GetApiSpec",
+          "parameters": [
+            {
+              "name": "project",
+              "in": "path",
+              "value": "$inputs.project"
+            },
+            {
+              "name": "location",
+              "in": "path",
+              "value": "$inputs.location"
+            },
+            {
+              "name": "api",
+              "in": "path",
+              "value": "$inputs.api"
+            },
+            {
+              "name": "version",
+              "in": "path",
+              "value": "$inputs.version"
+            },
+            {
+              "name": "spec",
+              "in": "path",
+              "value": "$inputs.spec"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "spec_object": "$response.body",
+            "spec_name_with_revision": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-api-deployment",
+          "description": "Create a deployment resource for the API, linking it to the retrieved specification revision.",
+          "operationId": "Registry_CreateApiDeployment",
+          "parameters": [
+            {
+              "name": "project",
+              "in": "path",
+              "value": "$inputs.project"
+            },
+            {
+              "name": "location",
+              "in": "path",
+              "value": "$inputs.location"
+            },
+            {
+              "name": "api",
+              "in": "path",
+              "value": "$inputs.api"
+            },
+            {
+              "name": "apiDeploymentId",
+              "in": "query",
+              "value": "$inputs.apiDeploymentId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "apiSpecRevision": "$steps.get-api-spec.outputs.spec_name_with_revision"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "deployment_name": "$response.body",
+            "deployment_object": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "spec_object": "$steps.get-api-spec.outputs.spec_object",
+        "spec_name_with_revision": "$steps.get-api-spec.outputs.spec_name_with_revision",
+        "deployment_name": "$steps.create-api-deployment.outputs.deployment_name",
+        "deployment_object": "$steps.create-api-deployment.outputs.deployment_object"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "update-api-spec-and-redeploy",
+      "summary": "Updates an existing API specification with new content (creating a new revision) and then updates an existing deployment to serve the API based on this new specification revision.",
+      "description": "Updates an existing API specification with new content (creating a new revision) and then updates an existing deployment to serve the API based on this new specification revision.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "api": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "spec": {
+            "type": "string"
+          },
+          "updateMask": {
+            "type": "string"
+          },
+          "allowMissing": {
+            "type": "string"
+          },
+          "update-api-spec_body": {
+            "type": "object"
+          },
+          "deployment": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "update-api-spec",
+          "description": "Update the API specification content, which creates a new revision.",
+          "operationId": "Registry_UpdateApiSpec",
+          "parameters": [
+            {
+              "name": "project",
+              "in": "path",
+              "value": "$inputs.project"
+            },
+            {
+              "name": "location",
+              "in": "path",
+              "value": "$inputs.location"
+            },
+            {
+              "name": "api",
+              "in": "path",
+              "value": "$inputs.api"
+            },
+            {
+              "name": "version",
+              "in": "path",
+              "value": "$inputs.version"
+            },
+            {
+              "name": "spec",
+              "in": "path",
+              "value": "$inputs.spec"
+            },
+            {
+              "name": "updateMask",
+              "in": "query",
+              "value": "$inputs.updateMask"
+            },
+            {
+              "name": "allowMissing",
+              "in": "query",
+              "value": "$inputs.allowMissing"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.update-api-spec_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_spec_object": "$response.body",
+            "updated_spec_name_with_revision": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-api-deployment",
+          "description": "Update the existing deployment to point to the new specification revision.",
+          "operationId": "Registry_UpdateApiDeployment",
+          "parameters": [
+            {
+              "name": "project",
+              "in": "path",
+              "value": "$inputs.project"
+            },
+            {
+              "name": "location",
+              "in": "path",
+              "value": "$inputs.location"
+            },
+            {
+              "name": "api",
+              "in": "path",
+              "value": "$inputs.api"
+            },
+            {
+              "name": "deployment",
+              "in": "path",
+              "value": "$inputs.deployment"
+            },
+            {
+              "name": "updateMask",
+              "in": "query",
+              "value": "$inputs.updateMask"
+            },
+            {
+              "name": "allowMissing",
+              "in": "query",
+              "value": "$inputs.allowMissing"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "apiSpecRevision": "$steps.update-api-spec.outputs.updated_spec_name_with_revision"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_deployment_object": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "updated_spec_object": "$steps.update-api-spec.outputs.updated_spec_object",
+        "updated_spec_name_with_revision": "$steps.update-api-spec.outputs.updated_spec_name_with_revision",
+        "updated_deployment_object": "$steps.update-api-deployment.outputs.updated_deployment_object"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "rollback-deployment-to-previous-revision",
+      "summary": "Identifies a previous revision of an API deployment and rolls back the active deployment configuration to match that selected revision.",
+      "description": "Identifies a previous revision of an API deployment and rolls back the active deployment configuration to match that selected revision.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "api": {
+            "type": "string"
+          },
+          "deployment": {
+            "type": "string"
+          },
+          "pageSize": {
+            "type": "string"
+          },
+          "pageToken": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-deployment-revisions",
+          "description": "List available revisions for the deployment to identify the target rollback revision.",
+          "operationId": "Registry_ListApiDeploymentRevisions",
+          "parameters": [
+            {
+              "name": "project",
+              "in": "path",
+              "value": "$inputs.project"
+            },
+            {
+              "name": "location",
+              "in": "path",
+              "value": "$inputs.location"
+            },
+            {
+              "name": "api",
+              "in": "path",
+              "value": "$inputs.api"
+            },
+            {
+              "name": "deployment",
+              "in": "path",
+              "value": "$inputs.deployment"
+            },
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            },
+            {
+              "name": "pageToken",
+              "in": "query",
+              "value": "$inputs.pageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "revisions_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "rollback-deployment",
+          "description": "Perform the rollback to the specified revision ID.",
+          "operationId": "Registry_RollbackApiDeployment",
+          "parameters": [
+            {
+              "name": "project",
+              "in": "path",
+              "value": "$inputs.project"
+            },
+            {
+              "name": "location",
+              "in": "path",
+              "value": "$inputs.location"
+            },
+            {
+              "name": "api",
+              "in": "path",
+              "value": "$inputs.api"
+            },
+            {
+              "name": "deployment",
+              "in": "path",
+              "value": "$inputs.deployment"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "revisionId": "$steps.list-deployment-revisions.outputs.revisions_list[n].revisionId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "rolled_back_deployment_object": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "revisions_list": "$steps.list-deployment-revisions.outputs.revisions_list",
+        "rolled_back_deployment_object": "$steps.rollback-deployment.outputs.rolled_back_deployment_object"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-api-version-lifecycle-state",
+      "summary": "Updates the state field of an API version to reflect its current lifecycle phase (e.g., DEVELOPMENT, PRODUCTION, DEPRECATED).",
+      "description": "Updates the state field of an API version to reflect its current lifecycle phase (e.g., DEVELOPMENT, PRODUCTION, DEPRECATED).",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "api": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "updateMask": {
+            "type": "string"
+          },
+          "allowMissing": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-api-version",
+          "description": "Retrieve the current details of the API version.",
+          "operationId": "Registry_GetApiVersion",
+          "parameters": [
+            {
+              "name": "project",
+              "in": "path",
+              "value": "$inputs.project"
+            },
+            {
+              "name": "location",
+              "in": "path",
+              "value": "$inputs.location"
+            },
+            {
+              "name": "api",
+              "in": "path",
+              "value": "$inputs.api"
+            },
+            {
+              "name": "version",
+              "in": "path",
+              "value": "$inputs.version"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "version_object": "$response.body",
+            "version_name": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-api-version-state",
+          "description": "Update the state field of the API version.",
+          "operationId": "Registry_UpdateApiVersion",
+          "parameters": [
+            {
+              "name": "project",
+              "in": "path",
+              "value": "$inputs.project"
+            },
+            {
+              "name": "location",
+              "in": "path",
+              "value": "$inputs.location"
+            },
+            {
+              "name": "api",
+              "in": "path",
+              "value": "$inputs.api"
+            },
+            {
+              "name": "version",
+              "in": "path",
+              "value": "$steps.get-api-version.outputs.version_name"
+            },
+            {
+              "name": "updateMask",
+              "in": "query",
+              "value": "$inputs.updateMask"
+            },
+            {
+              "name": "allowMissing",
+              "in": "query",
+              "value": "$inputs.allowMissing"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "version": "$steps.get-api-version.outputs.version_name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_version_object": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "version_object": "$steps.get-api-version.outputs.version_object",
+        "version_name": "$steps.get-api-version.outputs.version_name",
+        "updated_version_object": "$steps.update-api-version-state.outputs.updated_version_object"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "tag-deployment-revision-for-release-stage",
+      "summary": "Applies a specific tag (e.g., 'production', 'beta') to a particular revision of an API deployment, aiding in release management and identification.",
+      "description": "Applies a specific tag (e.g., 'production', 'beta') to a particular revision of an API deployment, aiding in release management and identification.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "api": {
+            "type": "string"
+          },
+          "deployment": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-deployment-revision",
+          "description": "Retrieve the specific deployment revision details (including its revision-specific name) to be tagged.",
+          "operationId": "Registry_GetApiDeployment",
+          "parameters": [
+            {
+              "name": "project",
+              "in": "path",
+              "value": "$inputs.project"
+            },
+            {
+              "name": "location",
+              "in": "path",
+              "value": "$inputs.location"
+            },
+            {
+              "name": "api",
+              "in": "path",
+              "value": "$inputs.api"
+            },
+            {
+              "name": "deployment",
+              "in": "path",
+              "value": "$inputs.deployment"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "deployment_object": "$response.body",
+            "deployment_name_with_revision": "$response.body"
+          }
+        },
+        {
+          "stepId": "tag-deployment-revision",
+          "description": "Apply a tag to the specified deployment revision.",
+          "operationId": "Registry_TagApiDeploymentRevision",
+          "parameters": [
+            {
+              "name": "project",
+              "in": "path",
+              "value": "$inputs.project"
+            },
+            {
+              "name": "location",
+              "in": "path",
+              "value": "$inputs.location"
+            },
+            {
+              "name": "api",
+              "in": "path",
+              "value": "$inputs.api"
+            },
+            {
+              "name": "deployment",
+              "in": "path",
+              "value": "$inputs.deployment"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$steps.get-deployment-revision.outputs.deployment_name_with_revision"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tagged_deployment_object": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "deployment_object": "$steps.get-deployment-revision.outputs.deployment_object",
+        "deployment_name_with_revision": "$steps.get-deployment-revision.outputs.deployment_name_with_revision",
+        "tagged_deployment_object": "$steps.tag-deployment-revision.outputs.tagged_deployment_object"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

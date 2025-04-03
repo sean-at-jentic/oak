@@ -1,0 +1,1118 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/credas.co.uk/pi/v1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "full-individual-verification",
+      "summary": "Registers an individual, uploads their ID document and selfie, performs standard data checks (AML/PEP/Sanctions), and retrieves the final verification summary. This is a comprehensive KYC/AML check.",
+      "description": "Registers an individual, uploads their ID document and selfie, performs standard data checks (AML/PEP/Sanctions), and retrieves the final verification summary. This is a comprehensive KYC/AML check.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "apikey": {
+            "type": "string"
+          },
+          "forename": {
+            "type": "string"
+          },
+          "surname": {
+            "type": "string"
+          },
+          "regTypeId": {
+            "type": "string"
+          },
+          "sendSms": {
+            "type": "string"
+          },
+          "documentType": {
+            "type": "string"
+          },
+          "imageData": {
+            "type": "string"
+          },
+          "checkType": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-registration",
+          "description": "Create a new registration record for an individual.",
+          "operationId": "AddRegistration",
+          "parameters": [
+            {
+              "name": "apikey",
+              "in": "header",
+              "value": "$inputs.apikey"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/*+json",
+            "payload": {
+              "forename": "$inputs.forename",
+              "surname": "$inputs.surname",
+              "regTypeId": "$inputs.regTypeId",
+              "sendSms": "$inputs.sendSms"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "registrationId": "$response.body",
+            "regCode": "$response.body"
+          }
+        },
+        {
+          "stepId": "upload-id-document",
+          "description": "Upload an image of the individual's ID document.",
+          "operationId": "AddIdDocumentImage",
+          "parameters": [
+            {
+              "name": "apikey",
+              "in": "header",
+              "value": "$inputs.apikey"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/*+json",
+            "payload": {
+              "registrationId": "$steps.create-registration.outputs.registrationId",
+              "documentType": "$inputs.documentType",
+              "imageData": "$inputs.imageData"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "scanId": "$response.body",
+            "documentStatus": "$response.body",
+            "facialMatch": "$response.body"
+          }
+        },
+        {
+          "stepId": "upload-selfie",
+          "description": "Upload a selfie image for facial comparison and liveness check.",
+          "operationId": "AddSelfieImage",
+          "parameters": [
+            {
+              "name": "apikey",
+              "in": "header",
+              "value": "$inputs.apikey"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/*+json",
+            "payload": {
+              "registrationId": "$steps.create-registration.outputs.registrationId",
+              "imageData": "$inputs.imageData"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "livenessConfirmed": "$response.body"
+          }
+        },
+        {
+          "stepId": "perform-data-check",
+          "description": "Perform data checks (e.g., AML, PEP, Sanctions) against the individual.",
+          "operationId": "AddDataCheck",
+          "parameters": [
+            {
+              "name": "apikey",
+              "in": "header",
+              "value": "$inputs.apikey"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/*+json",
+            "payload": {
+              "registrationId": "$steps.create-registration.outputs.registrationId",
+              "checkType": "$inputs.checkType"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "dataCheckId": "$response.body",
+            "dataCheckRegCode": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-verification-summary",
+          "description": "Retrieve the complete registration summary including results from ID verification, facial match, liveness, and data checks.",
+          "operationId": "GetRegistrationSummary",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "apikey",
+              "in": "header",
+              "value": "$inputs.apikey"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "registrationSummary": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "registrationId": "$steps.create-registration.outputs.registrationId",
+        "regCode": "$steps.create-registration.outputs.regCode",
+        "scanId": "$steps.upload-id-document.outputs.scanId",
+        "documentStatus": "$steps.upload-id-document.outputs.documentStatus",
+        "facialMatch": "$steps.upload-id-document.outputs.facialMatch",
+        "livenessConfirmed": "$steps.upload-selfie.outputs.livenessConfirmed",
+        "dataCheckId": "$steps.perform-data-check.outputs.dataCheckId",
+        "dataCheckRegCode": "$steps.perform-data-check.outputs.dataCheckRegCode",
+        "registrationSummary": "$steps.get-verification-summary.outputs.registrationSummary"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "web-journey-verification-initiation--monitoring",
+      "summary": "Creates a registration and generates a secure web link for the end-user to complete the verification process (uploading documents, selfie). Monitors the registration status afterwards.",
+      "description": "Creates a registration and generates a secure web link for the end-user to complete the verification process (uploading documents, selfie). Monitors the registration status afterwards.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "apikey": {
+            "type": "string"
+          },
+          "forename": {
+            "type": "string"
+          },
+          "surname": {
+            "type": "string"
+          },
+          "sendSms": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-reg-types",
+          "description": "Retrieve available registration types (check packages).",
+          "operationId": "GetAll",
+          "parameters": [
+            {
+              "name": "apikey",
+              "in": "header",
+              "value": "$inputs.apikey"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "regTypes": "$response.body"
+          }
+        },
+        {
+          "stepId": "initiate-web-registration",
+          "description": "Create a registration record and request a web journey link to be sent or returned.",
+          "operationId": "AddRegistration",
+          "parameters": [
+            {
+              "name": "apikey",
+              "in": "header",
+              "value": "$inputs.apikey"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/*+json",
+            "payload": {
+              "regTypeId": "$steps.get-reg-types.outputs.regTypes[0].id",
+              "forename": "$inputs.forename",
+              "surname": "$inputs.surname",
+              "sendSms": "$inputs.sendSms"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "registrationId": "$response.body",
+            "regCode": "$response.body",
+            "webJourneyUrl": "$response.body"
+          }
+        },
+        {
+          "stepId": "monitor-registration-status",
+          "description": "Periodically check the registration summary to monitor completion status and results after the user interacts with the web journey.",
+          "operationId": "GetRegistrationSummary",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "apikey",
+              "in": "header",
+              "value": "$inputs.apikey"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "registrationSummary": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "regTypes": "$steps.get-reg-types.outputs.regTypes",
+        "registrationId": "$steps.initiate-web-registration.outputs.registrationId",
+        "regCode": "$steps.initiate-web-registration.outputs.regCode",
+        "webJourneyUrl": "$steps.initiate-web-registration.outputs.webJourneyUrl",
+        "registrationSummary": "$steps.monitor-registration-status.outputs.registrationSummary"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "instant-individual-verification",
+      "summary": "Creates a registration, uploads an ID document, and optionally a selfie in a single call, then retrieves the summary. Useful for systems that capture ID details directly.",
+      "description": "Creates a registration, uploads an ID document, and optionally a selfie in a single call, then retrieves the summary. Useful for systems that capture ID details directly.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "apikey": {
+            "type": "string"
+          },
+          "regTypeId": {
+            "type": "string"
+          },
+          "document": {
+            "type": "string"
+          },
+          "documentType": {
+            "type": "string"
+          },
+          "forename": {
+            "type": "string"
+          },
+          "surname": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-instant-registration",
+          "description": "Create registration, add ID document, and optional selfie simultaneously.",
+          "operationId": "AddInstantRegistration",
+          "parameters": [
+            {
+              "name": "apikey",
+              "in": "header",
+              "value": "$inputs.apikey"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/*+json",
+            "payload": {
+              "regTypeId": "$inputs.regTypeId",
+              "document": "$inputs.document",
+              "documentType": "$inputs.documentType",
+              "forename": "$inputs.forename",
+              "surname": "$inputs.surname"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "registrationId": "$response.body",
+            "regCode": "$response.body",
+            "documentStatus": "$response.body",
+            "facialMatch": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-instant-verification-summary",
+          "description": "Retrieve the registration summary after instant creation.",
+          "operationId": "GetRegistrationSummary",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "apikey",
+              "in": "header",
+              "value": "$inputs.apikey"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "registrationSummary": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "registrationId": "$steps.create-instant-registration.outputs.registrationId",
+        "regCode": "$steps.create-instant-registration.outputs.regCode",
+        "documentStatus": "$steps.create-instant-registration.outputs.documentStatus",
+        "facialMatch": "$steps.create-instant-registration.outputs.facialMatch",
+        "registrationSummary": "$steps.get-instant-verification-summary.outputs.registrationSummary"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "perform-additional-checks-on-existing-registration",
+      "summary": "Finds an existing registration and performs additional checks like Bank Account Verification, Credit Status Check, or Property Register Check.",
+      "description": "Finds an existing registration and performs additional checks like Bank Account Verification, Credit Status Check, or Property Register Check.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "referenceId": {
+            "type": "string"
+          },
+          "apikey": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-registration-by-ref",
+          "description": "Find the registration using an external reference ID.",
+          "operationId": "GetRegistrationSummariesByReferenceId",
+          "parameters": [
+            {
+              "name": "referenceId",
+              "in": "path",
+              "value": "$inputs.referenceId"
+            },
+            {
+              "name": "apikey",
+              "in": "header",
+              "value": "$inputs.apikey"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "registrationId": "$response.body",
+            "registrationSummary": "$response.body"
+          }
+        },
+        {
+          "stepId": "verify-bank-account",
+          "description": "Perform bank account verification for the individual associated with the registration.",
+          "operationId": "Verify",
+          "parameters": [
+            {
+              "name": "apikey",
+              "in": "header",
+              "value": "$inputs.apikey"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/*+json",
+            "payload": {
+              "registrationId": "$steps.find-registration-by-ref.outputs.registrationId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "bankAccountVerificationResponse": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-credit-status",
+          "description": "Perform a credit status check (bankruptcy, insolvency, CCJs, directorships).",
+          "operationId": "CheckCreditStatus",
+          "parameters": [
+            {
+              "name": "apikey",
+              "in": "header",
+              "value": "$inputs.apikey"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/*+json",
+            "payload": {
+              "registrationId": "$steps.find-registration-by-ref.outputs.registrationId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "creditStatusCheckResponse": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-property-register",
+          "description": "Perform a check against the property registry.",
+          "operationId": "AddPropertyRegisterCheck",
+          "parameters": [
+            {
+              "name": "apikey",
+              "in": "header",
+              "value": "$inputs.apikey"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/*+json",
+            "payload": {
+              "registrationId": "$steps.find-registration-by-ref.outputs.registrationId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "propertyRegisterCheckResponse": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-updated-summary",
+          "description": "Retrieve the updated registration summary reflecting the results of the additional checks.",
+          "operationId": "GetRegistrationSummary",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "apikey",
+              "in": "header",
+              "value": "$inputs.apikey"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updatedRegistrationSummary": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "registrationId": "$steps.find-registration-by-ref.outputs.registrationId",
+        "registrationSummary": "$steps.find-registration-by-ref.outputs.registrationSummary",
+        "bankAccountVerificationResponse": "$steps.verify-bank-account.outputs.bankAccountVerificationResponse",
+        "creditStatusCheckResponse": "$steps.check-credit-status.outputs.creditStatusCheckResponse",
+        "propertyRegisterCheckResponse": "$steps.check-property-register.outputs.propertyRegisterCheckResponse",
+        "updatedRegistrationSummary": "$steps.get-updated-summary.outputs.updatedRegistrationSummary"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-verification-report",
+      "summary": "Finds a completed registration and retrieves the verification results as a PDF report or generates a secure link to view the report online.",
+      "description": "Finds a completed registration and retrieves the verification results as a PDF report or generates a secure link to view the report online.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "apikey": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-registration-by-id",
+          "description": "Find the registration using its unique ID.",
+          "operationId": "GetRegistrationSummary",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "apikey",
+              "in": "header",
+              "value": "$inputs.apikey"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "registrationId": "$response.body",
+            "registrationSummary": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-pdf-report",
+          "description": "Generate and download a full PDF report for the registration.",
+          "operationId": "GetRegistrationPdfExport",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "apikey",
+              "in": "header",
+              "value": "$inputs.apikey"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pdfReportData": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-secure-report-link",
+          "description": "Generate a secure, time-limited URL to view the registration details online.",
+          "operationId": "GetReportViewByRegistrationId",
+          "parameters": [
+            {
+              "name": "apikey",
+              "in": "header",
+              "value": "$inputs.apikey"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/*+json",
+            "payload": {
+              "registrationId": "$steps.find-registration-by-id.outputs.registrationId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "reportViewUrl": "$response.body",
+            "reportViewValidUntil": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "registrationId": "$steps.find-registration-by-id.outputs.registrationId",
+        "registrationSummary": "$steps.find-registration-by-id.outputs.registrationSummary",
+        "pdfReportData": "$steps.get-pdf-report.outputs.pdfReportData",
+        "reportViewUrl": "$steps.get-secure-report-link.outputs.reportViewUrl",
+        "reportViewValidUntil": "$steps.get-secure-report-link.outputs.reportViewValidUntil"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "company-verification",
+      "summary": "Searches for a company using its registration number and retrieves its details, including significant ownership information.",
+      "description": "Searches for a company using its registration number and retrieves its details, including significant ownership information.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "companyNumber": {
+            "type": "string"
+          },
+          "apikey": {
+            "type": "string"
+          },
+          "companyId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-company",
+          "description": "Search for a company by its registration number.",
+          "operationId": "SearchCompany",
+          "parameters": [
+            {
+              "name": "companyNumber",
+              "in": "query",
+              "value": "$inputs.companyNumber"
+            },
+            {
+              "name": "apikey",
+              "in": "header",
+              "value": "$inputs.apikey"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "companyId": "$response.body",
+            "companyDetails": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-company-details",
+          "description": "Retrieve full company details using the ID obtained from the search.",
+          "operationId": "GetCompany",
+          "parameters": [
+            {
+              "name": "companyId",
+              "in": "path",
+              "value": "$steps.search-company.outputs.companyId"
+            },
+            {
+              "name": "apikey",
+              "in": "header",
+              "value": "$inputs.apikey"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "fullCompanyDetails": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "companyId": "$steps.search-company.outputs.companyId",
+        "companyDetails": "$steps.search-company.outputs.companyDetails",
+        "fullCompanyDetails": "$steps.get-company-details.outputs.fullCompanyDetails"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manual-check-override",
+      "summary": "Allows an authorized user to review a registration's check results and manually override the status of a specific check (e.g., override a 'Refer' ID document check to 'Pass').",
+      "description": "Allows an authorized user to review a registration's check results and manually override the status of a specific check (e.g., override a 'Refer' ID document check to 'Pass').",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "apikey": {
+            "type": "string"
+          },
+          "checkType": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "comment": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-registration-for-review",
+          "description": "Retrieve the registration summary to review current check statuses.",
+          "operationId": "GetRegistrationSummary",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "apikey",
+              "in": "header",
+              "value": "$inputs.apikey"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "registrationId": "$response.body",
+            "registrationSummary": "$response.body"
+          }
+        },
+        {
+          "stepId": "override-check",
+          "description": "Apply a manual override to a specific check's status.",
+          "operationId": "OverrideCheckStatus",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "apikey",
+              "in": "header",
+              "value": "$inputs.apikey"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/*+json",
+            "payload": {
+              "registrationId": "$steps.get-registration-for-review.outputs.registrationId",
+              "checkType": "$inputs.checkType",
+              "status": "$inputs.status",
+              "comment": "$inputs.comment"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "overrideConfirmation": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-summary-after-override",
+          "description": "Retrieve the updated summary to confirm the override.",
+          "operationId": "GetRegistrationSummary",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "apikey",
+              "in": "header",
+              "value": "$inputs.apikey"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updatedRegistrationSummary": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "registrationId": "$steps.get-registration-for-review.outputs.registrationId",
+        "registrationSummary": "$steps.get-registration-for-review.outputs.registrationSummary",
+        "overrideConfirmation": "$steps.override-check.outputs.overrideConfirmation",
+        "updatedRegistrationSummary": "$steps.get-summary-after-override.outputs.updatedRegistrationSummary"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-detailed-id-scan-report",
+      "summary": "After an ID document is uploaded and processed, retrieve a detailed PDF report analyzing the specific scan.",
+      "description": "After an ID document is uploaded and processed, retrieve a detailed PDF report analyzing the specific scan.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "apikey": {
+            "type": "string"
+          },
+          "scanId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-registration-summary-with-docs",
+          "description": "Retrieve the registration summary which includes details of uploaded ID documents.",
+          "operationId": "GetRegistrationSummary",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "apikey",
+              "in": "header",
+              "value": "$inputs.apikey"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "registrationId": "$response.body",
+            "idDocuments": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-scan-report",
+          "description": "Retrieve the detailed PDF analysis report for a specific ID document scan.",
+          "operationId": "GetScanReportPdf",
+          "parameters": [
+            {
+              "name": "scanId",
+              "in": "path",
+              "value": "$steps.get-registration-summary-with-docs.outputs.registrationId.id"
+            },
+            {
+              "name": "apikey",
+              "in": "header",
+              "value": "$inputs.apikey"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "scanReportPdfData": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "registrationId": "$steps.get-registration-summary-with-docs.outputs.registrationId",
+        "idDocuments": "$steps.get-registration-summary-with-docs.outputs.idDocuments",
+        "scanReportPdfData": "$steps.get-scan-report.outputs.scanReportPdfData"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

@@ -1,0 +1,745 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/apideck.com/pos/10.14.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "process-new-pos-order",
+      "summary": "Creates a new customer order with specified items and processes the payment for it.",
+      "description": "Creates a new customer order with specified items and processes the payment for it.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "raw": {
+            "type": "string"
+          },
+          "x-apideck-consumer-id": {
+            "type": "string"
+          },
+          "x-apideck-app-id": {
+            "type": "string"
+          },
+          "x-apideck-service-id": {
+            "type": "string"
+          },
+          "location_id": {
+            "type": "string"
+          },
+          "merchant_id": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-order",
+          "description": "Create a new order with line items, customer details, and location.",
+          "operationId": "ordersAdd",
+          "parameters": [
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "location_id": "$inputs.location_id",
+              "merchant_id": "$inputs.merchant_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "order_id": "$response.body",
+            "created_order_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "pay-order",
+          "description": "Process the payment for the newly created order using a specific tender.",
+          "operationId": "ordersPay",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "order_id": "$steps.create-order.outputs.order_id",
+              "currency": "$steps.create-order.outputs.created_order_details.currency"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "paid_order_id": "$response.body",
+            "payment_confirmation_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "order_id": "$steps.create-order.outputs.order_id",
+        "created_order_details": "$steps.create-order.outputs.created_order_details",
+        "paid_order_id": "$steps.pay-order.outputs.paid_order_id",
+        "payment_confirmation_details": "$steps.pay-order.outputs.payment_confirmation_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "setup-product-with-modifiers",
+      "summary": "Creates a new modifier group, adds modifiers to it, and then creates a new item associated with that modifier group for product customization.",
+      "description": "Creates a new modifier group, adds modifiers to it, and then creates a new item associated with that modifier group for product customization.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "raw": {
+            "type": "string"
+          },
+          "x-apideck-consumer-id": {
+            "type": "string"
+          },
+          "x-apideck-app-id": {
+            "type": "string"
+          },
+          "x-apideck-service-id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "selection_type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-modifier-group",
+          "description": "Create a new group for item modifiers (e.g., Size, Toppings).",
+          "operationId": "modifierGroupsAdd",
+          "parameters": [
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name",
+              "selection_type": "$inputs.selection_type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "modifier_group_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-modifier",
+          "description": "Create a specific modifier option within the group (e.g., Large, Extra Cheese). Requires the group ID.",
+          "operationId": "modifiersAdd",
+          "parameters": [
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "modifier_group_id": "$steps.create-modifier-group.outputs.modifier_group_id",
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "modifier_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-product-item",
+          "description": "Create the main product item and associate the modifier group with it.",
+          "operationId": "itemsAdd",
+          "parameters": [
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "modifier_group_ids": "$steps.create-modifier-group.outputs.modifier_group_id",
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "item_id": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "modifier_group_id": "$steps.create-modifier-group.outputs.modifier_group_id",
+        "modifier_id": "$steps.create-modifier.outputs.modifier_id",
+        "item_id": "$steps.create-product-item.outputs.item_id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "update-unpaid-order",
+      "summary": "Retrieves an existing open order and updates its details, such as adding or removing line items, before payment.",
+      "description": "Retrieves an existing open order and updates its details, such as adding or removing line items, before payment.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "x-apideck-consumer-id": {
+            "type": "string"
+          },
+          "x-apideck-app-id": {
+            "type": "string"
+          },
+          "x-apideck-service-id": {
+            "type": "string"
+          },
+          "raw": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-order-to-update",
+          "description": "Retrieve the details of a specific open order by its ID.",
+          "operationId": "ordersOne",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            },
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "order_details": "$response.body",
+            "retrieved_order_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-order-details",
+          "description": "Update the retrieved order with new information (e.g., modified line items, notes).",
+          "operationId": "ordersUpdate",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            },
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "order_id": "$steps.get-order-to-update.outputs.retrieved_order_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_order_id": "$response.body",
+            "updated_order_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "order_details": "$steps.get-order-to-update.outputs.order_details",
+        "retrieved_order_id": "$steps.get-order-to-update.outputs.retrieved_order_id",
+        "updated_order_id": "$steps.update-order-details.outputs.updated_order_id",
+        "updated_order_details": "$steps.update-order-details.outputs.updated_order_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "onboard-new-merchant-and-location",
+      "summary": "Sets up a new merchant account and creates their primary business location.",
+      "description": "Sets up a new merchant account and creates their primary business location.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "raw": {
+            "type": "string"
+          },
+          "x-apideck-consumer-id": {
+            "type": "string"
+          },
+          "x-apideck-app-id": {
+            "type": "string"
+          },
+          "x-apideck-service-id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "business_name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-merchant",
+          "description": "Create a new merchant record.",
+          "operationId": "merchantsAdd",
+          "parameters": [
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name",
+              "address": "$inputs.address",
+              "language": "$inputs.language",
+              "currency": "$inputs.currency"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "merchant_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-location",
+          "description": "Create a new business location associated with the merchant.",
+          "operationId": "locationsAdd",
+          "parameters": [
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "merchant_id": "$steps.create-merchant.outputs.merchant_id",
+              "name": "$inputs.name",
+              "business_name": "$inputs.business_name",
+              "address": "$inputs.address",
+              "status": "$inputs.status"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "location_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "set-main-location",
+          "description": "Update the merchant record to set the newly created location as the main location.",
+          "operationId": "merchantsUpdate",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "x-apideck-consumer-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-consumer-id"
+            },
+            {
+              "name": "x-apideck-app-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-app-id"
+            },
+            {
+              "name": "x-apideck-service-id",
+              "in": "header",
+              "value": "$inputs.x-apideck-service-id"
+            },
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "merchant_id": "$steps.create-merchant.outputs.merchant_id",
+              "main_location_id": "$steps.create-location.outputs.location_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_merchant_id": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "merchant_id": "$steps.create-merchant.outputs.merchant_id",
+        "location_id": "$steps.create-location.outputs.location_id",
+        "updated_merchant_id": "$steps.set-main-location.outputs.updated_merchant_id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
