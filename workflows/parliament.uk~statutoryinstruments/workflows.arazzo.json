@@ -1,0 +1,1144 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/parliament.uk/statutoryinstruments/v1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "track-statutory-instrument-and-parliamentary-business-v2",
+      "summary": "Find a specific Statutory Instrument (SI) or Proposed Negative Statutory Instrument (PNSI) using search criteria, retrieve its detailed information, and then fetch the associated parliamentary business items (events like debates, laying, etc.). This helps users monitor the progress and activities related to a specific instrument.",
+      "description": "Find a specific Statutory Instrument (SI) or Proposed Negative Statutory Instrument (PNSI) using search criteria, retrieve its detailed information, and then fetch the associated parliamentary business items (events like debates, laying, etc.). This helps users monitor the progress and activities related to a specific instrument.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Name": {
+            "type": "string"
+          },
+          "Procedure": {
+            "type": "string"
+          },
+          "ScheduledDebate": {
+            "type": "string"
+          },
+          "MotionToStop": {
+            "type": "string"
+          },
+          "ConcernsRaisedByCommittee": {
+            "type": "string"
+          },
+          "ParliamentaryProcessConcluded": {
+            "type": "string"
+          },
+          "DepartmentId": {
+            "type": "string"
+          },
+          "LayingBodyId": {
+            "type": "string"
+          },
+          "RecommendedForProcedureChange": {
+            "type": "string"
+          },
+          "ActOfParliamentId": {
+            "type": "string"
+          },
+          "House": {
+            "type": "string"
+          },
+          "Skip": {
+            "type": "string"
+          },
+          "Take": {
+            "type": "string"
+          },
+          "instrumentId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-instruments",
+          "description": "Search for Statutory Instruments or Proposed Negative Statutory Instruments based on criteria like name, procedure, department, etc.",
+          "operationId": "ListSIsV2",
+          "parameters": [
+            {
+              "name": "Name",
+              "in": "query",
+              "value": "$inputs.Name"
+            },
+            {
+              "name": "Procedure",
+              "in": "query",
+              "value": "$inputs.Procedure"
+            },
+            {
+              "name": "ScheduledDebate",
+              "in": "query",
+              "value": "$inputs.ScheduledDebate"
+            },
+            {
+              "name": "MotionToStop",
+              "in": "query",
+              "value": "$inputs.MotionToStop"
+            },
+            {
+              "name": "ConcernsRaisedByCommittee",
+              "in": "query",
+              "value": "$inputs.ConcernsRaisedByCommittee"
+            },
+            {
+              "name": "ParliamentaryProcessConcluded",
+              "in": "query",
+              "value": "$inputs.ParliamentaryProcessConcluded"
+            },
+            {
+              "name": "DepartmentId",
+              "in": "query",
+              "value": "$inputs.DepartmentId"
+            },
+            {
+              "name": "LayingBodyId",
+              "in": "query",
+              "value": "$inputs.LayingBodyId"
+            },
+            {
+              "name": "RecommendedForProcedureChange",
+              "in": "query",
+              "value": "$inputs.RecommendedForProcedureChange"
+            },
+            {
+              "name": "ActOfParliamentId",
+              "in": "query",
+              "value": "$inputs.ActOfParliamentId"
+            },
+            {
+              "name": "House",
+              "in": "query",
+              "value": "$inputs.House"
+            },
+            {
+              "name": "Skip",
+              "in": "query",
+              "value": "$inputs.Skip"
+            },
+            {
+              "name": "Take",
+              "in": "query",
+              "value": "$inputs.Take"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "instrumentId": "$response.body",
+            "instrumentSummaryList": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-instrument-details",
+          "description": "Retrieve the full details for a specific instrument identified in the search results.",
+          "operationId": "GetSIsV2",
+          "parameters": [
+            {
+              "name": "instrumentId",
+              "in": "path",
+              "value": "$steps.search-instruments.outputs.instrumentId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "instrumentDetails": "$response.body",
+            "instrumentId": "$response.body",
+            "timelineIds": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-instrument-business-items",
+          "description": "Retrieve the list of parliamentary business items associated with the specific instrument.",
+          "operationId": "GetSiBusinessItemV2",
+          "parameters": [
+            {
+              "name": "instrumentId",
+              "in": "path",
+              "value": "$steps.get-instrument-details.outputs.instrumentId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "businessItems": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "instrumentId": "$steps.get-instrument-details.outputs.instrumentId",
+        "instrumentSummaryList": "$steps.search-instruments.outputs.instrumentSummaryList",
+        "instrumentDetails": "$steps.get-instrument-details.outputs.instrumentDetails",
+        "timelineIds": "$steps.get-instrument-details.outputs.timelineIds",
+        "businessItems": "$steps.get-instrument-business-items.outputs.businessItems"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "find-statutory-instruments-enabled-by-specific-act-of-parliament-v2",
+      "summary": "Identify Statutory Instruments (SIs) that were created under the authority of a specific Act of Parliament. This is useful for understanding the secondary legislation stemming from primary legislation.",
+      "description": "Identify Statutory Instruments (SIs) that were created under the authority of a specific Act of Parliament. This is useful for understanding the secondary legislation stemming from primary legislation.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Id": {
+            "type": "string"
+          },
+          "Name": {
+            "type": "string"
+          },
+          "Procedure": {
+            "type": "string"
+          },
+          "ScheduledDebate": {
+            "type": "string"
+          },
+          "MotionToStop": {
+            "type": "string"
+          },
+          "ConcernsRaisedByCommittee": {
+            "type": "string"
+          },
+          "ParliamentaryProcessConcluded": {
+            "type": "string"
+          },
+          "DepartmentId": {
+            "type": "string"
+          },
+          "LayingBodyId": {
+            "type": "string"
+          },
+          "RecommendedForProcedureChange": {
+            "type": "string"
+          },
+          "ActOfParliamentId": {
+            "type": "string"
+          },
+          "House": {
+            "type": "string"
+          },
+          "Skip": {
+            "type": "string"
+          },
+          "Take": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-acts",
+          "description": "Search for an Act of Parliament by its name.",
+          "operationId": "ActsOfParliamentV2",
+          "parameters": [
+            {
+              "name": "Id",
+              "in": "query",
+              "value": "$inputs.Id"
+            },
+            {
+              "name": "Name",
+              "in": "query",
+              "value": "$inputs.Name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "actId": "$response.body",
+            "actList": "$response.body"
+          }
+        },
+        {
+          "stepId": "find-sis-by-act",
+          "description": "Search for Statutory Instruments using the ID of the enabling Act found in the previous step.",
+          "operationId": "ListSIsV2",
+          "parameters": [
+            {
+              "name": "Name",
+              "in": "query",
+              "value": "$inputs.Name"
+            },
+            {
+              "name": "Procedure",
+              "in": "query",
+              "value": "$inputs.Procedure"
+            },
+            {
+              "name": "ScheduledDebate",
+              "in": "query",
+              "value": "$inputs.ScheduledDebate"
+            },
+            {
+              "name": "MotionToStop",
+              "in": "query",
+              "value": "$inputs.MotionToStop"
+            },
+            {
+              "name": "ConcernsRaisedByCommittee",
+              "in": "query",
+              "value": "$inputs.ConcernsRaisedByCommittee"
+            },
+            {
+              "name": "ParliamentaryProcessConcluded",
+              "in": "query",
+              "value": "$inputs.ParliamentaryProcessConcluded"
+            },
+            {
+              "name": "DepartmentId",
+              "in": "query",
+              "value": "$inputs.DepartmentId"
+            },
+            {
+              "name": "LayingBodyId",
+              "in": "query",
+              "value": "$inputs.LayingBodyId"
+            },
+            {
+              "name": "RecommendedForProcedureChange",
+              "in": "query",
+              "value": "$inputs.RecommendedForProcedureChange"
+            },
+            {
+              "name": "ActOfParliamentId",
+              "in": "query",
+              "value": "$steps.search-acts.outputs.actId"
+            },
+            {
+              "name": "House",
+              "in": "query",
+              "value": "$inputs.House"
+            },
+            {
+              "name": "Skip",
+              "in": "query",
+              "value": "$inputs.Skip"
+            },
+            {
+              "name": "Take",
+              "in": "query",
+              "value": "$inputs.Take"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "listOfSIs": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "actId": "$steps.search-acts.outputs.actId",
+        "actList": "$steps.search-acts.outputs.actList",
+        "listOfSIs": "$steps.find-sis-by-act.outputs.listOfSIs"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "explore-instruments-by-laying-department-v1--v2",
+      "summary": "Discover Statutory Instruments (SIs) and Proposed Negative Statutory Instruments (PNSIs) that were laid before Parliament by a specific government department or laying body.",
+      "description": "Discover Statutory Instruments (SIs) and Proposed Negative Statutory Instruments (PNSIs) that were laid before Parliament by a specific government department or laying body.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Name": {
+            "type": "string"
+          },
+          "Procedure": {
+            "type": "string"
+          },
+          "ScheduledDebate": {
+            "type": "string"
+          },
+          "MotionToStop": {
+            "type": "string"
+          },
+          "ConcernsRaisedByCommittee": {
+            "type": "string"
+          },
+          "ParliamentaryProcessConcluded": {
+            "type": "string"
+          },
+          "DepartmentId": {
+            "type": "string"
+          },
+          "LayingBodyId": {
+            "type": "string"
+          },
+          "RecommendedForProcedureChange": {
+            "type": "string"
+          },
+          "ActOfParliamentId": {
+            "type": "string"
+          },
+          "House": {
+            "type": "string"
+          },
+          "Skip": {
+            "type": "string"
+          },
+          "Take": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-laying-bodies",
+          "description": "Retrieve the list of all available laying bodies (departments).",
+          "operationId": "GetLayingBodies",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "layingBodyList": "$response.body",
+            "layingBodyId": "$response.body"
+          }
+        },
+        {
+          "stepId": "find-instruments-by-body",
+          "description": "Search for instruments using the ID of the laying body selected from the list.",
+          "operationId": "ListSIsV2",
+          "parameters": [
+            {
+              "name": "Name",
+              "in": "query",
+              "value": "$inputs.Name"
+            },
+            {
+              "name": "Procedure",
+              "in": "query",
+              "value": "$inputs.Procedure"
+            },
+            {
+              "name": "ScheduledDebate",
+              "in": "query",
+              "value": "$inputs.ScheduledDebate"
+            },
+            {
+              "name": "MotionToStop",
+              "in": "query",
+              "value": "$inputs.MotionToStop"
+            },
+            {
+              "name": "ConcernsRaisedByCommittee",
+              "in": "query",
+              "value": "$inputs.ConcernsRaisedByCommittee"
+            },
+            {
+              "name": "ParliamentaryProcessConcluded",
+              "in": "query",
+              "value": "$inputs.ParliamentaryProcessConcluded"
+            },
+            {
+              "name": "DepartmentId",
+              "in": "query",
+              "value": "$inputs.DepartmentId"
+            },
+            {
+              "name": "LayingBodyId",
+              "in": "query",
+              "value": "$steps.get-laying-bodies.outputs.layingBodyId"
+            },
+            {
+              "name": "RecommendedForProcedureChange",
+              "in": "query",
+              "value": "$inputs.RecommendedForProcedureChange"
+            },
+            {
+              "name": "ActOfParliamentId",
+              "in": "query",
+              "value": "$inputs.ActOfParliamentId"
+            },
+            {
+              "name": "House",
+              "in": "query",
+              "value": "$inputs.House"
+            },
+            {
+              "name": "Skip",
+              "in": "query",
+              "value": "$inputs.Skip"
+            },
+            {
+              "name": "Take",
+              "in": "query",
+              "value": "$inputs.Take"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "listOfInstruments": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "layingBodyList": "$steps.get-laying-bodies.outputs.layingBodyList",
+        "layingBodyId": "$steps.get-laying-bodies.outputs.layingBodyId",
+        "listOfInstruments": "$steps.find-instruments-by-body.outputs.listOfInstruments"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "explore-instruments-by-parliamentary-procedure-v1--v2",
+      "summary": "Find Statutory Instruments (SIs) and Proposed Negative Statutory Instruments (PNSIs) that are subject to a specific parliamentary procedure (e.g., affirmative, negative).",
+      "description": "Find Statutory Instruments (SIs) and Proposed Negative Statutory Instruments (PNSIs) that are subject to a specific parliamentary procedure (e.g., affirmative, negative).",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "Name": {
+            "type": "string"
+          },
+          "Procedure": {
+            "type": "string"
+          },
+          "ScheduledDebate": {
+            "type": "string"
+          },
+          "MotionToStop": {
+            "type": "string"
+          },
+          "ConcernsRaisedByCommittee": {
+            "type": "string"
+          },
+          "ParliamentaryProcessConcluded": {
+            "type": "string"
+          },
+          "DepartmentId": {
+            "type": "string"
+          },
+          "LayingBodyId": {
+            "type": "string"
+          },
+          "RecommendedForProcedureChange": {
+            "type": "string"
+          },
+          "ActOfParliamentId": {
+            "type": "string"
+          },
+          "House": {
+            "type": "string"
+          },
+          "Skip": {
+            "type": "string"
+          },
+          "Take": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-procedures",
+          "description": "Retrieve the list of all parliamentary procedures.",
+          "operationId": "GetProceduresV1",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "procedureList": "$response.body",
+            "procedureId": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-procedure-details",
+          "description": "Retrieve detailed information about a specific procedure selected from the list.",
+          "operationId": "GetProceduresByIdV1",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-procedures.outputs.procedureId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "procedureDetails": "$response.body"
+          }
+        },
+        {
+          "stepId": "find-instruments-by-procedure",
+          "description": "Search for instruments using the ID of the procedure selected.",
+          "operationId": "ListSIsV2",
+          "parameters": [
+            {
+              "name": "Name",
+              "in": "query",
+              "value": "$inputs.Name"
+            },
+            {
+              "name": "Procedure",
+              "in": "query",
+              "value": "$steps.get-procedures.outputs.procedureId"
+            },
+            {
+              "name": "ScheduledDebate",
+              "in": "query",
+              "value": "$inputs.ScheduledDebate"
+            },
+            {
+              "name": "MotionToStop",
+              "in": "query",
+              "value": "$inputs.MotionToStop"
+            },
+            {
+              "name": "ConcernsRaisedByCommittee",
+              "in": "query",
+              "value": "$inputs.ConcernsRaisedByCommittee"
+            },
+            {
+              "name": "ParliamentaryProcessConcluded",
+              "in": "query",
+              "value": "$inputs.ParliamentaryProcessConcluded"
+            },
+            {
+              "name": "DepartmentId",
+              "in": "query",
+              "value": "$inputs.DepartmentId"
+            },
+            {
+              "name": "LayingBodyId",
+              "in": "query",
+              "value": "$inputs.LayingBodyId"
+            },
+            {
+              "name": "RecommendedForProcedureChange",
+              "in": "query",
+              "value": "$inputs.RecommendedForProcedureChange"
+            },
+            {
+              "name": "ActOfParliamentId",
+              "in": "query",
+              "value": "$inputs.ActOfParliamentId"
+            },
+            {
+              "name": "House",
+              "in": "query",
+              "value": "$inputs.House"
+            },
+            {
+              "name": "Skip",
+              "in": "query",
+              "value": "$inputs.Skip"
+            },
+            {
+              "name": "Take",
+              "in": "query",
+              "value": "$inputs.Take"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "listOfInstruments": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "procedureList": "$steps.get-procedures.outputs.procedureList",
+        "procedureId": "$steps.get-procedures.outputs.procedureId",
+        "procedureDetails": "$steps.get-procedure-details.outputs.procedureDetails",
+        "listOfInstruments": "$steps.find-instruments-by-procedure.outputs.listOfInstruments"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "get-detailed-timeline-events-for-an-instrument-v2",
+      "summary": "Retrieve the detailed information for a specific SI or PNSI, identify a specific step in its procedural timeline, and then fetch the parliamentary business items associated only with that timeline step.",
+      "description": "Retrieve the detailed information for a specific SI or PNSI, identify a specific step in its procedural timeline, and then fetch the parliamentary business items associated only with that timeline step.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Name": {
+            "type": "string"
+          },
+          "Procedure": {
+            "type": "string"
+          },
+          "ScheduledDebate": {
+            "type": "string"
+          },
+          "MotionToStop": {
+            "type": "string"
+          },
+          "ConcernsRaisedByCommittee": {
+            "type": "string"
+          },
+          "ParliamentaryProcessConcluded": {
+            "type": "string"
+          },
+          "DepartmentId": {
+            "type": "string"
+          },
+          "LayingBodyId": {
+            "type": "string"
+          },
+          "RecommendedForProcedureChange": {
+            "type": "string"
+          },
+          "ActOfParliamentId": {
+            "type": "string"
+          },
+          "House": {
+            "type": "string"
+          },
+          "Skip": {
+            "type": "string"
+          },
+          "Take": {
+            "type": "string"
+          },
+          "instrumentId": {
+            "type": "string"
+          },
+          "timelineId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-instruments-for-timeline",
+          "description": "Search for a specific Statutory Instrument or Proposed Negative Statutory Instrument.",
+          "operationId": "ListSIsV2",
+          "parameters": [
+            {
+              "name": "Name",
+              "in": "query",
+              "value": "$inputs.Name"
+            },
+            {
+              "name": "Procedure",
+              "in": "query",
+              "value": "$inputs.Procedure"
+            },
+            {
+              "name": "ScheduledDebate",
+              "in": "query",
+              "value": "$inputs.ScheduledDebate"
+            },
+            {
+              "name": "MotionToStop",
+              "in": "query",
+              "value": "$inputs.MotionToStop"
+            },
+            {
+              "name": "ConcernsRaisedByCommittee",
+              "in": "query",
+              "value": "$inputs.ConcernsRaisedByCommittee"
+            },
+            {
+              "name": "ParliamentaryProcessConcluded",
+              "in": "query",
+              "value": "$inputs.ParliamentaryProcessConcluded"
+            },
+            {
+              "name": "DepartmentId",
+              "in": "query",
+              "value": "$inputs.DepartmentId"
+            },
+            {
+              "name": "LayingBodyId",
+              "in": "query",
+              "value": "$inputs.LayingBodyId"
+            },
+            {
+              "name": "RecommendedForProcedureChange",
+              "in": "query",
+              "value": "$inputs.RecommendedForProcedureChange"
+            },
+            {
+              "name": "ActOfParliamentId",
+              "in": "query",
+              "value": "$inputs.ActOfParliamentId"
+            },
+            {
+              "name": "House",
+              "in": "query",
+              "value": "$inputs.House"
+            },
+            {
+              "name": "Skip",
+              "in": "query",
+              "value": "$inputs.Skip"
+            },
+            {
+              "name": "Take",
+              "in": "query",
+              "value": "$inputs.Take"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "instrumentId": "$response.body",
+            "instrumentSummaryList": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-instrument-details-for-timeline",
+          "description": "Retrieve the full details for the instrument, including its timeline steps.",
+          "operationId": "GetSIsV2",
+          "parameters": [
+            {
+              "name": "instrumentId",
+              "in": "path",
+              "value": "$steps.search-instruments-for-timeline.outputs.instrumentId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "instrumentDetails": "$response.body",
+            "timelineId": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-timeline-business-items",
+          "description": "Retrieve the business items specifically associated with a selected timeline step ID.",
+          "operationId": "GetSiBusinessItemByTimelineV2",
+          "parameters": [
+            {
+              "name": "timelineId",
+              "in": "path",
+              "value": "$steps.get-instrument-details-for-timeline.outputs.timelineId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "timelineBusinessItems": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "instrumentId": "$steps.search-instruments-for-timeline.outputs.instrumentId",
+        "instrumentSummaryList": "$steps.search-instruments-for-timeline.outputs.instrumentSummaryList",
+        "instrumentDetails": "$steps.get-instrument-details-for-timeline.outputs.instrumentDetails",
+        "timelineId": "$steps.get-instrument-details-for-timeline.outputs.timelineId",
+        "timelineBusinessItems": "$steps.get-timeline-business-items.outputs.timelineBusinessItems"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "track-a-proposed-negative-statutory-instrument-pnsi-v1",
+      "summary": "Specifically find a Proposed Negative Statutory Instrument (PNSI), retrieve its details, and view the associated parliamentary business items. This focuses on the pre-laying stage for certain SIs.",
+      "description": "Specifically find a Proposed Negative Statutory Instrument (PNSI), retrieve its details, and view the associated parliamentary business items. This focuses on the pre-laying stage for certain SIs.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Name": {
+            "type": "string"
+          },
+          "RecommendedForProcedureChange": {
+            "type": "string"
+          },
+          "DepartmentId": {
+            "type": "string"
+          },
+          "LayingBodyId": {
+            "type": "string"
+          },
+          "Skip": {
+            "type": "string"
+          },
+          "Take": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-pnsi",
+          "description": "Search for Proposed Negative Statutory Instruments based on criteria like name or department.",
+          "operationId": "GetProposedNegativeStatutoryInstruments",
+          "parameters": [
+            {
+              "name": "Name",
+              "in": "query",
+              "value": "$inputs.Name"
+            },
+            {
+              "name": "RecommendedForProcedureChange",
+              "in": "query",
+              "value": "$inputs.RecommendedForProcedureChange"
+            },
+            {
+              "name": "DepartmentId",
+              "in": "query",
+              "value": "$inputs.DepartmentId"
+            },
+            {
+              "name": "LayingBodyId",
+              "in": "query",
+              "value": "$inputs.LayingBodyId"
+            },
+            {
+              "name": "Skip",
+              "in": "query",
+              "value": "$inputs.Skip"
+            },
+            {
+              "name": "Take",
+              "in": "query",
+              "value": "$inputs.Take"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pnsiId": "$response.body",
+            "pnsiList": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-pnsi-details",
+          "description": "Retrieve the details for a specific PNSI identified in the search results.",
+          "operationId": "GetProposedNegativeStatutoryInstrumentById",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.search-pnsi.outputs.pnsiId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pnsiDetails": "$response.body",
+            "pnsiId": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-pnsi-business-items",
+          "description": "Retrieve the list of parliamentary business items associated with the specific PNSI.",
+          "operationId": "GetBusinessItemsByProposedNegativeStatutoryInstrumentId",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-pnsi-details.outputs.pnsiId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "businessItems": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "pnsiId": "$steps.get-pnsi-details.outputs.pnsiId",
+        "pnsiList": "$steps.search-pnsi.outputs.pnsiList",
+        "pnsiDetails": "$steps.get-pnsi-details.outputs.pnsiDetails",
+        "businessItems": "$steps.get-pnsi-business-items.outputs.businessItems"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

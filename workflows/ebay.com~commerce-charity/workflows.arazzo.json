@@ -1,0 +1,208 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/ebay.com/commerce-charity/v1.2.1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "find-charity-by-keyword-and-view-details",
+      "summary": "Allows a user to search for charitable organizations using keywords (like name or mission statement) and then retrieve the full details for a specific charity found in the search results. This is useful for discovering charities and learning more about them.",
+      "description": "Allows a user to search for charitable organizations using keywords (like name or mission statement) and then retrieve the full details for a specific charity found in the search results. This is useful for discovering charities and learning more about them.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "q": {
+            "type": "string"
+          },
+          "registration_ids": {
+            "type": "string"
+          },
+          "X-EBAY-C-MARKETPLACE-ID": {
+            "type": "string"
+          },
+          "charity_org_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-charities-by-keyword",
+          "description": "Search for charities using a keyword query string.",
+          "operationId": "getCharityOrgs",
+          "parameters": [
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "q",
+              "in": "query",
+              "value": "$inputs.q"
+            },
+            {
+              "name": "registration_ids",
+              "in": "query",
+              "value": "$inputs.registration_ids"
+            },
+            {
+              "name": "X-EBAY-C-MARKETPLACE-ID",
+              "in": "header",
+              "value": "$inputs.X-EBAY-C-MARKETPLACE-ID"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "charityOrgs": "$response.body",
+            "total": "$response.body",
+            "next": "$response.body",
+            "prev": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-charity-details",
+          "description": "Retrieve the full details for a specific charity using its unique ID obtained from the search results.",
+          "operationId": "getCharityOrg",
+          "parameters": [
+            {
+              "name": "charity_org_id",
+              "in": "path",
+              "value": "$steps.search-charities-by-keyword.outputs.charityOrgs.charityOrgId"
+            },
+            {
+              "name": "X-EBAY-C-MARKETPLACE-ID",
+              "in": "header",
+              "value": "$inputs.X-EBAY-C-MARKETPLACE-ID"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "charityOrgId": "$response.body",
+            "name": "$response.body",
+            "description": "$response.body",
+            "location": "$response.body",
+            "logoImage": "$response.body",
+            "missionStatement": "$response.body",
+            "registrationId": "$response.body",
+            "website": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "charityOrgs": "$steps.search-charities-by-keyword.outputs.charityOrgs",
+        "total": "$steps.search-charities-by-keyword.outputs.total",
+        "next": "$steps.search-charities-by-keyword.outputs.next",
+        "prev": "$steps.search-charities-by-keyword.outputs.prev",
+        "charityOrgId": "$steps.get-charity-details.outputs.charityOrgId",
+        "name": "$steps.get-charity-details.outputs.name",
+        "description": "$steps.get-charity-details.outputs.description",
+        "location": "$steps.get-charity-details.outputs.location",
+        "logoImage": "$steps.get-charity-details.outputs.logoImage",
+        "missionStatement": "$steps.get-charity-details.outputs.missionStatement",
+        "registrationId": "$steps.get-charity-details.outputs.registrationId",
+        "website": "$steps.get-charity-details.outputs.website"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

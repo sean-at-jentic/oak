@@ -1,0 +1,1542 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/svix.com/main/1.62.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "onboard-new-webhook-consumer",
+      "summary": "Creates a new application for a consumer (e.g., a user on your platform), adds an endpoint for their webhook URL, and retrieves the signing secret for them to verify incoming webhooks.",
+      "description": "Creates a new application for a consumer (e.g., a user on your platform), adds an endpoint for their webhook URL, and retrieves the signing secret for them to verify incoming webhooks.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "get_if_exists": {
+            "type": "string"
+          },
+          "idempotency-key": {
+            "type": "string"
+          },
+          "create-consumer-application_body": {
+            "type": "object"
+          },
+          "app_id": {
+            "type": "string"
+          },
+          "endpoint_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-consumer-application",
+          "description": "Create a new Svix application to represent the webhook consumer.",
+          "operationId": "v1.application.create",
+          "parameters": [
+            {
+              "name": "get_if_exists",
+              "in": "query",
+              "value": "$inputs.get_if_exists"
+            },
+            {
+              "name": "idempotency-key",
+              "in": "header",
+              "value": "$inputs.idempotency-key"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-consumer-application_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "app_id": "$response.body",
+            "app_uid": "$response.body",
+            "application_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-consumer-endpoint",
+          "description": "Create a new endpoint associated with the consumer's application, specifying their webhook URL.",
+          "operationId": "v1.endpoint.create",
+          "parameters": [
+            {
+              "name": "app_id",
+              "in": "path",
+              "value": "$steps.create-consumer-application.outputs.app_id"
+            },
+            {
+              "name": "idempotency-key",
+              "in": "header",
+              "value": "$inputs.idempotency-key"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "app_id": "$steps.create-consumer-application.outputs.app_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "endpoint_id": "$response.body",
+            "endpoint_uid": "$response.body",
+            "endpoint_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-consumer-endpoint-secret",
+          "description": "Retrieve the signing secret for the newly created endpoint. This secret should be securely provided to the consumer.",
+          "operationId": "v1.endpoint.get-secret",
+          "parameters": [
+            {
+              "name": "app_id",
+              "in": "path",
+              "value": "$steps.create-consumer-application.outputs.app_id"
+            },
+            {
+              "name": "endpoint_id",
+              "in": "path",
+              "value": "$steps.create-consumer-endpoint.outputs.endpoint_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "endpoint_secret": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "app_id": "$steps.create-consumer-application.outputs.app_id",
+        "app_uid": "$steps.create-consumer-application.outputs.app_uid",
+        "application_details": "$steps.create-consumer-application.outputs.application_details",
+        "endpoint_id": "$steps.create-consumer-endpoint.outputs.endpoint_id",
+        "endpoint_uid": "$steps.create-consumer-endpoint.outputs.endpoint_uid",
+        "endpoint_details": "$steps.create-consumer-endpoint.outputs.endpoint_details",
+        "endpoint_secret": "$steps.get-consumer-endpoint-secret.outputs.endpoint_secret"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "send-and-monitor-a-webhook-message",
+      "summary": "Sends a webhook message to a specific application and then checks the delivery attempts for that message.",
+      "description": "Sends a webhook message to a specific application and then checks the delivery attempts for that message.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string"
+          },
+          "with_content": {
+            "type": "string"
+          },
+          "idempotency-key": {
+            "type": "string"
+          },
+          "send-webhook-message_body": {
+            "type": "object"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "iterator": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "status_code_class": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string"
+          },
+          "tag": {
+            "type": "string"
+          },
+          "endpoint_id": {
+            "type": "string"
+          },
+          "before": {
+            "type": "string"
+          },
+          "after": {
+            "type": "string"
+          },
+          "msg_id": {
+            "type": "string"
+          },
+          "event_types": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "send-webhook-message",
+          "description": "Create and dispatch a new webhook message to all endpoints of the specified application.",
+          "operationId": "v1.message.create",
+          "parameters": [
+            {
+              "name": "app_id",
+              "in": "path",
+              "value": "$inputs.app_id"
+            },
+            {
+              "name": "with_content",
+              "in": "query",
+              "value": "$inputs.with_content"
+            },
+            {
+              "name": "idempotency-key",
+              "in": "header",
+              "value": "$inputs.idempotency-key"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.send-webhook-message_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "msg_id": "$response.body",
+            "message_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-message-attempts",
+          "description": "List all delivery attempts for the sent message across all endpoints.",
+          "operationId": "v1.message-attempt.list-by-msg",
+          "parameters": [
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "iterator",
+              "in": "query",
+              "value": "$inputs.iterator"
+            },
+            {
+              "name": "status",
+              "in": "query",
+              "value": "$inputs.status"
+            },
+            {
+              "name": "status_code_class",
+              "in": "query",
+              "value": "$inputs.status_code_class"
+            },
+            {
+              "name": "channel",
+              "in": "query",
+              "value": "$inputs.channel"
+            },
+            {
+              "name": "tag",
+              "in": "query",
+              "value": "$inputs.tag"
+            },
+            {
+              "name": "endpoint_id",
+              "in": "query",
+              "value": "$inputs.endpoint_id"
+            },
+            {
+              "name": "before",
+              "in": "query",
+              "value": "$inputs.before"
+            },
+            {
+              "name": "after",
+              "in": "query",
+              "value": "$inputs.after"
+            },
+            {
+              "name": "with_content",
+              "in": "query",
+              "value": "$inputs.with_content"
+            },
+            {
+              "name": "app_id",
+              "in": "path",
+              "value": "$steps.send-webhook-message.outputs.message_details.application.id"
+            },
+            {
+              "name": "msg_id",
+              "in": "path",
+              "value": "$steps.send-webhook-message.outputs.msg_id"
+            },
+            {
+              "name": "event_types",
+              "in": "query",
+              "value": "$inputs.event_types"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "attempts_list": "$response.body",
+            "iterator": "$response.body",
+            "done": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "msg_id": "$steps.send-webhook-message.outputs.msg_id",
+        "message_details": "$steps.send-webhook-message.outputs.message_details",
+        "attempts_list": "$steps.list-message-attempts.outputs.attempts_list",
+        "iterator": "$steps.list-message-attempts.outputs.iterator",
+        "done": "$steps.list-message-attempts.outputs.done"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "troubleshoot-failed-webhook-delivery",
+      "summary": "Identifies failed delivery attempts for a specific endpoint within an application and allows resending a specific failed message.",
+      "description": "Identifies failed delivery attempts for a specific endpoint within an application and allows resending a specific failed message.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "string"
+          },
+          "iterator": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "status_code_class": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string"
+          },
+          "tag": {
+            "type": "string"
+          },
+          "before": {
+            "type": "string"
+          },
+          "after": {
+            "type": "string"
+          },
+          "with_content": {
+            "type": "string"
+          },
+          "with_msg": {
+            "type": "string"
+          },
+          "event_types": {
+            "type": "string"
+          },
+          "app_id": {
+            "type": "string"
+          },
+          "endpoint_id": {
+            "type": "string"
+          },
+          "msg_id": {
+            "type": "string"
+          },
+          "attempt_id": {
+            "type": "string"
+          },
+          "idempotency-key": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-failed-attempts-for-endpoint",
+          "description": "List message delivery attempts for a specific endpoint, filtering by failed status.",
+          "operationId": "v1.message-attempt.list-by-endpoint",
+          "parameters": [
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "iterator",
+              "in": "query",
+              "value": "$inputs.iterator"
+            },
+            {
+              "name": "status",
+              "in": "query",
+              "value": "$inputs.status"
+            },
+            {
+              "name": "status_code_class",
+              "in": "query",
+              "value": "$inputs.status_code_class"
+            },
+            {
+              "name": "channel",
+              "in": "query",
+              "value": "$inputs.channel"
+            },
+            {
+              "name": "tag",
+              "in": "query",
+              "value": "$inputs.tag"
+            },
+            {
+              "name": "before",
+              "in": "query",
+              "value": "$inputs.before"
+            },
+            {
+              "name": "after",
+              "in": "query",
+              "value": "$inputs.after"
+            },
+            {
+              "name": "with_content",
+              "in": "query",
+              "value": "$inputs.with_content"
+            },
+            {
+              "name": "with_msg",
+              "in": "query",
+              "value": "$inputs.with_msg"
+            },
+            {
+              "name": "event_types",
+              "in": "query",
+              "value": "$inputs.event_types"
+            },
+            {
+              "name": "app_id",
+              "in": "path",
+              "value": "$inputs.app_id"
+            },
+            {
+              "name": "endpoint_id",
+              "in": "path",
+              "value": "$inputs.endpoint_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "failed_attempts": "$response.body",
+            "iterator": "$response.body",
+            "done": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-failed-attempt-details",
+          "description": "Get the full details of a specific failed attempt.",
+          "operationId": "v1.message-attempt.get",
+          "parameters": [
+            {
+              "name": "app_id",
+              "in": "path",
+              "value": "$steps.list-failed-attempts-for-endpoint.outputs.failed_attempts.appId"
+            },
+            {
+              "name": "msg_id",
+              "in": "path",
+              "value": "$steps.list-failed-attempts-for-endpoint.outputs.failed_attempts.msgId"
+            },
+            {
+              "name": "attempt_id",
+              "in": "path",
+              "value": "$steps.list-failed-attempts-for-endpoint.outputs.failed_attempts.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "attempt_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "resend-failed-message",
+          "description": "Manually trigger a resend of the failed message to the specific endpoint.",
+          "operationId": "v1.message-attempt.resend",
+          "parameters": [
+            {
+              "name": "app_id",
+              "in": "path",
+              "value": "$steps.get-failed-attempt-details.outputs.attempt_details.appId"
+            },
+            {
+              "name": "msg_id",
+              "in": "path",
+              "value": "$steps.get-failed-attempt-details.outputs.attempt_details.msgId"
+            },
+            {
+              "name": "endpoint_id",
+              "in": "path",
+              "value": "$steps.get-failed-attempt-details.outputs.attempt_details.endpointId"
+            },
+            {
+              "name": "idempotency-key",
+              "in": "header",
+              "value": "$inputs.idempotency-key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "resend_status_code": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "failed_attempts": "$steps.list-failed-attempts-for-endpoint.outputs.failed_attempts",
+        "iterator": "$steps.list-failed-attempts-for-endpoint.outputs.iterator",
+        "done": "$steps.list-failed-attempts-for-endpoint.outputs.done",
+        "attempt_details": "$steps.get-failed-attempt-details.outputs.attempt_details",
+        "resend_status_code": "$steps.resend-failed-message.outputs.resend_status_code"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-api-access-tokens",
+      "summary": "Creates a new API token for programmatic access and later lists and expires an existing token.",
+      "description": "Creates a new API token for programmatic access and later lists and expires an existing token.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "idempotency-key": {
+            "type": "string"
+          },
+          "create-api-token_body": {
+            "type": "object"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "iterator": {
+            "type": "string"
+          },
+          "order": {
+            "type": "string"
+          },
+          "key_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-api-token",
+          "description": "Create a new API token with a specific name and optional scopes.",
+          "operationId": "v1.management.authentication.create-api-token",
+          "parameters": [
+            {
+              "name": "idempotency-key",
+              "in": "header",
+              "value": "$inputs.idempotency-key"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-api-token_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "token_id": "$response.body",
+            "token_value": "$response.body",
+            "token_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-api-tokens",
+          "description": "List existing API tokens (censored).",
+          "operationId": "v1.management.authentication.list-api-tokens",
+          "parameters": [
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "iterator",
+              "in": "query",
+              "value": "$inputs.iterator"
+            },
+            {
+              "name": "order",
+              "in": "query",
+              "value": "$inputs.order"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "token_list": "$response.body",
+            "iterator": "$response.body",
+            "done": "$response.body"
+          }
+        },
+        {
+          "stepId": "expire-api-token",
+          "description": "Expire a specific API token by its ID.",
+          "operationId": "v1.management.authentication.expire-api-token",
+          "parameters": [
+            {
+              "name": "key_id",
+              "in": "path",
+              "value": "$steps.list-api-tokens.outputs.token_list.id"
+            },
+            {
+              "name": "idempotency-key",
+              "in": "header",
+              "value": "$inputs.idempotency-key"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "key_id": "$steps.list-api-tokens.outputs.token_list[0].id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "expiration_status_code": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "token_id": "$steps.create-api-token.outputs.token_id",
+        "token_value": "$steps.create-api-token.outputs.token_value",
+        "token_details": "$steps.create-api-token.outputs.token_details",
+        "token_list": "$steps.list-api-tokens.outputs.token_list",
+        "iterator": "$steps.list-api-tokens.outputs.iterator",
+        "done": "$steps.list-api-tokens.outputs.done",
+        "expiration_status_code": "$steps.expire-api-token.outputs.expiration_status_code"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "generate-consumer-self-service-portal-link",
+      "summary": "Generates a secure, time-limited magic link for an application consumer to access the Svix Consumer Application Portal to manage their endpoints and view message history.",
+      "description": "Generates a secure, time-limited magic link for an application consumer to access the Svix Consumer Application Portal to manage their endpoints and view message history.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string"
+          },
+          "idempotency-key": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-application-details",
+          "description": "Retrieve the application details using its ID or UID.",
+          "operationId": "v1.application.get",
+          "parameters": [
+            {
+              "name": "app_id",
+              "in": "path",
+              "value": "$inputs.app_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "app_id_resolved": "$response.body",
+            "application_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "generate-portal-access-link",
+          "description": "Generate a magic link and token for the consumer portal.",
+          "operationId": "v1.authentication.app-portal-access",
+          "parameters": [
+            {
+              "name": "app_id",
+              "in": "path",
+              "value": "$steps.get-application-details.outputs.app_id_resolved"
+            },
+            {
+              "name": "idempotency-key",
+              "in": "header",
+              "value": "$inputs.idempotency-key"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "app_id": "$steps.get-application-details.outputs.app_id_resolved"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "portal_url": "$response.body",
+            "portal_token": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "app_id_resolved": "$steps.get-application-details.outputs.app_id_resolved",
+        "application_details": "$steps.get-application-details.outputs.application_details",
+        "portal_url": "$steps.generate-portal-access-link.outputs.portal_url",
+        "portal_token": "$steps.generate-portal-access-link.outputs.portal_token"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "define-and-use-custom-event-types",
+      "summary": "Defines a new event type with a schema, updates an endpoint to filter on this type, and then sends a message of this new type.",
+      "description": "Defines a new event type with a schema, updates an endpoint to filter on this type, and then sends a message of this new type.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "idempotency-key": {
+            "type": "string"
+          },
+          "create-event-type_body": {
+            "type": "object"
+          },
+          "app_id": {
+            "type": "string"
+          },
+          "endpoint_id": {
+            "type": "string"
+          },
+          "with_content": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-event-type",
+          "description": "Create a new event type with a name, description, and optional JSON schema.",
+          "operationId": "v1.event-type.create",
+          "parameters": [
+            {
+              "name": "idempotency-key",
+              "in": "header",
+              "value": "$inputs.idempotency-key"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-event-type_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "event_type_name": "$response.body",
+            "event_type_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-endpoint-filters",
+          "description": "Update an existing endpoint to include the new event type in its filter list.",
+          "operationId": "v1.endpoint.patch",
+          "parameters": [
+            {
+              "name": "app_id",
+              "in": "path",
+              "value": "$inputs.app_id"
+            },
+            {
+              "name": "endpoint_id",
+              "in": "path",
+              "value": "$inputs.endpoint_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "filterTypes": "$steps.create-event-type.outputs.event_type_name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_endpoint_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "send-typed-message",
+          "description": "Send a message using the newly created event type.",
+          "operationId": "v1.message.create",
+          "parameters": [
+            {
+              "name": "app_id",
+              "in": "path",
+              "value": "$steps.update-endpoint-filters.outputs.updated_endpoint_details.appId"
+            },
+            {
+              "name": "with_content",
+              "in": "query",
+              "value": "$inputs.with_content"
+            },
+            {
+              "name": "idempotency-key",
+              "in": "header",
+              "value": "$inputs.idempotency-key"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "app_id": "$steps.update-endpoint-filters.outputs.updated_endpoint_details.appId",
+              "eventType": "$steps.create-event-type.outputs.event_type_name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "msg_id": "$response.body",
+            "message_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "event_type_name": "$steps.create-event-type.outputs.event_type_name",
+        "event_type_details": "$steps.create-event-type.outputs.event_type_details",
+        "updated_endpoint_details": "$steps.update-endpoint-filters.outputs.updated_endpoint_details",
+        "msg_id": "$steps.send-typed-message.outputs.msg_id",
+        "message_details": "$steps.send-typed-message.outputs.message_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "rotate-endpoint-signing-secret",
+      "summary": "Rotates the signing secret for a specific endpoint for security purposes. The old secret remains valid for 24 hours.",
+      "description": "Rotates the signing secret for a specific endpoint for security purposes. The old secret remains valid for 24 hours.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string"
+          },
+          "endpoint_id": {
+            "type": "string"
+          },
+          "idempotency-key": {
+            "type": "string"
+          },
+          "initiate-secret-rotation_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "initiate-secret-rotation",
+          "description": "Initiate the rotation of the endpoint's signing secret. Optionally provide a new secret, otherwise one will be generated.",
+          "operationId": "v1.endpoint.rotate-secret",
+          "parameters": [
+            {
+              "name": "app_id",
+              "in": "path",
+              "value": "$inputs.app_id"
+            },
+            {
+              "name": "endpoint_id",
+              "in": "path",
+              "value": "$inputs.endpoint_id"
+            },
+            {
+              "name": "idempotency-key",
+              "in": "header",
+              "value": "$inputs.idempotency-key"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.initiate-secret-rotation_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "rotation_status_code": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-new-endpoint-secret",
+          "description": "Retrieve the new signing secret after rotation (optional, as the secret isn't returned by the rotate call itself but can be fetched immediately after).",
+          "operationId": "v1.endpoint.get-secret",
+          "parameters": [
+            {
+              "name": "app_id",
+              "in": "path",
+              "value": "$inputs.app_id"
+            },
+            {
+              "name": "endpoint_id",
+              "in": "path",
+              "value": "$inputs.endpoint_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "new_endpoint_secret": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "rotation_status_code": "$steps.initiate-secret-rotation.outputs.rotation_status_code",
+        "new_endpoint_secret": "$steps.get-new-endpoint-secret.outputs.new_endpoint_secret"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "recover-recently-failed-messages-for-an-endpoint",
+      "summary": "Initiates a recovery process to resend all messages that failed delivery to a specific endpoint after a given timestamp.",
+      "description": "Initiates a recovery process to resend all messages that failed delivery to a specific endpoint after a given timestamp.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string"
+          },
+          "endpoint_id": {
+            "type": "string"
+          },
+          "idempotency-key": {
+            "type": "string"
+          },
+          "initiate-endpoint-recovery_body": {
+            "type": "object"
+          },
+          "task_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "initiate-endpoint-recovery",
+          "description": "Start a background task to resend failed messages since the specified time.",
+          "operationId": "v1.endpoint.recover",
+          "parameters": [
+            {
+              "name": "app_id",
+              "in": "path",
+              "value": "$inputs.app_id"
+            },
+            {
+              "name": "endpoint_id",
+              "in": "path",
+              "value": "$inputs.endpoint_id"
+            },
+            {
+              "name": "idempotency-key",
+              "in": "header",
+              "value": "$inputs.idempotency-key"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.initiate-endpoint-recovery_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "background_task_id": "$response.body",
+            "background_task_status": "$response.body",
+            "background_task_type": "$response.body"
+          }
+        },
+        {
+          "stepId": "monitor-recovery-task",
+          "description": "Poll the background task status to check the progress and completion of the recovery operation.",
+          "operationId": "v1.background-task.get",
+          "parameters": [
+            {
+              "name": "task_id",
+              "in": "path",
+              "value": "$steps.initiate-endpoint-recovery.outputs.background_task_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "task_status": "$response.body",
+            "task_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "background_task_id": "$steps.initiate-endpoint-recovery.outputs.background_task_id",
+        "background_task_status": "$steps.initiate-endpoint-recovery.outputs.background_task_status",
+        "background_task_type": "$steps.initiate-endpoint-recovery.outputs.background_task_type",
+        "task_status": "$steps.monitor-recovery-task.outputs.task_status",
+        "task_details": "$steps.monitor-recovery-task.outputs.task_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-ingest-source-for-external-webhooks",
+      "summary": "Creates an Ingest Source (e.g., for Stripe), configures an endpoint where Svix should forward these ingested webhooks, and retrieves the secret for the destination endpoint.",
+      "description": "Creates an Ingest Source (e.g., for Stripe), configures an endpoint where Svix should forward these ingested webhooks, and retrieves the secret for the destination endpoint.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "idempotency-key": {
+            "type": "string"
+          },
+          "create-ingest-source_body": {
+            "type": "object"
+          },
+          "endpoint_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-ingest-source",
+          "description": "Create an ingest source, specifying the type (e.g., 'stripe') and configuration.",
+          "operationId": "v1.ingest.source.create",
+          "parameters": [
+            {
+              "name": "idempotency-key",
+              "in": "header",
+              "value": "$inputs.idempotency-key"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-ingest-source_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "source_id": "$response.body",
+            "source_uid": "$response.body",
+            "ingest_url": "$response.body",
+            "source_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-ingest-endpoint",
+          "description": "Create an endpoint associated with the ingest source, specifying the destination URL.",
+          "operationId": "v1.ingest.endpoint.create",
+          "parameters": [
+            {
+              "name": "idempotency-key",
+              "in": "header",
+              "value": "$inputs.idempotency-key"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "source_id": "$steps.create-ingest-source.outputs.source_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ingest_endpoint_id": "$response.body",
+            "ingest_endpoint_uid": "$response.body",
+            "ingest_endpoint_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-ingest-endpoint-secret",
+          "description": "Retrieve the signing secret for the ingest endpoint to verify webhooks forwarded by Svix.",
+          "operationId": "v1.ingest.endpoint.get-secret",
+          "parameters": [
+            {
+              "name": "endpoint_id",
+              "in": "path",
+              "value": "$steps.create-ingest-endpoint.outputs.ingest_endpoint_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ingest_endpoint_secret": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "source_id": "$steps.create-ingest-source.outputs.source_id",
+        "source_uid": "$steps.create-ingest-source.outputs.source_uid",
+        "ingest_url": "$steps.create-ingest-source.outputs.ingest_url",
+        "source_details": "$steps.create-ingest-source.outputs.source_details",
+        "ingest_endpoint_id": "$steps.create-ingest-endpoint.outputs.ingest_endpoint_id",
+        "ingest_endpoint_uid": "$steps.create-ingest-endpoint.outputs.ingest_endpoint_uid",
+        "ingest_endpoint_details": "$steps.create-ingest-endpoint.outputs.ingest_endpoint_details",
+        "ingest_endpoint_secret": "$steps.get-ingest-endpoint-secret.outputs.ingest_endpoint_secret"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "configure-operational-webhooks",
+      "summary": "Sets up an endpoint to receive operational webhooks from Svix about events like failed message attempts or disabled endpoints, and retrieves the secret needed to verify these webhooks.",
+      "description": "Sets up an endpoint to receive operational webhooks from Svix about events like failed message attempts or disabled endpoints, and retrieves the secret needed to verify these webhooks.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "idempotency-key": {
+            "type": "string"
+          },
+          "create-operational-webhook-endpoint_body": {
+            "type": "object"
+          },
+          "endpoint_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-operational-webhook-endpoint",
+          "description": "Create an endpoint where Svix will send operational notifications.",
+          "operationId": "v1.operational-webhook.endpoint.create",
+          "parameters": [
+            {
+              "name": "idempotency-key",
+              "in": "header",
+              "value": "$inputs.idempotency-key"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-operational-webhook-endpoint_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "op_endpoint_id": "$response.body",
+            "op_endpoint_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-operational-webhook-secret",
+          "description": "Retrieve the signing secret for the operational webhook endpoint.",
+          "operationId": "v1.operational-webhook.endpoint.get-secret",
+          "parameters": [
+            {
+              "name": "endpoint_id",
+              "in": "path",
+              "value": "$steps.create-operational-webhook-endpoint.outputs.op_endpoint_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "op_endpoint_secret": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "op_endpoint_id": "$steps.create-operational-webhook-endpoint.outputs.op_endpoint_id",
+        "op_endpoint_details": "$steps.create-operational-webhook-endpoint.outputs.op_endpoint_details",
+        "op_endpoint_secret": "$steps.get-operational-webhook-secret.outputs.op_endpoint_secret"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "import-event-types-via-open-api",
+      "summary": "Imports event type definitions, including schemas, directly from an OpenAPI specification file or raw string.",
+      "description": "Imports event type definitions, including schemas, directly from an OpenAPI specification file or raw string.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "idempotency-key": {
+            "type": "string"
+          },
+          "import-event-types_body": {
+            "type": "object"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "iterator": {
+            "type": "string"
+          },
+          "order": {
+            "type": "string"
+          },
+          "include_archived": {
+            "type": "string"
+          },
+          "with_content": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "import-event-types",
+          "description": "Import event types from an OpenAPI spec (JSON object or raw YAML/JSON string).",
+          "operationId": "v1.event-type.import-openapi",
+          "parameters": [
+            {
+              "name": "idempotency-key",
+              "in": "header",
+              "value": "$inputs.idempotency-key"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.import-event-types_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "import_results": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-imported-event-types",
+          "description": "List event types to verify the import.",
+          "operationId": "v1.event-type.list",
+          "parameters": [
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "iterator",
+              "in": "query",
+              "value": "$inputs.iterator"
+            },
+            {
+              "name": "order",
+              "in": "query",
+              "value": "$inputs.order"
+            },
+            {
+              "name": "include_archived",
+              "in": "query",
+              "value": "$inputs.include_archived"
+            },
+            {
+              "name": "with_content",
+              "in": "query",
+              "value": "$inputs.with_content"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "event_type_list": "$response.body",
+            "iterator": "$response.body",
+            "done": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "import_results": "$steps.import-event-types.outputs.import_results",
+        "event_type_list": "$steps.list-imported-event-types.outputs.event_type_list",
+        "iterator": "$steps.list-imported-event-types.outputs.iterator",
+        "done": "$steps.list-imported-event-types.outputs.done"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

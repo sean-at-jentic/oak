@@ -1,0 +1,290 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/ebay.com/sell-logistics/v1_beta.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "purchase-and-print-shipping-label",
+      "summary": "Retrieves available shipping rates for a package based on its details and associated order(s), allows selection of a rate to create a shipment and generate a shipping label, and finally downloads the label.",
+      "description": "Retrieves available shipping rates for a package based on its details and associated order(s), allows selection of a rate to create a shipment and generate a shipping label, and finally downloads the label.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-EBAY-C-MARKETPLACE-ID": {
+            "type": "string"
+          },
+          "Content-Type": {
+            "type": "string"
+          },
+          "create-shipping-quote_body": {
+            "type": "object"
+          },
+          "create-shipment-from-quote_body": {
+            "type": "object"
+          },
+          "shipmentId": {
+            "type": "string"
+          },
+          "Accept": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-shipping-quote",
+          "description": "Get a list of available shipping rates (quotes) for a specific package and destination.",
+          "operationId": "createShippingQuote",
+          "parameters": [
+            {
+              "name": "X-EBAY-C-MARKETPLACE-ID",
+              "in": "header",
+              "value": "$inputs.X-EBAY-C-MARKETPLACE-ID"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-shipping-quote_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "shippingQuoteId": "$response.body",
+            "rates (list including rateId, baseShippingCost, etc.)": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-shipment-from-quote",
+          "description": "Create a shipment using a selected rate from the quote, generating a shipping label.",
+          "operationId": "createFromShippingQuote",
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "X-EBAY-C-MARKETPLACE-ID",
+              "in": "header",
+              "value": "$inputs.X-EBAY-C-MARKETPLACE-ID"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-shipment-from-quote_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "shipmentId": "$response.body",
+            "labelDownloadUrl": "$response.body",
+            "shipmentTrackingNumber": "$response.body",
+            "totalShippingCost": "$response.body",
+            "Shipment details": "$response.body"
+          }
+        },
+        {
+          "stepId": "download-shipping-label",
+          "description": "Download the generated shipping label file (PDF).",
+          "operationId": "downloadLabelFile",
+          "parameters": [
+            {
+              "name": "shipmentId",
+              "in": "path",
+              "value": "$steps.create-shipment-from-quote.outputs.shipmentId"
+            },
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "PDF label file": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "shippingQuoteId": "$steps.create-shipping-quote.outputs.shippingQuoteId",
+        "rates (list including rateId, baseShippingCost, etc.)": "$steps.create-shipping-quote.outputs.rates (list including rateId, baseShippingCost, etc.)",
+        "shipmentId": "$steps.create-shipment-from-quote.outputs.shipmentId",
+        "labelDownloadUrl": "$steps.create-shipment-from-quote.outputs.labelDownloadUrl",
+        "shipmentTrackingNumber": "$steps.create-shipment-from-quote.outputs.shipmentTrackingNumber",
+        "totalShippingCost": "$steps.create-shipment-from-quote.outputs.totalShippingCost",
+        "Shipment details": "$steps.create-shipment-from-quote.outputs.Shipment details",
+        "PDF label file": "$steps.download-shipping-label.outputs.PDF label file"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "cancel-unused-shipment",
+      "summary": "Cancels a previously created shipment if the label has not been used, and then verifies the cancellation status.",
+      "description": "Cancels a previously created shipment if the label has not been used, and then verifies the cancellation status.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "shipmentId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "cancel-shipment",
+          "description": "Request cancellation of a shipment by its ID. The associated cost is refunded if cancellation is successful.",
+          "operationId": "cancelShipment",
+          "parameters": [
+            {
+              "name": "shipmentId",
+              "in": "path",
+              "value": "$inputs.shipmentId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Shipment (updated with cancellation details)": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-cancelled-shipment-details",
+          "description": "Retrieve the shipment details to confirm the cancellation status.",
+          "operationId": "getShipment",
+          "parameters": [
+            {
+              "name": "shipmentId",
+              "in": "path",
+              "value": "$inputs.shipmentId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Shipment (including cancellation status)": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "Shipment (updated with cancellation details)": "$steps.cancel-shipment.outputs.Shipment (updated with cancellation details)",
+        "Shipment (including cancellation status)": "$steps.get-cancelled-shipment-details.outputs.Shipment (including cancellation status)"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

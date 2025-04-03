@@ -1,0 +1,223 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/hubapi.com/cms/v3/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "find-recently-updated-domains-and-check-details",
+      "summary": "Identifies domains updated after a specific date, retrieves the list, and then fetches the full details for a particular domain from that list.",
+      "description": "Identifies domains updated after a specific date, retrieves the list, and then fetches the full details for a particular domain from that list.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "type": "string"
+          },
+          "createdAfter": {
+            "type": "string"
+          },
+          "createdBefore": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "updatedAfter": {
+            "type": "string"
+          },
+          "updatedBefore": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "string"
+          },
+          "after": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "archived": {
+            "type": "string"
+          },
+          "domainId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-recently-updated-domains",
+          "description": "Fetches a list of domains, filtered to show only those updated after a specified date.",
+          "operationId": "get-/cms/v3/domains/_getPage",
+          "parameters": [
+            {
+              "name": "createdAt",
+              "in": "query",
+              "value": "$inputs.createdAt"
+            },
+            {
+              "name": "createdAfter",
+              "in": "query",
+              "value": "$inputs.createdAfter"
+            },
+            {
+              "name": "createdBefore",
+              "in": "query",
+              "value": "$inputs.createdBefore"
+            },
+            {
+              "name": "updatedAt",
+              "in": "query",
+              "value": "$inputs.updatedAt"
+            },
+            {
+              "name": "updatedAfter",
+              "in": "query",
+              "value": "$inputs.updatedAfter"
+            },
+            {
+              "name": "updatedBefore",
+              "in": "query",
+              "value": "$inputs.updatedBefore"
+            },
+            {
+              "name": "sort",
+              "in": "query",
+              "value": "$inputs.sort"
+            },
+            {
+              "name": "after",
+              "in": "query",
+              "value": "$inputs.after"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "archived",
+              "in": "query",
+              "value": "$inputs.archived"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "domainList": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-specific-updated-domain-details",
+          "description": "Fetches the full details of a specific domain identified from the list of recently updated domains.",
+          "operationId": "get-/cms/v3/domains/{domainId}_getById",
+          "parameters": [
+            {
+              "name": "domainId",
+              "in": "path",
+              "value": "$steps.list-recently-updated-domains.outputs.domainList.results[0].id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "domainDetails": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "domainList": "$steps.list-recently-updated-domains.outputs.domainList",
+        "domainDetails": "$steps.get-specific-updated-domain-details.outputs.domainDetails"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

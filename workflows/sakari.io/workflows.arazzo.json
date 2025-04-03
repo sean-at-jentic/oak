@@ -1,0 +1,758 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/sakari.io/main/1.0.1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "send-welcome-sms-to-new-contact",
+      "summary": "Creates a new contact and immediately sends them a personalized welcome SMS message.",
+      "description": "Creates a new contact and immediately sends them a personalized welcome SMS message.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string"
+          },
+          "mergeStrategy": {
+            "type": "string"
+          },
+          "create-contact_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-contact",
+          "description": "Create a new contact record.",
+          "operationId": "contacts.create",
+          "parameters": [
+            {
+              "name": "accountId",
+              "in": "path",
+              "value": "$inputs.accountId"
+            },
+            {
+              "name": "mergeStrategy",
+              "in": "query",
+              "value": "$inputs.mergeStrategy"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-contact_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "contactId": "$response.body"
+          }
+        },
+        {
+          "stepId": "send-welcome-message",
+          "description": "Send an SMS message to the newly created contact.",
+          "operationId": "messages.send",
+          "parameters": [
+            {
+              "name": "accountId",
+              "in": "path",
+              "value": "$inputs.accountId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "contactId": "$steps.create-contact.outputs.contactId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "messageId": "$response.body",
+            "messageStatus": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "contactId": "$steps.create-contact.outputs.contactId",
+        "messageId": "$steps.send-welcome-message.outputs.messageId",
+        "messageStatus": "$steps.send-welcome-message.outputs.messageStatus"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "send-bulk-templated-sms-using-tags",
+      "summary": "Finds a specific message template and sends it as an SMS to all contacts matching a given tag.",
+      "description": "Finds a specific message template and sends it as an SMS to all contacts matching a given tag.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-template",
+          "description": "Fetch templates, filtering by name to find the desired one.",
+          "operationId": "templates.fetchAll",
+          "parameters": [
+            {
+              "name": "accountId",
+              "in": "path",
+              "value": "$inputs.accountId"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "templateId": "$response.body"
+          }
+        },
+        {
+          "stepId": "send-bulk-sms-by-tag",
+          "description": "Send a message using a template to contacts filtered by tags.",
+          "operationId": "messages.send",
+          "parameters": [
+            {
+              "name": "accountId",
+              "in": "path",
+              "value": "$inputs.accountId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "templateId": "$steps.find-template.outputs.templateId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "jobId": "$response.body",
+            "requestedCount": "$response.body",
+            "validCount": "$response.body",
+            "invalidContacts": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "templateId": "$steps.find-template.outputs.templateId",
+        "jobId": "$steps.send-bulk-sms-by-tag.outputs.jobId",
+        "requestedCount": "$steps.send-bulk-sms-by-tag.outputs.requestedCount",
+        "validCount": "$steps.send-bulk-sms-by-tag.outputs.validCount",
+        "invalidContacts": "$steps.send-bulk-sms-by-tag.outputs.invalidContacts"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "send-mms-message-to-existing-contact",
+      "summary": "Uploads a media file, finds an existing contact by their mobile number, and sends them an MMS message including the uploaded media.",
+      "description": "Uploads a media file, finds an existing contact by their mobile number, and sends them an MMS message including the uploaded media.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "mobile": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "string"
+          },
+          "upload-media-file_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-contact-by-mobile",
+          "description": "Find an existing contact using their mobile number.",
+          "operationId": "contacts.fetchAll",
+          "parameters": [
+            {
+              "name": "accountId",
+              "in": "path",
+              "value": "$inputs.accountId"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "firstName",
+              "in": "query",
+              "value": "$inputs.firstName"
+            },
+            {
+              "name": "lastName",
+              "in": "query",
+              "value": "$inputs.lastName"
+            },
+            {
+              "name": "mobile",
+              "in": "query",
+              "value": "$inputs.mobile"
+            },
+            {
+              "name": "email",
+              "in": "query",
+              "value": "$inputs.email"
+            },
+            {
+              "name": "tags",
+              "in": "query",
+              "value": "$inputs.tags"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "contactId": "$response.body"
+          }
+        },
+        {
+          "stepId": "upload-media-file",
+          "description": "Upload a media file to get a shareable link for MMS.",
+          "operationId": "tools.shareFile",
+          "requestBody": {
+            "contentType": "application/octet-stream",
+            "payload": "$inputs.upload-media-file_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "mediaUrl": "$response.body"
+          }
+        },
+        {
+          "stepId": "send-mms-message",
+          "description": "Send an MMS message with media to the specified contact.",
+          "operationId": "messages.send",
+          "parameters": [
+            {
+              "name": "accountId",
+              "in": "path",
+              "value": "$inputs.accountId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "contactId": "$steps.find-contact-by-mobile.outputs.contactId",
+              "mediaUrl": "$steps.upload-media-file.outputs.mediaUrl"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "messageId": "$response.body",
+            "messageStatus": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "contactId": "$steps.find-contact-by-mobile.outputs.contactId",
+        "mediaUrl": "$steps.upload-media-file.outputs.mediaUrl",
+        "messageId": "$steps.send-mms-message.outputs.messageId",
+        "messageStatus": "$steps.send-mms-message.outputs.messageStatus"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "track-message-delivery-status",
+      "summary": "Sends an SMS message to a contact and then checks the delivery status of that specific message.",
+      "description": "Sends an SMS message to a contact and then checks the delivery status of that specific message.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string"
+          },
+          "send-message-for-tracking_body": {
+            "type": "object"
+          },
+          "messageId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "send-message-for-tracking",
+          "description": "Send an SMS message to a specific contact.",
+          "operationId": "messages.send",
+          "parameters": [
+            {
+              "name": "accountId",
+              "in": "path",
+              "value": "$inputs.accountId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.send-message-for-tracking_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "messageId": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-message-status",
+          "description": "Retrieve the details and status of the sent message.",
+          "operationId": "messages.fetch",
+          "parameters": [
+            {
+              "name": "accountId",
+              "in": "path",
+              "value": "$inputs.accountId"
+            },
+            {
+              "name": "messageId",
+              "in": "path",
+              "value": "$steps.send-message-for-tracking.outputs.messageId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "messageDetails": "$response.body",
+            "messageStatus": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "messageId": "$steps.send-message-for-tracking.outputs.messageId",
+        "messageDetails": "$steps.check-message-status.outputs.messageDetails",
+        "messageStatus": "$steps.check-message-status.outputs.messageStatus"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-and-use-a-message-template",
+      "summary": "Defines a new reusable SMS template and then uses it to send a message to a contact.",
+      "description": "Defines a new reusable SMS template and then uses it to send a message to a contact.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string"
+          },
+          "create-new-template_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-new-template",
+          "description": "Create a new SMS message template.",
+          "operationId": "templates.create",
+          "parameters": [
+            {
+              "name": "accountId",
+              "in": "path",
+              "value": "$inputs.accountId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-new-template_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "templateId": "$response.body"
+          }
+        },
+        {
+          "stepId": "send-message-with-new-template",
+          "description": "Send an SMS message using the newly created template.",
+          "operationId": "messages.send",
+          "parameters": [
+            {
+              "name": "accountId",
+              "in": "path",
+              "value": "$inputs.accountId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "templateId": "$steps.create-new-template.outputs.templateId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "messageId": "$response.body",
+            "messageStatus": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "templateId": "$steps.create-new-template.outputs.templateId",
+        "messageId": "$steps.send-message-with-new-template.outputs.messageId",
+        "messageStatus": "$steps.send-message-with-new-template.outputs.messageStatus"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "review-and-close-a-conversation",
+      "summary": "Fetches conversations, retrieves messages for a specific conversation, and then marks the conversation as closed.",
+      "description": "Fetches conversations, retrieves messages for a specific conversation, and then marks the conversation as closed.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "contactId": {
+            "type": "string"
+          },
+          "conversationId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-target-conversation",
+          "description": "Fetch a list of conversations (potentially filtering if supported/needed).",
+          "operationId": "conversations.fetchAll",
+          "parameters": [
+            {
+              "name": "accountId",
+              "in": "path",
+              "value": "$inputs.accountId"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "conversationId": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-conversation-messages",
+          "description": "Retrieve all messages associated with the selected conversation.",
+          "operationId": "messages.fetchAll",
+          "parameters": [
+            {
+              "name": "accountId",
+              "in": "path",
+              "value": "$inputs.accountId"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "contactId",
+              "in": "query",
+              "value": "$inputs.contactId"
+            },
+            {
+              "name": "conversationId",
+              "in": "query",
+              "value": "$inputs.conversationId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "messagesList": "$response.body"
+          }
+        },
+        {
+          "stepId": "close-the-conversation",
+          "description": "Mark the specified conversation as closed.",
+          "operationId": "conversations.close",
+          "parameters": [
+            {
+              "name": "accountId",
+              "in": "path",
+              "value": "$inputs.accountId"
+            },
+            {
+              "name": "conversationId",
+              "in": "path",
+              "value": "$steps.find-target-conversation.outputs.conversationId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updatedConversationDetails": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "conversationId": "$steps.find-target-conversation.outputs.conversationId",
+        "messagesList": "$steps.get-conversation-messages.outputs.messagesList",
+        "updatedConversationDetails": "$steps.close-the-conversation.outputs.updatedConversationDetails"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

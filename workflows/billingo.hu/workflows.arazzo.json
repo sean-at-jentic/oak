@@ -1,0 +1,981 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/billingo.hu/main/3.0.7/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "onboard-new-client-and-send-first-invoice",
+      "summary": "Creates a new client (partner) record, then creates and emails their first invoice using a default document block.",
+      "description": "Creates a new client (partner) record, then creates and emails their first invoice using a default document block.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-new-partner_body": {
+            "type": "object"
+          },
+          "page": {
+            "type": "string"
+          },
+          "per_page": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-new-partner",
+          "description": "Create a new partner record with their details.",
+          "operationId": "CreatePartner",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-new-partner_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "partner_id": "$response.body",
+            "partner_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "find-document-block",
+          "description": "Retrieve the list of available document blocks (invoice pads) to select one for the invoice.",
+          "operationId": "ListDocumentBlock",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "per_page",
+              "in": "query",
+              "value": "$inputs.per_page"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "document_block_list": "$response.body",
+            "first_block_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-first-invoice",
+          "description": "Create a new invoice document for the newly created partner, using a selected document block and specifying invoice items.",
+          "operationId": "CreateDocument",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "partner_id": "$steps.create-new-partner.outputs.partner_id",
+              "block_id": "$steps.find-document-block.outputs.first_block_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "document_id": "$response.body",
+            "invoice_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "send-invoice-email",
+          "description": "Email the created invoice to the partner's email address (or specified addresses).",
+          "operationId": "SendDocument",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "document_id": "$steps.create-first-invoice.outputs.document_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sent_emails_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "partner_id": "$steps.create-new-partner.outputs.partner_id",
+        "partner_details": "$steps.create-new-partner.outputs.partner_details",
+        "document_block_list": "$steps.find-document-block.outputs.document_block_list",
+        "first_block_id": "$steps.find-document-block.outputs.first_block_id",
+        "document_id": "$steps.create-first-invoice.outputs.document_id",
+        "invoice_details": "$steps.create-first-invoice.outputs.invoice_details",
+        "sent_emails_list": "$steps.send-invoice-email.outputs.sent_emails_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-proforma-convert-to-invoice-mark-as-paid",
+      "summary": "Issues a proforma invoice, converts it to a final invoice after client approval/payment, and then updates the final invoice's payment status.",
+      "description": "Issues a proforma invoice, converts it to a final invoice after client approval/payment, and then updates the final invoice's payment status.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-proforma-invoice_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-proforma-invoice",
+          "description": "Create a new proforma invoice document for a partner.",
+          "operationId": "CreateDocument",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-proforma-invoice_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "proforma_document_id": "$response.body",
+            "proforma_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "convert-proforma-to-invoice",
+          "description": "Convert the existing proforma invoice into a final, official invoice.",
+          "operationId": "CreateDocumentFromProforma",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "final_document_id": "$response.body",
+            "final_invoice_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "mark-invoice-paid",
+          "description": "Update the payment history of the final invoice to mark it as fully paid.",
+          "operationId": "UpdatePayment",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "final_document_id": "$steps.convert-proforma-to-invoice.outputs.final_document_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_payment_history": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "proforma_document_id": "$steps.create-proforma-invoice.outputs.proforma_document_id",
+        "proforma_details": "$steps.create-proforma-invoice.outputs.proforma_details",
+        "final_document_id": "$steps.convert-proforma-to-invoice.outputs.final_document_id",
+        "final_invoice_details": "$steps.convert-proforma-to-invoice.outputs.final_invoice_details",
+        "updated_payment_history": "$steps.mark-invoice-paid.outputs.updated_payment_history"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "issue-invoice-and-track-payment",
+      "summary": "Creates a standard invoice and later updates its payment status when payment is received.",
+      "description": "Creates a standard invoice and later updates its payment status when payment is received.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-standard-invoice_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-standard-invoice",
+          "description": "Create a new standard invoice document.",
+          "operationId": "CreateDocument",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-standard-invoice_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "invoice_document_id": "$response.body",
+            "invoice_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "record-invoice-payment",
+          "description": "Record a payment received against the invoice by updating its payment history.",
+          "operationId": "UpdatePayment",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "invoice_document_id": "$steps.create-standard-invoice.outputs.invoice_document_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_payment_history": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-invoice-payment-status",
+          "description": "Retrieve the invoice details again to verify the updated payment status.",
+          "operationId": "GetDocument",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "invoice_details_with_payment_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "invoice_document_id": "$steps.create-standard-invoice.outputs.invoice_document_id",
+        "invoice_details": "$steps.create-standard-invoice.outputs.invoice_details",
+        "updated_payment_history": "$steps.record-invoice-payment.outputs.updated_payment_history",
+        "invoice_details_with_payment_status": "$steps.check-invoice-payment-status.outputs.invoice_details_with_payment_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "check-invoice-compliance-status-online-szmla",
+      "summary": "Creates an invoice and then checks its submission status with the Hungarian Tax Authority (NAV Online Számla system). Essential for Hungarian compliance.",
+      "description": "Creates an invoice and then checks its submission status with the Hungarian Tax Authority (NAV Online Számla system). Essential for Hungarian compliance.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-nav-reportable-invoice_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-nav-reportable-invoice",
+          "description": "Create a new invoice document that needs to be reported.",
+          "operationId": "CreateDocument",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-nav-reportable-invoice_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "invoice_document_id": "$response.body",
+            "invoice_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-nav-submission-status",
+          "description": "Retrieve the Online Számla status for the created invoice to check if it was successfully reported to NAV.",
+          "operationId": "GetOnlineSzamlaStatus",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "online_szamla_status": "$response.body",
+            "transaction_id": "$response.body",
+            "messages": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "invoice_document_id": "$steps.create-nav-reportable-invoice.outputs.invoice_document_id",
+        "invoice_details": "$steps.create-nav-reportable-invoice.outputs.invoice_details",
+        "online_szamla_status": "$steps.get-nav-submission-status.outputs.online_szamla_status",
+        "transaction_id": "$steps.get-nav-submission-status.outputs.transaction_id",
+        "messages": "$steps.get-nav-submission-status.outputs.messages"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "generate-and-share-invoice-pdf",
+      "summary": "Creates an invoice and then retrieves a downloadable PDF or a public URL for sharing.",
+      "description": "Creates an invoice and then retrieves a downloadable PDF or a public URL for sharing.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-invoice-for-pdf_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-invoice-for-pdf",
+          "description": "Create a new invoice document.",
+          "operationId": "CreateDocument",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-invoice-for-pdf_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "document_id": "$response.body",
+            "invoice_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-invoice-public-link",
+          "description": "Retrieve a publicly accessible URL to download the invoice PDF.",
+          "operationId": "GetPublicUrl",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "public_url": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "document_id": "$steps.create-invoice-for-pdf.outputs.document_id",
+        "invoice_details": "$steps.create-invoice-for-pdf.outputs.invoice_details",
+        "public_url": "$steps.get-invoice-public-link.outputs.public_url"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "cancel-incorrect-invoice",
+      "summary": "Finds an existing invoice and cancels it, generating a cancellation document.",
+      "description": "Finds an existing invoice and cancels it, generating a cancellation document.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "string"
+          },
+          "per_page": {
+            "type": "string"
+          },
+          "block_id": {
+            "type": "string"
+          },
+          "partner_id": {
+            "type": "string"
+          },
+          "payment_method": {
+            "type": "string"
+          },
+          "payment_status": {
+            "type": "string"
+          },
+          "start_date": {
+            "type": "string"
+          },
+          "end_date": {
+            "type": "string"
+          },
+          "start_number": {
+            "type": "string"
+          },
+          "end_number": {
+            "type": "string"
+          },
+          "start_year": {
+            "type": "string"
+          },
+          "end_year": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-invoice-to-cancel",
+          "description": "Search for the specific invoice to be cancelled using filters like partner_id, invoice number range, or date.",
+          "operationId": "ListDocument",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "per_page",
+              "in": "query",
+              "value": "$inputs.per_page"
+            },
+            {
+              "name": "block_id",
+              "in": "query",
+              "value": "$inputs.block_id"
+            },
+            {
+              "name": "partner_id",
+              "in": "query",
+              "value": "$inputs.partner_id"
+            },
+            {
+              "name": "payment_method",
+              "in": "query",
+              "value": "$inputs.payment_method"
+            },
+            {
+              "name": "payment_status",
+              "in": "query",
+              "value": "$inputs.payment_status"
+            },
+            {
+              "name": "start_date",
+              "in": "query",
+              "value": "$inputs.start_date"
+            },
+            {
+              "name": "end_date",
+              "in": "query",
+              "value": "$inputs.end_date"
+            },
+            {
+              "name": "start_number",
+              "in": "query",
+              "value": "$inputs.start_number"
+            },
+            {
+              "name": "end_number",
+              "in": "query",
+              "value": "$inputs.end_number"
+            },
+            {
+              "name": "start_year",
+              "in": "query",
+              "value": "$inputs.start_year"
+            },
+            {
+              "name": "end_year",
+              "in": "query",
+              "value": "$inputs.end_year"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "document_list": "$response.body",
+            "target_document_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "cancel-the-invoice",
+          "description": "Cancel the specified invoice. This typically generates a cancellation document linked to the original.",
+          "operationId": "CancelDocument",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "cancellation_document_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "document_list": "$steps.find-invoice-to-cancel.outputs.document_list",
+        "target_document_id": "$steps.find-invoice-to-cancel.outputs.target_document_id",
+        "cancellation_document_details": "$steps.cancel-the-invoice.outputs.cancellation_document_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "add-new-product-and-use-in-invoice",
+      "summary": "Adds a new product to the catalog and then immediately uses it when creating a new invoice for a partner.",
+      "description": "Adds a new product to the catalog and then immediately uses it when creating a new invoice for a partner.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-new-product_body": {
+            "type": "object"
+          },
+          "create-invoice-with-new-product_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-new-product",
+          "description": "Define and save a new product or service.",
+          "operationId": "CreateProduct",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-new-product_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "product_id": "$response.body",
+            "product_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-invoice-with-new-product",
+          "description": "Create an invoice including the newly added product in its items list.",
+          "operationId": "CreateDocument",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-invoice-with-new-product_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "document_id": "$response.body",
+            "invoice_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "product_id": "$steps.create-new-product.outputs.product_id",
+        "product_details": "$steps.create-new-product.outputs.product_details",
+        "document_id": "$steps.create-invoice-with-new-product.outputs.document_id",
+        "invoice_details": "$steps.create-invoice-with-new-product.outputs.invoice_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-partners-unpaid-invoices",
+      "summary": "Finds a specific partner and lists all their documents with an 'outstanding' or 'partially_paid' payment status.",
+      "description": "Finds a specific partner and lists all their documents with an 'outstanding' or 'partially_paid' payment status.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "string"
+          },
+          "per_page": {
+            "type": "string"
+          },
+          "block_id": {
+            "type": "string"
+          },
+          "partner_id": {
+            "type": "string"
+          },
+          "payment_method": {
+            "type": "string"
+          },
+          "payment_status": {
+            "type": "string"
+          },
+          "start_date": {
+            "type": "string"
+          },
+          "end_date": {
+            "type": "string"
+          },
+          "start_number": {
+            "type": "string"
+          },
+          "end_number": {
+            "type": "string"
+          },
+          "start_year": {
+            "type": "string"
+          },
+          "end_year": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-partner",
+          "description": "Search for the partner by listing partners (potentially filtering if API supported it, otherwise client-side filtering or getting by ID if known). For this example, assume we get the ID.",
+          "operationId": "ListPartner",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "per_page",
+              "in": "query",
+              "value": "$inputs.per_page"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "partner_list": "$response.body",
+            "target_partner_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-unpaid-documents-for-partner",
+          "description": "List documents filtered by the partner's ID and payment status (outstanding or partially_paid).",
+          "operationId": "ListDocument",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "per_page",
+              "in": "query",
+              "value": "$inputs.per_page"
+            },
+            {
+              "name": "block_id",
+              "in": "query",
+              "value": "$inputs.block_id"
+            },
+            {
+              "name": "partner_id",
+              "in": "query",
+              "value": "$steps.find-partner.outputs.target_partner_id"
+            },
+            {
+              "name": "payment_method",
+              "in": "query",
+              "value": "$inputs.payment_method"
+            },
+            {
+              "name": "payment_status",
+              "in": "query",
+              "value": "$inputs.payment_status"
+            },
+            {
+              "name": "start_date",
+              "in": "query",
+              "value": "$inputs.start_date"
+            },
+            {
+              "name": "end_date",
+              "in": "query",
+              "value": "$inputs.end_date"
+            },
+            {
+              "name": "start_number",
+              "in": "query",
+              "value": "$inputs.start_number"
+            },
+            {
+              "name": "end_number",
+              "in": "query",
+              "value": "$inputs.end_number"
+            },
+            {
+              "name": "start_year",
+              "in": "query",
+              "value": "$inputs.start_year"
+            },
+            {
+              "name": "end_year",
+              "in": "query",
+              "value": "$inputs.end_year"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "unpaid_document_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "partner_list": "$steps.find-partner.outputs.partner_list",
+        "target_partner_id": "$steps.find-partner.outputs.target_partner_id",
+        "unpaid_document_list": "$steps.list-unpaid-documents-for-partner.outputs.unpaid_document_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

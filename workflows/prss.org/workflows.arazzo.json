@@ -1,0 +1,1120 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/prss.org/main/2.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "upload-content-and-create-episode-structure",
+      "summary": "For Producers: Upload audio segment content to CD Drive, find the relevant program and episode, then create a new segment record linking the uploaded audio.",
+      "description": "For Producers: Upload audio segment content to CD Drive, find the relevant program and episode, then create a new segment record linking the uploaded audio.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Content-MD5": {
+            "type": "string"
+          },
+          "upload-audio-segment_body": {
+            "type": "object"
+          },
+          "keywords": {
+            "type": "string"
+          },
+          "pageStart": {
+            "type": "string"
+          },
+          "pageSize": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "beginAirDateAfter": {
+            "type": "string"
+          },
+          "endAirDateBefore": {
+            "type": "string"
+          },
+          "programId": {
+            "type": "string"
+          },
+          "orderById": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "upload-audio-segment",
+          "description": "Upload the audio file for a program segment to ContentDepot Drive.",
+          "operationPath": "openapi_source#/paths/~1api~1v2~1cddrive~1files~1content/post",
+          "parameters": [
+            {
+              "name": "Content-MD5",
+              "in": "header",
+              "value": "$inputs.Content-MD5"
+            }
+          ],
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": "$inputs.upload-audio-segment_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "fileId": "$response.body",
+            "fileName": "$response.body",
+            "cdDriveUri": "$response.body"
+          }
+        },
+        {
+          "stepId": "find-program",
+          "description": "Search for the program to which the episode belongs.",
+          "operationPath": "openapi_source#/paths/~1api~1v2~1programs~1search/get",
+          "parameters": [
+            {
+              "name": "keywords",
+              "in": "query",
+              "value": "$inputs.keywords"
+            },
+            {
+              "name": "pageStart",
+              "in": "query",
+              "value": "$inputs.pageStart"
+            },
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "programId": "$response.body"
+          }
+        },
+        {
+          "stepId": "find-episode",
+          "description": "Find the specific episode within the program based on air date or other criteria.",
+          "operationPath": "openapi_source#/paths/~1api~1v2~1episodes/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "query",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "beginAirDateAfter",
+              "in": "query",
+              "value": "$inputs.beginAirDateAfter"
+            },
+            {
+              "name": "endAirDateBefore",
+              "in": "query",
+              "value": "$inputs.endAirDateBefore"
+            },
+            {
+              "name": "programId",
+              "in": "query",
+              "value": "$steps.find-program.outputs.programId"
+            },
+            {
+              "name": "pageStart",
+              "in": "query",
+              "value": "$inputs.pageStart"
+            },
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            },
+            {
+              "name": "orderById",
+              "in": "query",
+              "value": "$inputs.orderById"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "episodeId": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-segment",
+          "description": "Create a segment record for the episode, linking the previously uploaded audio file via its CD Drive URI.",
+          "operationPath": "openapi_source#/paths/~1api~1v2~1segments/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "episodeId": "$steps.find-episode.outputs.episodeId",
+              "cdDriveUri": "$steps.upload-audio-segment.outputs.cdDriveUri"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "segmentId": "$response.body",
+            "segmentDetails": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "fileId": "$steps.upload-audio-segment.outputs.fileId",
+        "fileName": "$steps.upload-audio-segment.outputs.fileName",
+        "cdDriveUri": "$steps.upload-audio-segment.outputs.cdDriveUri",
+        "programId": "$steps.find-program.outputs.programId",
+        "episodeId": "$steps.find-episode.outputs.episodeId",
+        "segmentId": "$steps.create-segment.outputs.segmentId",
+        "segmentDetails": "$steps.create-segment.outputs.segmentDetails"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "add-detailed-piece-metadata-to-episode-segment",
+      "summary": "For Producers: After creating an episode segment, add detailed piece metadata (like story/song info) and optionally link a piece-specific image.",
+      "description": "For Producers: After creating an episode segment, add detailed piece metadata (like story/song info) and optionally link a piece-specific image.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "episodeId": {
+            "type": "string"
+          },
+          "segmentNumber": {
+            "type": "string"
+          },
+          "pageStart": {
+            "type": "string"
+          },
+          "pageSize": {
+            "type": "string"
+          },
+          "orderById": {
+            "type": "string"
+          },
+          "Content-MD5": {
+            "type": "string"
+          },
+          "upload-piece-image_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-episode-details",
+          "description": "Retrieve details for a specific episode.",
+          "operationPath": "openapi_source#/paths/~1api~1v2~1episodes~1{id}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "episodeId": "$response.body",
+            "episodeDetails": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-segment-details",
+          "description": "Retrieve segment details for the episode to identify the correct segment number.",
+          "operationPath": "openapi_source#/paths/~1api~1v2~1segments/get",
+          "parameters": [
+            {
+              "name": "episodeId",
+              "in": "query",
+              "value": "$steps.get-episode-details.outputs.episodeId"
+            },
+            {
+              "name": "segmentNumber",
+              "in": "query",
+              "value": "$inputs.segmentNumber"
+            },
+            {
+              "name": "pageStart",
+              "in": "query",
+              "value": "$inputs.pageStart"
+            },
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            },
+            {
+              "name": "orderById",
+              "in": "query",
+              "value": "$inputs.orderById"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "segmentNumber": "$response.body",
+            "segmentId": "$response.body"
+          }
+        },
+        {
+          "stepId": "upload-piece-image",
+          "description": "(Optional) Upload an image file associated with the piece to ContentDepot Drive.",
+          "operationPath": "openapi_source#/paths/~1api~1v2~1cddrive~1files~1content/post",
+          "parameters": [
+            {
+              "name": "Content-MD5",
+              "in": "header",
+              "value": "$inputs.Content-MD5"
+            }
+          ],
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": "$inputs.upload-piece-image_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "imageFileId": "$response.body",
+            "imageCdDriveUri": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-piece",
+          "description": "Create a piece record with detailed metadata, linking it to the episode and segment, and optionally including the uploaded image URI.",
+          "operationPath": "openapi_source#/paths/~1api~1v2~1pieces/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "episodeId": "$steps.get-episode-details.outputs.episodeId",
+              "segmentNumber": "$steps.get-segment-details.outputs.segmentNumber"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pieceId": "$response.body",
+            "pieceDetails": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "episodeId": "$steps.get-episode-details.outputs.episodeId",
+        "episodeDetails": "$steps.get-episode-details.outputs.episodeDetails",
+        "segmentNumber": "$steps.get-segment-details.outputs.segmentNumber",
+        "segmentId": "$steps.get-segment-details.outputs.segmentId",
+        "imageFileId": "$steps.upload-piece-image.outputs.imageFileId",
+        "imageCdDriveUri": "$steps.upload-piece-image.outputs.imageCdDriveUri",
+        "pieceId": "$steps.create-piece.outputs.pieceId",
+        "pieceDetails": "$steps.create-piece.outputs.pieceDetails"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-radio-dns-epg-data",
+      "summary": "For Stations/Middleware: Fetch the necessary RadioDNS documents (SI, GI, PI) to construct and display an Electronic Program Guide.",
+      "description": "For Stations/Middleware: Fetch the necessary RadioDNS documents (SI, GI, PI) to construct and display an Electronic Program Guide.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "fqdn": {
+            "type": "string"
+          },
+          "sid": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          },
+          "x-radiodnsspi-api-key": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-service-info",
+          "description": "Retrieve the Service Information (SI) document to identify available services, FQDN, and links.",
+          "operationPath": "openapi_source#/paths/~1radiodns~1spi~13.1~1SI.xml/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "siDocumentXml": "$response.body",
+            "fqdn": "$response.body",
+            "serviceIds": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-group-info",
+          "description": "Retrieve the Group Information (GI) document for metadata about program groups (shows).",
+          "operationPath": "openapi_source#/paths/~1radiodns~1spi~13.1~1GI.xml/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "giDocumentXml": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-program-info",
+          "description": "Retrieve the Program Information (PI) document for a specific service (e.g., 'streams' or 'files') and date, containing the EPG schedule.",
+          "operationPath": "openapi_source#/paths/~1radiodns~1spi~13.1~1id~1{fqdn}~1{sid}~1{date}_PI.xml/get",
+          "parameters": [
+            {
+              "name": "fqdn",
+              "in": "path",
+              "value": "$steps.get-service-info.outputs.fqdn"
+            },
+            {
+              "name": "sid",
+              "in": "path",
+              "value": "$steps.get-service-info.outputs.siDocumentXml"
+            },
+            {
+              "name": "date",
+              "in": "path",
+              "value": "$inputs.date"
+            },
+            {
+              "name": "x-radiodnsspi-api-key",
+              "in": "header",
+              "value": "$inputs.x-radiodnsspi-api-key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "piDocumentXml": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "siDocumentXml": "$steps.get-service-info.outputs.siDocumentXml",
+        "fqdn": "$steps.get-service-info.outputs.fqdn",
+        "serviceIds": "$steps.get-service-info.outputs.serviceIds",
+        "giDocumentXml": "$steps.get-group-info.outputs.giDocumentXml",
+        "piDocumentXml": "$steps.get-program-info.outputs.piDocumentXml"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "upload-and-schedule-spot-insertions",
+      "summary": "For Stations/Traffic Managers: Upload spot audio, create a spot record, find the target program and broadcast service, and schedule the spot insertion.",
+      "description": "For Stations/Traffic Managers: Upload spot audio, create a spot record, find the target program and broadcast service, and schedule the spot insertion.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Content-MD5": {
+            "type": "string"
+          },
+          "upload-spot-audio_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "upload-spot-audio",
+          "description": "Upload the spot audio file to ContentDepot Drive.",
+          "operationPath": "openapi_source#/paths/~1api~1v2~1cddrive~1files~1content/post",
+          "parameters": [
+            {
+              "name": "Content-MD5",
+              "in": "header",
+              "value": "$inputs.Content-MD5"
+            }
+          ],
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": "$inputs.upload-spot-audio_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "spotFileId": "$response.body",
+            "spotCdDriveUri": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-spot",
+          "description": "Create a spot record, linking the uploaded audio via its CD Drive URI.",
+          "operationPath": "openapi_source#/paths/~1api~1v2~1spots/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "cdDriveUri": "$steps.upload-spot-audio.outputs.spotCdDriveUri"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "spotId": "$response.body"
+          }
+        },
+        {
+          "stepId": "find-target-program",
+          "description": "Get the ID of the program where the spot will be inserted.",
+          "operationPath": "openapi_source#/paths/~1api~1v2~1programs~1{id}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "programId": "$response.body"
+          }
+        },
+        {
+          "stepId": "find-broadcast-service",
+          "description": "Get the ID of the broadcast service for the spot insertion.",
+          "operationPath": "openapi_source#/paths/~1api~1v2~1broadcastservices~1{id}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "broadcastServiceId": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-spot-insertion",
+          "description": "Create the spot insertion rule, specifying the program, service, cue, duration, spot(s), and date range.",
+          "operationPath": "openapi_source#/paths/~1api~1v2~1spotinsertions/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "programId": "$steps.find-target-program.outputs.programId",
+              "broadcastServiceId": "$steps.find-broadcast-service.outputs.broadcastServiceId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "spotInsertionId": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "spotFileId": "$steps.upload-spot-audio.outputs.spotFileId",
+        "spotCdDriveUri": "$steps.upload-spot-audio.outputs.spotCdDriveUri",
+        "spotId": "$steps.create-spot.outputs.spotId",
+        "programId": "$steps.find-target-program.outputs.programId",
+        "broadcastServiceId": "$steps.find-broadcast-service.outputs.broadcastServiceId",
+        "spotInsertionId": "$steps.create-spot-insertion.outputs.spotInsertionId"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "discover-and-retrieve-program-content-details",
+      "summary": "For Users/Stations: Search for a program, find its episodes, list the segments within an episode, and retrieve detailed piece metadata.",
+      "description": "For Users/Stations: Search for a program, find its episodes, list the segments within an episode, and retrieve detailed piece metadata.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "keywords": {
+            "type": "string"
+          },
+          "pageStart": {
+            "type": "string"
+          },
+          "pageSize": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "beginAirDateAfter": {
+            "type": "string"
+          },
+          "endAirDateBefore": {
+            "type": "string"
+          },
+          "programId": {
+            "type": "string"
+          },
+          "orderById": {
+            "type": "string"
+          },
+          "episodeId": {
+            "type": "string"
+          },
+          "segmentNumber": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-programs",
+          "description": "Search for programs based on keywords.",
+          "operationPath": "openapi_source#/paths/~1api~1v2~1programs~1search/get",
+          "parameters": [
+            {
+              "name": "keywords",
+              "in": "query",
+              "value": "$inputs.keywords"
+            },
+            {
+              "name": "pageStart",
+              "in": "query",
+              "value": "$inputs.pageStart"
+            },
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "programList": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-program-episodes",
+          "description": "Retrieve episodes for a specific program ID.",
+          "operationPath": "openapi_source#/paths/~1api~1v2~1episodes/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "query",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "beginAirDateAfter",
+              "in": "query",
+              "value": "$inputs.beginAirDateAfter"
+            },
+            {
+              "name": "endAirDateBefore",
+              "in": "query",
+              "value": "$inputs.endAirDateBefore"
+            },
+            {
+              "name": "programId",
+              "in": "query",
+              "value": "$steps.search-programs.outputs.programList.id"
+            },
+            {
+              "name": "pageStart",
+              "in": "query",
+              "value": "$inputs.pageStart"
+            },
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            },
+            {
+              "name": "orderById",
+              "in": "query",
+              "value": "$inputs.orderById"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "episodeList": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-episode-segments",
+          "description": "Retrieve the segments associated with a specific episode ID.",
+          "operationPath": "openapi_source#/paths/~1api~1v2~1segments/get",
+          "parameters": [
+            {
+              "name": "episodeId",
+              "in": "query",
+              "value": "$steps.get-program-episodes.outputs.episodeList.id"
+            },
+            {
+              "name": "segmentNumber",
+              "in": "query",
+              "value": "$inputs.segmentNumber"
+            },
+            {
+              "name": "pageStart",
+              "in": "query",
+              "value": "$inputs.pageStart"
+            },
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            },
+            {
+              "name": "orderById",
+              "in": "query",
+              "value": "$inputs.orderById"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "segmentList": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-episode-pieces",
+          "description": "Retrieve the detailed pieces (story/song metadata) for a specific episode ID.",
+          "operationPath": "openapi_source#/paths/~1api~1v2~1pieces/get",
+          "parameters": [
+            {
+              "name": "episodeId",
+              "in": "query",
+              "value": "$steps.get-program-episodes.outputs.episodeList.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pieceList": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "programList": "$steps.search-programs.outputs.programList",
+        "episodeList": "$steps.get-program-episodes.outputs.episodeList",
+        "segmentList": "$steps.get-episode-segments.outputs.segmentList",
+        "pieceList": "$steps.get-episode-pieces.outputs.pieceList"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "batch-update-epg-metadata-from-cd-drive-file",
+      "summary": "For Producers: Upload a metadata file (e.g., RadioDNS format) to CD Drive and initiate a batch job to update EPG information, then monitor the job status.",
+      "description": "For Producers: Upload a metadata file (e.g., RadioDNS format) to CD Drive and initiate a batch job to update EPG information, then monitor the job status.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Content-MD5": {
+            "type": "string"
+          },
+          "upload-metadata-file_body": {
+            "type": "object"
+          },
+          "batch-id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "upload-metadata-file",
+          "description": "Upload the metadata file (e.g., RadioDNS XML) containing EPG updates to CD Drive.",
+          "operationPath": "openapi_source#/paths/~1api~1v2~1cddrive~1files~1content/post",
+          "parameters": [
+            {
+              "name": "Content-MD5",
+              "in": "header",
+              "value": "$inputs.Content-MD5"
+            }
+          ],
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": "$inputs.upload-metadata-file_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "metadataFileId": "$response.body",
+            "metadataCdDriveUri": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-metadata-batch",
+          "description": "Create a batch job to process the uploaded metadata file.",
+          "operationPath": "openapi_source#/paths/~1api~1v2~1metapub~1program-information~1batch/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "uri": "$steps.upload-metadata-file.outputs.metadataCdDriveUri"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "batchId": "$response.body"
+          }
+        },
+        {
+          "stepId": "monitor-batch-status",
+          "description": "Periodically check the status of the batch processing job until completion or failure.",
+          "operationPath": "openapi_source#/paths/~1api~1v2~1metapub~1program-information~1batch~1{batch-id}/get",
+          "parameters": [
+            {
+              "name": "batch-id",
+              "in": "path",
+              "value": "$inputs.batch-id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "batchStatus": "$response.body",
+            "batchMessage": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "metadataFileId": "$steps.upload-metadata-file.outputs.metadataFileId",
+        "metadataCdDriveUri": "$steps.upload-metadata-file.outputs.metadataCdDriveUri",
+        "batchId": "$steps.create-metadata-batch.outputs.batchId",
+        "batchStatus": "$steps.monitor-batch-status.outputs.batchStatus",
+        "batchMessage": "$steps.monitor-batch-status.outputs.batchMessage"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "organize-and-upload-content-to-cd-drive",
+      "summary": "Utility workflow to create a folder structure in CD Drive and upload files into it.",
+      "description": "Utility workflow to create a folder structure in CD Drive and upload files into it.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-cd-drive-folder_body": {
+            "type": "object"
+          },
+          "Content-MD5": {
+            "type": "string"
+          },
+          "folder-id": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-cd-drive-folder",
+          "description": "Create a new folder in CD Drive.",
+          "operationPath": "openapi_source#/paths/~1api~1v2~1cddrive~1folders/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": "$inputs.create-cd-drive-folder_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "folderId": "$response.body"
+          }
+        },
+        {
+          "stepId": "upload-file-to-folder",
+          "description": "Upload a file into the newly created folder.",
+          "operationPath": "openapi_source#/paths/~1api~1v2~1cddrive~1files~1content/post",
+          "parameters": [
+            {
+              "name": "Content-MD5",
+              "in": "header",
+              "value": "$inputs.Content-MD5"
+            }
+          ],
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "parent-id": "$steps.create-cd-drive-folder.outputs.folderId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "fileId": "$response.body",
+            "cdDriveUri": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-folder-contents",
+          "description": "List the items (files/folders) within the created folder.",
+          "operationPath": "openapi_source#/paths/~1api~1v2~1cddrive~1folders~1{folder-id}~1items/get",
+          "parameters": [
+            {
+              "name": "folder-id",
+              "in": "path",
+              "value": "$steps.create-cd-drive-folder.outputs.folderId"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "itemsList": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "folderId": "$steps.create-cd-drive-folder.outputs.folderId",
+        "fileId": "$steps.upload-file-to-folder.outputs.fileId",
+        "cdDriveUri": "$steps.upload-file-to-folder.outputs.cdDriveUri",
+        "itemsList": "$steps.list-folder-contents.outputs.itemsList"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

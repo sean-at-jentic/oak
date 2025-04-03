@@ -1,0 +1,357 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/tyk.com/main/1.9/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "onboard-new-api-and-apply-changes",
+      "summary": "Creates a new API definition on the Tyk gateway and then reloads the gateway cluster to apply the changes, making the new API live.",
+      "description": "Creates a new API definition on the Tyk gateway and then reloads the gateway cluster to apply the changes, making the new API live.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "x-tyk-authorization": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-api-definition",
+          "description": "Create a new API Definition object on the gateway.",
+          "operationPath": "openapi_source#/paths/~1tyk~1apis~1/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body",
+            "apiID": "$response.body"
+          }
+        },
+        {
+          "stepId": "reload-gateway-cluster",
+          "description": "Reloads the gateway cluster configuration to activate the newly created API definition.",
+          "operationPath": "openapi_source#/paths/~1tyk~1reload~1group/get",
+          "parameters": [
+            {
+              "name": "x-tyk-authorization",
+              "in": "header",
+              "value": "$inputs.x-tyk-authorization"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body",
+            "error": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "status": "$steps.reload-gateway-cluster.outputs.status",
+        "apiID": "$steps.create-api-definition.outputs.apiID",
+        "error": "$steps.reload-gateway-cluster.outputs.error"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "update-api-configuration-and-apply-changes",
+      "summary": "Retrieves an existing API definition, allows for modification, updates the definition on the gateway, and then reloads the gateway cluster to apply the configuration changes.",
+      "description": "Retrieves an existing API definition, allows for modification, updates the definition on the gateway, and then reloads the gateway cluster to apply the configuration changes.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "x-tyk-authorization": {
+            "type": "string"
+          },
+          "apiID": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-api-definition",
+          "description": "Retrieve the current definition for a specific API.",
+          "operationPath": "openapi_source#/paths/~1tyk~1apis~1{apiID}/get",
+          "parameters": [
+            {
+              "name": "x-tyk-authorization",
+              "in": "header",
+              "value": "$inputs.x-tyk-authorization"
+            },
+            {
+              "name": "apiID",
+              "in": "path",
+              "value": "$inputs.apiID"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "APIDefinition": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-api-definition",
+          "description": "Update the API Definition object on the gateway with modified settings.",
+          "operationPath": "openapi_source#/paths/~1tyk~1apis~1{apiID}/put",
+          "parameters": [
+            {
+              "name": "x-tyk-authorization",
+              "in": "header",
+              "value": "$inputs.x-tyk-authorization"
+            },
+            {
+              "name": "apiID",
+              "in": "path",
+              "value": "$steps.get-api-definition.outputs.APIDefinition.api_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "apiID": "$steps.get-api-definition.outputs.APIDefinition.api_id",
+              "APIDefinition": "$steps.get-api-definition.outputs.APIDefinition"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body",
+            "key": "$response.body"
+          }
+        },
+        {
+          "stepId": "reload-gateway-cluster",
+          "description": "Reloads the gateway cluster configuration to activate the updated API definition.",
+          "operationPath": "openapi_source#/paths/~1tyk~1reload~1group/get",
+          "parameters": [
+            {
+              "name": "x-tyk-authorization",
+              "in": "header",
+              "value": "$inputs.x-tyk-authorization"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body",
+            "error": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "APIDefinition": "$steps.get-api-definition.outputs.APIDefinition",
+        "status": "$steps.reload-gateway-cluster.outputs.status",
+        "key": "$steps.update-api-definition.outputs.key",
+        "error": "$steps.reload-gateway-cluster.outputs.error"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "cleanup-unused-oauth-client",
+      "summary": "Lists all OAuth clients associated with a specific API and then deletes a selected client.",
+      "description": "Lists all OAuth clients associated with a specific API and then deletes a selected client.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "x-tyk-authorization": {
+            "type": "string"
+          },
+          "apiId": {
+            "type": "string"
+          },
+          "clientId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-oauth-clients",
+          "description": "Retrieve a list of OAuth clients registered for a specific API.",
+          "operationPath": "openapi_source#/paths/~1tyk~1oauth~1clients~1{apiId}/get",
+          "parameters": [
+            {
+              "name": "x-tyk-authorization",
+              "in": "header",
+              "value": "$inputs.x-tyk-authorization"
+            },
+            {
+              "name": "apiId",
+              "in": "path",
+              "value": "$inputs.apiId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "OAuthClients": "$response.body"
+          }
+        },
+        {
+          "stepId": "delete-oauth-client",
+          "description": "Delete a specific OAuth client using its client ID and the associated API ID.",
+          "operationPath": "openapi_source#/paths/~1tyk~1oauth~1clients~1{apiId}~1{clientId}/delete",
+          "parameters": [
+            {
+              "name": "x-tyk-authorization",
+              "in": "header",
+              "value": "$inputs.x-tyk-authorization"
+            },
+            {
+              "name": "apiId",
+              "in": "path",
+              "value": "$inputs.apiId"
+            },
+            {
+              "name": "clientId",
+              "in": "path",
+              "value": "$steps.list-oauth-clients.outputs.OAuthClients.client_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body",
+            "key": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "OAuthClients": "$steps.list-oauth-clients.outputs.OAuthClients",
+        "status": "$steps.delete-oauth-client.outputs.status",
+        "key": "$steps.delete-oauth-client.outputs.key"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

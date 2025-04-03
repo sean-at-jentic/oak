@@ -1,0 +1,383 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/qualtrics.com/main/0.2/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "distribute-survey-and-retrieve-links",
+      "summary": "Creates a new survey distribution for a mailing list, then retrieves the unique survey links generated for each contact in that list. This requires finding the newly created distribution ID after generation.",
+      "description": "Creates a new survey distribution for a mailing list, then retrieves the unique survey links generated for each contact in that list. This requires finding the newly created distribution ID after generation.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "generate-distribution_body": {
+            "type": "object"
+          },
+          "surveyId": {
+            "type": "string"
+          },
+          "DistributionId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "generate-distribution",
+          "description": "Initiate the creation of a survey distribution for a specific mailing list.",
+          "operationId": "GenerateDistributionLinks",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.generate-distribution_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "confirmationStatus": "$response.body"
+          }
+        },
+        {
+          "stepId": "find-distribution",
+          "description": "Retrieve all distributions for the survey to find the newly created one (requires user logic to filter/select the correct ID based on time or description).",
+          "operationId": "GetDistributions",
+          "parameters": [
+            {
+              "name": "surveyId",
+              "in": "query",
+              "value": "$inputs.surveyId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "distributionsList": "$response.body"
+          }
+        },
+        {
+          "stepId": "retrieve-links",
+          "description": "Retrieve the individual survey links for the specified distribution.",
+          "operationId": "Retrievedistributionlinks",
+          "parameters": [
+            {
+              "name": "surveyId",
+              "in": "query",
+              "value": "$inputs.surveyId"
+            },
+            {
+              "name": "DistributionId",
+              "in": "path",
+              "value": "$steps.find-distribution.outputs.distributionsList.result.elements[*].id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "individualLinksList": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "confirmationStatus": "$steps.generate-distribution.outputs.confirmationStatus",
+        "distributionsList": "$steps.find-distribution.outputs.distributionsList",
+        "individualLinksList": "$steps.retrieve-links.outputs.individualLinksList"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "add-contact-and-distribute-survey",
+      "summary": "Adds a new contact to a specific mailing list and then creates a survey distribution using that list, finally retrieving the unique links. Requires finding the distribution ID after generation.",
+      "description": "Adds a new contact to a specific mailing list and then creates a survey distribution using that list, finally retrieving the unique links. Requires finding the distribution ID after generation.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "DirectoryId": {
+            "type": "string"
+          },
+          "MailingListId": {
+            "type": "string"
+          },
+          "add-contact_body": {
+            "type": "object"
+          },
+          "generate-distribution-for-contact_body": {
+            "type": "object"
+          },
+          "surveyId": {
+            "type": "string"
+          },
+          "DistributionId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-contact",
+          "description": "Create a new contact within a specified directory and mailing list.",
+          "operationId": "CreateContactInMailinglist",
+          "parameters": [
+            {
+              "name": "DirectoryId",
+              "in": "path",
+              "value": "$inputs.DirectoryId"
+            },
+            {
+              "name": "MailingListId",
+              "in": "path",
+              "value": "$inputs.MailingListId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.add-contact_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "confirmationStatus": "$response.body"
+          }
+        },
+        {
+          "stepId": "generate-distribution-for-contact",
+          "description": "Initiate the creation of a survey distribution using the mailing list the contact was added to.",
+          "operationId": "GenerateDistributionLinks",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.generate-distribution-for-contact_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "confirmationStatus": "$response.body"
+          }
+        },
+        {
+          "stepId": "find-contact-distribution",
+          "description": "Retrieve all distributions for the survey to find the one created for the new contact (requires user logic to filter/select).",
+          "operationId": "GetDistributions",
+          "parameters": [
+            {
+              "name": "surveyId",
+              "in": "query",
+              "value": "$inputs.surveyId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "distributionsList": "$response.body"
+          }
+        },
+        {
+          "stepId": "retrieve-contact-links",
+          "description": "Retrieve the individual survey links for the distribution, including the link for the newly added contact.",
+          "operationId": "Retrievedistributionlinks",
+          "parameters": [
+            {
+              "name": "surveyId",
+              "in": "query",
+              "value": "$inputs.surveyId"
+            },
+            {
+              "name": "DistributionId",
+              "in": "path",
+              "value": "$steps.find-contact-distribution.outputs.distributionsList.result.elements[*].id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "individualLinksList": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "confirmationStatus": "$steps.generate-distribution-for-contact.outputs.confirmationStatus",
+        "distributionsList": "$steps.find-contact-distribution.outputs.distributionsList",
+        "individualLinksList": "$steps.retrieve-contact-links.outputs.individualLinksList"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-response-webhook-subscription",
+      "summary": "Retrieves the details of an existing webhook subscription (assuming details like topics/URL are returned) and then removes it using those details.",
+      "description": "Retrieves the details of an existing webhook subscription (assuming details like topics/URL are returned) and then removes it using those details.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "SubscriptionId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-subscription-details",
+          "description": "Fetch the details of a specific event subscription using its ID.",
+          "operationId": "GetEventSubscriptions",
+          "parameters": [
+            {
+              "name": "SubscriptionId",
+              "in": "path",
+              "value": "$inputs.SubscriptionId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "subscriptionDetails": "$response.body"
+          }
+        },
+        {
+          "stepId": "delete-subscription",
+          "description": "Remove the event subscription using the details retrieved in the previous step. Note: This relies on GET returning necessary details (topics, publicationUrl) which are required by the DELETE body schema.",
+          "operationId": "WebhookDelete",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "confirmationStatus": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "subscriptionDetails": "$steps.get-subscription-details.outputs.subscriptionDetails",
+        "confirmationStatus": "$steps.delete-subscription.outputs.confirmationStatus"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

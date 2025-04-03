@@ -1,0 +1,1010 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/climate.com/main/4.0.11/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "upload-imagery-for-existing-field",
+      "summary": "Uploads an imagery file (e.g., NDVI GeoTIFF) and associates it with an existing field in Climate FieldView.",
+      "description": "Uploads an imagery file (e.g., NDVI GeoTIFF) and associates it with an existing field in Climate FieldView.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-Next-Token": {
+            "type": "string"
+          },
+          "X-Limit": {
+            "type": "string"
+          },
+          "fieldName": {
+            "type": "string"
+          },
+          "X-Recipient-Email": {
+            "type": "string"
+          },
+          "md5": {
+            "type": "string"
+          },
+          "length": {
+            "type": "string"
+          },
+          "Content-Range": {
+            "type": "string"
+          },
+          "uploadId": {
+            "type": "string"
+          },
+          "Content-Type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-field",
+          "description": "Retrieve a list of fields to find the target field ID. Can be filtered by name.",
+          "operationId": "fetchFields",
+          "parameters": [
+            {
+              "name": "X-Next-Token",
+              "in": "header",
+              "value": "$inputs.X-Next-Token"
+            },
+            {
+              "name": "X-Limit",
+              "in": "header",
+              "value": "$inputs.X-Limit"
+            },
+            {
+              "name": "fieldName",
+              "in": "query",
+              "value": "$inputs.fieldName"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "fieldsList": "$response.body",
+            "fieldId": "$response.body"
+          }
+        },
+        {
+          "stepId": "initiate-imagery-upload",
+          "description": "Initiate the upload process for imagery data, providing the field ID in metadata.",
+          "operationId": "postUpload",
+          "parameters": [
+            {
+              "name": "X-Recipient-Email",
+              "in": "header",
+              "value": "$inputs.X-Recipient-Email"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "md5": "$inputs.md5",
+              "length": "$inputs.length"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "uploadId": "$response.body"
+          }
+        },
+        {
+          "stepId": "upload-imagery-chunk",
+          "description": "Upload a chunk of the imagery file. Requires Content-Range header.",
+          "operationId": "chunkedUpload",
+          "parameters": [
+            {
+              "name": "Content-Range",
+              "in": "header",
+              "value": "$inputs.Content-Range"
+            },
+            {
+              "name": "uploadId",
+              "in": "path",
+              "value": "$steps.initiate-imagery-upload.outputs.uploadId"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "upload_chunk_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-imagery-upload-status",
+          "description": "Check the processing status of the uploaded imagery.",
+          "operationId": "fetchUploadStatusById",
+          "parameters": [
+            {
+              "name": "uploadId",
+              "in": "path",
+              "value": "$steps.initiate-imagery-upload.outputs.uploadId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "uploadStatus": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "fieldsList": "$steps.find-field.outputs.fieldsList",
+        "fieldId": "$steps.find-field.outputs.fieldId",
+        "uploadId": "$steps.initiate-imagery-upload.outputs.uploadId",
+        "upload_chunk_status": "$steps.upload-imagery-chunk.outputs.upload_chunk_status",
+        "uploadStatus": "$steps.check-imagery-upload-status.outputs.uploadStatus"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "upload-agronomic-machine-data",
+      "summary": "Uploads machine-generated data (e.g., as-planted, as-applied, as-harvested) to Climate FieldView, associating it with a resource owner if necessary, and monitors the upload status.",
+      "description": "Uploads machine-generated data (e.g., as-planted, as-applied, as-harvested) to Climate FieldView, associating it with a resource owner if necessary, and monitors the upload status.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-Recipient-Email": {
+            "type": "string"
+          },
+          "contentType": {
+            "type": "string"
+          },
+          "md5": {
+            "type": "string"
+          },
+          "length": {
+            "type": "string"
+          },
+          "Content-Range": {
+            "type": "string"
+          },
+          "uploadId": {
+            "type": "string"
+          },
+          "Content-Type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "initiate-ag-data-upload",
+          "description": "Initiate the upload process for agronomic data (e.g., as-planted zip). Returns an upload ID.",
+          "operationId": "postUpload",
+          "parameters": [
+            {
+              "name": "X-Recipient-Email",
+              "in": "header",
+              "value": "$inputs.X-Recipient-Email"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "contentType": "$inputs.contentType",
+              "md5": "$inputs.md5",
+              "length": "$inputs.length"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "uploadId": "$response.body"
+          }
+        },
+        {
+          "stepId": "upload-ag-data-chunk",
+          "description": "Upload a chunk of the agronomic data file. Requires Content-Range header.",
+          "operationId": "chunkedUpload",
+          "parameters": [
+            {
+              "name": "Content-Range",
+              "in": "header",
+              "value": "$inputs.Content-Range"
+            },
+            {
+              "name": "uploadId",
+              "in": "path",
+              "value": "$steps.initiate-ag-data-upload.outputs.uploadId"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "upload_chunk_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-ag-data-upload-status",
+          "description": "Check the processing status of the uploaded agronomic data.",
+          "operationId": "fetchUploadStatusById",
+          "parameters": [
+            {
+              "name": "uploadId",
+              "in": "path",
+              "value": "$steps.initiate-ag-data-upload.outputs.uploadId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "uploadStatus": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "uploadId": "$steps.initiate-ag-data-upload.outputs.uploadId",
+        "upload_chunk_status": "$steps.upload-ag-data-chunk.outputs.upload_chunk_status",
+        "uploadStatus": "$steps.check-ag-data-upload-status.outputs.uploadStatus"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-agronomic-activity-data",
+      "summary": "Retrieves a list of agronomic activities (e.g., planting) for a user, optionally filtered by time or resource owner, and downloads the raw data file for a specific activity.",
+      "description": "Retrieves a list of agronomic activities (e.g., planting) for a user, optionally filtered by time or resource owner, and downloads the raw data file for a specific activity.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Accept": {
+            "type": "string"
+          },
+          "X-Next-Token": {
+            "type": "string"
+          },
+          "X-Limit": {
+            "type": "string"
+          },
+          "resourceOwnerId": {
+            "type": "string"
+          },
+          "occurredAfter": {
+            "type": "string"
+          },
+          "occurredBefore": {
+            "type": "string"
+          },
+          "updatedAfter": {
+            "type": "string"
+          },
+          "activityId": {
+            "type": "string"
+          },
+          "Range": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-agronomic-activities",
+          "description": "Retrieve a list of planting activities, potentially filtered by date or owner. Returns activity summaries including IDs.",
+          "operationPath": "openapi_source#/paths/~1v4~1layers~1asPlanted/get",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "X-Next-Token",
+              "in": "header",
+              "value": "$inputs.X-Next-Token"
+            },
+            {
+              "name": "X-Limit",
+              "in": "header",
+              "value": "$inputs.X-Limit"
+            },
+            {
+              "name": "resourceOwnerId",
+              "in": "query",
+              "value": "$inputs.resourceOwnerId"
+            },
+            {
+              "name": "occurredAfter",
+              "in": "query",
+              "value": "$inputs.occurredAfter"
+            },
+            {
+              "name": "occurredBefore",
+              "in": "query",
+              "value": "$inputs.occurredBefore"
+            },
+            {
+              "name": "updatedAfter",
+              "in": "query",
+              "value": "$inputs.updatedAfter"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "activitySummaries": "$response.body",
+            "X-Next-Token (optional)": "$response.body"
+          }
+        },
+        {
+          "stepId": "download-agronomic-activity-data",
+          "description": "Download the raw data file (zip) for a specific planting activity using its ID.",
+          "operationPath": "openapi_source#/paths/~1v4~1layers~1asPlanted~1{activityId}~1contents/get",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "activityId",
+              "in": "path",
+              "value": "$steps.list-agronomic-activities.outputs.activitySummaries.results[0].id"
+            },
+            {
+              "name": "Range",
+              "in": "header",
+              "value": "$inputs.Range"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "activityDataContents": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "activitySummaries": "$steps.list-agronomic-activities.outputs.activitySummaries",
+        "X-Next-Token (optional)": "$steps.list-agronomic-activities.outputs.X-Next-Token (optional)",
+        "activityDataContents": "$steps.download-agronomic-activity-data.outputs.activityDataContents"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-scouting-observations-and-attachments",
+      "summary": "Fetches scouting observations for a user within a specific timeframe, retrieves details for one observation, lists its attachments, and downloads an attachment's content.",
+      "description": "Fetches scouting observations for a user within a specific timeframe, retrieves details for one observation, lists its attachments, and downloads an attachment's content.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-Next-Token": {
+            "type": "string"
+          },
+          "X-Limit": {
+            "type": "string"
+          },
+          "occurredAfter": {
+            "type": "string"
+          },
+          "occurredBefore": {
+            "type": "string"
+          },
+          "scoutingObservationId": {
+            "type": "string"
+          },
+          "Accept": {
+            "type": "string"
+          },
+          "attachmentId": {
+            "type": "string"
+          },
+          "Range": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-scouting-observations",
+          "description": "Retrieve a list of scouting observation summaries, filtered by time.",
+          "operationPath": "openapi_source#/paths/~1v4~1layers~1scoutingObservations/get",
+          "parameters": [
+            {
+              "name": "X-Next-Token",
+              "in": "header",
+              "value": "$inputs.X-Next-Token"
+            },
+            {
+              "name": "X-Limit",
+              "in": "header",
+              "value": "$inputs.X-Limit"
+            },
+            {
+              "name": "occurredAfter",
+              "in": "query",
+              "value": "$inputs.occurredAfter"
+            },
+            {
+              "name": "occurredBefore",
+              "in": "query",
+              "value": "$inputs.occurredBefore"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "scoutingObservationSummaries": "$response.body",
+            "scoutingObservationId": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-scouting-observation-details",
+          "description": "Retrieve the full details of a specific scouting observation.",
+          "operationPath": "openapi_source#/paths/~1v4~1layers~1scoutingObservations~1{scoutingObservationId}/get",
+          "parameters": [
+            {
+              "name": "scoutingObservationId",
+              "in": "path",
+              "value": "$steps.list-scouting-observations.outputs.scoutingObservationId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "scoutingObservationDetails": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-scouting-attachments",
+          "description": "Retrieve a list of attachments associated with the scouting observation.",
+          "operationPath": "openapi_source#/paths/~1v4~1layers~1scoutingObservations~1{scoutingObservationId}~1attachments/get",
+          "parameters": [
+            {
+              "name": "scoutingObservationId",
+              "in": "path",
+              "value": "$steps.list-scouting-observations.outputs.scoutingObservationId"
+            },
+            {
+              "name": "X-Next-Token",
+              "in": "header",
+              "value": "$inputs.X-Next-Token"
+            },
+            {
+              "name": "X-Limit",
+              "in": "header",
+              "value": "$inputs.X-Limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "attachmentsList": "$response.body",
+            "attachmentId": "$response.body"
+          }
+        },
+        {
+          "stepId": "download-scouting-attachment",
+          "description": "Download the binary content of a specific scouting observation attachment.",
+          "operationPath": "openapi_source#/paths/~1v4~1layers~1scoutingObservations~1{scoutingObservationId}~1attachments~1{attachmentId}~1contents/get",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "scoutingObservationId",
+              "in": "path",
+              "value": "$steps.list-scouting-observations.outputs.scoutingObservationId"
+            },
+            {
+              "name": "attachmentId",
+              "in": "path",
+              "value": "$steps.list-scouting-attachments.outputs.attachmentId"
+            },
+            {
+              "name": "Range",
+              "in": "header",
+              "value": "$inputs.Range"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "attachmentContents": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "scoutingObservationSummaries": "$steps.list-scouting-observations.outputs.scoutingObservationSummaries",
+        "scoutingObservationId": "$steps.list-scouting-observations.outputs.scoutingObservationId",
+        "scoutingObservationDetails": "$steps.get-scouting-observation-details.outputs.scoutingObservationDetails",
+        "attachmentsList": "$steps.list-scouting-attachments.outputs.attachmentsList",
+        "attachmentId": "$steps.list-scouting-attachments.outputs.attachmentId",
+        "attachmentContents": "$steps.download-scouting-attachment.outputs.attachmentContents"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "export-agronomic-data",
+      "summary": "Initiates an export request for agronomic data (e.g., harvest activities as GeoJSON), monitors its status, and downloads the resulting file.",
+      "description": "Initiates an export request for agronomic data (e.g., harvest activities as GeoJSON), monitors its status, and downloads the resulting file.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "contentType": {
+            "type": "string"
+          },
+          "exportId": {
+            "type": "string"
+          },
+          "Accept": {
+            "type": "string"
+          },
+          "Range": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "initiate-data-export",
+          "description": "Request an export of data (e.g., harvest GeoJSON for a specific owner and date range).",
+          "operationId": "postExport",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "contentType": "$inputs.contentType"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "exportId": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-export-status",
+          "description": "Check the status of the data export request.",
+          "operationId": "fetchExportStatusById",
+          "parameters": [
+            {
+              "name": "exportId",
+              "in": "path",
+              "value": "$steps.initiate-data-export.outputs.exportId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "exportStatus": "$response.body",
+            "isCompleted": "$response.body"
+          }
+        },
+        {
+          "stepId": "download-export-contents",
+          "description": "Download the contents of the completed export file (potentially chunked).",
+          "operationId": "fetchExportContentsById",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "exportId",
+              "in": "path",
+              "value": "$steps.initiate-data-export.outputs.exportId"
+            },
+            {
+              "name": "Range",
+              "in": "header",
+              "value": "$inputs.Range"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "exportFileContents": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "exportId": "$steps.initiate-data-export.outputs.exportId",
+        "exportStatus": "$steps.check-export-status.outputs.exportStatus",
+        "isCompleted": "$steps.check-export-status.outputs.isCompleted",
+        "exportFileContents": "$steps.download-export-contents.outputs.exportFileContents"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "upload-planting-prescription",
+      "summary": "Uploads a planting prescription shapefile (zipped) to Climate FieldView and monitors the upload status.",
+      "description": "Uploads a planting prescription shapefile (zipped) to Climate FieldView and monitors the upload status.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-Recipient-Email": {
+            "type": "string"
+          },
+          "md5": {
+            "type": "string"
+          },
+          "length": {
+            "type": "string"
+          },
+          "Content-Range": {
+            "type": "string"
+          },
+          "uploadId": {
+            "type": "string"
+          },
+          "Content-Type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "initiate-prescription-upload",
+          "description": "Initiate the upload process for a planting prescription shapefile.",
+          "operationId": "postUpload",
+          "parameters": [
+            {
+              "name": "X-Recipient-Email",
+              "in": "header",
+              "value": "$inputs.X-Recipient-Email"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "md5": "$inputs.md5",
+              "length": "$inputs.length"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "uploadId": "$response.body"
+          }
+        },
+        {
+          "stepId": "upload-prescription-chunk",
+          "description": "Upload a chunk of the zipped prescription shapefile. Requires Content-Range header.",
+          "operationId": "chunkedUpload",
+          "parameters": [
+            {
+              "name": "Content-Range",
+              "in": "header",
+              "value": "$inputs.Content-Range"
+            },
+            {
+              "name": "uploadId",
+              "in": "path",
+              "value": "$steps.initiate-prescription-upload.outputs.uploadId"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "upload_chunk_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-prescription-upload-status",
+          "description": "Check the processing status of the uploaded prescription.",
+          "operationId": "fetchUploadStatusById",
+          "parameters": [
+            {
+              "name": "uploadId",
+              "in": "path",
+              "value": "$steps.initiate-prescription-upload.outputs.uploadId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "uploadStatus": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "uploadId": "$steps.initiate-prescription-upload.outputs.uploadId",
+        "upload_chunk_status": "$steps.upload-prescription-chunk.outputs.upload_chunk_status",
+        "uploadStatus": "$steps.check-prescription-upload-status.outputs.uploadStatus"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-field-boundary-geometry",
+      "summary": "Retrieves the details of a specific field and then fetches its corresponding boundary geometry.",
+      "description": "Retrieves the details of a specific field and then fetches its corresponding boundary geometry.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "fieldId": {
+            "type": "string"
+          },
+          "boundaryId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-field-details",
+          "description": "Retrieve details for a specific field by its ID.",
+          "operationId": "fetchFieldById",
+          "parameters": [
+            {
+              "name": "fieldId",
+              "in": "path",
+              "value": "$inputs.fieldId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "fieldDetails": "$response.body",
+            "boundaryId": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-boundary-geometry",
+          "description": "Retrieve the boundary geometry (GeoJSON Feature) using the boundary ID obtained from the field details.",
+          "operationId": "fetchBoundaryById",
+          "parameters": [
+            {
+              "name": "boundaryId",
+              "in": "path",
+              "value": "$steps.get-field-details.outputs.boundaryId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "boundaryGeometry": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "fieldDetails": "$steps.get-field-details.outputs.fieldDetails",
+        "boundaryId": "$steps.get-field-details.outputs.boundaryId",
+        "boundaryGeometry": "$steps.get-boundary-geometry.outputs.boundaryGeometry"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

@@ -1,0 +1,1809 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/hubapi.com/files/v3/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "upload-and-organize-new-file",
+      "summary": "Creates a new folder and uploads a file directly into that newly created folder. This is useful for organizing assets as they are added.",
+      "description": "Creates a new folder and uploads a file directly into that newly created folder. This is useful for organizing assets as they are added.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "file": {
+            "type": "string"
+          },
+          "fileName": {
+            "type": "string"
+          },
+          "options": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-folder",
+          "description": "Create a new folder to store the file.",
+          "operationId": "post-/files/v3/folders_create",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "folderId": "$response.body",
+            "folderPath": "$response.body"
+          }
+        },
+        {
+          "stepId": "upload-file-to-folder",
+          "description": "Upload the file into the specific folder created in the previous step.",
+          "operationId": "post-/files/v3/files_upload",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "folderId": "$steps.create-folder.outputs.folderId",
+              "file": "$inputs.file",
+              "fileName": "$inputs.fileName",
+              "options": "$inputs.options"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "fileId": "$response.body",
+            "fileDetails": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "folderId": "$steps.create-folder.outputs.folderId",
+        "folderPath": "$steps.create-folder.outputs.folderPath",
+        "fileId": "$steps.upload-file-to-folder.outputs.fileId",
+        "fileDetails": "$steps.upload-file-to-folder.outputs.fileDetails"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "import-file-from-url-and-retrieve-details",
+      "summary": "Initiates an asynchronous import of a file from a public URL, checks the import status until completion, and then retrieves the details of the imported file.",
+      "description": "Initiates an asynchronous import of a file from a public URL, checks the import status until completion, and then retrieves the details of the imported file.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "access": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "taskId": {
+            "type": "string"
+          },
+          "fileId": {
+            "type": "string"
+          },
+          "properties": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "start-import-from-url",
+          "description": "Start the asynchronous import process for a file located at a specific URL.",
+          "operationId": "post-/files/v3/files/import-from-url/async_importFromUrl",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "access": "$inputs.access",
+              "url": "$inputs.url"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "taskId": "$response.body",
+            "links": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-import-status",
+          "description": "Periodically check the status of the import task until it is complete.",
+          "operationId": "get-/files/v3/files/import-from-url/async/tasks/{taskId}/status_checkImport",
+          "parameters": [
+            {
+              "name": "taskId",
+              "in": "path",
+              "value": "$steps.start-import-from-url.outputs.taskId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body",
+            "result.id": "$response.body",
+            "result.name": "$response.body",
+            "result.url": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-imported-file-details",
+          "description": "Retrieve the full details of the file once the import is confirmed complete.",
+          "operationId": "get-/files/v3/files/{fileId}_getById",
+          "parameters": [
+            {
+              "name": "fileId",
+              "in": "path",
+              "value": "$inputs.fileId"
+            },
+            {
+              "name": "properties",
+              "in": "query",
+              "value": "$inputs.properties"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "fileDetails": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "taskId": "$steps.start-import-from-url.outputs.taskId",
+        "links": "$steps.start-import-from-url.outputs.links",
+        "status": "$steps.check-import-status.outputs.status",
+        "result.id": "$steps.check-import-status.outputs.result.id",
+        "result.name": "$steps.check-import-status.outputs.result.name",
+        "result.url": "$steps.check-import-status.outputs.result.url",
+        "fileDetails": "$steps.get-imported-file-details.outputs.fileDetails"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "securely-share-a-private-file",
+      "summary": "Finds a specific private file (potentially via search or known ID) and generates a temporary, secure signed URL to allow time-limited access without changing the file's privacy settings.",
+      "description": "Finds a specific private file (potentially via search or known ID) and generates a temporary, secure signed URL to allow time-limited access without changing the file's privacy settings.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "properties": {
+            "type": "string"
+          },
+          "after": {
+            "type": "string"
+          },
+          "before": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "string"
+          },
+          "ids": {
+            "type": "string"
+          },
+          "idLte": {
+            "type": "string"
+          },
+          "idGte": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "createdAtLte": {
+            "type": "string"
+          },
+          "createdAtGte": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "updatedAtLte": {
+            "type": "string"
+          },
+          "updatedAtGte": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "parentFolderIds": {
+            "type": "string"
+          },
+          "size": {
+            "type": "string"
+          },
+          "sizeLte": {
+            "type": "string"
+          },
+          "sizeGte": {
+            "type": "string"
+          },
+          "height": {
+            "type": "string"
+          },
+          "heightLte": {
+            "type": "string"
+          },
+          "heightGte": {
+            "type": "string"
+          },
+          "width": {
+            "type": "string"
+          },
+          "widthLte": {
+            "type": "string"
+          },
+          "widthGte": {
+            "type": "string"
+          },
+          "encoding": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "extension": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "isUsableInContent": {
+            "type": "string"
+          },
+          "allowsAnonymousAccess": {
+            "type": "string"
+          },
+          "fileMd5": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string"
+          },
+          "expiresAtLte": {
+            "type": "string"
+          },
+          "expiresAtGte": {
+            "type": "string"
+          },
+          "fileId": {
+            "type": "string"
+          },
+          "expirationSeconds": {
+            "type": "string"
+          },
+          "upscale": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-private-file",
+          "description": "Search for a specific file, potentially filtering for private files.",
+          "operationId": "get-/files/v3/files/search_doSearch",
+          "parameters": [
+            {
+              "name": "properties",
+              "in": "query",
+              "value": "$inputs.properties"
+            },
+            {
+              "name": "after",
+              "in": "query",
+              "value": "$inputs.after"
+            },
+            {
+              "name": "before",
+              "in": "query",
+              "value": "$inputs.before"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "sort",
+              "in": "query",
+              "value": "$inputs.sort"
+            },
+            {
+              "name": "ids",
+              "in": "query",
+              "value": "$inputs.ids"
+            },
+            {
+              "name": "idLte",
+              "in": "query",
+              "value": "$inputs.idLte"
+            },
+            {
+              "name": "idGte",
+              "in": "query",
+              "value": "$inputs.idGte"
+            },
+            {
+              "name": "createdAt",
+              "in": "query",
+              "value": "$inputs.createdAt"
+            },
+            {
+              "name": "createdAtLte",
+              "in": "query",
+              "value": "$inputs.createdAtLte"
+            },
+            {
+              "name": "createdAtGte",
+              "in": "query",
+              "value": "$inputs.createdAtGte"
+            },
+            {
+              "name": "updatedAt",
+              "in": "query",
+              "value": "$inputs.updatedAt"
+            },
+            {
+              "name": "updatedAtLte",
+              "in": "query",
+              "value": "$inputs.updatedAtLte"
+            },
+            {
+              "name": "updatedAtGte",
+              "in": "query",
+              "value": "$inputs.updatedAtGte"
+            },
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "path",
+              "in": "query",
+              "value": "$inputs.path"
+            },
+            {
+              "name": "parentFolderIds",
+              "in": "query",
+              "value": "$inputs.parentFolderIds"
+            },
+            {
+              "name": "size",
+              "in": "query",
+              "value": "$inputs.size"
+            },
+            {
+              "name": "sizeLte",
+              "in": "query",
+              "value": "$inputs.sizeLte"
+            },
+            {
+              "name": "sizeGte",
+              "in": "query",
+              "value": "$inputs.sizeGte"
+            },
+            {
+              "name": "height",
+              "in": "query",
+              "value": "$inputs.height"
+            },
+            {
+              "name": "heightLte",
+              "in": "query",
+              "value": "$inputs.heightLte"
+            },
+            {
+              "name": "heightGte",
+              "in": "query",
+              "value": "$inputs.heightGte"
+            },
+            {
+              "name": "width",
+              "in": "query",
+              "value": "$inputs.width"
+            },
+            {
+              "name": "widthLte",
+              "in": "query",
+              "value": "$inputs.widthLte"
+            },
+            {
+              "name": "widthGte",
+              "in": "query",
+              "value": "$inputs.widthGte"
+            },
+            {
+              "name": "encoding",
+              "in": "query",
+              "value": "$inputs.encoding"
+            },
+            {
+              "name": "type",
+              "in": "query",
+              "value": "$inputs.type"
+            },
+            {
+              "name": "extension",
+              "in": "query",
+              "value": "$inputs.extension"
+            },
+            {
+              "name": "url",
+              "in": "query",
+              "value": "$inputs.url"
+            },
+            {
+              "name": "isUsableInContent",
+              "in": "query",
+              "value": "$inputs.isUsableInContent"
+            },
+            {
+              "name": "allowsAnonymousAccess",
+              "in": "query",
+              "value": "$inputs.allowsAnonymousAccess"
+            },
+            {
+              "name": "fileMd5",
+              "in": "query",
+              "value": "$inputs.fileMd5"
+            },
+            {
+              "name": "expiresAt",
+              "in": "query",
+              "value": "$inputs.expiresAt"
+            },
+            {
+              "name": "expiresAtLte",
+              "in": "query",
+              "value": "$inputs.expiresAtLte"
+            },
+            {
+              "name": "expiresAtGte",
+              "in": "query",
+              "value": "$inputs.expiresAtGte"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "results[0].id": "$response.body"
+          }
+        },
+        {
+          "stepId": "generate-signed-url",
+          "description": "Generate a temporary signed URL for the private file found.",
+          "operationId": "get-/files/v3/files/{fileId}/signed-url_getSignedUrl",
+          "parameters": [
+            {
+              "name": "fileId",
+              "in": "path",
+              "value": "$inputs.fileId"
+            },
+            {
+              "name": "size",
+              "in": "query",
+              "value": "$inputs.size"
+            },
+            {
+              "name": "expirationSeconds",
+              "in": "query",
+              "value": "$inputs.expirationSeconds"
+            },
+            {
+              "name": "upscale",
+              "in": "query",
+              "value": "$inputs.upscale"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "url": "$response.body",
+            "expiresAt": "$response.body",
+            "name": "$response.body",
+            "type": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "results[0].id": "$steps.find-private-file.outputs.results[0].id",
+        "url": "$steps.generate-signed-url.outputs.url",
+        "expiresAt": "$steps.generate-signed-url.outputs.expiresAt",
+        "name": "$steps.generate-signed-url.outputs.name",
+        "type": "$steps.generate-signed-url.outputs.type"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "replace-existing-file-content",
+      "summary": "Replaces the binary content of an existing file with new content, keeping the same file ID. This is useful for updating assets like images without needing to update references elsewhere.",
+      "description": "Replaces the binary content of an existing file with new content, keeping the same file ID. This is useful for updating assets like images without needing to update references elsewhere.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string"
+          },
+          "properties": {
+            "type": "string"
+          },
+          "file": {
+            "type": "string"
+          },
+          "charsetHunch": {
+            "type": "string"
+          },
+          "options": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-file-to-replace",
+          "description": "Retrieve the details of the file intended for replacement (optional step, could use known ID).",
+          "operationId": "get-/files/v3/files/{fileId}_getById",
+          "parameters": [
+            {
+              "name": "fileId",
+              "in": "path",
+              "value": "$inputs.fileId"
+            },
+            {
+              "name": "properties",
+              "in": "query",
+              "value": "$inputs.properties"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "fileId": "$response.body"
+          }
+        },
+        {
+          "stepId": "replace-file-content",
+          "description": "Upload new file data to replace the content of the existing file.",
+          "operationId": "put-/files/v3/files/{fileId}_replace",
+          "parameters": [
+            {
+              "name": "fileId",
+              "in": "path",
+              "value": "$steps.get-file-to-replace.outputs.fileId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "fileId": "$steps.get-file-to-replace.outputs.fileId",
+              "file": "$inputs.file",
+              "charsetHunch": "$inputs.charsetHunch",
+              "options": "$inputs.options"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updatedFileDetails": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "fileId": "$steps.get-file-to-replace.outputs.fileId",
+        "updatedFileDetails": "$steps.replace-file-content.outputs.updatedFileDetails"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "update-file-properties-eg-renamemove",
+      "summary": "Modifies the metadata of an existing file, such as its name or parent folder.",
+      "description": "Modifies the metadata of an existing file, such as its name or parent folder.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string"
+          },
+          "properties": {
+            "type": "string"
+          },
+          "access": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "isUsableInContent": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-file-to-update",
+          "description": "Retrieve the current details of the file to be updated (optional step, could use known ID).",
+          "operationId": "get-/files/v3/files/{fileId}_getById",
+          "parameters": [
+            {
+              "name": "fileId",
+              "in": "path",
+              "value": "$inputs.fileId"
+            },
+            {
+              "name": "properties",
+              "in": "query",
+              "value": "$inputs.properties"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "fileId": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-file-properties",
+          "description": "Update properties like name, parent folder path/ID, or access level.",
+          "operationId": "patch-/files/v3/files/{fileId}_updateProperties",
+          "parameters": [
+            {
+              "name": "fileId",
+              "in": "path",
+              "value": "$steps.get-file-to-update.outputs.fileId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "fileId": "$steps.get-file-to-update.outputs.fileId",
+              "access": "$inputs.access",
+              "name": "$inputs.name",
+              "isUsableInContent": "$inputs.isUsableInContent"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updatedFileDetails": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "fileId": "$steps.get-file-to-update.outputs.fileId",
+        "updatedFileDetails": "$steps.update-file-properties.outputs.updatedFileDetails"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "find-and-gdpr-delete-file",
+      "summary": "Searches for a specific file and performs a GDPR-compliant deletion, typically used for removing files associated with personal data requests.",
+      "description": "Searches for a specific file and performs a GDPR-compliant deletion, typically used for removing files associated with personal data requests.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "properties": {
+            "type": "string"
+          },
+          "after": {
+            "type": "string"
+          },
+          "before": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "string"
+          },
+          "ids": {
+            "type": "string"
+          },
+          "idLte": {
+            "type": "string"
+          },
+          "idGte": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "createdAtLte": {
+            "type": "string"
+          },
+          "createdAtGte": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "updatedAtLte": {
+            "type": "string"
+          },
+          "updatedAtGte": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "parentFolderIds": {
+            "type": "string"
+          },
+          "size": {
+            "type": "string"
+          },
+          "sizeLte": {
+            "type": "string"
+          },
+          "sizeGte": {
+            "type": "string"
+          },
+          "height": {
+            "type": "string"
+          },
+          "heightLte": {
+            "type": "string"
+          },
+          "heightGte": {
+            "type": "string"
+          },
+          "width": {
+            "type": "string"
+          },
+          "widthLte": {
+            "type": "string"
+          },
+          "widthGte": {
+            "type": "string"
+          },
+          "encoding": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "extension": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "isUsableInContent": {
+            "type": "string"
+          },
+          "allowsAnonymousAccess": {
+            "type": "string"
+          },
+          "fileMd5": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string"
+          },
+          "expiresAtLte": {
+            "type": "string"
+          },
+          "expiresAtGte": {
+            "type": "string"
+          },
+          "fileId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-for-gdpr-file",
+          "description": "Search for the file requiring GDPR deletion.",
+          "operationId": "get-/files/v3/files/search_doSearch",
+          "parameters": [
+            {
+              "name": "properties",
+              "in": "query",
+              "value": "$inputs.properties"
+            },
+            {
+              "name": "after",
+              "in": "query",
+              "value": "$inputs.after"
+            },
+            {
+              "name": "before",
+              "in": "query",
+              "value": "$inputs.before"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "sort",
+              "in": "query",
+              "value": "$inputs.sort"
+            },
+            {
+              "name": "ids",
+              "in": "query",
+              "value": "$inputs.ids"
+            },
+            {
+              "name": "idLte",
+              "in": "query",
+              "value": "$inputs.idLte"
+            },
+            {
+              "name": "idGte",
+              "in": "query",
+              "value": "$inputs.idGte"
+            },
+            {
+              "name": "createdAt",
+              "in": "query",
+              "value": "$inputs.createdAt"
+            },
+            {
+              "name": "createdAtLte",
+              "in": "query",
+              "value": "$inputs.createdAtLte"
+            },
+            {
+              "name": "createdAtGte",
+              "in": "query",
+              "value": "$inputs.createdAtGte"
+            },
+            {
+              "name": "updatedAt",
+              "in": "query",
+              "value": "$inputs.updatedAt"
+            },
+            {
+              "name": "updatedAtLte",
+              "in": "query",
+              "value": "$inputs.updatedAtLte"
+            },
+            {
+              "name": "updatedAtGte",
+              "in": "query",
+              "value": "$inputs.updatedAtGte"
+            },
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "path",
+              "in": "query",
+              "value": "$inputs.path"
+            },
+            {
+              "name": "parentFolderIds",
+              "in": "query",
+              "value": "$inputs.parentFolderIds"
+            },
+            {
+              "name": "size",
+              "in": "query",
+              "value": "$inputs.size"
+            },
+            {
+              "name": "sizeLte",
+              "in": "query",
+              "value": "$inputs.sizeLte"
+            },
+            {
+              "name": "sizeGte",
+              "in": "query",
+              "value": "$inputs.sizeGte"
+            },
+            {
+              "name": "height",
+              "in": "query",
+              "value": "$inputs.height"
+            },
+            {
+              "name": "heightLte",
+              "in": "query",
+              "value": "$inputs.heightLte"
+            },
+            {
+              "name": "heightGte",
+              "in": "query",
+              "value": "$inputs.heightGte"
+            },
+            {
+              "name": "width",
+              "in": "query",
+              "value": "$inputs.width"
+            },
+            {
+              "name": "widthLte",
+              "in": "query",
+              "value": "$inputs.widthLte"
+            },
+            {
+              "name": "widthGte",
+              "in": "query",
+              "value": "$inputs.widthGte"
+            },
+            {
+              "name": "encoding",
+              "in": "query",
+              "value": "$inputs.encoding"
+            },
+            {
+              "name": "type",
+              "in": "query",
+              "value": "$inputs.type"
+            },
+            {
+              "name": "extension",
+              "in": "query",
+              "value": "$inputs.extension"
+            },
+            {
+              "name": "url",
+              "in": "query",
+              "value": "$inputs.url"
+            },
+            {
+              "name": "isUsableInContent",
+              "in": "query",
+              "value": "$inputs.isUsableInContent"
+            },
+            {
+              "name": "allowsAnonymousAccess",
+              "in": "query",
+              "value": "$inputs.allowsAnonymousAccess"
+            },
+            {
+              "name": "fileMd5",
+              "in": "query",
+              "value": "$inputs.fileMd5"
+            },
+            {
+              "name": "expiresAt",
+              "in": "query",
+              "value": "$inputs.expiresAt"
+            },
+            {
+              "name": "expiresAtLte",
+              "in": "query",
+              "value": "$inputs.expiresAtLte"
+            },
+            {
+              "name": "expiresAtGte",
+              "in": "query",
+              "value": "$inputs.expiresAtGte"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "results[0].id": "$response.body"
+          }
+        },
+        {
+          "stepId": "gdpr-delete-file",
+          "description": "Perform a GDPR-compliant deletion on the identified file.",
+          "operationId": "delete-/files/v3/files/{fileId}/gdpr-delete_archiveGDPR",
+          "parameters": [
+            {
+              "name": "fileId",
+              "in": "path",
+              "value": "$inputs.fileId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "results[0].id": "$steps.search-for-gdpr-file.outputs.results[0].id",
+        "status": "$steps.gdpr-delete-file.outputs.status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "asynchronously-reorganize-folder-structure",
+      "summary": "Initiates an asynchronous task to update a folder's properties (like name or parent folder), which also updates paths for all child files and folders. Checks the status until completion.",
+      "description": "Initiates an asynchronous task to update a folder's properties (like name or parent folder), which also updates paths for all child files and folders. Checks the status until completion.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "properties": {
+            "type": "string"
+          },
+          "after": {
+            "type": "string"
+          },
+          "before": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "string"
+          },
+          "ids": {
+            "type": "string"
+          },
+          "idLte": {
+            "type": "string"
+          },
+          "idGte": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "createdAtLte": {
+            "type": "string"
+          },
+          "createdAtGte": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "updatedAtLte": {
+            "type": "string"
+          },
+          "updatedAtGte": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "parentFolderIds": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "taskId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-folder-to-update",
+          "description": "Search for the folder that needs to be updated.",
+          "operationId": "get-/files/v3/folders/search_doSearch",
+          "parameters": [
+            {
+              "name": "properties",
+              "in": "query",
+              "value": "$inputs.properties"
+            },
+            {
+              "name": "after",
+              "in": "query",
+              "value": "$inputs.after"
+            },
+            {
+              "name": "before",
+              "in": "query",
+              "value": "$inputs.before"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "sort",
+              "in": "query",
+              "value": "$inputs.sort"
+            },
+            {
+              "name": "ids",
+              "in": "query",
+              "value": "$inputs.ids"
+            },
+            {
+              "name": "idLte",
+              "in": "query",
+              "value": "$inputs.idLte"
+            },
+            {
+              "name": "idGte",
+              "in": "query",
+              "value": "$inputs.idGte"
+            },
+            {
+              "name": "createdAt",
+              "in": "query",
+              "value": "$inputs.createdAt"
+            },
+            {
+              "name": "createdAtLte",
+              "in": "query",
+              "value": "$inputs.createdAtLte"
+            },
+            {
+              "name": "createdAtGte",
+              "in": "query",
+              "value": "$inputs.createdAtGte"
+            },
+            {
+              "name": "updatedAt",
+              "in": "query",
+              "value": "$inputs.updatedAt"
+            },
+            {
+              "name": "updatedAtLte",
+              "in": "query",
+              "value": "$inputs.updatedAtLte"
+            },
+            {
+              "name": "updatedAtGte",
+              "in": "query",
+              "value": "$inputs.updatedAtGte"
+            },
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "path",
+              "in": "query",
+              "value": "$inputs.path"
+            },
+            {
+              "name": "parentFolderIds",
+              "in": "query",
+              "value": "$inputs.parentFolderIds"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "results[0].id": "$response.body"
+          }
+        },
+        {
+          "stepId": "start-async-folder-update",
+          "description": "Start the asynchronous update process for the folder (e.g., rename or move).",
+          "operationId": "post-/files/v3/folders/update/async_updateProperties",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$inputs.id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "taskId": "$response.body",
+            "links": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-folder-update-status",
+          "description": "Periodically check the status of the folder update task.",
+          "operationId": "get-/files/v3/folders/update/async/tasks/{taskId}/status_checkUpdateStatus",
+          "parameters": [
+            {
+              "name": "taskId",
+              "in": "path",
+              "value": "$steps.start-async-folder-update.outputs.taskId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body",
+            "result.id": "$response.body",
+            "result.name": "$response.body",
+            "result.path": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "results[0].id": "$steps.find-folder-to-update.outputs.results[0].id",
+        "taskId": "$steps.start-async-folder-update.outputs.taskId",
+        "links": "$steps.start-async-folder-update.outputs.links",
+        "status": "$steps.check-folder-update-status.outputs.status",
+        "result.id": "$steps.check-folder-update-status.outputs.result.id",
+        "result.name": "$steps.check-folder-update-status.outputs.result.name",
+        "result.path": "$steps.check-folder-update-status.outputs.result.path"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "find-and-archive-file",
+      "summary": "Searches for a file based on specific criteria (e.g., name, path) and then archives (soft deletes) the found file.",
+      "description": "Searches for a file based on specific criteria (e.g., name, path) and then archives (soft deletes) the found file.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "properties": {
+            "type": "string"
+          },
+          "after": {
+            "type": "string"
+          },
+          "before": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "string"
+          },
+          "ids": {
+            "type": "string"
+          },
+          "idLte": {
+            "type": "string"
+          },
+          "idGte": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "createdAtLte": {
+            "type": "string"
+          },
+          "createdAtGte": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "updatedAtLte": {
+            "type": "string"
+          },
+          "updatedAtGte": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "parentFolderIds": {
+            "type": "string"
+          },
+          "size": {
+            "type": "string"
+          },
+          "sizeLte": {
+            "type": "string"
+          },
+          "sizeGte": {
+            "type": "string"
+          },
+          "height": {
+            "type": "string"
+          },
+          "heightLte": {
+            "type": "string"
+          },
+          "heightGte": {
+            "type": "string"
+          },
+          "width": {
+            "type": "string"
+          },
+          "widthLte": {
+            "type": "string"
+          },
+          "widthGte": {
+            "type": "string"
+          },
+          "encoding": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "extension": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "isUsableInContent": {
+            "type": "string"
+          },
+          "allowsAnonymousAccess": {
+            "type": "string"
+          },
+          "fileMd5": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string"
+          },
+          "expiresAtLte": {
+            "type": "string"
+          },
+          "expiresAtGte": {
+            "type": "string"
+          },
+          "fileId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-for-file-to-archive",
+          "description": "Search for the file to be archived using various criteria.",
+          "operationId": "get-/files/v3/files/search_doSearch",
+          "parameters": [
+            {
+              "name": "properties",
+              "in": "query",
+              "value": "$inputs.properties"
+            },
+            {
+              "name": "after",
+              "in": "query",
+              "value": "$inputs.after"
+            },
+            {
+              "name": "before",
+              "in": "query",
+              "value": "$inputs.before"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "sort",
+              "in": "query",
+              "value": "$inputs.sort"
+            },
+            {
+              "name": "ids",
+              "in": "query",
+              "value": "$inputs.ids"
+            },
+            {
+              "name": "idLte",
+              "in": "query",
+              "value": "$inputs.idLte"
+            },
+            {
+              "name": "idGte",
+              "in": "query",
+              "value": "$inputs.idGte"
+            },
+            {
+              "name": "createdAt",
+              "in": "query",
+              "value": "$inputs.createdAt"
+            },
+            {
+              "name": "createdAtLte",
+              "in": "query",
+              "value": "$inputs.createdAtLte"
+            },
+            {
+              "name": "createdAtGte",
+              "in": "query",
+              "value": "$inputs.createdAtGte"
+            },
+            {
+              "name": "updatedAt",
+              "in": "query",
+              "value": "$inputs.updatedAt"
+            },
+            {
+              "name": "updatedAtLte",
+              "in": "query",
+              "value": "$inputs.updatedAtLte"
+            },
+            {
+              "name": "updatedAtGte",
+              "in": "query",
+              "value": "$inputs.updatedAtGte"
+            },
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "path",
+              "in": "query",
+              "value": "$inputs.path"
+            },
+            {
+              "name": "parentFolderIds",
+              "in": "query",
+              "value": "$inputs.parentFolderIds"
+            },
+            {
+              "name": "size",
+              "in": "query",
+              "value": "$inputs.size"
+            },
+            {
+              "name": "sizeLte",
+              "in": "query",
+              "value": "$inputs.sizeLte"
+            },
+            {
+              "name": "sizeGte",
+              "in": "query",
+              "value": "$inputs.sizeGte"
+            },
+            {
+              "name": "height",
+              "in": "query",
+              "value": "$inputs.height"
+            },
+            {
+              "name": "heightLte",
+              "in": "query",
+              "value": "$inputs.heightLte"
+            },
+            {
+              "name": "heightGte",
+              "in": "query",
+              "value": "$inputs.heightGte"
+            },
+            {
+              "name": "width",
+              "in": "query",
+              "value": "$inputs.width"
+            },
+            {
+              "name": "widthLte",
+              "in": "query",
+              "value": "$inputs.widthLte"
+            },
+            {
+              "name": "widthGte",
+              "in": "query",
+              "value": "$inputs.widthGte"
+            },
+            {
+              "name": "encoding",
+              "in": "query",
+              "value": "$inputs.encoding"
+            },
+            {
+              "name": "type",
+              "in": "query",
+              "value": "$inputs.type"
+            },
+            {
+              "name": "extension",
+              "in": "query",
+              "value": "$inputs.extension"
+            },
+            {
+              "name": "url",
+              "in": "query",
+              "value": "$inputs.url"
+            },
+            {
+              "name": "isUsableInContent",
+              "in": "query",
+              "value": "$inputs.isUsableInContent"
+            },
+            {
+              "name": "allowsAnonymousAccess",
+              "in": "query",
+              "value": "$inputs.allowsAnonymousAccess"
+            },
+            {
+              "name": "fileMd5",
+              "in": "query",
+              "value": "$inputs.fileMd5"
+            },
+            {
+              "name": "expiresAt",
+              "in": "query",
+              "value": "$inputs.expiresAt"
+            },
+            {
+              "name": "expiresAtLte",
+              "in": "query",
+              "value": "$inputs.expiresAtLte"
+            },
+            {
+              "name": "expiresAtGte",
+              "in": "query",
+              "value": "$inputs.expiresAtGte"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "results[0].id": "$response.body"
+          }
+        },
+        {
+          "stepId": "archive-file",
+          "description": "Archive the file identified in the search results.",
+          "operationId": "delete-/files/v3/files/{fileId}_archive",
+          "parameters": [
+            {
+              "name": "fileId",
+              "in": "path",
+              "value": "$inputs.fileId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "results[0].id": "$steps.search-for-file-to-archive.outputs.results[0].id",
+        "status": "$steps.archive-file.outputs.status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

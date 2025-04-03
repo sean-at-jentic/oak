@@ -1,0 +1,291 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/hubapi.com/auth/v1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "obtain-and-validate-initial-tokens",
+      "summary": "Combines obtaining initial OAuth tokens via authorization code grant and immediately validating the received access token to ensure it's active and retrieve its metadata.",
+      "description": "Combines obtaining initial OAuth tokens via authorization code grant and immediately validating the received access token to ensure it's active and retrieve its metadata.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "grant_type": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "redirect_uri": {
+            "type": "string"
+          },
+          "client_id": {
+            "type": "string"
+          },
+          "client_secret": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "exchange-auth-code",
+          "description": "Submit the authorization code, client credentials, and redirect URI to get the first set of tokens.",
+          "operationId": "post-/oauth/v1/token_create",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "grant_type": "$inputs.grant_type",
+              "code": "$inputs.code",
+              "redirect_uri": "$inputs.redirect_uri",
+              "client_id": "$inputs.client_id",
+              "client_secret": "$inputs.client_secret"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "access_token": "$response.body",
+            "refresh_token": "$response.body",
+            "expires_in": "$response.body",
+            "token_type": "$response.body"
+          }
+        },
+        {
+          "stepId": "validate-new-access-token",
+          "description": "Retrieve metadata for the newly obtained access token.",
+          "operationId": "get-/oauth/v1/access-tokens/{token}_get",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "path",
+              "value": "$steps.exchange-auth-code.outputs.access_token"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "hub_id": "$response.body",
+            "user_id": "$response.body",
+            "scopes": "$response.body",
+            "token_type": "$response.body",
+            "user": "$response.body",
+            "hub_domain": "$response.body",
+            "app_id": "$response.body",
+            "expires_in": "$response.body",
+            "token": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "access_token": "$steps.exchange-auth-code.outputs.access_token",
+        "refresh_token": "$steps.exchange-auth-code.outputs.refresh_token",
+        "expires_in": "$steps.validate-new-access-token.outputs.expires_in",
+        "token_type": "$steps.validate-new-access-token.outputs.token_type",
+        "hub_id": "$steps.validate-new-access-token.outputs.hub_id",
+        "user_id": "$steps.validate-new-access-token.outputs.user_id",
+        "scopes": "$steps.validate-new-access-token.outputs.scopes",
+        "user": "$steps.validate-new-access-token.outputs.user",
+        "hub_domain": "$steps.validate-new-access-token.outputs.hub_domain",
+        "app_id": "$steps.validate-new-access-token.outputs.app_id",
+        "token": "$steps.validate-new-access-token.outputs.token"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "refresh-and-validate-access-token",
+      "summary": "Refreshes an access token using a refresh token and then immediately validates the newly obtained access token to confirm the refresh was successful and retrieve its details.",
+      "description": "Refreshes an access token using a refresh token and then immediately validates the newly obtained access token to confirm the refresh was successful and retrieve its details.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "grant_type": {
+            "type": "string"
+          },
+          "client_id": {
+            "type": "string"
+          },
+          "client_secret": {
+            "type": "string"
+          },
+          "refresh_token": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "refresh-access-token",
+          "description": "Submit the refresh token and client credentials to get a new access token.",
+          "operationId": "post-/oauth/v1/token_create",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "grant_type": "$inputs.grant_type",
+              "client_id": "$inputs.client_id",
+              "client_secret": "$inputs.client_secret",
+              "refresh_token": "$inputs.refresh_token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "access_token": "$response.body",
+            "expires_in": "$response.body",
+            "token_type": "$response.body"
+          }
+        },
+        {
+          "stepId": "validate-refreshed-access-token",
+          "description": "Retrieve metadata for the newly refreshed access token.",
+          "operationId": "get-/oauth/v1/access-tokens/{token}_get",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "path",
+              "value": "$steps.refresh-access-token.outputs.access_token"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "hub_id": "$response.body",
+            "user_id": "$response.body",
+            "scopes": "$response.body",
+            "token_type": "$response.body",
+            "user": "$response.body",
+            "hub_domain": "$response.body",
+            "app_id": "$response.body",
+            "expires_in": "$response.body",
+            "token": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "access_token": "$steps.refresh-access-token.outputs.access_token",
+        "expires_in": "$steps.validate-refreshed-access-token.outputs.expires_in",
+        "token_type": "$steps.validate-refreshed-access-token.outputs.token_type",
+        "hub_id": "$steps.validate-refreshed-access-token.outputs.hub_id",
+        "user_id": "$steps.validate-refreshed-access-token.outputs.user_id",
+        "scopes": "$steps.validate-refreshed-access-token.outputs.scopes",
+        "user": "$steps.validate-refreshed-access-token.outputs.user",
+        "hub_domain": "$steps.validate-refreshed-access-token.outputs.hub_domain",
+        "app_id": "$steps.validate-refreshed-access-token.outputs.app_id",
+        "token": "$steps.validate-refreshed-access-token.outputs.token"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

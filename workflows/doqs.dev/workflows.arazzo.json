@@ -1,0 +1,248 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/doqs.dev/main/1.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "fill-pdf-template",
+      "summary": "Finds an available PDF template and fills it with provided data. This is useful for automating the completion of standardized forms.",
+      "description": "Finds an available PDF template and fills it with provided data. This is useful for automating the completion of standardized forms.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-templates",
+          "description": "Lists available PDF templates to find the ID of the template to be filled.",
+          "operationId": "list",
+          "parameters": [
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "templates_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "fill-template",
+          "description": "Fills the selected PDF template with user-provided data.",
+          "operationId": "fill",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "template_id": "$steps.list-templates.outputs.templates_list.results[0].id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "filled_pdf_content": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "templates_list": "$steps.list-templates.outputs.templates_list",
+        "filled_pdf_content": "$steps.fill-template.outputs.filled_pdf_content"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "generate-pdf-and-check-submission-history",
+      "summary": "Generates a PDF from HTML and then retrieves the list of recent submissions, allowing the user to verify the status (success, error, timeout) of their generation request using the submission ID obtained from the generation step.",
+      "description": "Generates a PDF from HTML and then retrieves the list of recent submissions, allowing the user to verify the status (success, error, timeout) of their generation request using the submission ID obtained from the generation step.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "render-pdf-for-history_body": {
+            "type": "object"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "render-pdf-for-history",
+          "description": "Submits HTML content to generate a PDF and receives a submission ID in the response header.",
+          "operationId": "render_pdf_pdf_generator_render_post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.render-pdf-for-history_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "rendered_pdf_content": "$response.body",
+            "submission_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-pdf-submissions",
+          "description": "Retrieves a list of recent PDF generation submissions. The user can then find the status of the submission initiated in the previous step using the 'submission_id'.",
+          "operationId": "get_submissions_pdf_generator_submissions_get",
+          "parameters": [
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "submissions_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "rendered_pdf_content": "$steps.render-pdf-for-history.outputs.rendered_pdf_content",
+        "submission_id": "$steps.render-pdf-for-history.outputs.submission_id",
+        "submissions_list": "$steps.list-pdf-submissions.outputs.submissions_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

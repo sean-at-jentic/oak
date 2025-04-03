@@ -1,0 +1,401 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/namsor.com/main/2.1.1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "detailed-indian-name-analysis-batch",
+      "summary": "Performs a multi-step analysis of a batch of Indian names (first/last format) to determine sub-country classification (State/Union Territory), then infers likely religion and caste group based on that subclassification. Requires names to be associated with India (IN).",
+      "description": "Performs a multi-step analysis of a batch of Indian names (first/last format) to determine sub-country classification (State/Union Territory), then infers likely religion and caste group based on that subclassification. Requires names to be associated with India (IN).",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "get-indian-subclassification-batch_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-indian-subclassification-batch",
+          "description": "Infer the likely Indian state/territory for up to 100 first/last names.",
+          "operationId": "subclassificationIndianBatch",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.get-indian-subclassification-batch_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "BatchFirstLastNameGeoSubclassificationOut": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-indian-religion-batch",
+          "description": "Infer the likely religion for up to 100 Indian first/last names, using previously determined sub-country classification.",
+          "operationId": "religionIndianBatch",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "BatchFirstLastNameSubdivisionIn": "$steps.get-indian-subclassification-batch.outputs.BatchFirstLastNameGeoSubclassificationOut"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "BatchFirstLastNameReligionedOut": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-indian-castegroup-batch",
+          "description": "Infer the likely caste group for up to 100 Indian first/last names, using previously determined sub-country classification.",
+          "operationId": "castegroupIndianBatch",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "BatchFirstLastNameSubdivisionIn": "$steps.get-indian-subclassification-batch.outputs.BatchFirstLastNameGeoSubclassificationOut"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "BatchFirstLastNameCastegroupOut": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "BatchFirstLastNameGeoSubclassificationOut": "$steps.get-indian-subclassification-batch.outputs.BatchFirstLastNameGeoSubclassificationOut",
+        "BatchFirstLastNameReligionedOut": "$steps.get-indian-religion-batch.outputs.BatchFirstLastNameReligionedOut",
+        "BatchFirstLastNameCastegroupOut": "$steps.get-indian-castegroup-batch.outputs.BatchFirstLastNameCastegroupOut"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "name-parsing--gender-analysis-batch",
+      "summary": "Processes a list of full names with geographic context. First, it parses each full name into its likely first and last name components. Then, it uses these parsed components and the geographic context to infer the gender for each name.",
+      "description": "Processes a list of full names with geographic context. First, it parses each full name into its likely first and last name components. Then, it uses these parsed components and the geographic context to infer the gender for each name.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "parse-names-batch_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "parse-names-batch",
+          "description": "Parse up to 100 full names into first/last name structures, using geographic context.",
+          "operationId": "parseNameGeoBatch",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.parse-names-batch_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "BatchPersonalNameParsedOut": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-gender-from-parsed-names-batch",
+          "description": "Infer the likely gender for up to 100 first/last names using geographic context, based on previously parsed names.",
+          "operationId": "genderGeoBatch",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "BatchFirstLastNameGeoIn": "$steps.parse-names-batch.outputs.BatchPersonalNameParsedOut"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "BatchFirstLastNameGenderedOut": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "BatchPersonalNameParsedOut": "$steps.parse-names-batch.outputs.BatchPersonalNameParsedOut",
+        "BatchFirstLastNameGenderedOut": "$steps.get-gender-from-parsed-names-batch.outputs.BatchFirstLastNameGenderedOut"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "chinese-name-romanization-and-matching-single-name",
+      "summary": "Takes a Chinese name in script, romanizes it into Pinyin (separating surname and given name), and then calculates a match score between the original script name and the derived Pinyin version. Useful for verifying name consistency across scripts.",
+      "description": "Takes a Chinese name in script, romanizes it into Pinyin (separating surname and given name), and then calculates a match score between the original script name and the derived Pinyin version. Useful for verifying name consistency across scripts.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "chineseName": {
+            "type": "string"
+          },
+          "chineseSurnameLatin": {
+            "type": "string"
+          },
+          "chineseGivenNameLatin": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "pinyin-chinese-name",
+          "description": "Romanize a single Chinese name into Pinyin, parsing into surname and given name.",
+          "operationId": "pinyinChineseName",
+          "parameters": [
+            {
+              "name": "chineseName",
+              "in": "path",
+              "value": "$inputs.chineseName"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "PersonalNameParsedOut": "$response.body"
+          }
+        },
+        {
+          "stepId": "match-chinese-name",
+          "description": "Calculate a match score between a Chinese name in script and its Pinyin representation.",
+          "operationId": "chineseNameMatch",
+          "parameters": [
+            {
+              "name": "chineseSurnameLatin",
+              "in": "path",
+              "value": "$steps.pinyin-chinese-name.outputs.PersonalNameParsedOut.firstLastName.lastName"
+            },
+            {
+              "name": "chineseGivenNameLatin",
+              "in": "path",
+              "value": "$steps.pinyin-chinese-name.outputs.PersonalNameParsedOut.firstLastName.firstName"
+            },
+            {
+              "name": "chineseName",
+              "in": "path",
+              "value": "$steps.pinyin-chinese-name.outputs.PersonalNameParsedOut.name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "NameMatchedOut": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "PersonalNameParsedOut": "$steps.pinyin-chinese-name.outputs.PersonalNameParsedOut",
+        "NameMatchedOut": "$steps.match-chinese-name.outputs.NameMatchedOut"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "api-monitoring-and-status-check",
+      "summary": "Checks the operational status of API classifiers, lists available services and their costs, and retrieves the current API usage statistics for the authenticated key. Useful for integration health checks and usage monitoring.",
+      "description": "Checks the operational status of API classifiers, lists available services and their costs, and retrieves the current API usage statistics for the authenticated key. Useful for integration health checks and usage monitoring.",
+      "steps": [
+        {
+          "stepId": "check-api-status",
+          "description": "Get the current status of all classifiers.",
+          "operationId": "apiStatus",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "APIClassifiersStatusOut": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-available-services",
+          "description": "List available classification services and their unit costs.",
+          "operationId": "availableServices",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "APIServicesOut": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-api-usage",
+          "description": "Retrieve current API usage and subscription details.",
+          "operationId": "apiUsage",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "APIPeriodUsageOut": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-api-key-info",
+          "description": "Retrieve detailed information about the current API key.",
+          "operationId": "apiKeyInfo",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "APIKeyOut": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "APIClassifiersStatusOut": "$steps.check-api-status.outputs.APIClassifiersStatusOut",
+        "APIServicesOut": "$steps.check-available-services.outputs.APIServicesOut",
+        "APIPeriodUsageOut": "$steps.check-api-usage.outputs.APIPeriodUsageOut",
+        "APIKeyOut": "$steps.check-api-key-info.outputs.APIKeyOut"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

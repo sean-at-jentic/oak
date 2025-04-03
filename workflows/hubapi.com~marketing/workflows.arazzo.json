@@ -1,0 +1,151 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/hubapi.com/marketing/v3/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "find-hub-spot-event-id-and-retrieve-details",
+      "summary": "Finds the internal HubSpot Object ID for a marketing event using its known external ID, and then retrieves the full event details from HubSpot.",
+      "description": "Finds the internal HubSpot Object ID for a marketing event using its known external ID, and then retrieves the full event details from HubSpot.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "externalEventId": {
+            "type": "string"
+          },
+          "objectId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-hubspot-event-id",
+          "description": "Searches the portal for HubSpot marketing events matching the given external event ID.",
+          "operationId": "get-/marketing/v3/marketing-events/{externalEventId}/identifiers_searchPortalEvents",
+          "parameters": [
+            {
+              "name": "externalEventId",
+              "in": "path",
+              "value": "$inputs.externalEventId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "matchingEvents": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-hubspot-event-details",
+          "description": "Retrieves the full details of a specific marketing event using its HubSpot Object ID.",
+          "operationId": "get-/marketing/v3/marketing-events/{objectId}_getByObjectId",
+          "parameters": [
+            {
+              "name": "objectId",
+              "in": "path",
+              "value": "$steps.find-hubspot-event-id.outputs.matchingEvents.results[0].objectId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "eventDetails": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "matchingEvents": "$steps.find-hubspot-event-id.outputs.matchingEvents",
+        "eventDetails": "$steps.get-hubspot-event-details.outputs.eventDetails"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

@@ -1,0 +1,1020 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/signl4.com/main/1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "trigger-and-monitor-a-new-alert",
+      "summary": "Creates a new alert (Signl) within a team and then retrieves its details and status, potentially for logging or initial tracking in an external system.",
+      "description": "Creates a new alert (Signl) within a team and then retrieves its details and status, potentially for logging or initial tracking in an external system.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "trigger-alert_body": {
+            "type": "object"
+          },
+          "alertId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "trigger-alert",
+          "description": "Triggers a new alert for the team associated with the API key.",
+          "operationPath": "openapi_source#/paths/~1alerts/post",
+          "requestBody": {
+            "contentType": "application/json-patch+json",
+            "payload": "$inputs.trigger-alert_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "AlertInfo (including alertId, status, teamId, eventId)": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-alert-details",
+          "description": "Retrieves the full details of the newly created alert.",
+          "operationPath": "openapi_source#/paths/~1alerts~1{alertId}/get",
+          "parameters": [
+            {
+              "name": "alertId",
+              "in": "path",
+              "value": "$inputs.alertId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "AlertInfo": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-alert-notifications",
+          "description": "Retrieves the notification delivery status for the triggered alert to see who was notified.",
+          "operationPath": "openapi_source#/paths/~1alerts~1{alertId}~1notifications/get",
+          "parameters": [
+            {
+              "name": "alertId",
+              "in": "path",
+              "value": "$inputs.alertId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Array<AlertNotificationInfo>": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "AlertInfo (including alertId, status, teamId, eventId)": "$steps.trigger-alert.outputs.AlertInfo (including alertId, status, teamId, eventId)",
+        "AlertInfo": "$steps.get-alert-details.outputs.AlertInfo",
+        "Array<AlertNotificationInfo>": "$steps.get-alert-notifications.outputs.Array<AlertNotificationInfo>"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "respond-to-an-existing-alert",
+      "summary": "Handles an existing alert by acknowledging it, adding context via annotation, and finally closing it. Assumes the alertId is known.",
+      "description": "Handles an existing alert by acknowledging it, adding context via annotation, and finally closing it. Assumes the alertId is known.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "alertId": {
+            "type": "string"
+          },
+          "acknowledge-alert_body": {
+            "type": "object"
+          },
+          "annotate-alert_body": {
+            "type": "object"
+          },
+          "close-alert_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "acknowledge-alert",
+          "description": "Acknowledge a specific alert to signal that someone is working on it.",
+          "operationPath": "openapi_source#/paths/~1alerts~1{alertId}~1acknowledge/post",
+          "parameters": [
+            {
+              "name": "alertId",
+              "in": "path",
+              "value": "$inputs.alertId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json-patch+json",
+            "payload": "$inputs.acknowledge-alert_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "AlertInfo (updated status)": "$response.body"
+          }
+        },
+        {
+          "stepId": "annotate-alert",
+          "description": "Add an annotation (comment) to the alert, perhaps providing an update or context.",
+          "operationPath": "openapi_source#/paths/~1alerts~1{alertId}~1annotate/post",
+          "parameters": [
+            {
+              "name": "alertId",
+              "in": "path",
+              "value": "$inputs.alertId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json-patch+json",
+            "payload": "$inputs.annotate-alert_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "AlertAnnotationInfo (created annotation)": "$response.body"
+          }
+        },
+        {
+          "stepId": "close-alert",
+          "description": "Close the alert, indicating the incident is resolved.",
+          "operationPath": "openapi_source#/paths/~1alerts~1{alertId}~1close/post",
+          "parameters": [
+            {
+              "name": "alertId",
+              "in": "path",
+              "value": "$inputs.alertId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json-patch+json",
+            "payload": "$inputs.close-alert_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "AlertInfo (updated status)": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "AlertInfo (updated status)": "$steps.close-alert.outputs.AlertInfo (updated status)",
+        "AlertAnnotationInfo (created annotation)": "$steps.annotate-alert.outputs.AlertAnnotationInfo (created annotation)"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "synchronize-on-call-schedule-from-external-calendar",
+      "summary": "Updates the SIGNL4 on-call schedule for specific users within a team based on data from an external system (e.g., a corporate calendar). It retrieves existing schedules for context, potentially clears a future range, and posts new duties.",
+      "description": "Updates the SIGNL4 on-call schedule for specific users within a team based on data from an external system (e.g., a corporate calendar). It retrieves existing schedules for context, potentially clears a future range, and posts new duties.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "teamId": {
+            "type": "string"
+          },
+          "UserId": {
+            "type": "string"
+          },
+          "MinDate": {
+            "type": "string"
+          },
+          "Limit": {
+            "type": "string"
+          },
+          "MergeOverlap": {
+            "type": "string"
+          },
+          "delete-schedule-range_body": {
+            "type": "object"
+          },
+          "overrideExisting": {
+            "type": "string"
+          },
+          "create-multiple-schedules_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-team-info",
+          "description": "Retrieve information about available teams to find the target teamId.",
+          "operationPath": "openapi_source#/paths/~1teams/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Array<TeamInfo> (including teamId)": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-user-schedules",
+          "description": "Retrieve existing duty schedules for a specific user within a date range for comparison or context.",
+          "operationPath": "openapi_source#/paths/~1teams~1{teamId}~1schedules/get",
+          "parameters": [
+            {
+              "name": "teamId",
+              "in": "path",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "UserId",
+              "in": "query",
+              "value": "$inputs.UserId"
+            },
+            {
+              "name": "MinDate",
+              "in": "query",
+              "value": "$inputs.MinDate"
+            },
+            {
+              "name": "Limit",
+              "in": "query",
+              "value": "$inputs.Limit"
+            },
+            {
+              "name": "MergeOverlap",
+              "in": "query",
+              "value": "$inputs.MergeOverlap"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Array<ScheduleInfo>": "$response.body"
+          }
+        },
+        {
+          "stepId": "delete-schedule-range",
+          "description": "Delete existing duty schedules within a specific future date range before adding new ones.",
+          "operationPath": "openapi_source#/paths/~1teams~1{teamId}~1schedules~1deleteRange/post",
+          "parameters": [
+            {
+              "name": "teamId",
+              "in": "path",
+              "value": "$inputs.teamId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json-patch+json",
+            "payload": "$inputs.delete-schedule-range_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Array<ScheduleInfo> (deleted schedules)": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-multiple-schedules",
+          "description": "Create multiple new duty schedules based on the external calendar data.",
+          "operationPath": "openapi_source#/paths/~1teams~1{teamId}~1schedules~1multiple/post",
+          "parameters": [
+            {
+              "name": "teamId",
+              "in": "path",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "overrideExisting",
+              "in": "query",
+              "value": "$inputs.overrideExisting"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json-patch+json",
+            "payload": "$inputs.create-multiple-schedules_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Array<ScheduleInfo> (created schedules)": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "Array<TeamInfo> (including teamId)": "$steps.get-team-info.outputs.Array<TeamInfo> (including teamId)",
+        "Array<ScheduleInfo>": "$steps.get-user-schedules.outputs.Array<ScheduleInfo>",
+        "Array<ScheduleInfo> (deleted schedules)": "$steps.delete-schedule-range.outputs.Array<ScheduleInfo> (deleted schedules)",
+        "Array<ScheduleInfo> (created schedules)": "$steps.create-multiple-schedules.outputs.Array<ScheduleInfo> (created schedules)"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-user-duty-status-externally",
+      "summary": "Allows an external system (like an HR system or external calendar) to punch a specific user in or out of duty.",
+      "description": "Allows an external system (like an HR system or external calendar) to punch a specific user in or out of duty.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-user",
+          "description": "Retrieve the list of users to find the ID of the user whose duty status needs to be changed (e.g., by matching email).",
+          "operationPath": "openapi_source#/paths/~1users/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Array<UserInfo> (including userId, mail)": "$response.body"
+          }
+        },
+        {
+          "stepId": "punch-user-in",
+          "description": "Punch the specified user into duty.",
+          "operationPath": "openapi_source#/paths/~1users~1{userId}~1punchIn/post",
+          "parameters": [
+            {
+              "name": "userId",
+              "in": "path",
+              "value": "$inputs.userId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "UserDutyInfo": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "Array<UserInfo> (including userId, mail)": "$steps.find-user.outputs.Array<UserInfo> (including userId, mail)",
+        "UserDutyInfo": "$steps.punch-user-in.outputs.UserDutyInfo"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "onboard-new-user-to-a-team",
+      "summary": "Invites a new user via email to join a specific SIGNL4 team and checks the status of the invitation.",
+      "description": "Invites a new user via email to join a specific SIGNL4 team and checks the status of the invitation.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "teamId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-target-team",
+          "description": "Retrieve the list of teams to identify the ID of the team to invite the user to.",
+          "operationPath": "openapi_source#/paths/~1teams/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Array<TeamInfo>": "$response.body"
+          }
+        },
+        {
+          "stepId": "invite-user",
+          "description": "Send an invitation email to one or more users to join the specified team.",
+          "operationPath": "openapi_source#/paths/~1teams~1{teamId}~1memberships/post",
+          "parameters": [
+            {
+              "name": "teamId",
+              "in": "path",
+              "value": "$steps.find-target-team.outputs.Array<TeamInfo>.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json-patch+json",
+            "payload": {
+              "teamId": "$steps.find-target-team.outputs.Array<TeamInfo>[0].id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Array<UserInvitationResult>": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-invitation-status",
+          "description": "Retrieve the list of current members and pending invitations for the team to confirm the invite was sent.",
+          "operationPath": "openapi_source#/paths/~1teams~1{teamId}~1memberships/get",
+          "parameters": [
+            {
+              "name": "teamId",
+              "in": "path",
+              "value": "$steps.find-target-team.outputs.Array<TeamInfo>.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Array<InvitedUserInfo>": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "Array<TeamInfo>": "$steps.find-target-team.outputs.Array<TeamInfo>",
+        "Array<UserInvitationResult>": "$steps.invite-user.outputs.Array<UserInvitationResult>",
+        "Array<InvitedUserInfo>": "$steps.check-invitation-status.outputs.Array<InvitedUserInfo>"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "configure-outbound-webhook-for-alert-status-changes",
+      "summary": "Sets up an outbound webhook to notify an external system when specific events (like alert acknowledgement or closure) occur in SIGNL4.",
+      "description": "Sets up an outbound webhook to notify an external system when specific events (like alert acknowledgement or closure) occur in SIGNL4.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-webhook_body": {
+            "type": "object"
+          },
+          "webhookId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-webhook",
+          "description": "Create a new outbound webhook definition.",
+          "operationPath": "openapi_source#/paths/~1webhooks/post",
+          "requestBody": {
+            "contentType": "application/json-patch+json",
+            "payload": "$inputs.create-webhook_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "webhookId (string)": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-webhook-details",
+          "description": "Retrieve the details of the newly created webhook to confirm.",
+          "operationPath": "openapi_source#/paths/~1webhooks~1{webhookId}/get",
+          "parameters": [
+            {
+              "name": "webhookId",
+              "in": "path",
+              "value": "$inputs.webhookId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "WebhookInfo": "$response.body"
+          }
+        },
+        {
+          "stepId": "enable-webhook",
+          "description": "Ensure the created webhook is enabled (if not enabled during creation).",
+          "operationPath": "openapi_source#/paths/~1webhooks~1{webhookId}~1enable/post",
+          "parameters": [
+            {
+              "name": "webhookId",
+              "in": "path",
+              "value": "$inputs.webhookId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "WebhookInfo": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "webhookId (string)": "$steps.create-webhook.outputs.webhookId (string)",
+        "WebhookInfo": "$steps.enable-webhook.outputs.WebhookInfo"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-alert-history-and-details-for-auditing",
+      "summary": "Fetches detailed information about a specific alert, including its history, annotations, and attachments, often used for post-incident reviews or auditing.",
+      "description": "Fetches detailed information about a specific alert, including its history, annotations, and attachments, often used for post-incident reviews or auditing.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "alertId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-alert-overview",
+          "description": "Get a comprehensive overview of an alert, including its delivery status and detailed history.",
+          "operationPath": "openapi_source#/paths/~1alerts~1{alertId}~1overview/get",
+          "parameters": [
+            {
+              "name": "alertId",
+              "in": "path",
+              "value": "$inputs.alertId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "OverviewAlert (includes detailedHistory)": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-alert-annotations",
+          "description": "Retrieve all annotations associated with the alert.",
+          "operationPath": "openapi_source#/paths/~1alerts~1{alertId}~1annotations/get",
+          "parameters": [
+            {
+              "name": "alertId",
+              "in": "path",
+              "value": "$inputs.alertId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Array<AlertAnnotationInfo>": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-alert-attachments",
+          "description": "List metadata for all attachments associated with the alert.",
+          "operationPath": "openapi_source#/paths/~1alerts~1{alertId}~1attachments/get",
+          "parameters": [
+            {
+              "name": "alertId",
+              "in": "path",
+              "value": "$inputs.alertId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Array<AlertAttachmentInfo>": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "OverviewAlert (includes detailedHistory)": "$steps.get-alert-overview.outputs.OverviewAlert (includes detailedHistory)",
+        "Array<AlertAnnotationInfo>": "$steps.get-alert-annotations.outputs.Array<AlertAnnotationInfo>",
+        "Array<AlertAttachmentInfo>": "$steps.list-alert-attachments.outputs.Array<AlertAttachmentInfo>"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-alert-categories",
+      "summary": "Creates a new alert category for a team, configures its subscriptions (who gets notified by default), and retrieves its metrics.",
+      "description": "Creates a new alert category for a team, configures its subscriptions (who gets notified by default), and retrieves its metrics.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "teamId": {
+            "type": "string"
+          },
+          "categoryId": {
+            "type": "string"
+          },
+          "set-category-subscriptions_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-team",
+          "description": "Retrieve team information to get the teamId.",
+          "operationPath": "openapi_source#/paths/~1teams/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Array<TeamInfo>": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-category",
+          "description": "Create a new alert category with specific keywords and appearance.",
+          "operationPath": "openapi_source#/paths/~1categories~1{teamId}/post",
+          "parameters": [
+            {
+              "name": "teamId",
+              "in": "path",
+              "value": "$steps.find-team.outputs.Array<TeamInfo>.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json-patch+json",
+            "payload": {
+              "teamId": "$steps.find-team.outputs.Array<TeamInfo>[0].id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "CategoryInfo (including categoryId)": "$response.body"
+          }
+        },
+        {
+          "stepId": "set-category-subscriptions",
+          "description": "Define which users are subscribed, muted, or hidden for this category.",
+          "operationPath": "openapi_source#/paths/~1categories~1{teamId}~1{categoryId}~1subscriptions/post",
+          "parameters": [
+            {
+              "name": "teamId",
+              "in": "path",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "categoryId",
+              "in": "path",
+              "value": "$inputs.categoryId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json-patch+json",
+            "payload": "$inputs.set-category-subscriptions_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Array<CategorySubscriptionInfo>": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-category-metrics",
+          "description": "Retrieve usage metrics for the newly created category.",
+          "operationPath": "openapi_source#/paths/~1categories~1{teamId}~1{categoryId}~1metrics/get",
+          "parameters": [
+            {
+              "name": "teamId",
+              "in": "path",
+              "value": "$inputs.teamId"
+            },
+            {
+              "name": "categoryId",
+              "in": "path",
+              "value": "$inputs.categoryId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "CategoryMetrics": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "Array<TeamInfo>": "$steps.find-team.outputs.Array<TeamInfo>",
+        "CategoryInfo (including categoryId)": "$steps.create-category.outputs.CategoryInfo (including categoryId)",
+        "Array<CategorySubscriptionInfo>": "$steps.set-category-subscriptions.outputs.Array<CategorySubscriptionInfo>",
+        "CategoryMetrics": "$steps.get-category-metrics.outputs.CategoryMetrics"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "download-team-duty-report",
+      "summary": "Retrieves the list of available duty audit reports for a team and downloads a specific report file.",
+      "description": "Retrieves the list of available duty audit reports for a team and downloads a specific report file.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "teamId": {
+            "type": "string"
+          },
+          "fileName": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-team-id",
+          "description": "Retrieve the list of teams to identify the target team ID.",
+          "operationPath": "openapi_source#/paths/~1teams/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Array<TeamInfo>": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-duty-reports",
+          "description": "Get the list of available duty report files for the specified team.",
+          "operationPath": "openapi_source#/paths/~1teams~1{teamId}~1dutyReports/get",
+          "parameters": [
+            {
+              "name": "teamId",
+              "in": "path",
+              "value": "$steps.get-team-id.outputs.Array<TeamInfo>.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Array<DutyAuditReportFileInfo> (including fileName)": "$response.body"
+          }
+        },
+        {
+          "stepId": "download-duty-report",
+          "description": "Download the specified duty report file.",
+          "operationPath": "openapi_source#/paths/~1teams~1{teamId}~1dutyReports~1{fileName}/get",
+          "parameters": [
+            {
+              "name": "teamId",
+              "in": "path",
+              "value": "$steps.get-team-id.outputs.Array<TeamInfo>.id"
+            },
+            {
+              "name": "fileName",
+              "in": "path",
+              "value": "$inputs.fileName"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "binary file content": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "Array<TeamInfo>": "$steps.get-team-id.outputs.Array<TeamInfo>",
+        "Array<DutyAuditReportFileInfo> (including fileName)": "$steps.list-duty-reports.outputs.Array<DutyAuditReportFileInfo> (including fileName)",
+        "binary file content": "$steps.download-duty-report.outputs.binary file content"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

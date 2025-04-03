@@ -1,0 +1,420 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/journy.io/main/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "new-b2-b-account-and-user-setup",
+      "summary": "Registers a new B2B account in journy.io, creates the initial user for that account, and links the user to the account. This is a fundamental workflow for onboarding new B2B customers.",
+      "description": "Registers a new B2B account in journy.io, creates the initial user for that account, and links the user to the account. This is a fundamental workflow for onboarding new B2B customers.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-new-account_body": {
+            "type": "object"
+          },
+          "create-initial-user_body": {
+            "type": "object"
+          },
+          "link-user-to-account_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-new-account",
+          "description": "Create the new B2B account record in journy.io, providing initial properties like name, domain, plan, MRR.",
+          "operationId": "upsertAccount",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-new-account_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "account_creation_status": "$response.body",
+            "requestId": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-initial-user",
+          "description": "Create the first user associated with the new account, providing their details like email, userId, name.",
+          "operationId": "upsertUser",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-initial-user_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_creation_status": "$response.body",
+            "requestId": "$response.body"
+          }
+        },
+        {
+          "stepId": "link-user-to-account",
+          "description": "Associate the newly created user with the newly created account.",
+          "operationId": "addUserToAccount",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.link-user-to-account_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "link_status": "$response.body",
+            "requestId": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "account_creation_status": "$steps.create-new-account.outputs.account_creation_status",
+        "requestId": "$steps.link-user-to-account.outputs.requestId",
+        "user_creation_status": "$steps.create-initial-user.outputs.user_creation_status",
+        "link_status": "$steps.link-user-to-account.outputs.link_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "new-user-signup-and-initial-event-tracking",
+      "summary": "Handles the process when a new user signs up in the application. It creates the user in journy.io and tracks their first significant event, like 'Signed Up'. Optionally links pre-login web activity.",
+      "description": "Handles the process when a new user signs up in the application. It creates the user in journy.io and tracks their first significant event, like 'Signed Up'. Optionally links pre-login web activity.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-user_body": {
+            "type": "object"
+          },
+          "deviceId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-user",
+          "description": "Create the user record in journy.io upon successful signup in the main application.",
+          "operationId": "upsertUser",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-user_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_creation_status": "$response.body",
+            "requestId": "$response.body",
+            "user_identification": "$response.body"
+          }
+        },
+        {
+          "stepId": "link-web-activity",
+          "description": "(Optional) Link anonymous website activity (captured via JS snippet cookie) to the newly identified user.",
+          "operationId": "link",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "identification": "$steps.create-user.outputs.user_identification",
+              "deviceId": "$inputs.deviceId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "link_status": "$response.body",
+            "requestId": "$response.body"
+          }
+        },
+        {
+          "stepId": "track-signup-event",
+          "description": "Track the 'Signed Up' event for the new user.",
+          "operationId": "trackEvent",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "identification": "$steps.create-user.outputs.user_identification",
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "event_tracking_status": "$response.body",
+            "requestId": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "user_creation_status": "$steps.create-user.outputs.user_creation_status",
+        "requestId": "$steps.track-signup-event.outputs.requestId",
+        "user_identification": "$steps.create-user.outputs.user_identification",
+        "link_status": "$steps.link-web-activity.outputs.link_status",
+        "event_tracking_status": "$steps.track-signup-event.outputs.event_tracking_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "track-account-subscription-change",
+      "summary": "Updates an account's properties (e.g., plan, MRR) in journy.io and tracks the corresponding event (e.g., 'Subscription Upgraded', 'Subscription Downgraded').",
+      "description": "Updates an account's properties (e.g., plan, MRR) in journy.io and tracks the corresponding event (e.g., 'Subscription Upgraded', 'Subscription Downgraded').",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "update-account-properties_body": {
+            "type": "object"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "update-account-properties",
+          "description": "Update the account's properties in journy.io to reflect the new subscription status.",
+          "operationId": "upsertAccount",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.update-account-properties_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "account_update_status": "$response.body",
+            "requestId": "$response.body",
+            "account_identification": "$response.body"
+          }
+        },
+        {
+          "stepId": "track-subscription-change-event",
+          "description": "Track the specific subscription change event (e.g., 'subscription_upgraded') associated with the account.",
+          "operationId": "trackEvent",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "identification": "$steps.update-account-properties.outputs.account_identification",
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "event_tracking_status": "$response.body",
+            "requestId": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "account_update_status": "$steps.update-account-properties.outputs.account_update_status",
+        "requestId": "$steps.track-subscription-change-event.outputs.requestId",
+        "account_identification": "$steps.update-account-properties.outputs.account_identification",
+        "event_tracking_status": "$steps.track-subscription-change-event.outputs.event_tracking_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "discover-configured-properties-and-events",
+      "summary": "Retrieves lists of currently defined user properties, account properties, and trackable events within the journy.io configuration. Useful for developers integrating the API to understand the available data schema.",
+      "description": "Retrieves lists of currently defined user properties, account properties, and trackable events within the journy.io configuration. Useful for developers integrating the API to understand the available data schema.",
+      "steps": [
+        {
+          "stepId": "list-user-properties",
+          "description": "Get a list of all defined user properties.",
+          "operationId": "getUserProperties",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_properties_list": "$response.body",
+            "requestId": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-account-properties",
+          "description": "Get a list of all defined account properties.",
+          "operationId": "getAccountProperties",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "account_properties_list": "$response.body",
+            "requestId": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-defined-events",
+          "description": "Get a list of all defined event types.",
+          "operationId": "getEvents",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "events_list": "$response.body",
+            "requestId": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "user_properties_list": "$steps.list-user-properties.outputs.user_properties_list",
+        "requestId": "$steps.list-defined-events.outputs.requestId",
+        "account_properties_list": "$steps.list-account-properties.outputs.account_properties_list",
+        "events_list": "$steps.list-defined-events.outputs.events_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

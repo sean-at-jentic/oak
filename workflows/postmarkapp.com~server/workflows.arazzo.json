@@ -1,0 +1,1145 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/postmarkapp.com/server/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "send-batch-emails-using-existing-template",
+      "summary": "Retrieves the details of a specific email template and then uses it to send a batch of personalized emails.",
+      "description": "Retrieves the details of a specific email template and then uses it to send a batch of personalized emails.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-Postmark-Server-Token": {
+            "type": "string"
+          },
+          "templateIdOrAlias": {
+            "type": "string"
+          },
+          "send-batch-templated-emails_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-template-details",
+          "description": "Retrieve the details of a specific template using its ID or Alias.",
+          "operationId": "getSingleTemplate",
+          "parameters": [
+            {
+              "name": "X-Postmark-Server-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Server-Token"
+            },
+            {
+              "name": "templateIdOrAlias",
+              "in": "path",
+              "value": "$inputs.templateIdOrAlias"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "TemplateID": "$response.body",
+            "Alias": "$response.body"
+          }
+        },
+        {
+          "stepId": "send-batch-templated-emails",
+          "description": "Send a batch of emails using the retrieved template ID and providing unique data for each recipient.",
+          "operationId": "sendEmailBatchWithTemplates",
+          "parameters": [
+            {
+              "name": "X-Postmark-Server-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Server-Token"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.send-batch-templated-emails_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Array of SendEmailResponse ({MessageID, ErrorCode, Message, SubmittedAt, To})": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "TemplateID": "$steps.get-template-details.outputs.TemplateID",
+        "Alias": "$steps.get-template-details.outputs.Alias",
+        "Array of SendEmailResponse ({MessageID, ErrorCode, Message, SubmittedAt, To})": "$steps.send-batch-templated-emails.outputs.Array of SendEmailResponse ({MessageID, ErrorCode, Message, SubmittedAt, To})"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-validate-and-use-email-template",
+      "summary": "Validates the content for a new email template, creates the template if valid, and then sends a test email using the newly created template.",
+      "description": "Validates the content for a new email template, creates the template if valid, and then sends a test email using the newly created template.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-Postmark-Server-Token": {
+            "type": "string"
+          },
+          "validate-template-content_body": {
+            "type": "object"
+          },
+          "create-template_body": {
+            "type": "object"
+          },
+          "send-email-with-new-template_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "validate-template-content",
+          "description": "Validate the syntax and renderability of template content (Subject, HTML Body, Text Body) with optional test data.",
+          "operationId": "testTemplateContent",
+          "parameters": [
+            {
+              "name": "X-Postmark-Server-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Server-Token"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.validate-template-content_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "AllContentIsValid": "$response.body",
+            "HtmlBodyValidationResult": "$response.body",
+            "SubjectValidationResult": "$response.body",
+            "TextBodyValidationResult": "$response.body",
+            "SuggestedTemplateModel": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-template",
+          "description": "Create a new email template using the validated content. Assumes validation in the previous step was successful.",
+          "operationPath": "openapi_source#/paths/~1templates/post",
+          "parameters": [
+            {
+              "name": "X-Postmark-Server-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Server-Token"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-template_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "TemplateId": "$response.body",
+            "Alias": "$response.body",
+            "Name": "$response.body",
+            "Active": "$response.body"
+          }
+        },
+        {
+          "stepId": "send-email-with-new-template",
+          "description": "Send a single email using the newly created template ID or alias.",
+          "operationId": "sendEmailWithTemplate",
+          "parameters": [
+            {
+              "name": "X-Postmark-Server-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Server-Token"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.send-email-with-new-template_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "MessageID": "$response.body",
+            "ErrorCode": "$response.body",
+            "Message": "$response.body",
+            "SubmittedAt": "$response.body",
+            "To": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "AllContentIsValid": "$steps.validate-template-content.outputs.AllContentIsValid",
+        "HtmlBodyValidationResult": "$steps.validate-template-content.outputs.HtmlBodyValidationResult",
+        "SubjectValidationResult": "$steps.validate-template-content.outputs.SubjectValidationResult",
+        "TextBodyValidationResult": "$steps.validate-template-content.outputs.TextBodyValidationResult",
+        "SuggestedTemplateModel": "$steps.validate-template-content.outputs.SuggestedTemplateModel",
+        "TemplateId": "$steps.create-template.outputs.TemplateId",
+        "Alias": "$steps.create-template.outputs.Alias",
+        "Name": "$steps.create-template.outputs.Name",
+        "Active": "$steps.create-template.outputs.Active",
+        "MessageID": "$steps.send-email-with-new-template.outputs.MessageID",
+        "ErrorCode": "$steps.send-email-with-new-template.outputs.ErrorCode",
+        "Message": "$steps.send-email-with-new-template.outputs.Message",
+        "SubmittedAt": "$steps.send-email-with-new-template.outputs.SubmittedAt",
+        "To": "$steps.send-email-with-new-template.outputs.To"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "analyze-performance-of-an-email-campaign-by-tag",
+      "summary": "Retrieves various aggregated statistics (overview, opens, clicks, bounces, spam complaints) for emails sent with a specific tag within a date range to analyze campaign performance.",
+      "description": "Retrieves various aggregated statistics (overview, opens, clicks, bounces, spam complaints) for emails sent with a specific tag within a date range to analyze campaign performance.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-Postmark-Server-Token": {
+            "type": "string"
+          },
+          "tag": {
+            "type": "string"
+          },
+          "fromdate": {
+            "type": "string"
+          },
+          "todate": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-campaign-overview-stats",
+          "description": "Get overall delivery and engagement statistics for a specific tag and date range.",
+          "operationId": "getOutboundOverviewStatistics",
+          "parameters": [
+            {
+              "name": "X-Postmark-Server-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Server-Token"
+            },
+            {
+              "name": "tag",
+              "in": "query",
+              "value": "$inputs.tag"
+            },
+            {
+              "name": "fromdate",
+              "in": "query",
+              "value": "$inputs.fromdate"
+            },
+            {
+              "name": "todate",
+              "in": "query",
+              "value": "$inputs.todate"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "OutboundOverviewStatsResponse (Sent, Bounced, Opens, TotalClicks, SpamComplaints, etc.)": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-campaign-open-stats",
+          "description": "Get detailed open statistics (total, unique, daily) for the campaign tag and date range.",
+          "operationId": "getOutboundOpenCounts",
+          "parameters": [
+            {
+              "name": "X-Postmark-Server-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Server-Token"
+            },
+            {
+              "name": "tag",
+              "in": "query",
+              "value": "$inputs.tag"
+            },
+            {
+              "name": "fromdate",
+              "in": "query",
+              "value": "$inputs.fromdate"
+            },
+            {
+              "name": "todate",
+              "in": "query",
+              "value": "$inputs.todate"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Open counts (Total Opens, Unique Opens, Daily breakdown)": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-campaign-click-stats",
+          "description": "Get detailed click statistics (total, unique, daily) for the campaign tag and date range.",
+          "operationId": "getOutboundClickCounts",
+          "parameters": [
+            {
+              "name": "X-Postmark-Server-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Server-Token"
+            },
+            {
+              "name": "tag",
+              "in": "query",
+              "value": "$inputs.tag"
+            },
+            {
+              "name": "fromdate",
+              "in": "query",
+              "value": "$inputs.fromdate"
+            },
+            {
+              "name": "todate",
+              "in": "query",
+              "value": "$inputs.todate"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Click counts (Total Clicks, Unique Clicks, Daily breakdown)": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-campaign-bounce-stats",
+          "description": "Get detailed bounce statistics (by type, daily) for the campaign tag and date range.",
+          "operationId": "getBounceCounts",
+          "parameters": [
+            {
+              "name": "X-Postmark-Server-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Server-Token"
+            },
+            {
+              "name": "tag",
+              "in": "query",
+              "value": "$inputs.tag"
+            },
+            {
+              "name": "fromdate",
+              "in": "query",
+              "value": "$inputs.fromdate"
+            },
+            {
+              "name": "todate",
+              "in": "query",
+              "value": "$inputs.todate"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Bounce counts (Total Bounces by type, Daily breakdown)": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-campaign-spam-stats",
+          "description": "Get detailed spam complaint statistics (total, daily) for the campaign tag and date range.",
+          "operationId": "getSpamComplaints",
+          "parameters": [
+            {
+              "name": "X-Postmark-Server-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Server-Token"
+            },
+            {
+              "name": "tag",
+              "in": "query",
+              "value": "$inputs.tag"
+            },
+            {
+              "name": "fromdate",
+              "in": "query",
+              "value": "$inputs.fromdate"
+            },
+            {
+              "name": "todate",
+              "in": "query",
+              "value": "$inputs.todate"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Spam complaint counts (Total Spam Complaints, Daily breakdown)": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "OutboundOverviewStatsResponse (Sent, Bounced, Opens, TotalClicks, SpamComplaints, etc.)": "$steps.get-campaign-overview-stats.outputs.OutboundOverviewStatsResponse (Sent, Bounced, Opens, TotalClicks, SpamComplaints, etc.)",
+        "Open counts (Total Opens, Unique Opens, Daily breakdown)": "$steps.get-campaign-open-stats.outputs.Open counts (Total Opens, Unique Opens, Daily breakdown)",
+        "Click counts (Total Clicks, Unique Clicks, Daily breakdown)": "$steps.get-campaign-click-stats.outputs.Click counts (Total Clicks, Unique Clicks, Daily breakdown)",
+        "Bounce counts (Total Bounces by type, Daily breakdown)": "$steps.get-campaign-bounce-stats.outputs.Bounce counts (Total Bounces by type, Daily breakdown)",
+        "Spam complaint counts (Total Spam Complaints, Daily breakdown)": "$steps.get-campaign-spam-stats.outputs.Spam complaint counts (Total Spam Complaints, Daily breakdown)"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "investigate-and-reactivate-bounced-email-address",
+      "summary": "Searches for bounces associated with a specific email address that resulted in deactivation, retrieves details for a specific bounce, and then reactivates the address for sending.",
+      "description": "Searches for bounces associated with a specific email address that resulted in deactivation, retrieves details for a specific bounce, and then reactivates the address for sending.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-Postmark-Server-Token": {
+            "type": "string"
+          },
+          "count": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "inactive": {
+            "type": "string"
+          },
+          "emailFilter": {
+            "type": "string"
+          },
+          "messageID": {
+            "type": "string"
+          },
+          "tag": {
+            "type": "string"
+          },
+          "todate": {
+            "type": "string"
+          },
+          "fromdate": {
+            "type": "string"
+          },
+          "bounceid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-inactive-bounces-for-email",
+          "description": "Search for bounces for a specific email address where the bounce caused the address to be deactivated.",
+          "operationId": "getBounces",
+          "parameters": [
+            {
+              "name": "X-Postmark-Server-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Server-Token"
+            },
+            {
+              "name": "count",
+              "in": "query",
+              "value": "$inputs.count"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "type",
+              "in": "query",
+              "value": "$inputs.type"
+            },
+            {
+              "name": "inactive",
+              "in": "query",
+              "value": "$inputs.inactive"
+            },
+            {
+              "name": "emailFilter",
+              "in": "query",
+              "value": "$inputs.emailFilter"
+            },
+            {
+              "name": "messageID",
+              "in": "query",
+              "value": "$inputs.messageID"
+            },
+            {
+              "name": "tag",
+              "in": "query",
+              "value": "$inputs.tag"
+            },
+            {
+              "name": "todate",
+              "in": "query",
+              "value": "$inputs.todate"
+            },
+            {
+              "name": "fromdate",
+              "in": "query",
+              "value": "$inputs.fromdate"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "TotalCount": "$response.body",
+            "Bounces (Array of BounceInfoResponse)": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-bounce-details",
+          "description": "Retrieve detailed information about a specific bounce identified in the search results.",
+          "operationId": "getSingleBounce",
+          "parameters": [
+            {
+              "name": "X-Postmark-Server-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Server-Token"
+            },
+            {
+              "name": "bounceid",
+              "in": "path",
+              "value": "$inputs.bounceid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "BounceInfoResponse (ID, Email, BouncedAt, Type, Description, Details, CanActivate, etc.)": "$response.body"
+          }
+        },
+        {
+          "stepId": "activate-bounce",
+          "description": "Reactivate the email address associated with the specified bounce ID, allowing emails to be sent to it again.",
+          "operationId": "activateBounce",
+          "parameters": [
+            {
+              "name": "X-Postmark-Server-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Server-Token"
+            },
+            {
+              "name": "bounceid",
+              "in": "path",
+              "value": "$inputs.bounceid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "BounceActivationResponse (Message, Bounce)": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "TotalCount": "$steps.search-inactive-bounces-for-email.outputs.TotalCount",
+        "Bounces (Array of BounceInfoResponse)": "$steps.search-inactive-bounces-for-email.outputs.Bounces (Array of BounceInfoResponse)",
+        "BounceInfoResponse (ID, Email, BouncedAt, Type, Description, Details, CanActivate, etc.)": "$steps.get-bounce-details.outputs.BounceInfoResponse (ID, Email, BouncedAt, Type, Description, Details, CanActivate, etc.)",
+        "BounceActivationResponse (Message, Bounce)": "$steps.activate-bounce.outputs.BounceActivationResponse (Message, Bounce)"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "troubleshoot-outbound-email-delivery",
+      "summary": "Searches for outbound emails sent to a specific recipient, retrieves the detailed delivery events and status for a specific message, and optionally fetches the raw message content.",
+      "description": "Searches for outbound emails sent to a specific recipient, retrieves the detailed delivery events and status for a specific message, and optionally fetches the raw message content.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-Postmark-Server-Token": {
+            "type": "string"
+          },
+          "count": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "recipient": {
+            "type": "string"
+          },
+          "fromemail": {
+            "type": "string"
+          },
+          "tag": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "todate": {
+            "type": "string"
+          },
+          "fromdate": {
+            "type": "string"
+          },
+          "messageid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-outbound-messages",
+          "description": "Search for outbound messages using filters like recipient, sender, tag, or status.",
+          "operationId": "searchOutboundMessages",
+          "parameters": [
+            {
+              "name": "X-Postmark-Server-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Server-Token"
+            },
+            {
+              "name": "count",
+              "in": "query",
+              "value": "$inputs.count"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "recipient",
+              "in": "query",
+              "value": "$inputs.recipient"
+            },
+            {
+              "name": "fromemail",
+              "in": "query",
+              "value": "$inputs.fromemail"
+            },
+            {
+              "name": "tag",
+              "in": "query",
+              "value": "$inputs.tag"
+            },
+            {
+              "name": "status",
+              "in": "query",
+              "value": "$inputs.status"
+            },
+            {
+              "name": "todate",
+              "in": "query",
+              "value": "$inputs.todate"
+            },
+            {
+              "name": "fromdate",
+              "in": "query",
+              "value": "$inputs.fromdate"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "TotalCount": "$response.body",
+            "Messages (Array of OutboundMessageDetail)": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-outbound-message-details",
+          "description": "Retrieve detailed information, including delivery events and rendered body, for a specific outbound message.",
+          "operationId": "getOutboundMessageDetails",
+          "parameters": [
+            {
+              "name": "X-Postmark-Server-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Server-Token"
+            },
+            {
+              "name": "messageid",
+              "in": "path",
+              "value": "$inputs.messageid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "OutboundMessageDetailsResponse (Status, ReceivedAt, Recipients, Body, MessageEvents, etc.)": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-outbound-message-dump",
+          "description": "Retrieve the raw MIME message source for a specific outbound message (optional troubleshooting step).",
+          "operationId": "getOutboundMessageDump",
+          "parameters": [
+            {
+              "name": "X-Postmark-Server-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Server-Token"
+            },
+            {
+              "name": "messageid",
+              "in": "path",
+              "value": "$inputs.messageid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "OutboundMessageDumpResponse (Body)": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "TotalCount": "$steps.search-outbound-messages.outputs.TotalCount",
+        "Messages (Array of OutboundMessageDetail)": "$steps.search-outbound-messages.outputs.Messages (Array of OutboundMessageDetail)",
+        "OutboundMessageDetailsResponse (Status, ReceivedAt, Recipients, Body, MessageEvents, etc.)": "$steps.get-outbound-message-details.outputs.OutboundMessageDetailsResponse (Status, ReceivedAt, Recipients, Body, MessageEvents, etc.)",
+        "OutboundMessageDumpResponse (Body)": "$steps.get-outbound-message-dump.outputs.OutboundMessageDumpResponse (Body)"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "handle-blocked-inbound-message",
+      "summary": "Searches for inbound emails that were blocked by Postmark rules, retrieves the details and reason for blocking for a specific message, and then allows the message to bypass the rules for processing.",
+      "description": "Searches for inbound emails that were blocked by Postmark rules, retrieves the details and reason for blocking for a specific message, and then allows the message to bypass the rules for processing.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-Postmark-Server-Token": {
+            "type": "string"
+          },
+          "count": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "recipient": {
+            "type": "string"
+          },
+          "fromemail": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "mailboxhash": {
+            "type": "string"
+          },
+          "tag": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "todate": {
+            "type": "string"
+          },
+          "fromdate": {
+            "type": "string"
+          },
+          "messageid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-blocked-inbound",
+          "description": "Search for inbound messages with a 'blocked' status, optionally filtering by recipient, sender, etc.",
+          "operationId": "searchInboundMessages",
+          "parameters": [
+            {
+              "name": "X-Postmark-Server-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Server-Token"
+            },
+            {
+              "name": "count",
+              "in": "query",
+              "value": "$inputs.count"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "recipient",
+              "in": "query",
+              "value": "$inputs.recipient"
+            },
+            {
+              "name": "fromemail",
+              "in": "query",
+              "value": "$inputs.fromemail"
+            },
+            {
+              "name": "subject",
+              "in": "query",
+              "value": "$inputs.subject"
+            },
+            {
+              "name": "mailboxhash",
+              "in": "query",
+              "value": "$inputs.mailboxhash"
+            },
+            {
+              "name": "tag",
+              "in": "query",
+              "value": "$inputs.tag"
+            },
+            {
+              "name": "status",
+              "in": "query",
+              "value": "$inputs.status"
+            },
+            {
+              "name": "todate",
+              "in": "query",
+              "value": "$inputs.todate"
+            },
+            {
+              "name": "fromdate",
+              "in": "query",
+              "value": "$inputs.fromdate"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "TotalCount": "$response.body",
+            "InboundMessages (Array of InboundMessageDetail)": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-inbound-message-details",
+          "description": "Retrieve the full details of a specific blocked inbound message, including the reason it was blocked.",
+          "operationId": "getInboundMessageDetails",
+          "parameters": [
+            {
+              "name": "X-Postmark-Server-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Server-Token"
+            },
+            {
+              "name": "messageid",
+              "in": "path",
+              "value": "$inputs.messageid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "InboundMessageFullDetailsResponse (Status, BlockedReason, From, To, Subject, Body, etc.)": "$response.body"
+          }
+        },
+        {
+          "stepId": "bypass-inbound-rules",
+          "description": "Instruct Postmark to bypass the inbound rules for this specific message, allowing it to be processed (e.g., forwarded to the webhook).",
+          "operationId": "bypassRulesForInboundMessage",
+          "parameters": [
+            {
+              "name": "X-Postmark-Server-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Server-Token"
+            },
+            {
+              "name": "messageid",
+              "in": "path",
+              "value": "$inputs.messageid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "StandardPostmarkResponse (ErrorCode, Message)": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "TotalCount": "$steps.search-blocked-inbound.outputs.TotalCount",
+        "InboundMessages (Array of InboundMessageDetail)": "$steps.search-blocked-inbound.outputs.InboundMessages (Array of InboundMessageDetail)",
+        "InboundMessageFullDetailsResponse (Status, BlockedReason, From, To, Subject, Body, etc.)": "$steps.get-inbound-message-details.outputs.InboundMessageFullDetailsResponse (Status, BlockedReason, From, To, Subject, Body, etc.)",
+        "StandardPostmarkResponse (ErrorCode, Message)": "$steps.bypass-inbound-rules.outputs.StandardPostmarkResponse (ErrorCode, Message)"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "configure-real-time-event-notifications-webhooks",
+      "summary": "Retrieves the current server configuration, including webhook URLs, and then updates the configuration to set or change the URLs for bounce, open, click, or delivery events.",
+      "description": "Retrieves the current server configuration, including webhook URLs, and then updates the configuration to set or change the URLs for bounce, open, click, or delivery events.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-Postmark-Server-Token": {
+            "type": "string"
+          },
+          "update-server-webhooks_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-server-configuration",
+          "description": "Retrieve the current configuration settings for the server.",
+          "operationId": "getCurrentServerConfiguration",
+          "parameters": [
+            {
+              "name": "X-Postmark-Server-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Server-Token"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ServerConfigurationResponse (includes BounceHookUrl, OpenHookUrl, ClickHookUrl, DeliveryHookUrl, etc.)": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-server-webhooks",
+          "description": "Update the server configuration, specifically setting desired webhook URLs for real-time event notifications.",
+          "operationId": "editCurrentServerConfiguration",
+          "parameters": [
+            {
+              "name": "X-Postmark-Server-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Server-Token"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.update-server-webhooks_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ServerConfigurationResponse (updated configuration)": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "ServerConfigurationResponse (includes BounceHookUrl, OpenHookUrl, ClickHookUrl, DeliveryHookUrl, etc.)": "$steps.get-server-configuration.outputs.ServerConfigurationResponse (includes BounceHookUrl, OpenHookUrl, ClickHookUrl, DeliveryHookUrl, etc.)",
+        "ServerConfigurationResponse (updated configuration)": "$steps.update-server-webhooks.outputs.ServerConfigurationResponse (updated configuration)"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

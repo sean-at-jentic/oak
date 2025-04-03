@@ -1,0 +1,646 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/billbee.io/main/V1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "basic-order-fulfillment-with-shipping-label",
+      "summary": "Retrieves an order, generates a shipping label using a selected provider, and updates the order status to shipped.",
+      "description": "Retrieves an order, generates a shipping label using a selected provider, and updates the order status to shipped.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "articleTitleSource": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-order-to-fulfill",
+          "description": "Retrieve details of a specific order needing fulfillment.",
+          "operationId": "OrderApi_Get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "articleTitleSource",
+              "in": "query",
+              "value": "$inputs.articleTitleSource"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "orderId": "$response.body",
+            "orderDetails": "$response.body",
+            "shippingAddress": "$response.body",
+            "orderItems": "$response.body",
+            "customerId": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-shipping-providers",
+          "description": "Retrieve available shipping providers and their products to select for shipment.",
+          "operationId": "Shipment_GetShippingproviders",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "shippingProvidersList": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-shipment-label",
+          "description": "Creates a shipment label for the order using the selected provider and product.",
+          "operationId": "Shipment_ShipWithLabel",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "orderId": "$steps.get-order-to-fulfill.outputs.orderId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "shippingId": "$response.body",
+            "trackingUrl": "$response.body",
+            "labelDataPdf": "$response.body",
+            "carrier": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-order-status-shipped",
+          "description": "Updates the order's status to 'shipped' (State ID 4). Note: This might be redundant if 'changeStateToSend' was true in the previous step, but included for explicit control.",
+          "operationId": "OrderApi_UpdateState",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "orderId": "$steps.get-order-to-fulfill.outputs.orderId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "statusUpdateResult": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "orderId": "$steps.get-order-to-fulfill.outputs.orderId",
+        "orderDetails": "$steps.get-order-to-fulfill.outputs.orderDetails",
+        "shippingAddress": "$steps.get-order-to-fulfill.outputs.shippingAddress",
+        "orderItems": "$steps.get-order-to-fulfill.outputs.orderItems",
+        "customerId": "$steps.get-order-to-fulfill.outputs.customerId",
+        "shippingProvidersList": "$steps.get-shipping-providers.outputs.shippingProvidersList",
+        "shippingId": "$steps.create-shipment-label.outputs.shippingId",
+        "trackingUrl": "$steps.create-shipment-label.outputs.trackingUrl",
+        "labelDataPdf": "$steps.create-shipment-label.outputs.labelDataPdf",
+        "carrier": "$steps.create-shipment-label.outputs.carrier",
+        "statusUpdateResult": "$steps.update-order-status-shipped.outputs.statusUpdateResult"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "account-provisioning",
+      "summary": "Allows a partner application to onboard new users by creating Billbee accounts after terms acceptance.",
+      "description": "Allows a partner application to onboard new users by creating Billbee accounts after terms acceptance.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-billbee-account_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-terms-info",
+          "description": "Retrieve Billbee terms and conditions information.",
+          "operationId": "AutomaticProvisioning_TermsInfo",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "termsInfo": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-billbee-account",
+          "description": "Create a new Billbee user account after terms acceptance. Requires CreateAccountContainer in body.",
+          "operationId": "AutomaticProvisioning_CreateAccount",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-billbee-account_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "accountCreationResult": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "termsInfo": "$steps.get-terms-info.outputs.termsInfo",
+        "accountCreationResult": "$steps.create-billbee-account.outputs.accountCreationResult"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "generate-and-store-invoice",
+      "summary": "Creates an invoice document for a specific order and optionally sends it to a connected cloud storage.",
+      "description": "Creates an invoice document for a specific order and optionally sends it to a connected cloud storage.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "articleTitleSource": {
+            "type": "string"
+          },
+          "includeInvoicePdf": {
+            "type": "string"
+          },
+          "templateId": {
+            "type": "string"
+          },
+          "sendToCloudId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-order-for-invoice",
+          "description": "Retrieve order details to ensure it's ready for invoicing.",
+          "operationId": "OrderApi_Get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "articleTitleSource",
+              "in": "query",
+              "value": "$inputs.articleTitleSource"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "orderId": "$response.body",
+            "orderDetails": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-cloud-storages",
+          "description": "Retrieve the list of connected cloud storage options.",
+          "operationId": "CloudStorageApi_GetList",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "cloudStorageList": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-invoice-and-store",
+          "description": "Generate the invoice for the order and send it to the selected cloud storage.",
+          "operationId": "OrderApi_CreateInvoice",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "includeInvoicePdf",
+              "in": "query",
+              "value": "$inputs.includeInvoicePdf"
+            },
+            {
+              "name": "templateId",
+              "in": "query",
+              "value": "$inputs.templateId"
+            },
+            {
+              "name": "sendToCloudId",
+              "in": "query",
+              "value": "$steps.get-cloud-storages.outputs.cloudStorageList.Id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "invoiceDetails": "$response.body",
+            "pdfDownloadUrl": "$response.body",
+            "pdfData": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "orderId": "$steps.get-order-for-invoice.outputs.orderId",
+        "orderDetails": "$steps.get-order-for-invoice.outputs.orderDetails",
+        "cloudStorageList": "$steps.get-cloud-storages.outputs.cloudStorageList",
+        "invoiceDetails": "$steps.create-invoice-and-store.outputs.invoiceDetails",
+        "pdfDownloadUrl": "$steps.create-invoice-and-store.outputs.pdfDownloadUrl",
+        "pdfData": "$steps.create-invoice-and-store.outputs.pdfData"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "setup-order-status-webhook",
+      "summary": "Configures a webhook to receive notifications for specific order events (e.g., status updates).",
+      "description": "Configures a webhook to receive notifications for specific order events (e.g., status updates).",
+      "steps": [
+        {
+          "stepId": "get-webhook-filters",
+          "description": "Retrieve the list of available webhook event filters.",
+          "operationId": "WebHookManagement_GetFilters",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "availableFilters": "$response.body"
+          }
+        },
+        {
+          "stepId": "register-webhook",
+          "description": "Register a new webhook with a specific URL, secret, and selected filters.",
+          "operationId": "WebHookManagement_Post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "filters": "$steps.get-webhook-filters.outputs.availableFilters"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "webhookId": "$response.body",
+            "webhookDetails": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "availableFilters": "$steps.get-webhook-filters.outputs.availableFilters",
+        "webhookId": "$steps.register-webhook.outputs.webhookId",
+        "webhookDetails": "$steps.register-webhook.outputs.webhookDetails"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "customer-order-history-lookup",
+      "summary": "Searches for a customer using a search term (like email or name) and retrieves their order history.",
+      "description": "Searches for a customer using a search term (like email or name) and retrieves their order history.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "search-customer_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "pageSize": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-customer",
+          "description": "Search for a customer by term (e.g., email, name). Requires SearchModel in body.",
+          "operationId": "Search_Search",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.search-customer_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "customerId": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-customer-orders",
+          "description": "Retrieve the list of orders associated with the found customer.",
+          "operationId": "Customer_GetCustomerOrders",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "customerOrdersList": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "customerId": "$steps.search-customer.outputs.customerId",
+        "customerOrdersList": "$steps.get-customer-orders.outputs.customerOrdersList"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "product-information-enrichment",
+      "summary": "Adds new images to an existing product listing.",
+      "description": "Adds new images to an existing product listing.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "lookupBy": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "replace": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-product-by-sku",
+          "description": "Retrieve product details using its SKU.",
+          "operationId": "Article_GetArticle",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "lookupBy",
+              "in": "query",
+              "value": "$inputs.lookupBy"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "productId": "$response.body",
+            "productDetails": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-product-images",
+          "description": "Append new images to the specified product. Requires array of ArticleImageRelationApiModel in body.",
+          "operationId": "Article_PutImages",
+          "parameters": [
+            {
+              "name": "productId",
+              "in": "path",
+              "value": "$steps.get-product-by-sku.outputs.productId"
+            },
+            {
+              "name": "replace",
+              "in": "query",
+              "value": "$inputs.replace"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "productId": "$steps.get-product-by-sku.outputs.productId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "addedImageDetails": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "productId": "$steps.get-product-by-sku.outputs.productId",
+        "productDetails": "$steps.get-product-by-sku.outputs.productDetails",
+        "addedImageDetails": "$steps.add-product-images.outputs.addedImageDetails"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

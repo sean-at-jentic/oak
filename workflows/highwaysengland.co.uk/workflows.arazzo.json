@@ -1,0 +1,637 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/highwaysengland.co.uk/main/v1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "generate-traffic-report-for-specific-sites",
+      "summary": "Find monitoring sites, select specific ones, and generate a traffic data report (e.g., daily, monthly) for them over a specified period. Useful for analyzing traffic patterns at known locations.",
+      "description": "Find monitoring sites, select specific ones, and generate a traffic data report (e.g., daily, monthly) for them over a specified period. Useful for analyzing traffic patterns at known locations.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "report_type": {
+            "type": "string"
+          },
+          "sites": {
+            "type": "string"
+          },
+          "start_date": {
+            "type": "string"
+          },
+          "end_date": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "page_size": {
+            "type": "string"
+          },
+          "reportSubTypeId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-all-sites",
+          "description": "Retrieve a list of all available monitoring sites.",
+          "operationId": "Sites_Index",
+          "parameters": [
+            {
+              "name": "version",
+              "in": "path",
+              "value": "$inputs.version"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "site_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "generate-site-report",
+          "description": "Generate a specific type of report (e.g., Daily) for a comma-separated list of site IDs over a date range.",
+          "operationId": "Reports_Index",
+          "parameters": [
+            {
+              "name": "report_type",
+              "in": "path",
+              "value": "$inputs.report_type"
+            },
+            {
+              "name": "sites",
+              "in": "query",
+              "value": "$steps.list-all-sites.outputs.site_list.sites[*].Id"
+            },
+            {
+              "name": "start_date",
+              "in": "query",
+              "value": "$inputs.start_date"
+            },
+            {
+              "name": "end_date",
+              "in": "query",
+              "value": "$inputs.end_date"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "page_size",
+              "in": "query",
+              "value": "$inputs.page_size"
+            },
+            {
+              "name": "reportSubTypeId",
+              "in": "query",
+              "value": "$inputs.reportSubTypeId"
+            },
+            {
+              "name": "version",
+              "in": "path",
+              "value": "$inputs.version"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "report_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "site_list": "$steps.list-all-sites.outputs.site_list",
+        "report_data": "$steps.generate-site-report.outputs.report_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "generate-traffic-report-for-sites-of-a-specific-type",
+      "summary": "Identify different types of monitoring sites (e.g., MIDAS, TAME), retrieve all sites belonging to a chosen type, and then generate a traffic report for those specific sites. Helps in analyzing data from a particular technology or system.",
+      "description": "Identify different types of monitoring sites (e.g., MIDAS, TAME), retrieve all sites belonging to a chosen type, and then generate a traffic report for those specific sites. Helps in analyzing data from a particular technology or system.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "siteType_Id": {
+            "type": "string"
+          },
+          "report_type": {
+            "type": "string"
+          },
+          "sites": {
+            "type": "string"
+          },
+          "start_date": {
+            "type": "string"
+          },
+          "end_date": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "page_size": {
+            "type": "string"
+          },
+          "reportSubTypeId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-site-types",
+          "description": "Retrieve the list of available site types.",
+          "operationId": "SiteTypes_Index",
+          "parameters": [
+            {
+              "name": "version",
+              "in": "path",
+              "value": "$inputs.version"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "site_type_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-sites-for-type",
+          "description": "Retrieve all site IDs associated with a specific site type.",
+          "operationId": "SiteTypes_GetSitesForPublicFacingAPI",
+          "parameters": [
+            {
+              "name": "siteType_Id",
+              "in": "path",
+              "value": "$steps.list-site-types.outputs.site_type_list.sitetypes[*].Id"
+            },
+            {
+              "name": "version",
+              "in": "path",
+              "value": "$inputs.version"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "site_ids_for_type": "$response.body"
+          }
+        },
+        {
+          "stepId": "generate-report-for-type",
+          "description": "Generate a specific type of report for the sites identified by type.",
+          "operationId": "Reports_Index",
+          "parameters": [
+            {
+              "name": "report_type",
+              "in": "path",
+              "value": "$inputs.report_type"
+            },
+            {
+              "name": "sites",
+              "in": "query",
+              "value": "$steps.get-sites-for-type.outputs.site_ids_for_type.Sites.SiteId"
+            },
+            {
+              "name": "start_date",
+              "in": "query",
+              "value": "$inputs.start_date"
+            },
+            {
+              "name": "end_date",
+              "in": "query",
+              "value": "$inputs.end_date"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "page_size",
+              "in": "query",
+              "value": "$inputs.page_size"
+            },
+            {
+              "name": "reportSubTypeId",
+              "in": "query",
+              "value": "$inputs.reportSubTypeId"
+            },
+            {
+              "name": "version",
+              "in": "path",
+              "value": "$inputs.version"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "report_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "site_type_list": "$steps.list-site-types.outputs.site_type_list",
+        "site_ids_for_type": "$steps.get-sites-for-type.outputs.site_ids_for_type",
+        "report_data": "$steps.generate-report-for-type.outputs.report_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "assess-overall-data-quality-for-sites",
+      "summary": "Retrieve a list of monitoring sites, select relevant ones, and check the overall data quality percentage for those sites over a specific date range. Important for validating data reliability before detailed analysis.",
+      "description": "Retrieve a list of monitoring sites, select relevant ones, and check the overall data quality percentage for those sites over a specific date range. Important for validating data reliability before detailed analysis.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "sites": {
+            "type": "string"
+          },
+          "start_date": {
+            "type": "string"
+          },
+          "end_date": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-sites-for-quality-check",
+          "description": "Retrieve a list of all available monitoring sites to select from.",
+          "operationId": "Sites_Index",
+          "parameters": [
+            {
+              "name": "version",
+              "in": "path",
+              "value": "$inputs.version"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "site_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-overall-quality",
+          "description": "Get the overall data quality score for a comma-separated list of site IDs over a date range.",
+          "operationId": "Quality_GetOverallDataQualityForSites",
+          "parameters": [
+            {
+              "name": "sites",
+              "in": "query",
+              "value": "$steps.list-sites-for-quality-check.outputs.site_list.sites[*].Id"
+            },
+            {
+              "name": "start_date",
+              "in": "query",
+              "value": "$inputs.start_date"
+            },
+            {
+              "name": "end_date",
+              "in": "query",
+              "value": "$inputs.end_date"
+            },
+            {
+              "name": "version",
+              "in": "path",
+              "value": "$inputs.version"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "overall_quality_report": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "site_list": "$steps.list-sites-for-quality-check.outputs.site_list",
+        "overall_quality_report": "$steps.get-overall-quality.outputs.overall_quality_report"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "check-daily-data-quality-for-a-single-site",
+      "summary": "Retrieve detailed daily data quality percentages for a specific monitoring site over a given period. Useful for investigating data issues identified in overall quality checks or for detailed site performance monitoring.",
+      "description": "Retrieve detailed daily data quality percentages for a specific monitoring site over a given period. Useful for investigating data issues identified in overall quality checks or for detailed site performance monitoring.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "siteId": {
+            "type": "string"
+          },
+          "start_date": {
+            "type": "string"
+          },
+          "end_date": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-site",
+          "description": "Retrieve a list of sites to identify the ID of the site to check.",
+          "operationId": "Sites_Index",
+          "parameters": [
+            {
+              "name": "version",
+              "in": "path",
+              "value": "$inputs.version"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "site_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-daily-quality",
+          "description": "Get the daily data quality scores for a single site ID over a date range.",
+          "operationId": "Quality_GetDailyDataQualityForSite",
+          "parameters": [
+            {
+              "name": "siteId",
+              "in": "query",
+              "value": "$steps.find-site.outputs.site_list.sites[0].Id"
+            },
+            {
+              "name": "start_date",
+              "in": "query",
+              "value": "$inputs.start_date"
+            },
+            {
+              "name": "end_date",
+              "in": "query",
+              "value": "$inputs.end_date"
+            },
+            {
+              "name": "version",
+              "in": "path",
+              "value": "$inputs.version"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "daily_quality_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "site_list": "$steps.find-site.outputs.site_list",
+        "daily_quality_details": "$steps.get-daily-quality.outputs.daily_quality_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "explore-sites-within-geographic-areas",
+      "summary": "Discover defined geographic areas and retrieve details about specific areas. While the API doesn't directly link sites to areas, this workflow helps understand the geographic context provided by the API, which might be used alongside site location data (obtained separately) for spatial analysis.",
+      "description": "Discover defined geographic areas and retrieve details about specific areas. While the API doesn't directly link sites to areas, this workflow helps understand the geographic context provided by the API, which might be used alongside site location data (obtained separately) for spatial analysis.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "area_Ids": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-areas",
+          "description": "Retrieve a list of all defined geographic areas.",
+          "operationId": "Areas_Get",
+          "parameters": [
+            {
+              "name": "version",
+              "in": "path",
+              "value": "$inputs.version"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "area_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-area-details",
+          "description": "Get detailed information, including boundary coordinates, for specific areas.",
+          "operationId": "Areas_Get",
+          "parameters": [
+            {
+              "name": "area_Ids",
+              "in": "path",
+              "value": "$steps.list-areas.outputs.area_list.areas[*].Id"
+            },
+            {
+              "name": "version",
+              "in": "path",
+              "value": "$inputs.version"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "area_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "area_list": "$steps.list-areas.outputs.area_list",
+        "area_details": "$steps.get-area-details.outputs.area_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

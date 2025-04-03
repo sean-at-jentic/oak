@@ -1,0 +1,617 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/1password.local/connect/1.5.7/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "retrieve-specific-secret-value",
+      "summary": "Find a specific secret (Item) within a known Vault by searching for the Vault and then the Item by name/title, and retrieve its full details including sensitive field values. Essential for applications needing specific credentials.",
+      "description": "Find a specific secret (Item) within a known Vault by searching for the Vault and then the Item by name/title, and retrieve its full details including sensitive field values. Essential for applications needing specific credentials.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "filter": {
+            "type": "string"
+          },
+          "vaultUuid": {
+            "type": "string"
+          },
+          "itemUuid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-vault",
+          "description": "Find the target Vault ID by filtering by name.",
+          "operationId": "GetVaults",
+          "parameters": [
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "vaultUuid": "$response.body"
+          }
+        },
+        {
+          "stepId": "find-item",
+          "description": "Find the target Item ID within the Vault by filtering by title.",
+          "operationId": "GetVaultItems",
+          "parameters": [
+            {
+              "name": "vaultUuid",
+              "in": "path",
+              "value": "$steps.find-vault.outputs.vaultUuid"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "itemUuid": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-secret-details",
+          "description": "Retrieve the full details of the specific Item, including all fields and their values.",
+          "operationId": "GetVaultItemById",
+          "parameters": [
+            {
+              "name": "vaultUuid",
+              "in": "path",
+              "value": "$steps.find-vault.outputs.vaultUuid"
+            },
+            {
+              "name": "itemUuid",
+              "in": "path",
+              "value": "$steps.find-item.outputs.itemUuid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "FullItem": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "vaultUuid": "$steps.find-vault.outputs.vaultUuid",
+        "itemUuid": "$steps.find-item.outputs.itemUuid",
+        "FullItem": "$steps.get-secret-details.outputs.FullItem"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "rotate-secret-field-eg-passwordapi-key",
+      "summary": "Update a specific field (like a password or API key) of an existing secret Item. This is crucial for security practices like credential rotation.",
+      "description": "Update a specific field (like a password or API key) of an existing secret Item. This is crucial for security practices like credential rotation.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "filter": {
+            "type": "string"
+          },
+          "vaultUuid": {
+            "type": "string"
+          },
+          "itemUuid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "locate-vault",
+          "description": "Find the Vault ID containing the item to update.",
+          "operationId": "GetVaults",
+          "parameters": [
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "vaultUuid": "$response.body"
+          }
+        },
+        {
+          "stepId": "locate-item",
+          "description": "Find the Item ID within the Vault to update.",
+          "operationId": "GetVaultItems",
+          "parameters": [
+            {
+              "name": "vaultUuid",
+              "in": "path",
+              "value": "$steps.locate-vault.outputs.vaultUuid"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "itemUuid": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-item-for-field-id",
+          "description": "Retrieve the item's details to identify the specific Field ID that needs to be updated.",
+          "operationId": "GetVaultItemById",
+          "parameters": [
+            {
+              "name": "vaultUuid",
+              "in": "path",
+              "value": "$steps.locate-vault.outputs.vaultUuid"
+            },
+            {
+              "name": "itemUuid",
+              "in": "path",
+              "value": "$steps.locate-item.outputs.itemUuid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "FullItem": "$response.body",
+            "fieldId_to_update": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-secret-field",
+          "description": "Update the specific field's value using a JSON Patch operation.",
+          "operationId": "PatchVaultItem",
+          "parameters": [
+            {
+              "name": "vaultUuid",
+              "in": "path",
+              "value": "$steps.locate-vault.outputs.vaultUuid"
+            },
+            {
+              "name": "itemUuid",
+              "in": "path",
+              "value": "$steps.locate-item.outputs.itemUuid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "vaultUuid": "$steps.locate-vault.outputs.vaultUuid",
+              "itemUuid": "$steps.locate-item.outputs.itemUuid",
+              "Patch_payload": "$steps.get-item-for-field-id.outputs.fieldId_to_update"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "FullItem": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "vaultUuid": "$steps.locate-vault.outputs.vaultUuid",
+        "itemUuid": "$steps.locate-item.outputs.itemUuid",
+        "FullItem": "$steps.update-secret-field.outputs.FullItem",
+        "fieldId_to_update": "$steps.get-item-for-field-id.outputs.fieldId_to_update"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-new-secret",
+      "summary": "Create a new secret (Item) like an API credential or database password within a specified Vault. Allows for secure provisioning of new credentials, potentially auto-generating strong passwords.",
+      "description": "Create a new secret (Item) like an API credential or database password within a specified Vault. Allows for secure provisioning of new credentials, potentially auto-generating strong passwords.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "filter": {
+            "type": "string"
+          },
+          "vaultUuid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-target-vault",
+          "description": "Find the Vault ID where the new secret should be created by filtering by name.",
+          "operationId": "GetVaults",
+          "parameters": [
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "vaultUuid": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-new-item",
+          "description": "Create the new Item within the specified Vault, providing its details (title, category, fields, etc.). The response includes the full item details, including any generated values.",
+          "operationId": "CreateVaultItem",
+          "parameters": [
+            {
+              "name": "vaultUuid",
+              "in": "path",
+              "value": "$steps.find-target-vault.outputs.vaultUuid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "vaultUuid": "$steps.find-target-vault.outputs.vaultUuid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "FullItem": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "vaultUuid": "$steps.find-target-vault.outputs.vaultUuid",
+        "FullItem": "$steps.create-new-item.outputs.FullItem"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "download-attached-secure-file",
+      "summary": "Retrieve a file (e.g., certificate, private key, configuration file) attached to a specific secret Item within a Vault.",
+      "description": "Retrieve a file (e.g., certificate, private key, configuration file) attached to a specific secret Item within a Vault.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "filter": {
+            "type": "string"
+          },
+          "vaultUuid": {
+            "type": "string"
+          },
+          "itemUuid": {
+            "type": "string"
+          },
+          "inline_files": {
+            "type": "string"
+          },
+          "fileUuid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-vault",
+          "description": "Find the Vault ID containing the item with the file.",
+          "operationId": "GetVaults",
+          "parameters": [
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "vaultUuid": "$response.body"
+          }
+        },
+        {
+          "stepId": "search-item",
+          "description": "Find the Item ID within the Vault that contains the file.",
+          "operationId": "GetVaultItems",
+          "parameters": [
+            {
+              "name": "vaultUuid",
+              "in": "path",
+              "value": "$steps.search-vault.outputs.vaultUuid"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "itemUuid": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-item-files",
+          "description": "List the files attached to the Item to find the target File ID.",
+          "operationId": "GetItemFiles",
+          "parameters": [
+            {
+              "name": "vaultUuid",
+              "in": "path",
+              "value": "$steps.search-vault.outputs.vaultUuid"
+            },
+            {
+              "name": "itemUuid",
+              "in": "path",
+              "value": "$steps.search-item.outputs.itemUuid"
+            },
+            {
+              "name": "inline_files",
+              "in": "query",
+              "value": "$inputs.inline_files"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "files_array": "$response.body",
+            "fileUuid": "$response.body"
+          }
+        },
+        {
+          "stepId": "download-file",
+          "description": "Download the raw content of the specified file.",
+          "operationId": "DownloadFileByID",
+          "parameters": [
+            {
+              "name": "vaultUuid",
+              "in": "path",
+              "value": "$steps.search-vault.outputs.vaultUuid"
+            },
+            {
+              "name": "itemUuid",
+              "in": "path",
+              "value": "$steps.search-item.outputs.itemUuid"
+            },
+            {
+              "name": "fileUuid",
+              "in": "path",
+              "value": "$steps.list-item-files.outputs.fileUuid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "file_content": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "vaultUuid": "$steps.search-vault.outputs.vaultUuid",
+        "itemUuid": "$steps.search-item.outputs.itemUuid",
+        "files_array": "$steps.list-item-files.outputs.files_array",
+        "fileUuid": "$steps.list-item-files.outputs.fileUuid",
+        "file_content": "$steps.download-file.outputs.file_content"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "check-service-health",
+      "summary": "Verify the operational status of the 1Password Connect server and its dependencies. Useful for monitoring and automated health checks.",
+      "description": "Verify the operational status of the 1Password Connect server and its dependencies. Useful for monitoring and automated health checks.",
+      "steps": [
+        {
+          "stepId": "ping-server",
+          "description": "Perform a quick liveness check of the server.",
+          "operationId": "GetHeartbeat",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_code_200": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-detailed-health",
+          "description": "Retrieve detailed health status including server version and dependency states.",
+          "operationId": "GetServerHealth",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "health_status_object": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "status_code_200": "$steps.ping-server.outputs.status_code_200",
+        "health_status_object": "$steps.get-detailed-health.outputs.health_status_object"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

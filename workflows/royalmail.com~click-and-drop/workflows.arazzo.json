@@ -1,0 +1,522 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/royalmail.com/click-and-drop/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "create-single-order-and-retrieve-label-oba-customers",
+      "summary": "Creates a single order and immediately retrieves the shipping label. This is a fundamental workflow for OBA (Online Business Account) customers processing individual shipments.",
+      "description": "Creates a single order and immediately retrieves the shipping label. This is a fundamental workflow for OBA (Online Business Account) customers processing individual shipments.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-order_body": {
+            "type": "object"
+          },
+          "orderIdentifiers": {
+            "type": "string"
+          },
+          "documentType": {
+            "type": "string"
+          },
+          "includeReturnsLabel": {
+            "type": "string"
+          },
+          "includeCN": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-order",
+          "description": "Submit details for a new order.",
+          "operationId": "CreateOrdersAsync",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-order_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "createdOrders": "$response.body",
+            "failedOrders": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-label",
+          "description": "Retrieve the generated shipping label PDF for the created order.",
+          "operationId": "GetOrdersLabelAsync",
+          "parameters": [
+            {
+              "name": "orderIdentifiers",
+              "in": "path",
+              "value": "$steps.create-order.outputs.createdOrders.orderIdentifier"
+            },
+            {
+              "name": "documentType",
+              "in": "query",
+              "value": "$inputs.documentType"
+            },
+            {
+              "name": "includeReturnsLabel",
+              "in": "query",
+              "value": "$inputs.includeReturnsLabel"
+            },
+            {
+              "name": "includeCN",
+              "in": "query",
+              "value": "$inputs.includeCN"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "labelPdf": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "createdOrders": "$steps.create-order.outputs.createdOrders",
+        "failedOrders": "$steps.create-order.outputs.failedOrders",
+        "labelPdf": "$steps.get-label.outputs.labelPdf"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "bulk-create-orders-and-update-status",
+      "summary": "Imports multiple orders in a batch and later updates their status, typically to 'despatched' once shipped. Useful for processing high volumes.",
+      "description": "Imports multiple orders in a batch and later updates their status, typically to 'despatched' once shipped. Useful for processing high volumes.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "bulk-create-orders_body": {
+            "type": "object"
+          },
+          "update-orders-status_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "bulk-create-orders",
+          "description": "Submit details for multiple new orders in a single request.",
+          "operationId": "CreateOrdersAsync",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.bulk-create-orders_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "createdOrders": "$response.body",
+            "failedOrders": "$response.body",
+            "successCount": "$response.body",
+            "errorsCount": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-orders-status",
+          "description": "Update the status (e.g., to 'despatched') for the successfully created orders.",
+          "operationId": "UpdateOrdersStatusAsync",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.update-orders-status_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updatedOrders": "$response.body",
+            "errors": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "createdOrders": "$steps.bulk-create-orders.outputs.createdOrders",
+        "failedOrders": "$steps.bulk-create-orders.outputs.failedOrders",
+        "successCount": "$steps.bulk-create-orders.outputs.successCount",
+        "errorsCount": "$steps.bulk-create-orders.outputs.errorsCount",
+        "updatedOrders": "$steps.update-orders-status.outputs.updatedOrders",
+        "errors": "$steps.update-orders-status.outputs.errors"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-specific-order-and-generate-label-oba-customers",
+      "summary": "Looks up an existing order by its identifier and then generates the shipping label. Useful if the label wasn't generated during creation or needs reprinting.",
+      "description": "Looks up an existing order by its identifier and then generates the shipping label. Useful if the label wasn't generated during creation or needs reprinting.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "orderIdentifiers": {
+            "type": "string"
+          },
+          "documentType": {
+            "type": "string"
+          },
+          "includeReturnsLabel": {
+            "type": "string"
+          },
+          "includeCN": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-specific-order",
+          "description": "Retrieve basic information for a specific order using its identifier.",
+          "operationId": "GetSpecificOrdersAsync",
+          "parameters": [
+            {
+              "name": "orderIdentifiers",
+              "in": "path",
+              "value": "$inputs.orderIdentifiers"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "orderInfo": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-order-label",
+          "description": "Retrieve the shipping label PDF for the specified order.",
+          "operationId": "GetOrdersLabelAsync",
+          "parameters": [
+            {
+              "name": "orderIdentifiers",
+              "in": "path",
+              "value": "$steps.get-specific-order.outputs.orderInfo.orderIdentifier"
+            },
+            {
+              "name": "documentType",
+              "in": "query",
+              "value": "$inputs.documentType"
+            },
+            {
+              "name": "includeReturnsLabel",
+              "in": "query",
+              "value": "$inputs.includeReturnsLabel"
+            },
+            {
+              "name": "includeCN",
+              "in": "query",
+              "value": "$inputs.includeCN"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "labelPdf": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "orderInfo": "$steps.get-specific-order.outputs.orderInfo",
+        "labelPdf": "$steps.get-order-label.outputs.labelPdf"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-order-retrieve-detailed-info-update-status-channel-shipper-only",
+      "summary": "Creates orders, retrieves their full details (available only to ChannelShipper customers), and then updates their status, potentially using ChannelShipper-specific options like 'despatchedByOtherCourier'.",
+      "description": "Creates orders, retrieves their full details (available only to ChannelShipper customers), and then updates their status, potentially using ChannelShipper-specific options like 'despatchedByOtherCourier'.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-orders-cs_body": {
+            "type": "object"
+          },
+          "orderIdentifiers": {
+            "type": "string"
+          },
+          "update-orders-status-cs_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-orders-cs",
+          "description": "Submit details for one or more new orders.",
+          "operationId": "CreateOrdersAsync",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-orders-cs_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "createdOrders": "$response.body",
+            "failedOrders": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-detailed-orders-cs",
+          "description": "Retrieve full detailed information for the created orders (ChannelShipper feature).",
+          "operationId": "GetSpecificOrdersWithDetailsAsync",
+          "parameters": [
+            {
+              "name": "orderIdentifiers",
+              "in": "path",
+              "value": "$steps.create-orders-cs.outputs.createdOrders.orderIdentifier"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "orderDetails": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-orders-status-cs",
+          "description": "Update the status for the orders, potentially using 'despatchedByOtherCourier' status (ChannelShipper feature).",
+          "operationId": "UpdateOrdersStatusAsync",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.update-orders-status-cs_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updatedOrders": "$response.body",
+            "errors": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "createdOrders": "$steps.create-orders-cs.outputs.createdOrders",
+        "failedOrders": "$steps.create-orders-cs.outputs.failedOrders",
+        "orderDetails": "$steps.get-detailed-orders-cs.outputs.orderDetails",
+        "updatedOrders": "$steps.update-orders-status-cs.outputs.updatedOrders",
+        "errors": "$steps.update-orders-status-cs.outputs.errors"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-and-immediately-delete-order-channel-shipper-only",
+      "summary": "Creates an order and then immediately deletes it. This might be used to correct an error shortly after order creation. Note the warning about label invalidation.",
+      "description": "Creates an order and then immediately deletes it. This might be used to correct an error shortly after order creation. Note the warning about label invalidation.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-order-for-deletion_body": {
+            "type": "object"
+          },
+          "orderIdentifiers": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-order-for-deletion",
+          "description": "Submit details for a new order intended for immediate deletion.",
+          "operationId": "CreateOrdersAsync",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-order-for-deletion_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "createdOrders": "$response.body"
+          }
+        },
+        {
+          "stepId": "delete-order-cs",
+          "description": "Delete the newly created order (ChannelShipper feature).",
+          "operationId": "DeleteOrdersAsync",
+          "parameters": [
+            {
+              "name": "orderIdentifiers",
+              "in": "path",
+              "value": "$steps.create-order-for-deletion.outputs.createdOrders.orderIdentifier"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "deletedOrders": "$response.body",
+            "errors": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "createdOrders": "$steps.create-order-for-deletion.outputs.createdOrders",
+        "deletedOrders": "$steps.delete-order-cs.outputs.deletedOrders",
+        "errors": "$steps.delete-order-cs.outputs.errors"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

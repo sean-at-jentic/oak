@@ -1,0 +1,576 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/hubhopper.com/main/v5/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "view-podcast-details-and-episodes",
+      "summary": "Retrieves detailed information about a specific podcast and then lists its available episodes. Essential for displaying a podcast's landing page or allowing users to browse episodes of a selected podcast.",
+      "description": "Retrieves detailed information about a specific podcast and then lists its available episodes. Essential for displaying a podcast's landing page or allowing users to browse episodes of a selected podcast.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "podcastId": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "pageSize": {
+            "type": "string"
+          },
+          "order": {
+            "type": "string"
+          },
+          "filters": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-podcast-details",
+          "description": "Retrieve detailed information for a single podcast using its ID.",
+          "operationPath": "openapi_source#/paths/~1podcasts~1{podcastId}/get",
+          "parameters": [
+            {
+              "name": "podcastId",
+              "in": "path",
+              "value": "$inputs.podcastId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "podcast": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-podcast-episodes",
+          "description": "Retrieve the list of episodes for the specified podcast, with options for pagination and ordering.",
+          "operationPath": "openapi_source#/paths/~1podcasts~1{podcastId}~1episodes/get",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            },
+            {
+              "name": "order",
+              "in": "query",
+              "value": "$inputs.order"
+            },
+            {
+              "name": "filters",
+              "in": "query",
+              "value": "$inputs.filters"
+            },
+            {
+              "name": "podcastId",
+              "in": "path",
+              "value": "$steps.get-podcast-details.outputs.podcast.podcastId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "episodes": "$response.body",
+            "noOfPages": "$response.body",
+            "page": "$response.body",
+            "pageSize": "$response.body",
+            "total": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "podcast": "$steps.get-podcast-details.outputs.podcast",
+        "episodes": "$steps.list-podcast-episodes.outputs.episodes",
+        "noOfPages": "$steps.list-podcast-episodes.outputs.noOfPages",
+        "page": "$steps.list-podcast-episodes.outputs.page",
+        "pageSize": "$steps.list-podcast-episodes.outputs.pageSize",
+        "total": "$steps.list-podcast-episodes.outputs.total"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "discover-podcasts-by-category",
+      "summary": "Allows users to first browse available content categories and then view the podcasts within a selected category. Useful for implementing category-based navigation in a partner application.",
+      "description": "Allows users to first browse available content categories and then view the podcasts within a selected category. Useful for implementing category-based navigation in a partner application.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "pageSize": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "categoryId": {
+            "type": "string"
+          },
+          "order": {
+            "type": "string"
+          },
+          "filters": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-categories",
+          "description": "Retrieve the list of all available content categories.",
+          "operationPath": "openapi_source#/paths/~1categories/get",
+          "parameters": [
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "categories": "$response.body",
+            "noOfPages": "$response.body",
+            "page": "$response.body",
+            "pageSize": "$response.body",
+            "total": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-podcasts-in-category",
+          "description": "Retrieve the list of podcasts belonging to a specific category, identified by its ID. Supports pagination, ordering, and filtering (e.g., by language).",
+          "operationPath": "openapi_source#/paths/~1categories~1{categoryId}~1podcasts/get",
+          "parameters": [
+            {
+              "name": "categoryId",
+              "in": "path",
+              "value": "$steps.list-categories.outputs.categories.id"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            },
+            {
+              "name": "order",
+              "in": "query",
+              "value": "$inputs.order"
+            },
+            {
+              "name": "filters",
+              "in": "query",
+              "value": "$inputs.filters"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "podcasts": "$response.body",
+            "noOfPages": "$response.body",
+            "page": "$response.body",
+            "pageSize": "$response.body",
+            "total": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "categories": "$steps.list-categories.outputs.categories",
+        "noOfPages": "$steps.list-podcasts-in-category.outputs.noOfPages",
+        "page": "$steps.list-podcasts-in-category.outputs.page",
+        "pageSize": "$steps.list-podcasts-in-category.outputs.pageSize",
+        "total": "$steps.list-podcasts-in-category.outputs.total",
+        "podcasts": "$steps.list-podcasts-in-category.outputs.podcasts"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "browse-all-podcasts-with-language-filter",
+      "summary": "Fetches the list of supported languages and then retrieves all podcasts, optionally filtering them by a selected language code. Useful for providing a language-specific podcast discovery experience.",
+      "description": "Fetches the list of supported languages and then retrieves all podcasts, optionally filtering them by a selected language code. Useful for providing a language-specific podcast discovery experience.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "pageSize": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "order": {
+            "type": "string"
+          },
+          "filters": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-languages",
+          "description": "Retrieve the list of languages supported for content filtering.",
+          "operationPath": "openapi_source#/paths/~1util~1languages/get",
+          "parameters": [
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "languages": "$response.body",
+            "noOfPages": "$response.body",
+            "page": "$response.body",
+            "pageSize": "$response.body",
+            "total": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-all-podcasts",
+          "description": "Retrieve a list of all podcasts, with options for pagination, ordering, and filtering by language using codes obtained from 'list-languages'.",
+          "operationPath": "openapi_source#/paths/~1podcasts/get",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            },
+            {
+              "name": "order",
+              "in": "query",
+              "value": "$inputs.order"
+            },
+            {
+              "name": "filters",
+              "in": "query",
+              "value": "$steps.list-languages.outputs.languages.code"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "podcasts": "$response.body",
+            "noOfPages": "$response.body",
+            "page": "$response.body",
+            "pageSize": "$response.body",
+            "total": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "languages": "$steps.list-languages.outputs.languages",
+        "noOfPages": "$steps.list-all-podcasts.outputs.noOfPages",
+        "page": "$steps.list-all-podcasts.outputs.page",
+        "pageSize": "$steps.list-all-podcasts.outputs.pageSize",
+        "total": "$steps.list-all-podcasts.outputs.total",
+        "podcasts": "$steps.list-all-podcasts.outputs.podcasts"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "find-language-specific-podcasts-in-a-category",
+      "summary": "Identifies a category and a language, then retrieves podcasts matching both criteria. Useful for targeted content discovery within a partner app (e.g., showing 'Hindi Comedy' podcasts).",
+      "description": "Identifies a category and a language, then retrieves podcasts matching both criteria. Useful for targeted content discovery within a partner app (e.g., showing 'Hindi Comedy' podcasts).",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "pageSize": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "categoryId": {
+            "type": "string"
+          },
+          "order": {
+            "type": "string"
+          },
+          "filters": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-categories",
+          "description": "Retrieve the list of all available content categories to identify the target category ID.",
+          "operationPath": "openapi_source#/paths/~1categories/get",
+          "parameters": [
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "categories": "$response.body",
+            "noOfPages": "$response.body",
+            "page": "$response.body",
+            "pageSize": "$response.body",
+            "total": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-languages",
+          "description": "Retrieve the list of supported languages to identify the target language code for filtering.",
+          "operationPath": "openapi_source#/paths/~1util~1languages/get",
+          "parameters": [
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "languages": "$response.body",
+            "noOfPages": "$response.body",
+            "page": "$response.body",
+            "pageSize": "$response.body",
+            "total": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-filtered-podcasts-in-category",
+          "description": "Retrieve podcasts within the specified category ID, filtered by the specified language code(s).",
+          "operationPath": "openapi_source#/paths/~1categories~1{categoryId}~1podcasts/get",
+          "parameters": [
+            {
+              "name": "categoryId",
+              "in": "path",
+              "value": "$steps.list-categories.outputs.categories.id"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            },
+            {
+              "name": "order",
+              "in": "query",
+              "value": "$inputs.order"
+            },
+            {
+              "name": "filters",
+              "in": "query",
+              "value": "$steps.list-languages.outputs.languages.code"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "podcasts": "$response.body",
+            "noOfPages": "$response.body",
+            "page": "$response.body",
+            "pageSize": "$response.body",
+            "total": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "categories": "$steps.list-categories.outputs.categories",
+        "noOfPages": "$steps.list-filtered-podcasts-in-category.outputs.noOfPages",
+        "page": "$steps.list-filtered-podcasts-in-category.outputs.page",
+        "pageSize": "$steps.list-filtered-podcasts-in-category.outputs.pageSize",
+        "total": "$steps.list-filtered-podcasts-in-category.outputs.total",
+        "languages": "$steps.list-languages.outputs.languages",
+        "podcasts": "$steps.list-filtered-podcasts-in-category.outputs.podcasts"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

@@ -1,0 +1,874 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/ean-search.org/main/1.51.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "detailed-product-information-retrieval",
+      "summary": "Retrieves comprehensive details for a specific EAN, including product information, checksum validity, issuing country, and a visual barcode image. Useful for validating and enriching product data from a scanned EAN.",
+      "description": "Retrieves comprehensive details for a specific EAN, including product information, checksum validity, issuing country, and a visual barcode image. Useful for validating and enriching product data from a scanned EAN.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string"
+          },
+          "ean": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "width": {
+            "type": "string"
+          },
+          "height": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "verify-ean-checksum",
+          "description": "Verify the checksum of the provided EAN code.",
+          "operationId": "verify-checksum",
+          "parameters": [
+            {
+              "name": "op",
+              "in": "query",
+              "value": "$inputs.op"
+            },
+            {
+              "name": "ean",
+              "in": "query",
+              "value": "$inputs.ean"
+            },
+            {
+              "name": "format",
+              "in": "query",
+              "value": "$inputs.format"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ean_verified": "$response.body",
+            "is_valid": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-product-details",
+          "description": "Look up product details using the EAN code.",
+          "operationId": "barcode-lookup",
+          "parameters": [
+            {
+              "name": "op",
+              "in": "query",
+              "value": "$inputs.op"
+            },
+            {
+              "name": "ean",
+              "in": "query",
+              "value": "$steps.verify-ean-checksum.outputs.ean_verified"
+            },
+            {
+              "name": "language",
+              "in": "query",
+              "value": "$inputs.language"
+            },
+            {
+              "name": "format",
+              "in": "query",
+              "value": "$inputs.format"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "product_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-issuing-country",
+          "description": "Find the issuing country of the barcode, providing a result even if product details are unknown.",
+          "operationId": "issuing-country",
+          "parameters": [
+            {
+              "name": "op",
+              "in": "query",
+              "value": "$inputs.op"
+            },
+            {
+              "name": "ean",
+              "in": "query",
+              "value": "$steps.verify-ean-checksum.outputs.ean_verified"
+            },
+            {
+              "name": "format",
+              "in": "query",
+              "value": "$inputs.format"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "country_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "generate-barcode-image",
+          "description": "Generate a PNG image of the barcode for the EAN.",
+          "operationId": "barcode-image",
+          "parameters": [
+            {
+              "name": "op",
+              "in": "query",
+              "value": "$inputs.op"
+            },
+            {
+              "name": "ean",
+              "in": "query",
+              "value": "$steps.verify-ean-checksum.outputs.ean_verified"
+            },
+            {
+              "name": "width",
+              "in": "query",
+              "value": "$inputs.width"
+            },
+            {
+              "name": "height",
+              "in": "query",
+              "value": "$inputs.height"
+            },
+            {
+              "name": "format",
+              "in": "query",
+              "value": "$inputs.format"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "barcode_image_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "ean_verified": "$steps.verify-ean-checksum.outputs.ean_verified",
+        "is_valid": "$steps.verify-ean-checksum.outputs.is_valid",
+        "product_details": "$steps.get-product-details.outputs.product_details",
+        "country_details": "$steps.get-issuing-country.outputs.country_details",
+        "barcode_image_data": "$steps.generate-barcode-image.outputs.barcode_image_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "product-search-and-barcode-generation",
+      "summary": "Searches for products by name and then generates a barcode image for a selected product EAN from the search results. Useful for finding an EAN by name and getting its scannable image.",
+      "description": "Searches for products by name and then generates a barcode image for a selected product EAN from the search results. Useful for finding an EAN by name and getting its scannable image.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "ean": {
+            "type": "string"
+          },
+          "width": {
+            "type": "string"
+          },
+          "height": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-products-by-name",
+          "description": "Search for products based on a product name or keywords.",
+          "operationId": "product-search",
+          "parameters": [
+            {
+              "name": "op",
+              "in": "query",
+              "value": "$inputs.op"
+            },
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "language",
+              "in": "query",
+              "value": "$inputs.language"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "format",
+              "in": "query",
+              "value": "$inputs.format"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "product_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "generate-barcode-for-product",
+          "description": "Generate a barcode image for a specific EAN found in the product search results.",
+          "operationId": "barcode-image",
+          "parameters": [
+            {
+              "name": "op",
+              "in": "query",
+              "value": "$inputs.op"
+            },
+            {
+              "name": "ean",
+              "in": "query",
+              "value": "$steps.search-products-by-name.outputs.product_list.ean"
+            },
+            {
+              "name": "width",
+              "in": "query",
+              "value": "$inputs.width"
+            },
+            {
+              "name": "height",
+              "in": "query",
+              "value": "$inputs.height"
+            },
+            {
+              "name": "format",
+              "in": "query",
+              "value": "$inputs.format"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "barcode_image_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "product_list": "$steps.search-products-by-name.outputs.product_list",
+        "barcode_image_data": "$steps.generate-barcode-for-product.outputs.barcode_image_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "barcode-validation-and-origin-check",
+      "summary": "Quickly verifies if an EAN code is structurally valid (checksum) and determines its country of origin. Essential for initial validation of scanned or entered barcodes.",
+      "description": "Quickly verifies if an EAN code is structurally valid (checksum) and determines its country of origin. Essential for initial validation of scanned or entered barcodes.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string"
+          },
+          "ean": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "verify-ean-checksum",
+          "description": "Verify the checksum of the provided EAN code.",
+          "operationId": "verify-checksum",
+          "parameters": [
+            {
+              "name": "op",
+              "in": "query",
+              "value": "$inputs.op"
+            },
+            {
+              "name": "ean",
+              "in": "query",
+              "value": "$inputs.ean"
+            },
+            {
+              "name": "format",
+              "in": "query",
+              "value": "$inputs.format"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ean_verified": "$response.body",
+            "is_valid": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-ean-issuing-country",
+          "description": "Find the issuing country of the barcode using the validated EAN.",
+          "operationId": "issuing-country",
+          "parameters": [
+            {
+              "name": "op",
+              "in": "query",
+              "value": "$inputs.op"
+            },
+            {
+              "name": "ean",
+              "in": "query",
+              "value": "$steps.verify-ean-checksum.outputs.ean_verified"
+            },
+            {
+              "name": "format",
+              "in": "query",
+              "value": "$inputs.format"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "country_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "ean_verified": "$steps.verify-ean-checksum.outputs.ean_verified",
+        "is_valid": "$steps.verify-ean-checksum.outputs.is_valid",
+        "country_details": "$steps.get-ean-issuing-country.outputs.country_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "category-exploration-and-product-lookup",
+      "summary": "Allows users to browse products within a specific category, optionally filter by name, and then retrieve detailed information for a chosen product EAN.",
+      "description": "Allows users to browse products within a specific category, optionally filter by name, and then retrieve detailed information for a chosen product EAN.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "ean": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-products-by-category",
+          "description": "Search for products within a specific category number, optionally filtering by name.",
+          "operationId": "category-search",
+          "parameters": [
+            {
+              "name": "op",
+              "in": "query",
+              "value": "$inputs.op"
+            },
+            {
+              "name": "category",
+              "in": "query",
+              "value": "$inputs.category"
+            },
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "language",
+              "in": "query",
+              "value": "$inputs.language"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "format",
+              "in": "query",
+              "value": "$inputs.format"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "product_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-product-details-from-category",
+          "description": "Retrieve detailed product information for an EAN selected from the category search results.",
+          "operationId": "barcode-lookup",
+          "parameters": [
+            {
+              "name": "op",
+              "in": "query",
+              "value": "$inputs.op"
+            },
+            {
+              "name": "ean",
+              "in": "query",
+              "value": "$steps.search-products-by-category.outputs.product_list.ean"
+            },
+            {
+              "name": "language",
+              "in": "query",
+              "value": "$inputs.language"
+            },
+            {
+              "name": "format",
+              "in": "query",
+              "value": "$inputs.format"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "product_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "product_list": "$steps.search-products-by-category.outputs.product_list",
+        "product_details": "$steps.get-product-details-from-category.outputs.product_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manufacturerprefix-based-product-discovery",
+      "summary": "Identifies products associated with a specific EAN prefix (often linked to a manufacturer or GS1 member) and retrieves details for a selected product from that list.",
+      "description": "Identifies products associated with a specific EAN prefix (often linked to a manufacturer or GS1 member) and retrieves details for a selected product from that list.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string"
+          },
+          "prefix": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "ean": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-products-by-prefix",
+          "description": "Query the database for all barcodes starting with the given prefix (at least 4 digits).",
+          "operationId": "barcode-prefix-search",
+          "parameters": [
+            {
+              "name": "op",
+              "in": "query",
+              "value": "$inputs.op"
+            },
+            {
+              "name": "prefix",
+              "in": "query",
+              "value": "$inputs.prefix"
+            },
+            {
+              "name": "language",
+              "in": "query",
+              "value": "$inputs.language"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "format",
+              "in": "query",
+              "value": "$inputs.format"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "product_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-prefix-product-details",
+          "description": "Retrieve detailed product information for an EAN selected from the prefix search results.",
+          "operationId": "barcode-lookup",
+          "parameters": [
+            {
+              "name": "op",
+              "in": "query",
+              "value": "$inputs.op"
+            },
+            {
+              "name": "ean",
+              "in": "query",
+              "value": "$steps.search-products-by-prefix.outputs.product_list.ean"
+            },
+            {
+              "name": "language",
+              "in": "query",
+              "value": "$inputs.language"
+            },
+            {
+              "name": "format",
+              "in": "query",
+              "value": "$inputs.format"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "product_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "product_list": "$steps.search-products-by-prefix.outputs.product_list",
+        "product_details": "$steps.get-prefix-product-details.outputs.product_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "find-similar-products-and-get-details",
+      "summary": "Searches for products with names similar to a given query, allowing discovery of related items or variations, and then retrieves details for a selected similar product.",
+      "description": "Searches for products with names similar to a given query, allowing discovery of related items or variations, and then retrieves details for a selected similar product.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "ean": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-similar-products",
+          "description": "Find products with names similar to the provided name or keywords.",
+          "operationId": "similar-product-search",
+          "parameters": [
+            {
+              "name": "op",
+              "in": "query",
+              "value": "$inputs.op"
+            },
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "language",
+              "in": "query",
+              "value": "$inputs.language"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "format",
+              "in": "query",
+              "value": "$inputs.format"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "similar_product_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-similar-product-details",
+          "description": "Retrieve detailed product information for an EAN selected from the similar products search results.",
+          "operationId": "barcode-lookup",
+          "parameters": [
+            {
+              "name": "op",
+              "in": "query",
+              "value": "$inputs.op"
+            },
+            {
+              "name": "ean",
+              "in": "query",
+              "value": "$steps.search-similar-products.outputs.similar_product_list.ean"
+            },
+            {
+              "name": "language",
+              "in": "query",
+              "value": "$inputs.language"
+            },
+            {
+              "name": "format",
+              "in": "query",
+              "value": "$inputs.format"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "product_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "similar_product_list": "$steps.search-similar-products.outputs.similar_product_list",
+        "product_details": "$steps.get-similar-product-details.outputs.product_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

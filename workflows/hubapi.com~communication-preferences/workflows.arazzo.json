@@ -1,0 +1,363 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/hubapi.com/communication-preferences/v3/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "subscribe-contact-to-specific-communication",
+      "summary": "Find the ID for a specific subscription type (e.g., 'Monthly Newsletter' by checking its name) and then subscribe a contact to it using their email address. This is useful for handling user opt-ins via forms or other interfaces.",
+      "description": "Find the ID for a specific subscription type (e.g., 'Monthly Newsletter' by checking its name) and then subscribe a contact to it using their email address. This is useful for handling user opt-ins via forms or other interfaces.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "emailAddress": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-subscription-definitions",
+          "description": "Retrieve the list of all available subscription definitions to find the ID of the target subscription.",
+          "operationId": "get-/communication-preferences/v3/definitions_getPage",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "subscriptionDefinitions": "$response.body"
+          }
+        },
+        {
+          "stepId": "subscribe-contact",
+          "description": "Subscribe the contact to the specific subscription type identified in the previous step.",
+          "operationId": "post-/communication-preferences/v3/subscribe_subscribe",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "subscriptionId": "$steps.get-subscription-definitions.outputs.subscriptionDefinitions[*].id",
+              "emailAddress": "$inputs.emailAddress"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "PublicSubscriptionStatus": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "subscriptionDefinitions": "$steps.get-subscription-definitions.outputs.subscriptionDefinitions",
+        "PublicSubscriptionStatus": "$steps.subscribe-contact.outputs.PublicSubscriptionStatus"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "unsubscribe-contact-from-specific-communication",
+      "summary": "Find the ID for a specific subscription type (e.g., 'Promotional Offers' by checking its name) and then unsubscribe a contact from it using their email address. Essential for processing opt-out requests and maintaining compliance.",
+      "description": "Find the ID for a specific subscription type (e.g., 'Promotional Offers' by checking its name) and then unsubscribe a contact from it using their email address. Essential for processing opt-out requests and maintaining compliance.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "emailAddress": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-subscription-definitions",
+          "description": "Retrieve the list of all available subscription definitions to find the ID of the target subscription.",
+          "operationId": "get-/communication-preferences/v3/definitions_getPage",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "subscriptionDefinitions": "$response.body"
+          }
+        },
+        {
+          "stepId": "unsubscribe-contact",
+          "description": "Unsubscribe the contact from the specific subscription type identified in the previous step.",
+          "operationId": "post-/communication-preferences/v3/unsubscribe_unsubscribe",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "subscriptionId": "$steps.get-subscription-definitions.outputs.subscriptionDefinitions[*].id",
+              "emailAddress": "$inputs.emailAddress"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "PublicSubscriptionStatus": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "subscriptionDefinitions": "$steps.get-subscription-definitions.outputs.subscriptionDefinitions",
+        "PublicSubscriptionStatus": "$steps.unsubscribe-contact.outputs.PublicSubscriptionStatus"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "ensure-contact-is-subscribed-to-specific-type",
+      "summary": "Check a contact's current subscription statuses, and if they are not currently subscribed to a specific, predetermined subscription type, subscribe them. Requires external logic to select the target subscription ID and evaluate the current status.",
+      "description": "Check a contact's current subscription statuses, and if they are not currently subscribed to a specific, predetermined subscription type, subscribe them. Requires external logic to select the target subscription ID and evaluate the current status.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "emailAddress": {
+            "type": "string"
+          },
+          "subscriptionId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-contact-statuses",
+          "description": "Retrieve the current subscription statuses for the contact.",
+          "operationId": "get-/communication-preferences/v3/status/email/{emailAddress}_getEmailStatus",
+          "parameters": [
+            {
+              "name": "emailAddress",
+              "in": "path",
+              "value": "$inputs.emailAddress"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "recipient": "$response.body",
+            "subscriptionStatuses": "$response.body"
+          }
+        },
+        {
+          "stepId": "conditionally-subscribe-contact",
+          "description": "Subscribe the contact to a specific subscription type if external logic determines they are not already subscribed (based on the output of the previous step).",
+          "operationId": "post-/communication-preferences/v3/subscribe_subscribe",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "emailAddress": "$steps.get-contact-statuses.outputs.recipient",
+              "subscriptionId": "$inputs.subscriptionId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "PublicSubscriptionStatus": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "recipient": "$steps.get-contact-statuses.outputs.recipient",
+        "subscriptionStatuses": "$steps.get-contact-statuses.outputs.subscriptionStatuses",
+        "PublicSubscriptionStatus": "$steps.conditionally-subscribe-contact.outputs.PublicSubscriptionStatus"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "ensure-contact-is-unsubscribed-from-specific-type",
+      "summary": "Check a contact's current subscription statuses, and if they are currently subscribed to a specific, predetermined subscription type, unsubscribe them. Requires external logic to select the target subscription ID and evaluate the current status.",
+      "description": "Check a contact's current subscription statuses, and if they are currently subscribed to a specific, predetermined subscription type, unsubscribe them. Requires external logic to select the target subscription ID and evaluate the current status.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "emailAddress": {
+            "type": "string"
+          },
+          "subscriptionId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-contact-statuses",
+          "description": "Retrieve the current subscription statuses for the contact.",
+          "operationId": "get-/communication-preferences/v3/status/email/{emailAddress}_getEmailStatus",
+          "parameters": [
+            {
+              "name": "emailAddress",
+              "in": "path",
+              "value": "$inputs.emailAddress"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "recipient": "$response.body",
+            "subscriptionStatuses": "$response.body"
+          }
+        },
+        {
+          "stepId": "conditionally-unsubscribe-contact",
+          "description": "Unsubscribe the contact from a specific subscription type if external logic determines they are currently subscribed (based on the output of the previous step).",
+          "operationId": "post-/communication-preferences/v3/unsubscribe_unsubscribe",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "emailAddress": "$steps.get-contact-statuses.outputs.recipient",
+              "subscriptionId": "$inputs.subscriptionId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "PublicSubscriptionStatus": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "recipient": "$steps.get-contact-statuses.outputs.recipient",
+        "subscriptionStatuses": "$steps.get-contact-statuses.outputs.subscriptionStatuses",
+        "PublicSubscriptionStatus": "$steps.conditionally-unsubscribe-contact.outputs.PublicSubscriptionStatus"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

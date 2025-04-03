@@ -1,0 +1,987 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/portfoliooptimizer.io/main/1.0.10/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "maximum-sharpe-ratio-portfolio-optimization",
+      "summary": "Calculate asset returns and covariance, then optimize a portfolio to maximize the Sharpe ratio, and finally analyze the resulting portfolio's risk contributions.",
+      "description": "Calculate asset returns and covariance, then optimize a portfolio to maximize the Sharpe ratio, and finally analyze the resulting portfolio's risk contributions.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "calculate-arithmetic-returns_body": {
+            "type": "object"
+          },
+          "estimate-covariance_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "calculate-arithmetic-returns",
+          "description": "Calculate arithmetic returns from asset prices.",
+          "operationPath": "openapi_source#/paths/~1assets~1returns/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.calculate-arithmetic-returns_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "assets (with assetReturns)": "$response.body"
+          }
+        },
+        {
+          "stepId": "estimate-covariance",
+          "description": "Estimate the empirical covariance matrix from asset returns.",
+          "operationPath": "openapi_source#/paths/~1assets~1covariance~1matrix~1estimation~1empirical/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.estimate-covariance_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "assetsCovarianceMatrix": "$response.body"
+          }
+        },
+        {
+          "stepId": "optimize-max-sharpe",
+          "description": "Compute the weights of the maximum Sharpe ratio portfolio.",
+          "operationPath": "openapi_source#/paths/~1portfolio~1optimization~1maximum-sharpe-ratio/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "assetsCovarianceMatrix": "$steps.estimate-covariance.outputs.assetsCovarianceMatrix"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "assetsWeights": "$response.body"
+          }
+        },
+        {
+          "stepId": "analyze-risk-contributions",
+          "description": "Analyze the risk contributions of each asset in the optimized portfolio.",
+          "operationPath": "openapi_source#/paths/~1portfolio~1analysis~1contributions~1risk/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "assetsCovarianceMatrix": "$steps.estimate-covariance.outputs.assetsCovarianceMatrix",
+              "portfolios": "$steps.optimize-max-sharpe.outputs.assetsWeights"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "portfolios (with assetsMarginalRiskContributions, assetsTotalRiskContributions)": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "assets (with assetReturns)": "$steps.calculate-arithmetic-returns.outputs.assets (with assetReturns)",
+        "assetsCovarianceMatrix": "$steps.estimate-covariance.outputs.assetsCovarianceMatrix",
+        "assetsWeights": "$steps.optimize-max-sharpe.outputs.assetsWeights",
+        "portfolios (with assetsMarginalRiskContributions, assetsTotalRiskContributions)": "$steps.analyze-risk-contributions.outputs.portfolios (with assetsMarginalRiskContributions, assetsTotalRiskContributions)"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "equal-risk-contributions-risk-parity-portfolio-optimization",
+      "summary": "Estimate the covariance matrix from asset returns, optimize a portfolio for equal risk contributions (risk parity), and analyze the risk contributions.",
+      "description": "Estimate the covariance matrix from asset returns, optimize a portfolio for equal risk contributions (risk parity), and analyze the risk contributions.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "calculate-log-returns_body": {
+            "type": "object"
+          },
+          "estimate-covariance_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "calculate-log-returns",
+          "description": "Calculate logarithmic returns from asset prices.",
+          "operationPath": "openapi_source#/paths/~1assets~1returns~1logarithmic/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.calculate-log-returns_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "assets (with assetReturns)": "$response.body"
+          }
+        },
+        {
+          "stepId": "estimate-covariance",
+          "description": "Estimate the empirical covariance matrix from asset returns.",
+          "operationPath": "openapi_source#/paths/~1assets~1covariance~1matrix~1estimation~1empirical/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.estimate-covariance_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "assetsCovarianceMatrix": "$response.body"
+          }
+        },
+        {
+          "stepId": "optimize-erc",
+          "description": "Compute the weights of the equal risk contributions portfolio.",
+          "operationPath": "openapi_source#/paths/~1portfolio~1optimization~1equal-risk-contributions/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "assetsCovarianceMatrix": "$steps.estimate-covariance.outputs.assetsCovarianceMatrix"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "assetsWeights": "$response.body"
+          }
+        },
+        {
+          "stepId": "analyze-risk-contributions",
+          "description": "Analyze the risk contributions of each asset in the optimized ERC portfolio.",
+          "operationPath": "openapi_source#/paths/~1portfolio~1analysis~1contributions~1risk/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "assetsCovarianceMatrix": "$steps.estimate-covariance.outputs.assetsCovarianceMatrix",
+              "portfolios": "$steps.optimize-erc.outputs.assetsWeights"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "portfolios (with assetsMarginalRiskContributions, assetsTotalRiskContributions)": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "assets (with assetReturns)": "$steps.calculate-log-returns.outputs.assets (with assetReturns)",
+        "assetsCovarianceMatrix": "$steps.estimate-covariance.outputs.assetsCovarianceMatrix",
+        "assetsWeights": "$steps.optimize-erc.outputs.assetsWeights",
+        "portfolios (with assetsMarginalRiskContributions, assetsTotalRiskContributions)": "$steps.analyze-risk-contributions.outputs.portfolios (with assetsMarginalRiskContributions, assetsTotalRiskContributions)"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "hierarchical-risk-parity-hrp-optimization",
+      "summary": "Estimate asset covariance, perform Hierarchical Risk Parity optimization, and analyze the resulting portfolio's risk contributions.",
+      "description": "Estimate asset covariance, perform Hierarchical Risk Parity optimization, and analyze the resulting portfolio's risk contributions.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "calculate-log-returns_body": {
+            "type": "object"
+          },
+          "estimate-covariance_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "calculate-log-returns",
+          "description": "Calculate logarithmic returns from asset prices.",
+          "operationPath": "openapi_source#/paths/~1assets~1returns~1logarithmic/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.calculate-log-returns_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "assets (with assetReturns)": "$response.body"
+          }
+        },
+        {
+          "stepId": "estimate-covariance",
+          "description": "Estimate the empirical covariance matrix from asset returns.",
+          "operationPath": "openapi_source#/paths/~1assets~1covariance~1matrix~1estimation~1empirical/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.estimate-covariance_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "assetsCovarianceMatrix": "$response.body"
+          }
+        },
+        {
+          "stepId": "optimize-hrp",
+          "description": "Compute the weights of the Hierarchical Risk Parity portfolio.",
+          "operationPath": "openapi_source#/paths/~1portfolio~1optimization~1hierarchical-risk-parity/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "assetsCovarianceMatrix": "$steps.estimate-covariance.outputs.assetsCovarianceMatrix"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "assetsWeights": "$response.body"
+          }
+        },
+        {
+          "stepId": "analyze-hrp-risk-contributions",
+          "description": "Analyze the risk contributions of each asset in the optimized HRP portfolio.",
+          "operationPath": "openapi_source#/paths/~1portfolio~1analysis~1contributions~1risk/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "assetsCovarianceMatrix": "$steps.estimate-covariance.outputs.assetsCovarianceMatrix",
+              "portfolios": "$steps.optimize-hrp.outputs.assetsWeights"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "portfolios (with assetsMarginalRiskContributions, assetsTotalRiskContributions)": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "assets (with assetReturns)": "$steps.calculate-log-returns.outputs.assets (with assetReturns)",
+        "assetsCovarianceMatrix": "$steps.estimate-covariance.outputs.assetsCovarianceMatrix",
+        "assetsWeights": "$steps.optimize-hrp.outputs.assetsWeights",
+        "portfolios (with assetsMarginalRiskContributions, assetsTotalRiskContributions)": "$steps.analyze-hrp-risk-contributions.outputs.portfolios (with assetsMarginalRiskContributions, assetsTotalRiskContributions)"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "data-preparation-for-portfolio-analysis",
+      "summary": "Adjust historical asset prices for corporate actions (dividends, splits), calculate logarithmic returns, estimate the empirical covariance matrix, and validate it.",
+      "description": "Adjust historical asset prices for corporate actions (dividends, splits), calculate logarithmic returns, estimate the empirical covariance matrix, and validate it.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "adjust-prices_body": {
+            "type": "object"
+          },
+          "calculate-log-returns_body": {
+            "type": "object"
+          },
+          "estimate-covariance_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "adjust-prices",
+          "description": "Adjust raw asset closing prices for dividends and splits.",
+          "operationPath": "openapi_source#/paths/~1assets~1prices~1adjusted/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.adjust-prices_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "assets (with assetAdjustedPrices)": "$response.body"
+          }
+        },
+        {
+          "stepId": "calculate-log-returns",
+          "description": "Calculate logarithmic returns from adjusted asset prices.",
+          "operationPath": "openapi_source#/paths/~1assets~1returns~1logarithmic/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.calculate-log-returns_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "assets (with assetReturns)": "$response.body"
+          }
+        },
+        {
+          "stepId": "estimate-covariance",
+          "description": "Estimate the empirical covariance matrix from asset returns.",
+          "operationPath": "openapi_source#/paths/~1assets~1covariance~1matrix~1estimation~1empirical/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.estimate-covariance_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "assetsCovarianceMatrix": "$response.body"
+          }
+        },
+        {
+          "stepId": "validate-covariance",
+          "description": "Validate if the estimated matrix is a valid covariance matrix.",
+          "operationPath": "openapi_source#/paths/~1assets~1covariance~1matrix~1validation/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "assetsCovarianceMatrix": "$steps.estimate-covariance.outputs.assetsCovarianceMatrix"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "message": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "assets (with assetAdjustedPrices)": "$steps.adjust-prices.outputs.assets (with assetAdjustedPrices)",
+        "assets (with assetReturns)": "$steps.calculate-log-returns.outputs.assets (with assetReturns)",
+        "assetsCovarianceMatrix": "$steps.estimate-covariance.outputs.assetsCovarianceMatrix",
+        "message": "$steps.validate-covariance.outputs.message"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "clustering-based-portfolio-optimization-hrp-cb",
+      "summary": "Estimate asset correlation, perform hierarchical clustering, estimate covariance, and then optimize using Hierarchical Clustering-Based Risk Parity.",
+      "description": "Estimate asset correlation, perform hierarchical clustering, estimate covariance, and then optimize using Hierarchical Clustering-Based Risk Parity.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "calculate-log-returns_body": {
+            "type": "object"
+          },
+          "estimate-correlation_body": {
+            "type": "object"
+          },
+          "estimate-covariance_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "calculate-log-returns",
+          "description": "Calculate logarithmic returns from asset prices.",
+          "operationPath": "openapi_source#/paths/~1assets~1returns~1logarithmic/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.calculate-log-returns_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "assets (with assetReturns)": "$response.body"
+          }
+        },
+        {
+          "stepId": "estimate-correlation",
+          "description": "Estimate the Pearson correlation matrix from asset returns.",
+          "operationPath": "openapi_source#/paths/~1assets~1correlation~1matrix/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.estimate-correlation_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "assetsCorrelationMatrix": "$response.body"
+          }
+        },
+        {
+          "stepId": "cluster-assets",
+          "description": "Group assets into clusters using hierarchical clustering based on their correlation.",
+          "operationPath": "openapi_source#/paths/~1assets~1clustering~1hierarchical/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "assetsCorrelationMatrix": "$steps.estimate-correlation.outputs.assetsCorrelationMatrix"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "assetsGroups": "$response.body"
+          }
+        },
+        {
+          "stepId": "estimate-covariance",
+          "description": "Estimate the empirical covariance matrix from asset returns.",
+          "operationPath": "openapi_source#/paths/~1assets~1covariance~1matrix~1estimation~1empirical/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.estimate-covariance_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "assetsCovarianceMatrix": "$response.body"
+          }
+        },
+        {
+          "stepId": "optimize-hrp-cb",
+          "description": "Compute weights using Hierarchical Clustering-Based Risk Parity.",
+          "operationPath": "openapi_source#/paths/~1portfolio~1optimization~1hierarchical-risk-parity~1clustering-based/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "assetsCovarianceMatrix": "$steps.estimate-covariance.outputs.assetsCovarianceMatrix"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "assetsWeights": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "assets (with assetReturns)": "$steps.calculate-log-returns.outputs.assets (with assetReturns)",
+        "assetsCorrelationMatrix": "$steps.estimate-correlation.outputs.assetsCorrelationMatrix",
+        "assetsGroups": "$steps.cluster-assets.outputs.assetsGroups",
+        "assetsCovarianceMatrix": "$steps.estimate-covariance.outputs.assetsCovarianceMatrix",
+        "assetsWeights": "$steps.optimize-hrp-cb.outputs.assetsWeights"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "resampling-based-mean-variance-optimization",
+      "summary": "Estimate returns and covariance, then perform resampling-based mean-variance optimization (e.g., for Maximum Sharpe Ratio) considering input uncertainty.",
+      "description": "Estimate returns and covariance, then perform resampling-based mean-variance optimization (e.g., for Maximum Sharpe Ratio) considering input uncertainty.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "calculate-arithmetic-returns_body": {
+            "type": "object"
+          },
+          "estimate-covariance_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "calculate-arithmetic-returns",
+          "description": "Calculate arithmetic returns from asset prices.",
+          "operationPath": "openapi_source#/paths/~1assets~1returns/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.calculate-arithmetic-returns_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "assets (with assetReturns)": "$response.body"
+          }
+        },
+        {
+          "stepId": "estimate-covariance",
+          "description": "Estimate the empirical covariance matrix from asset returns.",
+          "operationPath": "openapi_source#/paths/~1assets~1covariance~1matrix~1estimation~1empirical/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.estimate-covariance_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "assetsCovarianceMatrix": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "assets (with assetReturns)": "$steps.calculate-arithmetic-returns.outputs.assets (with assetReturns)",
+        "assetsCovarianceMatrix": "$steps.estimate-covariance.outputs.assetsCovarianceMatrix"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "construct-and-round-investable-portfolio",
+      "summary": "Optimize a portfolio (e.g., Minimum Variance), then construct an investable version based on asset prices and portfolio value, and finally round the weights to specified increments.",
+      "description": "Optimize a portfolio (e.g., Minimum Variance), then construct an investable version based on asset prices and portfolio value, and finally round the weights to specified increments.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "calculate-log-returns_body": {
+            "type": "object"
+          },
+          "estimate-covariance_body": {
+            "type": "object"
+          },
+          "construct-investable_body": {
+            "type": "object"
+          },
+          "round-weights_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "calculate-log-returns",
+          "description": "Calculate logarithmic returns from asset prices.",
+          "operationPath": "openapi_source#/paths/~1assets~1returns~1logarithmic/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.calculate-log-returns_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "assets (with assetReturns)": "$response.body"
+          }
+        },
+        {
+          "stepId": "estimate-covariance",
+          "description": "Estimate the empirical covariance matrix from asset returns.",
+          "operationPath": "openapi_source#/paths/~1assets~1covariance~1matrix~1estimation~1empirical/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.estimate-covariance_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "assetsCovarianceMatrix": "$response.body"
+          }
+        },
+        {
+          "stepId": "optimize-min-variance",
+          "description": "Compute the weights of the minimum variance portfolio.",
+          "operationPath": "openapi_source#/paths/~1portfolio~1optimization~1minimum-variance/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "assetsCovarianceMatrix": "$steps.estimate-covariance.outputs.assetsCovarianceMatrix"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "assetsWeights": "$response.body"
+          }
+        },
+        {
+          "stepId": "construct-investable",
+          "description": "Compute investable asset positions (shares) based on target weights, prices, and portfolio value.",
+          "operationPath": "openapi_source#/paths/~1portfolio~1construction~1investable/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.construct-investable_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "assetsPositions": "$response.body",
+            "assetsWeights (actual)": "$response.body"
+          }
+        },
+        {
+          "stepId": "round-weights",
+          "description": "Round the actual portfolio weights to a specified increment.",
+          "operationPath": "openapi_source#/paths/~1portfolios~1post-optimization~1rounding/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.round-weights_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "portfolios (with rounded assetsWeights)": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "assets (with assetReturns)": "$steps.calculate-log-returns.outputs.assets (with assetReturns)",
+        "assetsCovarianceMatrix": "$steps.estimate-covariance.outputs.assetsCovarianceMatrix",
+        "assetsWeights": "$steps.optimize-min-variance.outputs.assetsWeights",
+        "assetsPositions": "$steps.construct-investable.outputs.assetsPositions",
+        "assetsWeights (actual)": "$steps.construct-investable.outputs.assetsWeights (actual)",
+        "portfolios (with rounded assetsWeights)": "$steps.round-weights.outputs.portfolios (with rounded assetsWeights)"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "portfolio-performance-and-drawdown-analysis",
+      "summary": "Analyze a portfolio's historical performance by calculating its time-weighted return (if cash flows involved), Sharpe ratio, and drawdowns.",
+      "description": "Analyze a portfolio's historical performance by calculating its time-weighted return (if cash flows involved), Sharpe ratio, and drawdowns.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "calculate-sharpe-ratio_body": {
+            "type": "object"
+          },
+          "analyze-drawdowns_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "calculate-sharpe-ratio",
+          "description": "Calculate the Sharpe ratio based on portfolio values and risk-free rate.",
+          "operationPath": "openapi_source#/paths/~1portfolio~1analysis~1sharpe-ratio/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.calculate-sharpe-ratio_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "portfolios (with portfolioSharpeRatio)": "$response.body"
+          }
+        },
+        {
+          "stepId": "analyze-drawdowns",
+          "description": "Compute the portfolio's drawdown function and identify the worst drawdowns.",
+          "operationPath": "openapi_source#/paths/~1portfolio~1analysis~1drawdowns/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.analyze-drawdowns_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "portfolios (with portfolioDrawdowns, portfolioWorstDrawdowns)": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "portfolios (with portfolioSharpeRatio)": "$steps.calculate-sharpe-ratio.outputs.portfolios (with portfolioSharpeRatio)",
+        "portfolios (with portfolioDrawdowns, portfolioWorstDrawdowns)": "$steps.analyze-drawdowns.outputs.portfolios (with portfolioDrawdowns, portfolioWorstDrawdowns)"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "portfolio-factor-exposure-analysis-fama-french-us",
+      "summary": "Retrieve Fama-French US factor returns and analyze a portfolio's exposure to these factors based on its historical returns.",
+      "description": "Retrieve Fama-French US factor returns and analyze a portfolio's exposure to these factors based on its historical returns.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "calculate-portfolio-exposures_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-fama-french-us-factors",
+          "description": "Retrieve historical returns for Fama-French US factors.",
+          "operationPath": "openapi_source#/paths/~1factors~1models~1fama-french~1us/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "famaFrenchFactors": "$response.body"
+          }
+        },
+        {
+          "stepId": "calculate-portfolio-exposures",
+          "description": "Calculate the portfolio's alpha, betas (factor exposures), and R-squared relative to the Fama-French factors.",
+          "operationPath": "openapi_source#/paths/~1portfolios~1analysis~1factors~1exposures/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.calculate-portfolio-exposures_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "portfolios (with portfolioAlpha, portfolioBetas, portfolioRSquared)": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "famaFrenchFactors": "$steps.get-fama-french-us-factors.outputs.famaFrenchFactors",
+        "portfolios (with portfolioAlpha, portfolioBetas, portfolioRSquared)": "$steps.calculate-portfolio-exposures.outputs.portfolios (with portfolioAlpha, portfolioBetas, portfolioRSquared)"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

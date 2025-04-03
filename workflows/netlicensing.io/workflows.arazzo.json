@@ -1,0 +1,430 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/netlicensing.io/main/2.x/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "register-new-customer-and-grant-initial-license",
+      "summary": "Onboards a new customer (Licensee) and issues them a specific license based on a pre-defined license template.",
+      "description": "Onboards a new customer (Licensee) and issues them a specific license based on a pre-defined license template.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-licensee_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-licensee",
+          "description": "Register a new customer (Licensee) in NetLicensing, optionally associating them with a product.",
+          "operationId": "createLicensee",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": "$inputs.create-licensee_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "licenseeNumber": "$response.body",
+            "licenseeDetails": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-license",
+          "description": "Grant a specific license to the newly created licensee based on an existing license template.",
+          "operationId": "createLicense",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "licenseeNumber": "$steps.create-licensee.outputs.licenseeNumber"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "licenseNumber": "$response.body",
+            "licenseDetails": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "licenseeNumber": "$steps.create-licensee.outputs.licenseeNumber",
+        "licenseeDetails": "$steps.create-licensee.outputs.licenseeDetails",
+        "licenseNumber": "$steps.create-license.outputs.licenseNumber",
+        "licenseDetails": "$steps.create-license.outputs.licenseDetails"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "onboard-new-software-product-with-basic-licensing",
+      "summary": "Sets up the fundamental structure for licensing a new software product by creating the product, an associated product module, and a basic license template.",
+      "description": "Sets up the fundamental structure for licensing a new software product by creating the product, an associated product module, and a basic license template.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-product_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-product",
+          "description": "Define a new software product within NetLicensing.",
+          "operationId": "createProduct",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": "$inputs.create-product_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "productNumber": "$response.body",
+            "productDetails": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-product-module",
+          "description": "Create a product module linked to the new product, defining its licensing model.",
+          "operationId": "createProductModule",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "productNumber": "$steps.create-product.outputs.productNumber"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "productModuleNumber": "$response.body",
+            "productModuleDetails": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-license-template",
+          "description": "Create a license template associated with the product module, specifying license type and rules.",
+          "operationId": "createLicenseTemplate",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "productModuleNumber": "$steps.create-product-module.outputs.productModuleNumber"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "licenseTemplateNumber": "$response.body",
+            "licenseTemplateDetails": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "productNumber": "$steps.create-product.outputs.productNumber",
+        "productDetails": "$steps.create-product.outputs.productDetails",
+        "productModuleNumber": "$steps.create-product-module.outputs.productModuleNumber",
+        "productModuleDetails": "$steps.create-product-module.outputs.productModuleDetails",
+        "licenseTemplateNumber": "$steps.create-license-template.outputs.licenseTemplateNumber",
+        "licenseTemplateDetails": "$steps.create-license-template.outputs.licenseTemplateDetails"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "transfer-licenses-between-customers",
+      "summary": "Moves all licenses associated with a source licensee to a destination licensee, useful for handling user changes or account consolidation.",
+      "description": "Moves all licenses associated with a source licensee to a destination licensee, useful for handling user changes or account consolidation.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "licenseeNumber": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-source-licensee",
+          "description": "Retrieve details of the source licensee.",
+          "operationId": "getLicensee",
+          "parameters": [
+            {
+              "name": "licenseeNumber",
+              "in": "path",
+              "value": "$inputs.licenseeNumber"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sourceLicenseeNumber": "$response.body",
+            "sourceLicenseeDetails": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-target-licensee",
+          "description": "Retrieve details of the target licensee.",
+          "operationId": "getLicensee",
+          "parameters": [
+            {
+              "name": "licenseeNumber",
+              "in": "path",
+              "value": "$inputs.licenseeNumber"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "targetLicenseeNumber": "$response.body",
+            "targetLicenseeDetails": "$response.body"
+          }
+        },
+        {
+          "stepId": "transfer-licenses",
+          "description": "Execute the transfer of all licenses from the source to the target licensee.",
+          "operationId": "transferLicenses",
+          "parameters": [
+            {
+              "name": "licenseeNumber",
+              "in": "path",
+              "value": "$inputs.licenseeNumber"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "sourceLicenseeNumber": "$steps.get-source-licensee.outputs.sourceLicenseeNumber",
+              "targetLicenseeNumber": "$steps.get-target-licensee.outputs.targetLicenseeNumber"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "transferResult": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "sourceLicenseeNumber": "$steps.get-source-licensee.outputs.sourceLicenseeNumber",
+        "sourceLicenseeDetails": "$steps.get-source-licensee.outputs.sourceLicenseeDetails",
+        "targetLicenseeNumber": "$steps.get-target-licensee.outputs.targetLicenseeNumber",
+        "targetLicenseeDetails": "$steps.get-target-licensee.outputs.targetLicenseeDetails",
+        "transferResult": "$steps.transfer-licenses.outputs.transferResult"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "setup-automatic-license-granting-on-licensee-creation",
+      "summary": "Configures a specific (usually free) license template to be automatically granted to any new licensee created for the associated product.",
+      "description": "Configures a specific (usually free) license template to be automatically granted to any new licensee created for the associated product.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "licenseTemplateNumber": {
+            "type": "string"
+          },
+          "update-license-template-automatic_body": {
+            "type": "object"
+          },
+          "create-new-licensee-for-auto-license_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "update-license-template-automatic",
+          "description": "Set the 'automatic' flag to true on a license template (requires price=0).",
+          "operationId": "updateLicenseTemplate",
+          "parameters": [
+            {
+              "name": "licenseTemplateNumber",
+              "in": "path",
+              "value": "$inputs.licenseTemplateNumber"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": "$inputs.update-license-template-automatic_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updatedLicenseTemplateDetails": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-new-licensee-for-auto-license",
+          "description": "Create a new licensee associated with the product linked to the automatic template.",
+          "operationId": "createLicensee",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": "$inputs.create-new-licensee-for-auto-license_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "licenseeNumber": "$response.body",
+            "licenseeDetails": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "updatedLicenseTemplateDetails": "$steps.update-license-template-automatic.outputs.updatedLicenseTemplateDetails",
+        "licenseeNumber": "$steps.create-new-licensee-for-auto-license.outputs.licenseeNumber",
+        "licenseeDetails": "$steps.create-new-licensee-for-auto-license.outputs.licenseeDetails"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

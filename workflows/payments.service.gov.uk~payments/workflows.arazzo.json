@@ -1,0 +1,586 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/payments.service.gov.uk/payments/1.0.3/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "standard-payment-initiation-and-monitoring",
+      "summary": "Initiates a standard card payment request and allows checking its status later. This is the fundamental workflow for taking a payment.",
+      "description": "Initiates a standard card payment request and allows checking its status later. This is the fundamental workflow for taking a payment.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "return_url": {
+            "type": "string"
+          },
+          "paymentId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-payment",
+          "description": "Creates a new payment request, returning a unique payment ID and links for the user to complete the payment.",
+          "operationId": "Create a payment",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "amount": "$inputs.amount",
+              "description": "$inputs.description",
+              "reference": "$inputs.reference",
+              "return_url": "$inputs.return_url"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "payment_id": "$response.body",
+            "state": "$response.body",
+            "next_url": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-payment-status",
+          "description": "Retrieves the current status and details of a previously created payment using its ID.",
+          "operationId": "Get a payment",
+          "parameters": [
+            {
+              "name": "paymentId",
+              "in": "path",
+              "value": "$steps.create-payment.outputs.payment_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "payment_details": "$response.body",
+            "state": "$response.body",
+            "refund_summary": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "payment_id": "$steps.create-payment.outputs.payment_id",
+        "state": "$steps.get-payment-status.outputs.state",
+        "next_url": "$steps.create-payment.outputs.next_url",
+        "payment_details": "$steps.get-payment-status.outputs.payment_details",
+        "refund_summary": "$steps.get-payment-status.outputs.refund_summary"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "issue-and-verify-refund",
+      "summary": "Finds a completed payment, issues a full or partial refund against it, and then verifies the status of the refund.",
+      "description": "Finds a completed payment, issues a full or partial refund against it, and then verifies the status of the refund.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "paymentId": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "refundId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-payment-to-refund",
+          "description": "Retrieve details of a specific payment to confirm it's refundable and check the available amount.",
+          "operationId": "Get a payment",
+          "parameters": [
+            {
+              "name": "paymentId",
+              "in": "path",
+              "value": "$inputs.paymentId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "payment_id": "$response.body",
+            "state": "$response.body",
+            "refund_summary_amount_available": "$response.body"
+          }
+        },
+        {
+          "stepId": "submit-refund",
+          "description": "Submits a refund request for a specified amount against the payment.",
+          "operationId": "Submit a refund for a payment",
+          "parameters": [
+            {
+              "name": "paymentId",
+              "in": "path",
+              "value": "$steps.find-payment-to-refund.outputs.payment_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "paymentId": "$steps.find-payment-to-refund.outputs.payment_id",
+              "refund_amount_available": "$steps.find-payment-to-refund.outputs.refund_summary_amount_available",
+              "amount": "$inputs.amount"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "refund_id": "$response.body",
+            "status": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-refund-status",
+          "description": "Retrieves the details and status of a specific refund.",
+          "operationId": "Get a payment refund",
+          "parameters": [
+            {
+              "name": "paymentId",
+              "in": "path",
+              "value": "$steps.find-payment-to-refund.outputs.payment_id"
+            },
+            {
+              "name": "refundId",
+              "in": "path",
+              "value": "$steps.submit-refund.outputs.refund_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "refund_details": "$response.body",
+            "status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "payment_id": "$steps.find-payment-to-refund.outputs.payment_id",
+        "state": "$steps.find-payment-to-refund.outputs.state",
+        "refund_summary_amount_available": "$steps.find-payment-to-refund.outputs.refund_summary_amount_available",
+        "refund_id": "$steps.submit-refund.outputs.refund_id",
+        "status": "$steps.get-refund-status.outputs.status",
+        "refund_details": "$steps.get-refund-status.outputs.refund_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "delayed-capture-payment",
+      "summary": "Creates a payment authorization (without immediately capturing funds), checks its status, and then captures the payment later. Useful for services that need to confirm stock or details before finalizing the charge.",
+      "description": "Creates a payment authorization (without immediately capturing funds), checks its status, and then captures the payment later. Useful for services that need to confirm stock or details before finalizing the charge.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "return_url": {
+            "type": "string"
+          },
+          "paymentId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-delayed-payment",
+          "description": "Creates a new payment request with delayed capture enabled.",
+          "operationId": "Create a payment",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "amount": "$inputs.amount",
+              "description": "$inputs.description",
+              "reference": "$inputs.reference",
+              "return_url": "$inputs.return_url"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "payment_id": "$response.body",
+            "state": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-payment-submitted",
+          "description": "Retrieves the payment status to confirm it has been successfully submitted by the user and is ready for capture.",
+          "operationId": "Get a payment",
+          "parameters": [
+            {
+              "name": "paymentId",
+              "in": "path",
+              "value": "$steps.create-delayed-payment.outputs.payment_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "payment_id": "$response.body",
+            "state": "$response.body"
+          }
+        },
+        {
+          "stepId": "capture-payment",
+          "description": "Captures the funds for a previously authorized payment (must be in 'submitted' state).",
+          "operationId": "Capture a payment",
+          "parameters": [
+            {
+              "name": "paymentId",
+              "in": "path",
+              "value": "$steps.check-payment-submitted.outputs.payment_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "capture_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "payment_id": "$steps.check-payment-submitted.outputs.payment_id",
+        "state": "$steps.check-payment-submitted.outputs.state",
+        "capture_status": "$steps.capture-payment.outputs.capture_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "cancel-pending-payment",
+      "summary": "Creates a payment request and subsequently cancels it before it is completed or captured. Useful if the user abandons the process or the service needs to void the transaction.",
+      "description": "Creates a payment request and subsequently cancels it before it is completed or captured. Useful if the user abandons the process or the service needs to void the transaction.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "return_url": {
+            "type": "string"
+          },
+          "paymentId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-cancellable-payment",
+          "description": "Creates a new payment request.",
+          "operationId": "Create a payment",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "amount": "$inputs.amount",
+              "description": "$inputs.description",
+              "reference": "$inputs.reference",
+              "return_url": "$inputs.return_url"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "payment_id": "$response.body",
+            "state": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-payment-cancellable",
+          "description": "Retrieves the payment status to confirm it is in a state that allows cancellation (e.g., 'created', 'started').",
+          "operationId": "Get a payment",
+          "parameters": [
+            {
+              "name": "paymentId",
+              "in": "path",
+              "value": "$steps.create-cancellable-payment.outputs.payment_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "payment_id": "$response.body",
+            "state": "$response.body",
+            "is_cancellable": "$response.body"
+          }
+        },
+        {
+          "stepId": "cancel-payment",
+          "description": "Cancels the payment if it's in an appropriate state.",
+          "operationId": "Cancel a payment",
+          "parameters": [
+            {
+              "name": "paymentId",
+              "in": "path",
+              "value": "$steps.check-payment-cancellable.outputs.payment_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "cancellation_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "payment_id": "$steps.check-payment-cancellable.outputs.payment_id",
+        "state": "$steps.check-payment-cancellable.outputs.state",
+        "is_cancellable": "$steps.check-payment-cancellable.outputs.is_cancellable",
+        "cancellation_status": "$steps.cancel-payment.outputs.cancellation_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "investigate-payment-history",
+      "summary": "Finds a specific payment (either by ID or searching) and retrieves its detailed event history for troubleshooting, auditing, or understanding the payment lifecycle.",
+      "description": "Finds a specific payment (either by ID or searching) and retrieves its detailed event history for troubleshooting, auditing, or understanding the payment lifecycle.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "paymentId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-payment-by-id",
+          "description": "Retrieve details of a specific payment using its ID.",
+          "operationId": "Get a payment",
+          "parameters": [
+            {
+              "name": "paymentId",
+              "in": "path",
+              "value": "$inputs.paymentId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "payment_id": "$response.body",
+            "payment_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-payment-events",
+          "description": "Retrieves the sequence of status changes and events associated with the payment.",
+          "operationId": "Get events for a payment",
+          "parameters": [
+            {
+              "name": "paymentId",
+              "in": "path",
+              "value": "$steps.find-payment-by-id.outputs.payment_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "payment_events_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "payment_id": "$steps.find-payment-by-id.outputs.payment_id",
+        "payment_details": "$steps.find-payment-by-id.outputs.payment_details",
+        "payment_events_list": "$steps.get-payment-events.outputs.payment_events_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

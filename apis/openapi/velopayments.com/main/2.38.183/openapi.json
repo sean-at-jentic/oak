@@ -1,0 +1,2760 @@
+{
+  "openapi": "3.0.2",
+  "info": {
+    "description": "## Terms and Definitions\n\nThroughout this document and the Velo platform the following terms are used:\n\n* **Payor.** An entity (typically a corporation) which wishes to pay funds to one or more payees via a payout.\n* **Payee.** The recipient of funds paid out by a payor.\n* **Payment.** A single transfer of funds from a payor to a payee.\n* **Payout.** A batch of Payments, typically used by a payor to logically group payments (e.g. by business day). Technically there need be no relationship between the payments in a payout - a single payout can contain payments to multiple payees and/or multiple payments to a single payee.\n* **Sandbox.** An integration environment provided by Velo Payments which offers a similar API experience to the production environment, but all funding and payment events are simulated, along with many other services such as OFAC sanctions list checking.\n\n## Overview\n\nThe Velo Payments API allows a payor to perform a number of operations. The following is a list of the main capabilities in a natural order of execution:\n\n* Authenticate with the Velo platform\n* Maintain a collection of payees\n* Query the payor\u2019s current balance of funds within the platform and perform additional funding\n* Issue payments to payees\n* Query the platform for a history of those payments\n\nThis document describes the main concepts and APIs required to get up and running with the Velo Payments platform. It is not an exhaustive API reference. For that, please see the separate Velo Payments API Reference.\n\n## API Considerations\n\nThe Velo Payments API is REST based and uses the JSON format for requests and responses.\n\nMost calls are secured using OAuth 2 security and require a valid authentication access token for successful operation. See the Authentication section for details.\n\nWhere a dynamic value is required in the examples below, the {token} format is used, suggesting that the caller needs to supply the appropriate value of the token in question (without including the { or } characters).\n\nWhere curl examples are given, the \u2013d @filename.json approach is used, indicating that the request body should be placed into a file named filename.json in the current directory. Each of the curl examples in this document should be considered a single line on the command-line, regardless of how they appear in print.\n\n## Authenticating with the Velo Platform\n\nOnce Velo backoffice staff have added your organization as a payor within the Velo platform sandbox, they will create you a payor Id, an API key and an API secret and share these with you in a secure manner.\n\nYou will need to use these values to authenticate with the Velo platform in order to gain access to the APIs. The steps to take are explained in the following:\n\ncreate a string comprising the API key (e.g. 44a9537d-d55d-4b47-8082-14061c2bcdd8) and API secret (e.g. c396b26b-137a-44fd-87f5-34631f8fd529) with a colon between them. E.g. 44a9537d-d55d-4b47-8082-14061c2bcdd8:c396b26b-137a-44fd-87f5-34631f8fd529\n\nbase64 encode this string. E.g.: NDRhOTUzN2QtZDU1ZC00YjQ3LTgwODItMTQwNjFjMmJjZGQ4OmMzOTZiMjZiLTEzN2EtNDRmZC04N2Y1LTM0NjMxZjhmZDUyOQ==\n\ncreate an HTTP **Authorization** header with the value set to e.g. Basic NDRhOTUzN2QtZDU1ZC00YjQ3LTgwODItMTQwNjFjMmJjZGQ4OmMzOTZiMjZiLTEzN2EtNDRmZC04N2Y1LTM0NjMxZjhmZDUyOQ==\n\nperform the Velo authentication REST call using the HTTP header created above e.g. via curl:\n\n```\n  curl -X POST \\\n  -H \"Content-Type: application/json\" \\\n  -H \"Authorization: Basic NDRhOTUzN2QtZDU1ZC00YjQ3LTgwODItMTQwNjFjMmJjZGQ4OmMzOTZiMjZiLTEzN2EtNDRmZC04N2Y1LTM0NjMxZjhmZDUyOQ==\" \\\n  'https://api.sandbox.velopayments.com/v1/authenticate?grant_type=client_credentials'\n```\n\nIf successful, this call will result in a **200** HTTP status code and a response body such as:\n\n```\n  {\n    \"access_token\":\"19f6bafd-93fd-4747-b229-00507bbc991f\",\n    \"token_type\":\"bearer\",\n    \"expires_in\":1799,\n    \"scope\":\"...\"\n  }\n```\n## API access following authentication\nFollowing successful authentication, the value of the access_token field in the response (indicated in green above) should then be presented with all subsequent API calls to allow the Velo platform to validate that the caller is authenticated.\n\nThis is achieved by setting the HTTP Authorization header with the value set to e.g. Bearer 19f6bafd-93fd-4747-b229-00507bbc991f such as the curl example below:\n\n```\n  -H \"Authorization: Bearer 19f6bafd-93fd-4747-b229-00507bbc991f \"\n```\n\nIf you make other Velo API calls which require authorization but the Authorization header is missing or invalid then you will get a **401** HTTP status response.\n\n\n## Http Status Codes\nFollowing is a list of Http Status codes that could be returned by the platform\n\n    | Status Code            | Description                                                                          |\n    | -----------------------| -------------------------------------------------------------------------------------|\n    | 200 OK                 | The request was successfully processed and usually returns a json response           |\n    | 201 Created            | A resource was created and a Location header is returned linking to the new resource |\n    | 202 Accepted           | The request has been accepted for processing                                         |\n    | 204 No Content         | The request has been processed and there is no response (usually deletes and updates)|\n    | 400 Bad Request        | The request is invalid and should be fixed before retrying                           |\n    | 401 Unauthorized       | Authentication has failed, usually means the token has expired                       |\n    | 403 Forbidden          | The user does not have permissions for the request                                   |\n    | 404 Not Found          | The resource was not found                                                           |\n    | 409 Conflict           | The resource already exists and there is a conflict                                  |\n    | 429 Too Many Requests  | The user has submitted too many requests in a given amount of time                   |\n    | 5xx Server Error       | Platform internal error (should rarely happen)                                       |\n",
+    "license": {
+      "name": "Apache License 2.0",
+      "url": "https://www.apache.org/licenses/LICENSE-2.0.html"
+    },
+    "title": "Velo Payments APIs",
+    "version": "2.38.183",
+    "x-logo": {
+      "url": "https://apidocs.velopayments.com/velo-logo-e9573185_new.svg"
+    },
+    "x-jentic-source-url": "https://raw.githubusercontent.com/velopaymentsapi/VeloOpenApi/master/spec/openapi.yaml"
+  },
+  "servers": [
+    {
+      "description": "Velo Payments Sandbox for testing",
+      "url": "https://api.sandbox.velopayments.com/"
+    },
+    {
+      "description": "Velo Payments Production URL",
+      "url": "https://api.payouts.velopayments.com"
+    }
+  ],
+  "security": [
+    {
+      "OAuth2": []
+    }
+  ],
+  "tags": [
+    {
+      "description": "A payee is a person you wish to transfer money to. In this section you will find API opertions for working with Payees.\n",
+      "name": "Payees"
+    },
+    {
+      "description": "Payee invitation is a process of inviting individual payees to the Velo platform. In this sction you will find APIs for working with Payee Invitations.",
+      "name": "Payee Invitation"
+    },
+    {
+      "description": "A Payor is the entity which is sending money. Here you will find the available APIs for working with Payors.",
+      "name": "Payors"
+    },
+    {
+      "description": "<p>Payors that are part of the same organization can be linked together in a hierarchical fashion</p>\n<p>Payors higher up in the tree can read and write data on behalf of payors below them</p>\n<p>For example Payor A can make payouts on behalf of Payor B if Payor B is linked below Payor A</p>\n<p>Payors can not access data of payors above them in the hierarchy</p>\n<p>Contact Velo if you need to link payors in your organization</p>\n",
+      "name": "Payor Hierarchy"
+    },
+    {
+      "description": "<p>Payout APIs allow you to create and instruct payouts to payees</p>\n<p>There are three phases to a payout:</p>\n<ul>\n    <li>Submit - the payments are created within the platform</li>\n    <li>Quote - optional step if FX is involved</li>\n    <li>Instruct - the payments are sent to the payment rails for processing</li>\n</ul>\n<p>Between 1 and 2000 payments can be created within the platform as part of a Payout</p>\n",
+      "name": "Payouts"
+    },
+    {
+      "description": "<p>APIs for initiating funding of source accounts from external sources and viewing balance updates</p>\n",
+      "name": "Funding"
+    },
+    {
+      "description": "<p>Source Accounts are where funds are drawn from for making payouts</p>\n",
+      "name": "Source Accounts"
+    },
+    {
+      "description": "<p>Transactions are linked to a specific Source Account and allow a payor to logically separate funds</p>\n",
+      "name": "Transactions"
+    },
+    {
+      "description": "Payment Audit Service APIs allow you to see the history of fundings, payouts, and payments to payees.",
+      "name": "Payment Audit Service"
+    },
+    {
+      "description": "<p>When a payor creates a payee then an invite token is emailed to the invited payee</p>\n<p>Payees use this token to onboard to the platform</p>\n<p>There are several required tasks that the payee must perform before they are accepted onto the platform</p>\n",
+      "name": "Invites"
+    },
+    {
+      "description": "<p>Verification tokens allow users to complete authenitcation flows such as user invite, MFA registration and password reset</p>\n<p>Tokens have an expiry and are one-time use only</p>\n",
+      "name": "Tokens"
+    },
+    {
+      "description": "<p>This document, including all counts herein, and the Velo Payments API are the intellectual property\nof Velo Payments. The Velo Payment API and your use of the Velo Payment API, is goverend by and subject to the\nVelo Payments Terms of Use</p>\n<p>&copy; Velo Payments, Inc.</p>\n",
+      "name": "Legal"
+    }
+  ],
+  "paths": {
+    "/v1/authenticate": {
+      "post": {
+        "description": "<p>Use this endpoint to obtain an access token for calling Velo Payments APIs. </p>\n<p>You need your API key and API secret issued by Velo</p>\n<p>To login and get an access token the API key and API secret must be Base64 encoded by concatenating them with a colon between them</p>\n<p>e.g. Given an ApiKey: 44a9537d-d55d-4b47-8082-14061c2bcdd8 and ApiSecret: c396b26b-137a-44fd-87f5-34631f8fd529</p>\n<p>Using a Base64 encode function Base64Encoder().encode(\"44a9537d-d55d-4b47-8082-14061c2bcdd8:c396b26b-137a-44fd-87f5-34631f8fd529\")</p>\n<p>Included as a Basic Authorization header: -H \"Authorization: Basic NDRhOTUzN2QtZDU1ZC00YjQ3LTgwODItMTQwNjFjMmJjZGQ4OmMzOTZiMjZiLTEzN2EtNDRmZC04N2Y1LTM0NjMxZjhmZDUyOQ==\" </p>\n",
+        "operationId": "veloAuth",
+        "parameters": [
+          {
+            "description": "OAuth grant type. Should use 'client_credentials'",
+            "in": "query",
+            "name": "grant_type",
+            "schema": {
+              "default": "client_credentials",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            },
+            "description": "Valid Authenication response",
+            "headers": {
+              "Cache-Control": {
+                "description": "Ensure clients do not cache request",
+                "required": true,
+                "schema": {
+                  "default": "no-store",
+                  "type": "string"
+                }
+              },
+              "Pragma": {
+                "description": "Ensure clients do not cache request",
+                "required": true,
+                "schema": {
+                  "default": "no-cache",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ],
+        "summary": "Authentication endpoint",
+        "tags": [
+          "Login"
+        ]
+      }
+    },
+    "/v1/logout": {
+      "post": {
+        "description": "<p>Given a valid access token in the header then log out the authenticated user or client </p>\n<p>Will revoke the token</p>\n",
+        "operationId": "logout",
+        "responses": {
+          "204": {
+            "description": "User has been logged out"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_401"
+                }
+              }
+            },
+            "description": "Invalid access token. May be expired or invalid"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_403"
+                }
+              }
+            },
+            "description": "The authentication does not have permissions to access the resource\nThis usually occurs when there is a valid authentication instance (client or user) but they do not have the required permissions\n"
+          }
+        },
+        "summary": "Logout",
+        "tags": [
+          "Login"
+        ],
+        "x-code-samples": [
+          {
+            "lang": "shell",
+            "source": "$ curl 'https://api.sandbox.velopayments.com/v1/logout' -i -X POST \\\n    -H 'Content-Type: application/json' \\\n    -H 'Authorization: Bearer 93560bbb-5e79-492a-97b5-1ffbdf1cfeb8'\n"
+          }
+        ]
+      }
+    },
+    "/v1/password/reset": {
+      "post": {
+        "description": "<p>Reset password </p>\n<p>An email with an embedded link will be sent to the receipient of the email address </p>\n<p>The link will contain a token to be used for resetting the password </p>\n",
+        "operationId": "resetPassword",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          },
+          "description": "An Email address to send the reset password link to",
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "the request was accepted"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_400"
+                }
+              }
+            },
+            "description": "Invalid request. See Error message payload for details of failure"
+          }
+        },
+        "security": [],
+        "summary": "Reset password",
+        "tags": [
+          "Login"
+        ],
+        "x-code-samples": [
+          {
+            "lang": "shell",
+            "source": "$ curl 'https://api.sandbox.velopayments.com/v1/password/reset' -i -X POST \\\n      -H 'Content-Type: application/json' \\\n      -d '{\"email\":\"foo@example.com\"}'\n"
+          }
+        ]
+      }
+    },
+    "/v1/validate": {
+      "post": {
+        "description": "<p>The second part of login involves validating using an MFA device</p>\n<p>An access token with PRE_AUTH authorities is required</p>\n",
+        "operationId": "validateAccessToken",
+        "parameters": [
+          {
+            "description": "Bearer token authorization leg of validate",
+            "in": "header",
+            "name": "Authorization",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccessTokenValidationRequest"
+              }
+            }
+          },
+          "description": "An OTP from the user's registered MFA Device\n",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessTokenResponse"
+                }
+              }
+            },
+            "description": "User request has been validated"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_401"
+                }
+              }
+            },
+            "description": "Invalid access token. May be expired or invalid"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_403"
+                }
+              }
+            },
+            "description": "The authentication does not have permissions to access the resource\nThis usually occurs when there is a valid authentication instance (client or user) but they do not have the required permissions\n"
+          }
+        },
+        "summary": "validate",
+        "tags": [
+          "Login"
+        ],
+        "x-code-samples": [
+          {
+            "lang": "shell",
+            "source": "$ curl 'https://api.sandbox.velopayments.com/v1/validate' -i -X POST \\\n    -H 'Content-Type: application/json' \\\n    -H 'Authorization: Bearer 93560bbb-5e79-492a-97b5-1ffbdf1cfeb8' \\\n    -d '{\"otp\":\"123456\"}'\n"
+          }
+        ]
+      }
+    },
+    "/v2/users": {
+      "get": {
+        "description": "Get a paginated response listing the Users",
+        "operationId": "listUsers",
+        "parameters": [
+          {
+            "description": "The Type of the User.",
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/UserType"
+            }
+          },
+          {
+            "description": "The status of the User.",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/UserStatus"
+            }
+          },
+          {
+            "description": "The entityId of the User.",
+            "in": "query",
+            "name": "entityId",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The Type of the Payee entity. Either COMPANY or INDIVIDUAL.",
+            "in": "query",
+            "name": "payeeType",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/PayeeType"
+            }
+          },
+          {
+            "description": "Page number. Default is 1.",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The number of results to return in a page",
+            "in": "query",
+            "name": "pageSize",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "format": "int32",
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "List of sort fields (e.g. ?sort=email:asc,lastName:asc)\nDefault is email:asc 'name'\nThe supported sort fields are - email, lastNmae.\n",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "email:asc",
+              "pattern": "[a-zA-Z]+[:desc|:asc]",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedUserResponse"
+                }
+              }
+            },
+            "description": "Paginated list of Users filtered by query parameters"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_400"
+                }
+              }
+            },
+            "description": "Invalid request. See Error message payload for details of failure"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_401"
+                }
+              }
+            },
+            "description": "Invalid access token. May be expired or invalid"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_403"
+                }
+              }
+            },
+            "description": "The authentication does not have permissions to access the resource\nThis usually occurs when there is a valid authentication instance (client or user) but they do not have the required permissions\n"
+          }
+        },
+        "summary": "List Users",
+        "tags": [
+          "Users"
+        ],
+        "x-code-samples": [
+          {
+            "lang": "shell",
+            "source": "$ curl 'https://api.sandbox.velopayments.com/v2/users?pageSize=2&page=8&status=DISABLED' -i -X GET \\\n    -H 'Authorization: Bearer 6dd5e976-e329-462f-bd6b-25d463cf02fd' \\\n    -H 'Content-Type: application/json'\n"
+          }
+        ]
+      }
+    },
+    "/v2/users/{userId}": {
+      "delete": {
+        "description": "Delete User by Id.\n",
+        "operationId": "deleteUserByIdV2",
+        "parameters": [
+          {
+            "description": "The UUID of the User.",
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "request completed okay"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_401"
+                }
+              }
+            },
+            "description": "Invalid access token. May be expired or invalid"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_403"
+                }
+              }
+            },
+            "description": "The authentication does not have permissions to access the resource\nThis usually occurs when there is a valid authentication instance (client or user) but they do not have the required permissions\n"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_404"
+                }
+              }
+            },
+            "description": "The resource was not found or is no longer available\n"
+          }
+        },
+        "summary": "Delete a User",
+        "tags": [
+          "Users"
+        ],
+        "x-code-samples": [
+          {
+            "lang": "shell",
+            "source": "$ curl 'https://api.sandbox.velopayments.com/v2/users/d4ca564-f2ee-4725-97c2-7193a093f0f1' -i -X DELETE \\\n    -H 'Authorization: Bearer 3387c417-464c-41a6-b25e-6630f0a06093' \\\n    -H 'Content-Type: application/json'\n"
+          }
+        ]
+      },
+      "get": {
+        "description": "Get a Single User by Id.\n",
+        "operationId": "getUserByIdV2",
+        "parameters": [
+          {
+            "description": "The UUID of the User.",
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            },
+            "description": "Get User Details",
+            "x-contracts": [
+              {
+                "contractId": 1,
+                "headers": {
+                  "Content-Type": "application/json"
+                },
+                "body": {
+                  "id": "5782f21b-03ab-4f4c-a2ca-ca1e1141eeee",
+                  "email": "foo@example.com",
+                  "firstName": "Foo",
+                  "lastName": "Bar",
+                  "status": "ENABLED",
+                  "smsNumber": 44123555000,
+                  "primaryContactNumber": 44123555001,
+                  "secondaryContactNumber": 44123555002,
+                  "entityId": "93742f58-d584-4527-b187-19a90a70fe89",
+                  "roles": [
+                    "payor.admin"
+                  ],
+                  "mfaStatus": "REGISTERED",
+                  "mfaType": "TOTP",
+                  "lockedOut": false
+                }
+              }
+            ]
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_401"
+                }
+              }
+            },
+            "description": "Invalid access token. May be expired or invalid"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_403"
+                }
+              }
+            },
+            "description": "The authentication does not have permissions to access the resource\nThis usually occurs when there is a valid authentication instance (client or user) but they do not have the required permissions\n"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_404"
+                }
+              }
+            },
+            "description": "The resource was not found or is no longer available\n"
+          }
+        },
+        "summary": "Get User",
+        "tags": [
+          "Users"
+        ],
+        "x-code-samples": [
+          {
+            "lang": "shell",
+            "source": "$ curl 'https://api.sandbox.velopayments.com/v2/users/d4ca564-f2ee-4725-97c2-7193a093f0f1' -i -X GET \\\n    -H 'Authorization: Bearer 3387c417-464c-41a6-b25e-6630f0a06093' \\\n    -H 'Content-Type: application/json'\n"
+          }
+        ]
+      }
+    },
+    "/v2/users/{userId}/disable": {
+      "post": {
+        "description": "<p>If a user is enabled this endpoint will disable them </p>\n<p>The invoker must have the appropriate permission </p>\n<p>A user cannot disable themself </p>\n<p>When a user is disabled any active access tokens will be revoked and the user will not be able to log in</p>\n",
+        "operationId": "disableUserV2",
+        "parameters": [
+          {
+            "description": "The UUID of the User.",
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success the user was disabled or was already disabled"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_400"
+                }
+              }
+            },
+            "description": "Invalid request. See Error message payload for details of failure"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_401"
+                }
+              }
+            },
+            "description": "Invalid access token. May be expired or invalid"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_403"
+                }
+              }
+            },
+            "description": "The authentication does not have permissions to access the resource\nThis usually occurs when there is a valid authentication instance (client or user) but they do not have the required permissions\n"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_404"
+                }
+              }
+            },
+            "description": "The resource was not found or is no longer available\n"
+          }
+        },
+        "summary": "Disable a User",
+        "tags": [
+          "Users"
+        ],
+        "x-code-samples": [
+          {
+            "lang": "shell",
+            "source": "$ curl 'https://api.sandbox.velopayments.com/v2/users/79a6fdaa-f4bb-47b7-9c1f-f6fd99c156a0/disable' -i -X POST \\\n    -H 'Content-Type: application/json' \\\n    -H 'Authorization: Bearer 93560bbb-5e79-492a-97b5-1ffbdf1cfeb8'\n"
+          }
+        ]
+      }
+    },
+    "/v2/users/{userId}/enable": {
+      "post": {
+        "description": "<p>If a user has been disabled this endpoints will enable them </p>\n<p>The invoker must have the appropriate permission </p>\n<p>A user cannot enable themself </p>\n<p>If the user is a payor user and the payor is disabled this operation is not allowed</p>\n<p>If enabling a payor user would breach the limit for master admin payor users the request will be rejected </p>\n",
+        "operationId": "enableUserV2",
+        "parameters": [
+          {
+            "description": "The UUID of the User.",
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success the user was enabled or was already enabled"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_400"
+                }
+              }
+            },
+            "description": "Invalid request. See Error message payload for details of failure"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_401"
+                }
+              }
+            },
+            "description": "Invalid access token. May be expired or invalid"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_403"
+                }
+              }
+            },
+            "description": "The authentication does not have permissions to access the resource\nThis usually occurs when there is a valid authentication instance (client or user) but they do not have the required permissions\n"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_404"
+                }
+              }
+            },
+            "description": "The resource was not found or is no longer available\n"
+          }
+        },
+        "summary": "Enable a User",
+        "tags": [
+          "Users"
+        ],
+        "x-code-samples": [
+          {
+            "lang": "shell",
+            "source": "$ curl 'https://api.sandbox.velopayments.com/v2/users/79a6fdaa-f4bb-47b7-9c1f-f6fd99c156a0/enable' -i -X POST \\\n    -H 'Content-Type: application/json' \\\n    -H 'Authorization: Bearer 93560bbb-5e79-492a-97b5-1ffbdf1cfeb8'\n"
+          }
+        ]
+      }
+    },
+    "/v2/users/invite": {
+      "post": {
+        "description": "Create a User and invite them to the system\n",
+        "operationId": "inviteUser",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteUserRequest"
+              }
+            }
+          },
+          "description": "Details of User to invite",
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content. The user was invited successfully"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_400"
+                }
+              }
+            },
+            "description": "Invalid request. See Error message payload for details of failure"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_401"
+                }
+              }
+            },
+            "description": "Invalid access token. May be expired or invalid"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_403"
+                }
+              }
+            },
+            "description": "The authentication does not have permissions to access the resource\nThis usually occurs when there is a valid authentication instance (client or user) but they do not have the required permissions\n"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_409"
+                }
+              }
+            },
+            "description": "The request contained data that would result in a duplicate value\n"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_412"
+                }
+              }
+            },
+            "description": "The request could not be completed as a precondition was not met\n"
+          }
+        },
+        "summary": "Invite a User",
+        "tags": [
+          "Users"
+        ],
+        "x-code-samples": [
+          {
+            "lang": "shell",
+            "source": "$ curl 'https://api.sandbox.velopayments.com/v2/users/invite' -i -X POST \\\n    -H 'Content-Type: application/json' \\\n    -H 'Authorization: Bearer 93560bbb-5e79-492a-97b5-1ffbdf1cfeb8' \\\n    -d '{\"email\":\"foo@example.com\", \\\n        \"mfaType\":\"YUBIKEY\", \\\n        \"smsNumber\":\"+4411223344556\", \\\n        \"primaryContactNumber\":\"+4411223344556\", \\\n        \"secondaryContactNumber\":null, \\\n        \"roles\":[\"payor.admin\"], \\\n        \"firstName\":\"Foo\", \\\n        \"lastName\":\"Bar\", \\\n        \"entityId\":\"f84e437a-50a4-4e45-9223-e0601e370a79\", \\\n        \"verificationCode\":null \\\n        }'\n"
+          }
+        ]
+      }
+    },
+    "/v2/users/{userId}/roleUpdate": {
+      "post": {
+        "description": "<p>Update the user's Role</p>\n",
+        "operationId": "roleUpdate",
+        "parameters": [
+          {
+            "description": "The UUID of the User.",
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleUpdateRequest"
+              }
+            }
+          },
+          "description": "The Role to change to",
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "request completed okay"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_400"
+                }
+              }
+            },
+            "description": "Invalid request. See Error message payload for details of failure"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_401"
+                }
+              }
+            },
+            "description": "Invalid access token. May be expired or invalid"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_403"
+                }
+              }
+            },
+            "description": "The authentication does not have permissions to access the resource\nThis usually occurs when there is a valid authentication instance (client or user) but they do not have the required permissions\n"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_404"
+                }
+              }
+            },
+            "description": "The resource was not found or is no longer available\n"
+          }
+        },
+        "summary": "Update User Role",
+        "tags": [
+          "Users"
+        ],
+        "x-code-samples": [
+          {
+            "lang": "shell",
+            "source": "$ curl 'https://api.sandbox.velopayments.com/v2/users/ad19fc24-0cf6-4c15-a571-754b015b18e0/roleUpdate' -i -X POST \\\n      -H 'Authorization: Bearer 147c0008-2ec1-4009-9e2e-1f435f02a69b' \\\n      -H 'Content-Type: application/json' \\\n      -d '{\"role\":\"payor.admin\", \\\n          \"verificationCode\": \"123456\" \\\n          }'\n"
+          }
+        ]
+      }
+    },
+    "/v2/users/{userId}/mfa/unregister": {
+      "post": {
+        "description": "<p>Unregister the MFA device for the user </p>\n<p>If the user does not require further verification then a register new MFA device token will be sent to them via their email address</p>\n",
+        "operationId": "unregisterMFA",
+        "parameters": [
+          {
+            "description": "The UUID of the User.",
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnregisterMFARequest"
+              }
+            }
+          },
+          "description": "The MFA Type to unregister",
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "the MFA Type to unregister"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_400"
+                }
+              }
+            },
+            "description": "Invalid request. See Error message payload for details of failure"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_401"
+                }
+              }
+            },
+            "description": "Invalid access token. May be expired or invalid"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_403"
+                }
+              }
+            },
+            "description": "The authentication does not have permissions to access the resource\nThis usually occurs when there is a valid authentication instance (client or user) but they do not have the required permissions\n"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_404"
+                }
+              }
+            },
+            "description": "The resource was not found or is no longer available\n"
+          }
+        },
+        "summary": "Unregister MFA for the user",
+        "tags": [
+          "Users"
+        ],
+        "x-code-samples": [
+          {
+            "lang": "shell",
+            "source": "$ curl 'https://api.sandbox.velopayments.com/v2/users/79a6fdaa-f4bb-47b7-9c1f-f6fd99c156a0/mfa/unregister' -i -X POST \\\n      -H 'Content-Type: application/json' \\\n      -d '{\"mfaType\":\"TOTP\", \\\n        \"verificationCode\":\"123456\", \\\n        }'\n"
+          }
+        ]
+      }
+    },
+    "/v2/users/{userId}/tokens": {
+      "post": {
+        "description": "<p>Resend the specified token </p>\n<p>The token to resend must already exist for the user </p>\n<p>It will be revoked and a new one issued</p>\n",
+        "operationId": "resendToken",
+        "parameters": [
+          {
+            "description": "The UUID of the User.",
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResendTokenRequest"
+              }
+            }
+          },
+          "description": "The type of token to resend",
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "request completed okay"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_400"
+                }
+              }
+            },
+            "description": "Invalid request. See Error message payload for details of failure"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_401"
+                }
+              }
+            },
+            "description": "Invalid access token. May be expired or invalid"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_403"
+                }
+              }
+            },
+            "description": "The authentication does not have permissions to access the resource\nThis usually occurs when there is a valid authentication instance (client or user) but they do not have the required permissions\n"
+          }
+        },
+        "summary": "Resend a token",
+        "tags": [
+          "Tokens",
+          "Users"
+        ],
+        "x-code-samples": [
+          {
+            "lang": "shell",
+            "source": "$ curl 'https://api.sandbox.velopayments.com/v2/users/79a6fdaa-f4bb-47b7-9c1f-f6fd99c156a0/tokens' -i -X POST \\\n      -H 'Authorization: Bearer 147c0008-2ec1-4009-9e2e-1f435f02a69b' \\\n      -H 'Content-Type: application/json' \\\n      -d '{\"tokenType\":\"MFA_REGISTRATION\"}'\n"
+          }
+        ]
+      }
+    },
+    "/v2/users/{userId}/unlock": {
+      "post": {
+        "description": "If a user is locked this endpoint will unlock them\n",
+        "operationId": "unlockUserV2",
+        "parameters": [
+          {
+            "description": "The UUID of the User.",
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success the user was unlocked or was already unlocked"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_400"
+                }
+              }
+            },
+            "description": "Invalid request. See Error message payload for details of failure"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_401"
+                }
+              }
+            },
+            "description": "Invalid access token. May be expired or invalid"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_403"
+                }
+              }
+            },
+            "description": "The authentication does not have permissions to access the resource\nThis usually occurs when there is a valid authentication instance (client or user) but they do not have the required permissions\n"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_404"
+                }
+              }
+            },
+            "description": "The resource was not found or is no longer available\n"
+          }
+        },
+        "summary": "Unlock a User",
+        "tags": [
+          "Users"
+        ],
+        "x-code-samples": [
+          {
+            "lang": "shell",
+            "source": "$ curl 'https://api.sandbox.velopayments.com/v2/users/79a6fdaa-f4bb-47b7-9c1f-f6fd99c156a0/unlock' -i -X POST \\\n    -H 'Content-Type: application/json' \\\n    -H 'Authorization: Bearer 93560bbb-5e79-492a-97b5-1ffbdf1cfeb8'\n"
+          }
+        ]
+      }
+    },
+    "/v2/users/{userId}/userDetailsUpdate": {
+      "post": {
+        "description": "<p>Update the profile details for the given user</p>\n<p>When updating Payor users with the role of payor.master_admin a verificationCode is required</p>\n",
+        "operationId": "userDetailsUpdate",
+        "parameters": [
+          {
+            "description": "The UUID of the User.",
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserDetailsUpdateRequest"
+              }
+            }
+          },
+          "description": "The details of the user to update",
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "request completed okay"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_400"
+                }
+              }
+            },
+            "description": "Invalid request. See Error message payload for details of failure"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_401"
+                }
+              }
+            },
+            "description": "Invalid access token. May be expired or invalid"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_403"
+                }
+              }
+            },
+            "description": "The authentication does not have permissions to access the resource\nThis usually occurs when there is a valid authentication instance (client or user) but they do not have the required permissions\n"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_404"
+                }
+              }
+            },
+            "description": "The resource was not found or is no longer available\n"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_409"
+                }
+              }
+            },
+            "description": "The request contained data that would result in a duplicate value\n"
+          }
+        },
+        "summary": "Update User Details",
+        "tags": [
+          "Users"
+        ],
+        "x-code-samples": [
+          {
+            "lang": "shell",
+            "source": "$ curl 'https://api.sandbox.velopayments.com/v2/users/ad19fc24-0cf6-4c15-a571-754b015b18e0/userDetailsUpdate' -i -X POST \\\n      -H 'Authorization: Bearer 147c0008-2ec1-4009-9e2e-1f435f02a69b' \\\n      -H 'Content-Type: application/json' \\\n      -d '{\"firstName: \"Foo\", \\\n           \"lastName\": \"Bar\", \\\n           \"primaryContactNumber\": \"+1234567890\", \\\n           \"secondaryContactNumber\": \"+!234567890\", \\\n           \"email\": \"foo@example.com\", \\\n           \"smsNumber\": \"+1234567890\", \\\n           \"mfaType\": \"TOTP\", \\\n           \"verificationCode\": \"123456\" \\\n           }'\n"
+          }
+        ]
+      }
+    },
+    "/v2/users/registration/sms": {
+      "post": {
+        "description": "<p>Register an Sms number and send an OTP to it </p>\n<p>Used for manual verification of a user </p>\n<p>The backoffice user initiates the request to send the OTP to the user's sms </p>\n<p>The user then reads back the OTP which the backoffice user enters in the verifactionCode property for requests that require it</p>\n",
+        "operationId": "registerSms",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterSmsRequest"
+              }
+            }
+          },
+          "description": "a SMS Number to send an OTP to",
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "request completed okay"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_400"
+                }
+              }
+            },
+            "description": "Invalid request. See Error message payload for details of failure"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_401"
+                }
+              }
+            },
+            "description": "Invalid access token. May be expired or invalid"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_403"
+                }
+              }
+            },
+            "description": "The authentication does not have permissions to access the resource\nThis usually occurs when there is a valid authentication instance (client or user) but they do not have the required permissions\n"
+          }
+        },
+        "summary": "Register SMS Number",
+        "tags": [
+          "Users"
+        ],
+        "x-code-samples": [
+          {
+            "lang": "shell",
+            "source": "$ curl 'https://api.sandbox.velopayments.com/v2/users/registration/sms' -i -X POST \\\n      -H 'Authorization: Bearer 147c0008-2ec1-4009-9e2e-1f435f02a69b' \\\n      -H 'Content-Type: application/json' \\\n      -d '{\"smsNumber\":\"+4411223344556\"}'\n"
+          }
+        ]
+      }
+    },
+    "/v2/users/self": {
+      "get": {
+        "description": "Get the user's details\n",
+        "operationId": "getSelf",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            },
+            "description": "Get User Details"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_401"
+                }
+              }
+            },
+            "description": "Invalid access token. May be expired or invalid"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_403"
+                }
+              }
+            },
+            "description": "The authentication does not have permissions to access the resource\nThis usually occurs when there is a valid authentication instance (client or user) but they do not have the required permissions\n"
+          }
+        },
+        "summary": "Get Self",
+        "tags": [
+          "Users"
+        ],
+        "x-code-samples": [
+          {
+            "lang": "shell",
+            "source": "$ curl 'https://api.sandbox.velopayments.com/v2/users/self' -i -X GET \\\n    -H 'Authorization: Bearer 3387c417-464c-41a6-b25e-6630f0a06093' \\\n    -H 'Content-Type: application/json'\n"
+          }
+        ]
+      }
+    },
+    "/v2/users/self/userDetailsUpdate": {
+      "post": {
+        "description": "<p>Update the profile details for the given user</p>\n<p>Only Payee user types are supported</p>\n",
+        "operationId": "userDetailsUpdateForSelf",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayeeUserSelfUpdateRequest"
+              }
+            }
+          },
+          "description": "The details of the user to update",
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "request completed okay"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_400"
+                }
+              }
+            },
+            "description": "Invalid request. See Error message payload for details of failure"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_401"
+                }
+              }
+            },
+            "description": "Invalid access token. May be expired or invalid"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_403"
+                }
+              }
+            },
+            "description": "The authentication does not have permissions to access the resource\nThis usually occurs when there is a valid authentication instance (client or user) but they do not have the required permissions\n"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_409"
+                }
+              }
+            },
+            "description": "The request contained data that would result in a duplicate value\n"
+          }
+        },
+        "summary": "Update User Details for self",
+        "tags": [
+          "Users"
+        ],
+        "x-code-samples": [
+          {
+            "lang": "shell",
+            "source": "$ curl 'https://api.sandbox.velopayments.com/v2/users/self/userDetailsUpdate' -i -X POST \\\n      -H 'Authorization: Bearer 147c0008-2ec1-4009-9e2e-1f435f02a69b' \\\n      -H 'Content-Type: application/json' \\\n      -d '{\"firstName: \"Foo\", \\\n           \"lastName\": \"Bar\", \\\n           \"primaryContactNumber\": \"+1234567890\", \\\n           \"secondaryContactNumber\": \"+!234567890\", \\\n           \"email\": \"foo@example.com\", \\\n           \"smsNumber\": \"+1234567890\", \\\n           }'\n"
+          }
+        ]
+      }
+    },
+    "/v2/users/self/mfa/unregister": {
+      "post": {
+        "description": "<p>Unregister the MFA device for the user </p>\n<p>If the user does not require further verification then a register new MFA device token will be sent to them via their email address</p>\n",
+        "operationId": "unregisterMFAForSelf",
+        "parameters": [
+          {
+            "description": "Bearer token authorization leg of validate",
+            "in": "header",
+            "name": "Authorization",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelfMFATypeUnregisterRequest"
+              }
+            }
+          },
+          "description": "The MFA Type to unregister",
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "the MFA Type to unregister"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_400"
+                }
+              }
+            },
+            "description": "Invalid request. See Error message payload for details of failure"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_401"
+                }
+              }
+            },
+            "description": "Invalid access token. May be expired or invalid"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_403"
+                }
+              }
+            },
+            "description": "The authentication does not have permissions to access the resource\nThis usually occurs when there is a valid authentication instance (client or user) but they do not have the required permissions\n"
+          }
+        },
+        "summary": "Unregister MFA for Self",
+        "tags": [
+          "Users"
+        ],
+        "x-code-samples": [
+          {
+            "lang": "shell",
+            "source": "$ curl 'https://api.sandbox.velopayments.com/v2/users/self/mfa/unregister' -i -X POST \\\n      -H 'Content-Type: application/json' \\\n      -d '{\"mfaType\":\"TOTP\"}'\n"
+          }
+        ]
+      }
+    },
+    "/v2/users/self/password": {
+      "post": {
+        "description": "Update password for self\n",
+        "operationId": "updatePasswordSelf",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelfUpdatePasswordRequest"
+              }
+            }
+          },
+          "description": "The password",
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "the password was submitted and accepted"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_400"
+                }
+              }
+            },
+            "description": "Invalid request. See Error message payload for details of failure"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_401"
+                }
+              }
+            },
+            "description": "Invalid access token. May be expired or invalid"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_403"
+                }
+              }
+            },
+            "description": "The authentication does not have permissions to access the resource\nThis usually occurs when there is a valid authentication instance (client or user) but they do not have the required permissions\n"
+          }
+        },
+        "summary": "Update Password for self",
+        "tags": [
+          "Users"
+        ],
+        "x-code-samples": [
+          {
+            "lang": "shell",
+            "source": "$ curl 'https://api.sandbox.velopayments.com/v2/users/self/password' -i -X POST \\\n      -H 'Content-Type: application/json' \\\n      -d '{\"oldpassword\":\"abcd_12345\", \\\n          \"newPassword\": \"myNewPassword\"}'\n"
+          }
+        ]
+      }
+    },
+    "/v2/users/self/password/validate": {
+      "post": {
+        "description": "validate the password and return a score\n",
+        "operationId": "validatePasswordSelf",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordRequest"
+              }
+            }
+          },
+          "description": "The password",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidatePasswordResponse"
+                }
+              }
+            },
+            "description": "the password was checked and a score returned"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_400"
+                }
+              }
+            },
+            "description": "Invalid request. See Error message payload for details of failure"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_401"
+                }
+              }
+            },
+            "description": "Invalid access token. May be expired or invalid"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_403"
+                }
+              }
+            },
+            "description": "The authentication does not have permissions to access the resource\nThis usually occurs when there is a valid authentication instance (client or user) but they do not have the required permissions\n"
+          }
+        },
+        "summary": "Validate the proposed password",
+        "tags": [
+          "Users"
+        ],
+        "x-code-samples": [
+          {
+            "lang": "shell",
+            "source": "$ curl 'https://api.sandbox.velopayments.com/v2/users/self/password/validate' -i -X POST \\\n      -H 'Content-Type: application/json' \\\n      -d '{\"password\":\"abcd_12345\"}'\n"
+          }
+        ]
+      }
+    },
+    "/v2/payors/{payorId}": {
+      "get": {
+        "description": "Get a Single Payor by Id.\n",
+        "operationId": "getPayorByIdV2",
+        "parameters": [
+          {
+            "description": "The account owner Payor ID",
+            "in": "path",
+            "name": "payorId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayorV2"
+                }
+              }
+            },
+            "description": "Get Payor Details",
+            "x-contracts": [
+              {
+                "contractId": 1,
+                "headers": {
+                  "Content-Type": "application/json;charset=UTF-8"
+                },
+                "body": {
+                  "payorId": "0a818933-087d-47f2-ad83-2f986ed087eb",
+                  "payorXid": "ABC_12345678",
+                  "payorName": "Joe",
+                  "address": {
+                    "line1": "101 California Street",
+                    "city": "San Francisco",
+                    "zipOrPostcode": 94111,
+                    "country": "US"
+                  },
+                  "primaryContactName": "Joe",
+                  "primaryContactPhone": 1231231234,
+                  "primaryContactEmail": "foo@example.com",
+                  "kycState": "PASSED_KYC",
+                  "manualLockout": false,
+                  "payeeGracePeriodProcessingEnabled": true,
+                  "payeeGracePeriodDays": 90,
+                  "dbaName": "FlyByNight, Inc",
+                  "allowsLanguageChoice": false,
+                  "reminderEmailsOptOut": false,
+                  "language": "EN",
+                  "supportContact": "support@example.com",
+                  "collectiveAlias": "MyAlias",
+                  "maxMasterPayorAdmins": 2
+                }
+              }
+            ]
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_400"
+                }
+              }
+            },
+            "description": "Invalid request. See Error message payload for details of failure"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_403"
+                }
+              }
+            },
+            "description": "The authentication does not have permissions to access the resource\nThis usually occurs when there is a valid authentication instance (client or user) but they do not have the required permissions\n"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Payor Id Not Found",
+            "x-contracts": [
+              {
+                "contractId": 2
+              }
+            ]
+          }
+        },
+        "summary": "Get Payor",
+        "tags": [
+          "Payors"
+        ],
+        "x-code-samples": [
+          {
+            "lang": "shell",
+            "source": "$ curl 'https://api.sandbox.velopayments.com/v2/payors/126969bd-6a18-47ec-96e1-57559afecf32' -i -X GET \\\n    -H 'Authorization: Bearer 3387c417-464c-41a6-b25e-6630f0a06093' \\\n    -H 'Content-Type: application/json'\n"
+          }
+        ],
+        "x-contracts": [
+          {
+            "contractId": 1,
+            "name": "Test Get Payor V2",
+            "contractPath": "/v2/payors/0a818933-087d-47f2-ad83-2f986ed087eb",
+            "serviceName": "payor-service"
+          },
+          {
+            "contractId": 2,
+            "name": "Test Payor Not Found V2",
+            "contractPath": "/v2/payors/00000000-0000-0000-0000-000000000000",
+            "serviceName": "payor-service"
+          }
+        ]
+      }
+    },
+    "/v1/payors/{payorId}/applications": {
+      "post": {
+        "description": "<p>Create an application for the given Payor ID.</p>\n<p>Applications provide a means to group your API Keys</p>\n<p>For example you might have an SAP application that you wish to integrate with Velo</p>\n<p>You can create an application and then create one or more API keys for the application</p>\n",
+        "operationId": "payorCreateApplicationV1",
+        "parameters": [
+          {
+            "description": "The account owner Payor ID",
+            "in": "path",
+            "name": "payorId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayorCreateApplicationRequest"
+              }
+            }
+          },
+          "description": "Details of application to create",
+          "required": true,
+          "x-contracts": [
+            {
+              "contractId": 1,
+              "headers": {
+                "Content-Type": "application/json"
+              },
+              "body": {
+                "name": "foo",
+                "description": "a foo application"
+              },
+              "matchers": {
+                "headers": [
+                  {
+                    "key": "Content-Type",
+                    "regex": "application/json.*"
+                  }
+                ],
+                "body": [
+                  {
+                    "path": "$.name",
+                    "type": "by_regex",
+                    "predefined": "non_empty"
+                  },
+                  {
+                    "path": "$.description",
+                    "type": "by_regex",
+                    "predefined": "non_empty"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "headers": {
+              "Location": {
+                "description": "location",
+                "schema": {
+                  "example": "<p>HTTP/1.1 201 Created</p>\n<p>Location: https://api.sandbox.velopayments.com/v1/payors/2e144160-e87f-4976-b577-6087e683f419/applications/8701c174-b64a-476a-ab1a-4af27f09f0b8</p>\n",
+                  "type": "string"
+                }
+              }
+            },
+            "x-contracts": [
+              {
+                "contractId": 1,
+                "mathers": {
+                  "headers": [
+                    {
+                      "key": "Location",
+                      "predefined": "non_blank"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_400"
+                }
+              }
+            },
+            "description": "Invalid request. See Error message payload for details of failure"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_404"
+                }
+              }
+            },
+            "description": "The resource was not found or is no longer available\n"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_403"
+                }
+              }
+            },
+            "description": "The authentication does not have permissions to access the resource\nThis usually occurs when there is a valid authentication instance (client or user) but they do not have the required permissions\n"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_409"
+                }
+              }
+            },
+            "description": "The request contained data that would result in a duplicate value\n"
+          }
+        },
+        "summary": "Create Application",
+        "tags": [
+          "Payors"
+        ],
+        "x-code-samples": [
+          {
+            "lang": "shell",
+            "source": "$ curl 'https://api.sandbox.velopayments.com/v1/payors/79a6fdaa-f4bb-47b7-9c1f-f6fd99c156a0/applications' -i -X POST \\\n    -H 'Content-Type: application/json' \\\n    -H 'Authorization: Bearer 93560bbb-5e79-492a-97b5-1ffbdf1cfeb8' \\\n    -d '{\"name\":\"foo\",\"description\":\"a foo application\"}'\n"
+          }
+        ],
+        "x-contracts": [
+          {
+            "contractId": 1,
+            "name": "Test Create Application",
+            "contractPath": "/v1/payors/835ac62e-616c-4261-bf38-63366db78c0d/applications",
+            "serviceName": "payor-service"
+          }
+        ]
+      }
+    },
+    "/v1/payors/{payorId}/applications/{applicationId}/keys": {
+      "post": {
+        "description": "<p>Create an an API key for the given payor Id and application Id</p>\n<p>You can create multiple API Keys for a given application</p>\n<p>API Keys are programmatic users for integrating your application with the Velo platform</p>\n<p>The response will return the API Key and the secret. This is the only time you will be able to see the secret</p>\n",
+        "operationId": "payorCreateApiKeyV1",
+        "parameters": [
+          {
+            "description": "The account owner Payor ID",
+            "in": "path",
+            "name": "payorId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Application ID",
+            "in": "path",
+            "name": "applicationId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayorCreateApiKeyRequest"
+              }
+            }
+          },
+          "description": "Details of application API key to create",
+          "required": true,
+          "x-contracts": [
+            {
+              "contractId": 4,
+              "headers": {
+                "Content-Type": "application/json"
+              },
+              "body": {
+                "name": "Key Name",
+                "description": "A key description",
+                "roles": [
+                  "velo.payor.admin"
+                ]
+              },
+              "matchers": {
+                "headers": [
+                  {
+                    "key": "Content-Type",
+                    "regex": "application/json.*"
+                  }
+                ],
+                "body": [
+                  {
+                    "path": "$.name",
+                    "type": "by_regex",
+                    "predefined": "non_empty"
+                  },
+                  {
+                    "path": "$.description",
+                    "type": "by_regex",
+                    "predefined": "non_empty"
+                  },
+                  {
+                    "path": "$.roles",
+                    "type": "by_regex",
+                    "predefined": "non_empty"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayorCreateApiKeyResponse"
+                }
+              }
+            },
+            "description": "HTTP Ok, key created",
+            "x-contracts": [
+              {
+                "contractId": 4,
+                "headers": {
+                  "Content-Type": "application/json"
+                },
+                "body": {
+                  "apiKey": "385d4506-e7dd-446e-a092-5f30b98e7b26",
+                  "apiSecret": "f25767d9-342a-48ac-a788-0a7a38ae6fb3"
+                },
+                "matchers": {
+                  "headers": [
+                    {
+                      "key": "Content-Type",
+                      "regex": "application/json.*"
+                    }
+                  ],
+                  "body": [
+                    {
+                      "path": "$.apiKey",
+                      "type": "by_regex",
+                      "predefined": "non_empty"
+                    },
+                    {
+                      "path": "$.apiSecret",
+                      "type": "by_regex",
+                      "predefined": "non_empty"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_400"
+                }
+              }
+            },
+            "description": "Invalid request. See Error message payload for details of failure"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_403"
+                }
+              }
+            },
+            "description": "The authentication does not have permissions to access the resource\nThis usually occurs when there is a valid authentication instance (client or user) but they do not have the required permissions\n"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_404"
+                }
+              }
+            },
+            "description": "The resource was not found or is no longer available\n"
+          }
+        },
+        "summary": "Create API Key",
+        "tags": [
+          "Payors"
+        ],
+        "x-code-samples": [
+          {
+            "lang": "shell",
+            "source": "$ curl 'https://api.sandbox.velopayments.com/v1/payors/79a6fdaa-f4bb-47b7-9c1f-f6fd99c156a0/applications/ba08877f-9d96-41e4-9c26-44a872d856ae/keys' -i -X POST \\\n    -H 'Content-Type: application/json' \\\n    -H 'Authorization: Bearer 698f1609-c616-48f0-b8d5-03373e9fbd40' \\\n    -d '{\"name\":\"foo\",\"description\":\"a foo key\",\"roles\":[\"velo.payor.admin\"]}'\n"
+          }
+        ],
+        "x-contracts": [
+          {
+            "contractId": 4,
+            "name": "Create an API key for a payor",
+            "contractPath": "/v1/payors/0a818933-087d-47f2-ad83-2f986ed087eb/applications/ba08877f-9d96-41e4-9c26-44a872d856ae/keys",
+            "serviceName": "payor-service"
+          }
+        ]
+      }
+    },
+    "/v1/payors/{payorId}/reminderEmailsUpdate": {
+      "post": {
+        "description": "Update the emailRemindersOptOut field for a Payor. This API can be used to opt out\nor opt into Payor Reminder emails. These emails are typically around payee events\nsuch as payees registering and onboarding.\n",
+        "operationId": "payorEmailOptOut",
+        "parameters": [
+          {
+            "description": "The account owner Payor ID",
+            "in": "path",
+            "name": "payorId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayorEmailOptOutRequest"
+              }
+            }
+          },
+          "description": "Reminder Emails Opt-Out Request",
+          "required": true,
+          "x-contracts": [
+            {
+              "contractId": 1,
+              "headers": {
+                "Content-Type": "application/json"
+              },
+              "body": {
+                "reminderEmailsOptOut": true
+              }
+            },
+            {
+              "contractId": 2,
+              "headers": {
+                "Content-Type": "application/json"
+              },
+              "body": {
+                "reminderEmailsOptOut": true
+              }
+            }
+          ]
+        },
+        "responses": {
+          "202": {
+            "description": "HTTP Accepted",
+            "x-contracts": [
+              {
+                "contractId": 1
+              }
+            ]
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_400"
+                }
+              }
+            },
+            "description": "Invalid request. See Error message payload for details of failure"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_403"
+                }
+              }
+            },
+            "description": "The authentication does not have permissions to access the resource\nThis usually occurs when there is a valid authentication instance (client or user) but they do not have the required permissions\n"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Payor Id Not Found",
+            "x-contracts": [
+              {
+                "contractId": 2
+              }
+            ]
+          }
+        },
+        "summary": "Reminder Email Opt-Out",
+        "tags": [
+          "Payors"
+        ],
+        "x-code-samples": [
+          {
+            "lang": "shell",
+            "source": "$ curl 'https://api.sandbox.velopayments.com/v1/payors/d8d49d3a-0712-4ad0-bb14-2e308d240233/reminderEmailsUpdate' -i -X POST \\\n    -H 'Authorization: Bearer fc825fad-e4a7-49e5-b6d9-9b9aa47a19c8' \\\n    -H 'Content-Type: application/json' \\\n    -d '{\"reminderEmailsOptOut\":true}'\n"
+          }
+        ],
+        "x-contracts": [
+          {
+            "contractId": 1,
+            "name": "Test Email Opt-Out",
+            "serviceName": "payor-service",
+            "contractPath": "/v1/payors/0a818933-087d-47f2-ad83-2f986ed087eb/reminderEmailsUpdate"
+          },
+          {
+            "contractId": 2,
+            "name": "Test Not Found",
+            "serviceName": "payor-service",
+            "contractPath": "/v1/payors/00000000-0000-0000-0000-000000000000/reminderEmailsUpdate"
+          }
+        ]
+      }
+    },
+    "/v1/payors/{payorId}/branding/logos": {
+      "post": {
+        "description": "<p>Add Payor Logo</p>\n<p>Logo file is used in your branding and emails sent to payees</p>\n",
+        "operationId": "payorAddPayorLogoV1",
+        "parameters": [
+          {
+            "description": "The account owner Payor ID",
+            "in": "path",
+            "name": "payorId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/PayorLogoRequest"
+              }
+            }
+          },
+          "description": "Image file to upload",
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_400"
+                }
+              }
+            },
+            "description": "Invalid request. See Error message payload for details of failure"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_403"
+                }
+              }
+            },
+            "description": "The authentication does not have permissions to access the resource\nThis usually occurs when there is a valid authentication instance (client or user) but they do not have the required permissions\n"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_404"
+                }
+              }
+            },
+            "description": "The resource was not found or is no longer available\n"
+          }
+        },
+        "summary": "Add Logo",
+        "tags": [
+          "Payors"
+        ],
+        "x-code-samples": [
+          {
+            "lang": "shell",
+            "source": "$ curl 'https://api.sandbox.velopayments.com/v1/payors/450ecb66-df18-4d0c-b557-f718782775df/branding/logos' -i -X POST \\\n    -H 'Content-Type: multipart/form-data' \\\n    -F 'logo=@mylogo.png;type=image/png'\n"
+          }
+        ]
+      }
+    },
+    "/v1/payors/{payorId}/branding": {
+      "get": {
+        "description": "Get the payor branding details.",
+        "operationId": "payorGetBranding",
+        "parameters": [
+          {
+            "description": "The account owner Payor ID",
+            "in": "path",
+            "name": "payorId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayorBrandingResponse"
+                }
+              }
+            },
+            "description": "HTTP Ok, key created",
+            "x-contracts": [
+              {
+                "contractId": 1,
+                "body": {
+                  "payorName": "Payor1",
+                  "logoUrl": "http://example.com",
+                  "collectiveAlias": "customer",
+                  "supportContact": "support@example.com",
+                  "dbaName": "FlybyNight Inc"
+                },
+                "matchers": {
+                  "headers": [
+                    {
+                      "key": "Content_type",
+                      "regex": "application/json.*"
+                    }
+                  ],
+                  "body": [
+                    {
+                      "path": "$.payorName",
+                      "type": "by_regex",
+                      "predefined": "non_empty"
+                    },
+                    {
+                      "path": "$.logoUrl",
+                      "type": "by_regex",
+                      "predefined": "non_empty"
+                    },
+                    {
+                      "path": "$.collectiveAlias",
+                      "type": "by_regex",
+                      "predefined": "non_empty"
+                    },
+                    {
+                      "path": "$.supportContact",
+                      "type": "by_regex",
+                      "predefined": "non_empty"
+                    },
+                    {
+                      "path": "$.dbaName",
+                      "type": "by_regex",
+                      "predefined": "non_empty"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_400"
+                }
+              }
+            },
+            "description": "Invalid request. See Error message payload for details of failure"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_403"
+                }
+              }
+            },
+            "description": "The authentication does not have permissions to access the resource\nThis usually occurs when there is a valid authentication instance (client or user) but they do not have the required permissions\n"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Payor Id Not Found",
+            "x-contracts": [
+              {
+                "contractId": 2
+              }
+            ]
+          }
+        },
+        "summary": "Get Branding",
+        "tags": [
+          "Payors"
+        ],
+        "x-code-samples": [
+          {
+            "lang": "shell",
+            "source": "$ curl 'https://api.sandbox.velopayments.com/v1/payors/450ecb66-df18-4d0c-b557-f718782775df/branding' -i -X GET \\\n    -H 'Content-Type: application/json' \\\n    -H 'Authorization: Bearer d60eef1c-bea6-4f7e-8755-e916268ad4ff'\n"
+          }
+        ],
+        "x-contracts": [
+          {
+            "contractId": 1,
+            "name": "Get Payor Branding Details",
+            "description": "Test to get branding details for payor",
+            "label": "Payor_Branding",
+            "priority": 10,
+            "ignored": false,
+            "contractPath": "/v1/payors/0a818933-087d-47f2-ad83-2f986ed087eb/branding",
+            "serviceName": "payor-service"
+          },
+          {
+            "contractId": 2,
+            "name": "Get Payor Brandding Details - not found",
+            "description": "Test to not found status returned by API",
+            "label": "Payor_Branding",
+            "priority": 20,
+            "contractPath": "/v1/payors/00000000-0000-0000-0000-000000000000/branding",
+            "serviceName": "payor-service"
+          }
+        ]
+      }
+    },
+    "/v1/payorLinks": {
+      "get": {
+        "description": "<p>If the payor is set up as part of a hierarchy you can use this API to traverse the hierarchy</p>\n",
+        "operationId": "payorLinksV1",
+        "parameters": [
+          {
+            "description": "The Payor ID from which to start the query to show all descendants",
+            "in": "query",
+            "name": "descendantsOfPayor",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Query for the parent payor details for this payor id",
+            "in": "query",
+            "name": "parentOfPayor",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "<p>List of additional Payor fields to include in the response for each Payor</p>\n<p>The values of payorId and payorName are always included for each Payor by default</p>\n<p>You can add fields to the response for each payor by including them in the fields parameter separated by commas</p>\n<p>The supported fields are any combination of: primaryContactEmail,kycState</p>\n",
+            "in": "query",
+            "name": "fields",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayorLinksResponse"
+                }
+              }
+            },
+            "description": "Details of Payor Links",
+            "x-contracts": [
+              {
+                "contractId": 1,
+                "headers": {
+                  "Content-Type": "application/json"
+                },
+                "body": {
+                  "links": [
+                    {
+                      "linkId": "65514617-d18d-4bb4-8cee-09b3e7625fc9",
+                      "fromPayorId": "51e93026-2f47-4dfd-a5ff-c0da0954a847",
+                      "linkType": "PARENT_OF",
+                      "toPayorId": "b0b09d8a-866c-4703-833e-2ff9106e185b"
+                    },
+                    {
+                      "linkId": "6a91b045-6f42-4f9f-a627-f97f66d39bef",
+                      "fromPayorId": "b0b09d8a-866c-4703-833e-2ff9106e185b",
+                      "linkType": "PARENT_OF",
+                      "toPayorId": "15486051-aa39-430d-8926-a4bc2fea1d04"
+                    }
+                  ],
+                  "payors": [
+                    {
+                      "payorId": "51e93026-2f47-4dfd-a5ff-c0da0954a847",
+                      "payorName": "Payor One"
+                    },
+                    {
+                      "payorId": "b0b09d8a-866c-4703-833e-2ff9106e185b",
+                      "payorName": "Payor Two"
+                    },
+                    {
+                      "payorId": "15486051-aa39-430d-8926-a4bc2fea1d04",
+                      "payorName": "Payor Three"
+                    }
+                  ]
+                },
+                "matchers": {
+                  "headers": [
+                    {
+                      "key": "Content-Type",
+                      "regex": "application/json.*"
+                    }
+                  ]
+                }
+              },
+              {
+                "contractId": 2,
+                "headers": {
+                  "Content-Type": "application/json"
+                },
+                "body": {
+                  "links": [
+                    {
+                      "linkId": "65514617-d18d-4bb4-8cee-09b3e7625fc9",
+                      "fromPayorId": "51e93026-2f47-4dfd-a5ff-c0da0954a847",
+                      "linkType": "PARENT_OF",
+                      "toPayorId": "b0b09d8a-866c-4703-833e-2ff9106e185b"
+                    },
+                    {
+                      "linkId": "6a91b045-6f42-4f9f-a627-f97f66d39bef",
+                      "fromPayorId": "b0b09d8a-866c-4703-833e-2ff9106e185b",
+                      "linkType": "PARENT_OF",
+                      "toPayorId": "15486051-aa39-430d-8926-a4bc2fea1d04"
+                    }
+                  ],
+                  "payors": [
+                    {
+                      "payorId": "51e93026-2f47-4dfd-a5ff-c0da0954a847",
+                      "payorName": "Payor One",
+                      "primaryContactEmail": "payorone@somewhere.com",
+                      "kycState": "FAILED_KYC"
+                    },
+                    {
+                      "payorId": "b0b09d8a-866c-4703-833e-2ff9106e185b",
+                      "payorName": "Payor Two",
+                      "primaryContactEmail": "payortwo@anothersite.com",
+                      "kycState": "PASSED_KYC"
+                    },
+                    {
+                      "payorId": "15486051-aa39-430d-8926-a4bc2fea1d04",
+                      "payorName": "Payor Three",
+                      "primaryContactEmail": "payorthree@example.com",
+                      "kycState": "REQUIRES_KYC"
+                    }
+                  ]
+                },
+                "matchers": {
+                  "headers": [
+                    {
+                      "key": "Content-Type",
+                      "regex": "application/json.*"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_400"
+                }
+              }
+            },
+            "description": "Invalid request. See Error message payload for details of failure"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_404"
+                }
+              }
+            },
+            "description": "The resource was not found or is no longer available\n"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_403"
+                }
+              }
+            },
+            "description": "The authentication does not have permissions to access the resource\nThis usually occurs when there is a valid authentication instance (client or user) but they do not have the required permissions\n"
+          }
+        },
+        "summary": "List Payor Links",
+        "tags": [
+          "Payor Hierarchy"
+        ],
+        "x-contracts": [
+          {
+            "contractId": 1,
+            "ignored": true,
+            "name": "Test List Payor Links - default Payor fields",
+            "request": {
+              "queryParameters": [
+                {
+                  "key": "descendantsOfPayor",
+                  "value": "0a818933-087d-47f2-ad83-2f986ed087eb"
+                }
+              ]
+            },
+            "serviceName": "payor-service"
+          },
+          {
+            "contractId": 2,
+            "ignored": true,
+            "name": "Test List Payor Links - all Payor fields requested",
+            "request": {
+              "queryParameters": [
+                {
+                  "key": "descendantsOfPayor",
+                  "value": "0a818933-087d-47f2-ad83-2f986ed087eb"
+                },
+                {
+                  "key": "fields",
+                  "value": "primaryContactEmail,kycState"
+                }
+              ]
+            },
+            "serviceName": "payor-service"
+          }
+        ],
+        "x-code-samples": [
+          {
+            "lang": "shell",
+            "source": "$ curl 'https://api.sandbox.velopayments.com/v1/payorLinks?descendantsOfPayor=0a818933-087d-47f2-ad83-2f986ed087eb' -i -X GET \\\n    -H 'Authorization: Bearer 3387c417-464c-41a6-b25e-6630f0a06093' \\\n    -H 'Content-Type: application/json'\n"
+          }
+        ]
+      },
+      "post": {
+        "description": "This endpoint allows you to create a payor link.",
+        "operationId": "createPayorLinks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePayorLinkRequest"
+              }
+            }
+          },
+          "description": "Request to create a payor link",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "HTTP Creeated",
+            "headers": {
+              "Location": {
+                "description": "URI to location of created resource",
+                "schema": {
+                  "example": "http://example.com/resourcepath/123123123",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_400"
+                }
+              }
+            },
+            "description": "Invalid request. See Error message payload for details of failure"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_404"
+                }
+              }
+            },
+            "description": "The resource was not found or is no longer available\n"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_403"
+                }
+              }
+            },
+            "description": "The authentication does not have permissions to access the resource\nThis usually occurs when there is a valid authentication instance (client or user) but they do not have the required permissions\n"
+          }
+        },
+        "security": [
+          {
+            "oAuthVeloBackOffice": []
+          }
+        ],
+        "summary": "Create a Payor Link",
+        "tags": [
+          "Payors Private"
+        ]
+      }
+    },
+    "/v3/payees/{payeeId}": {
+      "delete": {
+        "deprecated": true,
+        "description": "<p>Use v4 instead</p>\n<p>This API will delete Payee by Id (UUID). Deletion by ID is not allowed if:</p>\n<p>* Payee ID is not found</p>\n<p>* If Payee has not been on-boarded</p>\n<p>* If Payee is in grace period</p>\n<p>* If Payee has existing payments</p>\n",
+        "operationId": "deletePayeeByIdV3",
+        "parameters": [
+          {
+            "description": "The UUID of the payee.",
+            "in": "path",
+            "name": "payeeId",
+            "required": true,
+            "schema": {
+              "example": "2aa5d7e0-2ecb-403f-8494-1865ed0454e9",
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content. Payee Id accepted for deletion."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_400"
+                }
+              }
+            },
+            "description": "Invalid request. See Error message payload for details of failure"
+          },
+          "404": {
+            "description": "Payee Id not found"
+          }
+        },
+        "summary": "Delete Payee by Id",
+        "tags": [
+          "Payees"
+        ]
+      },
+      "get": {
+        "deprecated": true,
+        "description": "<p>Use v4 instead</p>\n<p>Get Payee by Id</p>\n",
+        "operationId": "getPayeeByIdV3",
+        "parameters": [
+          {
+            "description": "The UUID of the payee.",
+            "in": "path",
+            "name": "payeeId",
+            "required": true,
+            "schema": {
+              "example": "2aa5d7e0-2ecb-403f-8494-1865ed0454e9",
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional. If omitted or set to false, any Personal Identifiable Information (PII) values are returned masked.\nIf set to true, and you have permission, the PII values will be returned as their original unmasked values.\n",
+            "in": "query",
+            "name": "sensitive",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayeeDetailResponseV3"
+                }
+              }
+            },
+            "description": "Success response, request completed okay",
+            "x-contracts": [
+              {
+                "contractId": 1,
+                "headers": {
+                  "Content-Type": "application/json"
+                },
+                "body": {
+                  "payeeId": "2aa5d7e0-2ecb-403f-8494-1865ed0454e9",
+                  "payorRefs": [
+                    {
+                      "payorId": "9ac75325-5dcd-42d5-b992-175d7e0a035e",
+                      "remoteId": "remoteId",
+                      "invitationStatus": "PENDING"
+                    }
+                  ],
+                  "email": "bob@example.com",
+                  "onboardedStatus": "CREATED",
+                  "watchlistStatus": "PENDING",
+                  "watchlistOverrideExpiresAtTimestamp": 

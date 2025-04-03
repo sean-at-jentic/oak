@@ -1,0 +1,239 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/visualcrossing.com/weather/4.6/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "compare-forecast-to-last-years-weather",
+      "summary": "Retrieves the upcoming 15-day weather forecast for a location and then retrieves the historical weather data for the same calendar period in the previous year. This allows comparison between the forecast and recent historical conditions. Requires client-side calculation to determine the previous year's date range based on the forecast period.",
+      "description": "Retrieves the upcoming 15-day weather forecast for a location and then retrieves the historical weather data for the same calendar period in the previous year. This allows comparison between the forecast and recent historical conditions. Requires client-side calculation to determine the previous year's date range based on the forecast period.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string"
+          },
+          "contentType": {
+            "type": "string"
+          },
+          "unitGroup": {
+            "type": "string"
+          },
+          "include": {
+            "type": "string"
+          },
+          "lang": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "startdate": {
+            "type": "string"
+          },
+          "enddate": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-current-forecast-for-comparison",
+          "description": "Get the standard 15-day forecast for the specified location.",
+          "operationPath": "openapi_source#/paths/~1VisualCrossingWebServices~1rest~1services~1timeline~1{location}/get",
+          "parameters": [
+            {
+              "name": "location",
+              "in": "path",
+              "value": "$inputs.location"
+            },
+            {
+              "name": "contentType",
+              "in": "query",
+              "value": "$inputs.contentType"
+            },
+            {
+              "name": "unitGroup",
+              "in": "query",
+              "value": "$inputs.unitGroup"
+            },
+            {
+              "name": "include",
+              "in": "query",
+              "value": "$inputs.include"
+            },
+            {
+              "name": "lang",
+              "in": "query",
+              "value": "$inputs.lang"
+            },
+            {
+              "name": "key",
+              "in": "query",
+              "value": "$inputs.key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "forecast_data": "$response.body",
+            "location_resolved": "$response.body",
+            "forecast_period": "$response.body",
+            "contentType": "$response.body",
+            "unitGroup": "$response.body",
+            "lang": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-last-year-historical-comparison",
+          "description": "Get historical weather data for the same location covering the equivalent date range from the previous year. Requires startdate and enddate calculated by the client.",
+          "operationPath": "openapi_source#/paths/~1VisualCrossingWebServices~1rest~1services~1timeline~1{location}~1{startdate}~1{enddate}/get",
+          "parameters": [
+            {
+              "name": "location",
+              "in": "path",
+              "value": "$steps.get-current-forecast-for-comparison.outputs.location_resolved"
+            },
+            {
+              "name": "startdate",
+              "in": "path",
+              "value": "$inputs.startdate"
+            },
+            {
+              "name": "enddate",
+              "in": "path",
+              "value": "$inputs.enddate"
+            },
+            {
+              "name": "contentType",
+              "in": "query",
+              "value": "$steps.get-current-forecast-for-comparison.outputs.contentType"
+            },
+            {
+              "name": "unitGroup",
+              "in": "query",
+              "value": "$steps.get-current-forecast-for-comparison.outputs.unitGroup"
+            },
+            {
+              "name": "include",
+              "in": "query",
+              "value": "$inputs.include"
+            },
+            {
+              "name": "lang",
+              "in": "query",
+              "value": "$steps.get-current-forecast-for-comparison.outputs.lang"
+            },
+            {
+              "name": "key",
+              "in": "query",
+              "value": "$inputs.key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "historical_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "forecast_data": "$steps.get-current-forecast-for-comparison.outputs.forecast_data",
+        "location_resolved": "$steps.get-current-forecast-for-comparison.outputs.location_resolved",
+        "forecast_period": "$steps.get-current-forecast-for-comparison.outputs.forecast_period",
+        "contentType": "$steps.get-current-forecast-for-comparison.outputs.contentType",
+        "unitGroup": "$steps.get-current-forecast-for-comparison.outputs.unitGroup",
+        "lang": "$steps.get-current-forecast-for-comparison.outputs.lang",
+        "historical_data": "$steps.get-last-year-historical-comparison.outputs.historical_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

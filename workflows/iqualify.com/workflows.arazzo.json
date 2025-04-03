@@ -1,0 +1,1263 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/iqualify.com/main/v1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "onboard-learner-to-offering",
+      "summary": "Creates a new user (if they don't exist) and enrolls them as a learner in a specific offering, optionally sending an invite.",
+      "description": "Creates a new user (if they don't exist) and enrolls them as a learner in a specific offering, optionally sending an invite.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-user_body": {
+            "type": "object"
+          },
+          "offeringId": {
+            "type": "string"
+          },
+          "enroll-user-in-offering_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-user",
+          "description": "Create a new user account in iQualify.",
+          "operationPath": "openapi_source#/paths/~1users/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-user_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "email": "$response.body",
+            "invite": "$response.body"
+          }
+        },
+        {
+          "stepId": "enroll-user-in-offering",
+          "description": "Enroll the newly created or existing user into a specified offering as a learner.",
+          "operationPath": "openapi_source#/paths/~1offerings~1{offeringId}~1users/post",
+          "parameters": [
+            {
+              "name": "offeringId",
+              "in": "path",
+              "value": "$inputs.offeringId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.enroll-user-in-offering_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "enrollment_status_array": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-user.outputs.id",
+        "email": "$steps.create-user.outputs.email",
+        "invite": "$steps.create-user.outputs.invite",
+        "enrollment_status_array": "$steps.enroll-user-in-offering.outputs.enrollment_status_array"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "monitor-learner-progress-in-offering",
+      "summary": "Retrieves the progress details for all learners currently enrolled in a specific active offering.",
+      "description": "Retrieves the progress details for all learners currently enrolled in a specific active offering.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "offeringId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-offering-details",
+          "description": "Retrieve details for a specific offering.",
+          "operationPath": "openapi_source#/paths/~1offerings~1{offeringId}/get",
+          "parameters": [
+            {
+              "name": "offeringId",
+              "in": "path",
+              "value": "$inputs.offeringId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "offering_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-learner-progress",
+          "description": "Fetch progress data for all learners within the specified offering.",
+          "operationPath": "openapi_source#/paths/~1offerings~1{offeringId}~1analytics~1learners-progress/get",
+          "parameters": [
+            {
+              "name": "offeringId",
+              "in": "path",
+              "value": "$steps.get-offering-details.outputs.offering_details.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "learners_progress_array": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "offering_details": "$steps.get-offering-details.outputs.offering_details",
+        "learners_progress_array": "$steps.get-learner-progress.outputs.learners_progress_array"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-assessment-submissions-for-marking",
+      "summary": "Fetches all learner submissions for a specific assessment within an offering, providing the necessary data for marking.",
+      "description": "Fetches all learner submissions for a specific assessment within an offering, providing the necessary data for marking.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "offeringId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-offering-assessments",
+          "description": "List all assessments within a specific offering to identify the target assessment.",
+          "operationPath": "openapi_source#/paths/~1offerings~1{offeringId}~1assessments/get",
+          "parameters": [
+            {
+              "name": "offeringId",
+              "in": "path",
+              "value": "$inputs.offeringId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "assessments_array": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-assignment-submissions",
+          "description": "Retrieve all assignment submissions (including marks if already graded) for the offering.",
+          "operationPath": "openapi_source#/paths/~1offerings~1{offeringId}~1analytics~1submissions~1assignments/get",
+          "parameters": [
+            {
+              "name": "offeringId",
+              "in": "path",
+              "value": "$steps.get-offering-assessments.outputs.assessments_array.offeringId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "assignment_submissions_array": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "assessments_array": "$steps.get-offering-assessments.outputs.assessments_array",
+        "assignment_submissions_array": "$steps.get-assignment-submissions.outputs.assignment_submissions_array"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "transfer-learner-between-offerings",
+      "summary": "Moves a learner's access and progress from a source offering to a destination offering.",
+      "description": "Moves a learner's access and progress from a source offering to a destination offering.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "userEmail": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-user-info",
+          "description": "Retrieve user details.",
+          "operationPath": "openapi_source#/paths/~1users~1{userEmail}/get",
+          "parameters": [
+            {
+              "name": "userEmail",
+              "in": "path",
+              "value": "$inputs.userEmail"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "transfer-learner",
+          "description": "Perform the transfer operation, moving access and progress.",
+          "operationPath": "openapi_source#/paths/~1users~1{userEmail}~1transfer/patch",
+          "parameters": [
+            {
+              "name": "userEmail",
+              "in": "path",
+              "value": "$steps.get-user-info.outputs.user_details.email"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "userEmail": "$steps.get-user-info.outputs.user_details.email"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_user_info": "$response.body"
+          }
+        },
+        {
+          "stepId": "verify-new-offering-access",
+          "description": "Verify the user is now associated with the destination offering.",
+          "operationPath": "openapi_source#/paths/~1users~1{userEmail}~1offerings/get",
+          "parameters": [
+            {
+              "name": "userEmail",
+              "in": "path",
+              "value": "$steps.transfer-learner.outputs.updated_user_info.email"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_offerings_array": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "user_details": "$steps.get-user-info.outputs.user_details",
+        "updated_user_info": "$steps.transfer-learner.outputs.updated_user_info",
+        "user_offerings_array": "$steps.verify-new-offering-access.outputs.user_offerings_array"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "grant-assessment-extension-for-learner",
+      "summary": "Updates the due date for a specific learner's quiz attempt within an offering.",
+      "description": "Updates the due date for a specific learner's quiz attempt within an offering.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "userEmail": {
+            "type": "string"
+          },
+          "offeringId": {
+            "type": "string"
+          },
+          "assessmentId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-learner-details",
+          "description": "Verify the learner exists.",
+          "operationPath": "openapi_source#/paths/~1users~1{userEmail}/get",
+          "parameters": [
+            {
+              "name": "userEmail",
+              "in": "path",
+              "value": "$inputs.userEmail"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-assessment-details",
+          "description": "Retrieve assessments for the offering to confirm assessmentId.",
+          "operationPath": "openapi_source#/paths/~1offerings~1{offeringId}~1assessments/get",
+          "parameters": [
+            {
+              "name": "offeringId",
+              "in": "path",
+              "value": "$inputs.offeringId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "assessments_array": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-assessment-due-date",
+          "description": "Set a new due date for the specified learner and assessment.",
+          "operationPath": "openapi_source#/paths/~1offerings~1{offeringId}~1assessments~1{assessmentId}~1{userEmail}/patch",
+          "parameters": [
+            {
+              "name": "offeringId",
+              "in": "path",
+              "value": "$steps.get-assessment-details.outputs.assessments_array.offeringId"
+            },
+            {
+              "name": "assessmentId",
+              "in": "path",
+              "value": "$steps.get-assessment-details.outputs.assessments_array.id"
+            },
+            {
+              "name": "userEmail",
+              "in": "path",
+              "value": "$steps.get-learner-details.outputs.user_details.email"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "offeringId": "$steps.get-assessment-details.outputs.assessments_array[0].offeringId",
+              "assessmentId": "$steps.get-assessment-details.outputs.assessments_array[0].id",
+              "userEmail": "$steps.get-learner-details.outputs.user_details.email"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_code_204": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "user_details": "$steps.get-learner-details.outputs.user_details",
+        "assessments_array": "$steps.get-assessment-details.outputs.assessments_array",
+        "status_code_204": "$steps.update-assessment-due-date.outputs.status_code_204"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "analyze-learner-engagement-in-channel",
+      "summary": "Retrieves posts, comments, and replies for a specific channel within an offering to analyze learner interaction.",
+      "description": "Retrieves posts, comments, and replies for a specific channel within an offering to analyze learner interaction.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "offeringId": {
+            "type": "string"
+          },
+          "channelId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-offering-channels",
+          "description": "List channels within the offering to identify the target channel.",
+          "operationPath": "openapi_source#/paths/~1offerings~1{offeringId}~1channels/get",
+          "parameters": [
+            {
+              "name": "offeringId",
+              "in": "path",
+              "value": "$inputs.offeringId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "channels_array": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-channel-posts",
+          "description": "Retrieve all posts made in the specified channel.",
+          "operationPath": "openapi_source#/paths/~1offerings~1{offeringId}~1analytics~1channels~1{channelId}~1posts/get",
+          "parameters": [
+            {
+              "name": "offeringId",
+              "in": "path",
+              "value": "$steps.find-offering-channels.outputs.channels_array.offeringId"
+            },
+            {
+              "name": "channelId",
+              "in": "path",
+              "value": "$steps.find-offering-channels.outputs.channels_array.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "posts_array": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-channel-comments",
+          "description": "Retrieve all comments made on posts within the specified channel.",
+          "operationPath": "openapi_source#/paths/~1offerings~1{offeringId}~1analytics~1channels~1{channelId}~1comments/get",
+          "parameters": [
+            {
+              "name": "offeringId",
+              "in": "path",
+              "value": "$steps.find-offering-channels.outputs.channels_array.offeringId"
+            },
+            {
+              "name": "channelId",
+              "in": "path",
+              "value": "$steps.find-offering-channels.outputs.channels_array.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "comments_array": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-channel-replies",
+          "description": "Retrieve all replies made to comments within the specified channel.",
+          "operationPath": "openapi_source#/paths/~1offerings~1{offeringId}~1analytics~1channels~1{channelId}~1replies/get",
+          "parameters": [
+            {
+              "name": "offeringId",
+              "in": "path",
+              "value": "$steps.find-offering-channels.outputs.channels_array.offeringId"
+            },
+            {
+              "name": "channelId",
+              "in": "path",
+              "value": "$steps.find-offering-channels.outputs.channels_array.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "replies_array": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "channels_array": "$steps.find-offering-channels.outputs.channels_array",
+        "posts_array": "$steps.get-channel-posts.outputs.posts_array",
+        "comments_array": "$steps.get-channel-comments.outputs.comments_array",
+        "replies_array": "$steps.get-channel-replies.outputs.replies_array"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "award-badge-to-learner",
+      "summary": "Manually awards an offering-specific badge to a learner.",
+      "description": "Manually awards an offering-specific badge to a learner.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "offeringId": {
+            "type": "string"
+          },
+          "userEmail": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-offering-badge-info",
+          "description": "Retrieve details about the badge associated with the offering.",
+          "operationPath": "openapi_source#/paths/~1offerings~1{offeringId}~1badges/get",
+          "parameters": [
+            {
+              "name": "offeringId",
+              "in": "path",
+              "value": "$inputs.offeringId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "badge_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "award-badge",
+          "description": "Award the badge to the specified user within the offering.",
+          "operationPath": "openapi_source#/paths/~1offerings~1{offeringId}~1users~1{userEmail}~1badges~1award/post",
+          "parameters": [
+            {
+              "name": "offeringId",
+              "in": "path",
+              "value": "$steps.get-offering-badge-info.outputs.badge_details.offeringId"
+            },
+            {
+              "name": "userEmail",
+              "in": "path",
+              "value": "$inputs.userEmail"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "awarded_response": "$response.body"
+          }
+        },
+        {
+          "stepId": "verify-user-badge",
+          "description": "Verify that the badge has been awarded by checking the user's badge list.",
+          "operationPath": "openapi_source#/paths/~1users~1{userEmail}~1badges/get",
+          "parameters": [
+            {
+              "name": "userEmail",
+              "in": "path",
+              "value": "$inputs.userEmail"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_badges_array": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "badge_details": "$steps.get-offering-badge-info.outputs.badge_details",
+        "awarded_response": "$steps.award-badge.outputs.awarded_response",
+        "user_badges_array": "$steps.verify-user-badge.outputs.user_badges_array"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "assign-learners-to-a-coachmarker",
+      "summary": "Assigns a list of learners within an offering to be marked by a specific coach/marker.",
+      "description": "Assigns a list of learners within an offering to be marked by a specific coach/marker.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "userEmail": {
+            "type": "string"
+          },
+          "offeringId": {
+            "type": "string"
+          },
+          "markerEmail": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-coach-info",
+          "description": "Retrieve coach/marker user details.",
+          "operationPath": "openapi_source#/paths/~1users~1{userEmail}/get",
+          "parameters": [
+            {
+              "name": "userEmail",
+              "in": "path",
+              "value": "$inputs.userEmail"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "assign-learners-to-coach",
+          "description": "Assign the specified list of learner emails to the coach for marking.",
+          "operationPath": "openapi_source#/paths/~1offerings~1{offeringId}~1users~1{markerEmail}~1marks/post",
+          "parameters": [
+            {
+              "name": "offeringId",
+              "in": "path",
+              "value": "$inputs.offeringId"
+            },
+            {
+              "name": "markerEmail",
+              "in": "path",
+              "value": "$steps.get-coach-info.outputs.user_details.email"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "markerEmail": "$steps.get-coach-info.outputs.user_details.email"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "assigned_learners_array": "$response.body"
+          }
+        },
+        {
+          "stepId": "verify-coach-assignments",
+          "description": "Verify the learners have been assigned to the coach.",
+          "operationPath": "openapi_source#/paths/~1offerings~1{offeringId}~1users~1{markerEmail}~1marks/get",
+          "parameters": [
+            {
+              "name": "offeringId",
+              "in": "path",
+              "value": "$inputs.offeringId"
+            },
+            {
+              "name": "markerEmail",
+              "in": "path",
+              "value": "$inputs.markerEmail"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "assigned_learners_array": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "user_details": "$steps.get-coach-info.outputs.user_details",
+        "assigned_learners_array": "$steps.verify-coach-assignments.outputs.assigned_learners_array"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "setup-new-offering-from-course",
+      "summary": "Finds an existing course, creates a new offering based on it, and configures basic metadata.",
+      "description": "Finds an existing course, creates a new offering based on it, and configures basic metadata.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-offering_body": {
+            "type": "object"
+          },
+          "offeringId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-course",
+          "description": "List available courses to find the desired base course.",
+          "operationPath": "openapi_source#/paths/~1courses/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "courses_array": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-offering",
+          "description": "Create a new offering using the contentId and rootContentId from the selected course.",
+          "operationPath": "openapi_source#/paths/~1offerings/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-offering_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "offering_metadata_response": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-offering-tags",
+          "description": "Update the tags metadata for the newly created offering.",
+          "operationPath": "openapi_source#/paths/~1offerings~1{offeringId}~1metadata~1tags/put",
+          "parameters": [
+            {
+              "name": "offeringId",
+              "in": "path",
+              "value": "$steps.create-offering.outputs.offering_metadata_response.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "offeringId": "$steps.create-offering.outputs.offering_metadata_response.id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "offering_metadata_response": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "courses_array": "$steps.find-course.outputs.courses_array",
+        "offering_metadata_response": "$steps.update-offering-tags.outputs.offering_metadata_response"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "reset-learner-assessment-submission",
+      "summary": "Resets a specific learner's submitted assessment back to a draft state, allowing them to resubmit.",
+      "description": "Resets a specific learner's submitted assessment back to a draft state, allowing them to resubmit.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "offeringId": {
+            "type": "string"
+          },
+          "userEmail": {
+            "type": "string"
+          },
+          "assessmentId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-learner-submission",
+          "description": "Retrieve the learner's specific submission details to confirm its status before resetting.",
+          "operationPath": "openapi_source#/paths/~1offerings~1{offeringId}~1analytics~1submissions~1{userEmail}~1assignments~1{assessmentId}/get",
+          "parameters": [
+            {
+              "name": "offeringId",
+              "in": "path",
+              "value": "$inputs.offeringId"
+            },
+            {
+              "name": "userEmail",
+              "in": "path",
+              "value": "$inputs.userEmail"
+            },
+            {
+              "name": "assessmentId",
+              "in": "path",
+              "value": "$inputs.assessmentId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "submission_details_array": "$response.body"
+          }
+        },
+        {
+          "stepId": "reset-submission-to-draft",
+          "description": "Reset the identified assessment submission to draft state.",
+          "operationPath": "openapi_source#/paths/~1offerings~1{offeringId}~1users~1{userEmail}~1assessments~1{assessmentId}/delete",
+          "parameters": [
+            {
+              "name": "offeringId",
+              "in": "path",
+              "value": "$steps.find-learner-submission.outputs.submission_details_array.offeringId"
+            },
+            {
+              "name": "userEmail",
+              "in": "path",
+              "value": "$steps.find-learner-submission.outputs.submission_details_array.learnerEmail"
+            },
+            {
+              "name": "assessmentId",
+              "in": "path",
+              "value": "$steps.find-learner-submission.outputs.submission_details_array.assessmentId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_code_204": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "submission_details_array": "$steps.find-learner-submission.outputs.submission_details_array",
+        "status_code_204": "$steps.reset-submission-to-draft.outputs.status_code_204"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-assessment-group-members",
+      "summary": "Creates a new assessment group within an offering and adds specified learners to it.",
+      "description": "Creates a new assessment group within an offering and adds specified learners to it.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "offeringId": {
+            "type": "string"
+          },
+          "create-assessment-group_body": {
+            "type": "object"
+          },
+          "groupId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-assessment-group",
+          "description": "Create a new assessment group.",
+          "operationPath": "openapi_source#/paths/~1offerings~1{offeringId}~1groups/post",
+          "parameters": [
+            {
+              "name": "offeringId",
+              "in": "path",
+              "value": "$inputs.offeringId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-assessment-group_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "title": "$response.body",
+            "createdAt": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-learner-to-group",
+          "description": "Add a specific learner (by email) to the newly created assessment group.",
+          "operationPath": "openapi_source#/paths/~1offerings~1{offeringId}~1groups~1{groupId}~1learners/post",
+          "parameters": [
+            {
+              "name": "offeringId",
+              "in": "path",
+              "value": "$inputs.offeringId"
+            },
+            {
+              "name": "groupId",
+              "in": "path",
+              "value": "$steps.create-assessment-group.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "groupId": "$steps.create-assessment-group.outputs.id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_response": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-assessment-group.outputs.id",
+        "title": "$steps.create-assessment-group.outputs.title",
+        "createdAt": "$steps.create-assessment-group.outputs.createdAt",
+        "user_response": "$steps.add-learner-to-group.outputs.user_response"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "link-offering-to-external-course-system",
+      "summary": "Creates a mapping between an iQualify offering and an external course identifier (e.g., from an SIS or other system).",
+      "description": "Creates a mapping between an iQualify offering and an external course identifier (e.g., from an SIS or other system).",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "offeringId": {
+            "type": "string"
+          },
+          "externalCourseId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-offering-to-map",
+          "description": "Retrieve details of the iQualify offering to be mapped.",
+          "operationPath": "openapi_source#/paths/~1offerings~1{offeringId}/get",
+          "parameters": [
+            {
+              "name": "offeringId",
+              "in": "path",
+              "value": "$inputs.offeringId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "offering_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-course-mapping",
+          "description": "Create the mapping link between the offering and the external ID.",
+          "operationPath": "openapi_source#/paths/~1course-mappings~1{offeringId}~1{externalCourseId}/put",
+          "parameters": [
+            {
+              "name": "offeringId",
+              "in": "path",
+              "value": "$steps.get-offering-to-map.outputs.offering_details.id"
+            },
+            {
+              "name": "externalCourseId",
+              "in": "path",
+              "value": "$inputs.externalCourseId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "mapping_details_array": "$response.body"
+          }
+        },
+        {
+          "stepId": "verify-mapping-by-offering",
+          "description": "Verify the mapping exists by querying using the offering ID.",
+          "operationPath": "openapi_source#/paths/~1course-mappings~1{offeringId}/get",
+          "parameters": [
+            {
+              "name": "offeringId",
+              "in": "path",
+              "value": "$inputs.offeringId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "mapping_details_array": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "offering_details": "$steps.get-offering-to-map.outputs.offering_details",
+        "mapping_details_array": "$steps.verify-mapping-by-offering.outputs.mapping_details_array"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

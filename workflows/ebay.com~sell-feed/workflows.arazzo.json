@@ -1,0 +1,928 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/ebay.com/sell-feed/v1.3.1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "generate-and-download-on-demand-order-report",
+      "summary": "Creates a task to generate an order report based on specified filters, monitors the task status, and downloads the resulting report file once completed. Useful for sellers needing specific order data for fulfillment or analysis.",
+      "description": "Creates a task to generate an order report based on specified filters, monitors the task status, and downloads the resulting report file once completed. Useful for sellers needing specific order data for fulfillment or analysis.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Content-Type": {
+            "type": "string"
+          },
+          "create-order-report-task_body": {
+            "type": "object"
+          },
+          "task_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-order-report-task",
+          "description": "Initiate the creation of an order report task with specific filter criteria (e.g., date range, order status).",
+          "operationId": "createOrderTask",
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-order-report-task_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "location_header_url": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-order-report-task-status",
+          "description": "Retrieve the status of the order report task. This step might need to be polled until the status is 'COMPLETED' or 'COMPLETED_WITH_ERROR'.",
+          "operationId": "getOrderTask",
+          "parameters": [
+            {
+              "name": "task_id",
+              "in": "path",
+              "value": "$steps.create-order-report-task.outputs.location_header_url"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "taskId": "$response.body",
+            "status": "$response.body",
+            "completionDate": "$response.body"
+          }
+        },
+        {
+          "stepId": "download-order-report-file",
+          "description": "Download the generated order report file once the task status is 'COMPLETED' or 'COMPLETED_WITH_ERROR'.",
+          "operationId": "getResultFile",
+          "parameters": [
+            {
+              "name": "task_id",
+              "in": "path",
+              "value": "$steps.get-order-report-task-status.outputs.taskId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "report_file_stream": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "location_header_url": "$steps.create-order-report-task.outputs.location_header_url",
+        "taskId": "$steps.get-order-report-task-status.outputs.taskId",
+        "status": "$steps.get-order-report-task-status.outputs.status",
+        "completionDate": "$steps.get-order-report-task-status.outputs.completionDate",
+        "report_file_stream": "$steps.download-order-report-file.outputs.report_file_stream"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "process-bulk-upload-feed-eg-order-acknowledgement",
+      "summary": "Handles the process of uploading bulk data to eBay, such as acknowledging orders or updating inventory. Creates an upload task, uploads the data file, monitors processing, and optionally downloads the result file.",
+      "description": "Handles the process of uploading bulk data to eBay, such as acknowledging orders or updating inventory. Creates an upload task, uploads the data file, monitors processing, and optionally downloads the result file.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-EBAY-C-MARKETPLACE-ID": {
+            "type": "string"
+          },
+          "Content-Type": {
+            "type": "string"
+          },
+          "create-upload-task_body": {
+            "type": "object"
+          },
+          "task_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-upload-task",
+          "description": "Create a task for a specific upload feed type (e.g., LMS_ORDER_ACK). Requires marketplace ID.",
+          "operationId": "createTask",
+          "parameters": [
+            {
+              "name": "X-EBAY-C-MARKETPLACE-ID",
+              "in": "header",
+              "value": "$inputs.X-EBAY-C-MARKETPLACE-ID"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-upload-task_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "location_header_url": "$response.body"
+          }
+        },
+        {
+          "stepId": "upload-data-file",
+          "description": "Upload the data file (e.g., XML or zipped XML containing order acknowledgements) associated with the created task.",
+          "operationId": "uploadFile",
+          "parameters": [
+            {
+              "name": "task_id",
+              "in": "path",
+              "value": "$steps.create-upload-task.outputs.location_header_url"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "upload_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-upload-task-status",
+          "description": "Retrieve the status of the upload task. Poll until status is 'COMPLETED' or 'COMPLETED_WITH_ERROR'.",
+          "operationId": "getTask",
+          "parameters": [
+            {
+              "name": "task_id",
+              "in": "path",
+              "value": "$steps.create-upload-task.outputs.location_header_url"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "taskId": "$response.body",
+            "status": "$response.body",
+            "completionDate": "$response.body",
+            "uploadSummary.successCount": "$response.body",
+            "uploadSummary.failureCount": "$response.body"
+          }
+        },
+        {
+          "stepId": "download-upload-result-file",
+          "description": "Download the result file, which typically contains details about processing success or errors for each record in the uploaded file.",
+          "operationId": "getResultFile",
+          "parameters": [
+            {
+              "name": "task_id",
+              "in": "path",
+              "value": "$steps.get-upload-task-status.outputs.taskId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "result_file_stream": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "location_header_url": "$steps.create-upload-task.outputs.location_header_url",
+        "upload_status": "$steps.upload-data-file.outputs.upload_status",
+        "taskId": "$steps.get-upload-task-status.outputs.taskId",
+        "status": "$steps.get-upload-task-status.outputs.status",
+        "completionDate": "$steps.get-upload-task-status.outputs.completionDate",
+        "uploadSummary.successCount": "$steps.get-upload-task-status.outputs.uploadSummary.successCount",
+        "uploadSummary.failureCount": "$steps.get-upload-task-status.outputs.uploadSummary.failureCount",
+        "result_file_stream": "$steps.download-upload-result-file.outputs.result_file_stream"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "set-up-and-retrieve-scheduled-order-reports",
+      "summary": "Configures a recurring schedule for generating order reports based on a template and downloads the latest generated report file. Automates regular order data retrieval.",
+      "description": "Configures a recurring schedule for generating order reports based on a template and downloads the latest generated report file. Automates regular order data retrieval.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "feed_type": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "Content-Type": {
+            "type": "string"
+          },
+          "create-order-report-schedule_body": {
+            "type": "object"
+          },
+          "schedule_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-order-report-template",
+          "description": "Find available schedule templates for the 'LMS_ORDER_REPORT' feed type.",
+          "operationId": "getScheduleTemplates",
+          "parameters": [
+            {
+              "name": "feed_type",
+              "in": "query",
+              "value": "$inputs.feed_type"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "scheduleTemplates[0].scheduleTemplateId": "$response.body",
+            "scheduleTemplates[0].supportedConfigurations": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-order-report-schedule",
+          "description": "Create a new schedule using a template ID, specifying desired trigger times and other configurations.",
+          "operationId": "createSchedule",
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-order-report-schedule_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "location_header_url": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-schedule-details",
+          "description": "Retrieve the details of the newly created schedule using the ID from the location header.",
+          "operationId": "getSchedule",
+          "parameters": [
+            {
+              "name": "schedule_id",
+              "in": "path",
+              "value": "$steps.create-order-report-schedule.outputs.location_header_url"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "scheduleId": "$response.body",
+            "status": "$response.body",
+            "feedType": "$response.body"
+          }
+        },
+        {
+          "stepId": "download-latest-scheduled-report",
+          "description": "Download the most recent report file generated by the specified schedule.",
+          "operationId": "getLatestResultFile",
+          "parameters": [
+            {
+              "name": "schedule_id",
+              "in": "path",
+              "value": "$steps.get-schedule-details.outputs.scheduleId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "report_file_stream": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "scheduleTemplates[0].scheduleTemplateId": "$steps.find-order-report-template.outputs.scheduleTemplates[0].scheduleTemplateId",
+        "scheduleTemplates[0].supportedConfigurations": "$steps.find-order-report-template.outputs.scheduleTemplates[0].supportedConfigurations",
+        "location_header_url": "$steps.create-order-report-schedule.outputs.location_header_url",
+        "scheduleId": "$steps.get-schedule-details.outputs.scheduleId",
+        "status": "$steps.get-schedule-details.outputs.status",
+        "feedType": "$steps.get-schedule-details.outputs.feedType",
+        "report_file_stream": "$steps.download-latest-scheduled-report.outputs.report_file_stream"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "generate-and-download-on-demand-inventory-report",
+      "summary": "Creates a task to generate an active inventory report (optionally filtered by listing format), monitors the task status, and downloads the report file upon completion. Helps sellers get a snapshot of their current listings.",
+      "description": "Creates a task to generate an active inventory report (optionally filtered by listing format), monitors the task status, and downloads the report file upon completion. Helps sellers get a snapshot of their current listings.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Content-Type": {
+            "type": "string"
+          },
+          "create-inventory-report-task_body": {
+            "type": "object"
+          },
+          "task_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-inventory-report-task",
+          "description": "Initiate the creation of an active inventory report task, optionally filtering by listing format.",
+          "operationId": "createInventoryTask",
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-inventory-report-task_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "location_header_url": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-inventory-report-task-status",
+          "description": "Retrieve the status of the inventory report task. Poll until status is 'COMPLETED' or 'COMPLETED_WITH_ERROR'.",
+          "operationId": "getInventoryTask",
+          "parameters": [
+            {
+              "name": "task_id",
+              "in": "path",
+              "value": "$steps.create-inventory-report-task.outputs.location_header_url"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "taskId": "$response.body",
+            "status": "$response.body",
+            "completionDate": "$response.body"
+          }
+        },
+        {
+          "stepId": "download-inventory-report-file",
+          "description": "Download the generated inventory report file when the task is complete.",
+          "operationId": "getResultFile",
+          "parameters": [
+            {
+              "name": "task_id",
+              "in": "path",
+              "value": "$steps.get-inventory-report-task-status.outputs.taskId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "report_file_stream": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "location_header_url": "$steps.create-inventory-report-task.outputs.location_header_url",
+        "taskId": "$steps.get-inventory-report-task-status.outputs.taskId",
+        "status": "$steps.get-inventory-report-task-status.outputs.status",
+        "completionDate": "$steps.get-inventory-report-task-status.outputs.completionDate",
+        "report_file_stream": "$steps.download-inventory-report-file.outputs.report_file_stream"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "generate-and-download-customer-service-metrics-report",
+      "summary": "Creates a task to generate a customer service metrics report based on specified filters (metric type, marketplace, etc.), monitors task status, and downloads the report file upon completion. Helps sellers analyze their performance.",
+      "description": "Creates a task to generate a customer service metrics report based on specified filters (metric type, marketplace, etc.), monitors task status, and downloads the report file upon completion. Helps sellers analyze their performance.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Accept-Language": {
+            "type": "string"
+          },
+          "Content-Type": {
+            "type": "string"
+          },
+          "create-cs-metrics-task_body": {
+            "type": "object"
+          },
+          "task_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-cs-metrics-task",
+          "description": "Initiate the creation of a customer service metrics report task with specific filter criteria.",
+          "operationId": "createCustomerServiceMetricTask",
+          "parameters": [
+            {
+              "name": "Accept-Language",
+              "in": "header",
+              "value": "$inputs.Accept-Language"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-cs-metrics-task_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "location_header_url": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-cs-metrics-task-status",
+          "description": "Retrieve the status of the customer service metrics task. Poll until status is 'COMPLETED' or 'COMPLETED_WITH_ERROR'.",
+          "operationId": "getCustomerServiceMetricTask",
+          "parameters": [
+            {
+              "name": "task_id",
+              "in": "path",
+              "value": "$steps.create-cs-metrics-task.outputs.location_header_url"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "taskId": "$response.body",
+            "status": "$response.body",
+            "completionDate": "$response.body"
+          }
+        },
+        {
+          "stepId": "download-cs-metrics-report-file",
+          "description": "Download the generated customer service metrics report file when the task is complete.",
+          "operationId": "getResultFile",
+          "parameters": [
+            {
+              "name": "task_id",
+              "in": "path",
+              "value": "$steps.get-cs-metrics-task-status.outputs.taskId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "report_file_stream": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "location_header_url": "$steps.create-cs-metrics-task.outputs.location_header_url",
+        "taskId": "$steps.get-cs-metrics-task-status.outputs.taskId",
+        "status": "$steps.get-cs-metrics-task-status.outputs.status",
+        "completionDate": "$steps.get-cs-metrics-task-status.outputs.completionDate",
+        "report_file_stream": "$steps.download-cs-metrics-report-file.outputs.report_file_stream"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "update-existing-order-report-schedule",
+      "summary": "Finds an existing order report schedule, retrieves its details and associated template constraints, and updates its configuration (e.g., trigger time, name, end date).",
+      "description": "Finds an existing order report schedule, retrieves its details and associated template constraints, and updates its configuration (e.g., trigger time, name, end date).",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "feed_type": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "schedule_template_id": {
+            "type": "string"
+          },
+          "schedule_id": {
+            "type": "string"
+          },
+          "Content-Type": {
+            "type": "string"
+          },
+          "update-schedule-configuration_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-schedule-to-update",
+          "description": "Retrieve a list of existing schedules for 'LMS_ORDER_REPORT' to find the ID of the one to update.",
+          "operationId": "getSchedules",
+          "parameters": [
+            {
+              "name": "feed_type",
+              "in": "query",
+              "value": "$inputs.feed_type"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "schedules[0].scheduleId": "$response.body",
+            "schedules[0].scheduleTemplateId": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-schedule-template-for-update",
+          "description": "Retrieve the details of the schedule template to understand allowed configurations for updating.",
+          "operationId": "getScheduleTemplate",
+          "parameters": [
+            {
+              "name": "schedule_template_id",
+              "in": "path",
+              "value": "$inputs.schedule_template_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "supportedConfigurations": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-schedule-configuration",
+          "description": "Update the configuration of the specified schedule.",
+          "operationId": "updateSchedule",
+          "parameters": [
+            {
+              "name": "schedule_id",
+              "in": "path",
+              "value": "$inputs.schedule_id"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.update-schedule-configuration_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "update_status_code": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "schedules[0].scheduleId": "$steps.find-schedule-to-update.outputs.schedules[0].scheduleId",
+        "schedules[0].scheduleTemplateId": "$steps.find-schedule-to-update.outputs.schedules[0].scheduleTemplateId",
+        "supportedConfigurations": "$steps.get-schedule-template-for-update.outputs.supportedConfigurations",
+        "update_status_code": "$steps.update-schedule-configuration.outputs.update_status_code"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "delete-order-report-schedule",
+      "summary": "Finds an existing order report schedule by its ID and deletes it, stopping future automated report generation.",
+      "description": "Finds an existing order report schedule by its ID and deletes it, stopping future automated report generation.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "feed_type": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "schedule_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-schedule-to-delete",
+          "description": "Retrieve a list of existing schedules for 'LMS_ORDER_REPORT' to identify the ID to delete.",
+          "operationId": "getSchedules",
+          "parameters": [
+            {
+              "name": "feed_type",
+              "in": "query",
+              "value": "$inputs.feed_type"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "schedules[0].scheduleId": "$response.body"
+          }
+        },
+        {
+          "stepId": "delete-the-schedule",
+          "description": "Delete the specified schedule using its ID.",
+          "operationId": "deleteSchedule",
+          "parameters": [
+            {
+              "name": "schedule_id",
+              "in": "path",
+              "value": "$inputs.schedule_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "delete_status_code": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "schedules[0].scheduleId": "$steps.find-schedule-to-delete.outputs.schedules[0].scheduleId",
+        "delete_status_code": "$steps.delete-the-schedule.outputs.delete_status_code"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

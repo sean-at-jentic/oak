@@ -1,0 +1,439 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/ebay.com/sell-analytics/1.3.2/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "seller-performance-snapshot",
+      "summary": "Provides a comprehensive overview of the seller's current performance, including their overall standards rating, specific customer service metrics, and recent traffic trends.",
+      "description": "Provides a comprehensive overview of the seller's current performance, including their overall standards rating, specific customer service metrics, and recent traffic trends.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "customer_service_metric_type": {
+            "type": "string"
+          },
+          "evaluation_marketplace_id": {
+            "type": "string"
+          },
+          "evaluation_type": {
+            "type": "string"
+          },
+          "dimension": {
+            "type": "string"
+          },
+          "filter": {
+            "type": "string"
+          },
+          "metric": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-all-seller-profiles",
+          "description": "Retrieve all available seller standards profiles (e.g., GLOBAL, US, UK, DE for CURRENT and PROJECTED cycles) to understand the seller's standing in different programs.",
+          "operationId": "findSellerStandardsProfiles",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "allStandardsProfiles": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-current-inad-metric",
+          "description": "Get the seller's current performance rating for the 'Item Not As Described' customer service metric in a specific marketplace.",
+          "operationId": "getCustomerServiceMetric",
+          "parameters": [
+            {
+              "name": "customer_service_metric_type",
+              "in": "path",
+              "value": "$inputs.customer_service_metric_type"
+            },
+            {
+              "name": "evaluation_marketplace_id",
+              "in": "query",
+              "value": "$inputs.evaluation_marketplace_id"
+            },
+            {
+              "name": "evaluation_type",
+              "in": "path",
+              "value": "$inputs.evaluation_type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "inadMetricData": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-current-inr-metric",
+          "description": "Get the seller's current performance rating for the 'Item Not Received' customer service metric in the same marketplace.",
+          "operationId": "getCustomerServiceMetric",
+          "parameters": [
+            {
+              "name": "customer_service_metric_type",
+              "in": "path",
+              "value": "$inputs.customer_service_metric_type"
+            },
+            {
+              "name": "evaluation_marketplace_id",
+              "in": "query",
+              "value": "$inputs.evaluation_marketplace_id"
+            },
+            {
+              "name": "evaluation_type",
+              "in": "path",
+              "value": "$inputs.evaluation_type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "inrMetricData": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-daily-traffic-report",
+          "description": "Retrieve a daily traffic report for a specified date range and marketplace to understand overall listing engagement trends.",
+          "operationId": "getTrafficReport",
+          "parameters": [
+            {
+              "name": "dimension",
+              "in": "query",
+              "value": "$inputs.dimension"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            },
+            {
+              "name": "metric",
+              "in": "query",
+              "value": "$inputs.metric"
+            },
+            {
+              "name": "sort",
+              "in": "query",
+              "value": "$inputs.sort"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "dailyTrafficReportData": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "allStandardsProfiles": "$steps.find-all-seller-profiles.outputs.allStandardsProfiles",
+        "inadMetricData": "$steps.get-current-inad-metric.outputs.inadMetricData",
+        "inrMetricData": "$steps.get-current-inr-metric.outputs.inrMetricData",
+        "dailyTrafficReportData": "$steps.get-daily-traffic-report.outputs.dailyTrafficReportData"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "diagnose-seller-standard-issues",
+      "summary": "Investigates the reasons behind a specific seller standard rating (e.g., 'BELOW_STANDARD') by retrieving the detailed profile and then checking the relevant customer service metrics.",
+      "description": "Investigates the reasons behind a specific seller standard rating (e.g., 'BELOW_STANDARD') by retrieving the detailed profile and then checking the relevant customer service metrics.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "cycle": {
+            "type": "string"
+          },
+          "program": {
+            "type": "string"
+          },
+          "customer_service_metric_type": {
+            "type": "string"
+          },
+          "evaluation_marketplace_id": {
+            "type": "string"
+          },
+          "evaluation_type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-specific-seller-profile",
+          "description": "Retrieve the specific seller standards profile (e.g., US program, CURRENT cycle) that needs investigation.",
+          "operationId": "getSellerStandardsProfile",
+          "parameters": [
+            {
+              "name": "cycle",
+              "in": "path",
+              "value": "$inputs.cycle"
+            },
+            {
+              "name": "program",
+              "in": "path",
+              "value": "$inputs.program"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "specificStandardsProfile": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-relevant-cs-metric",
+          "description": "Retrieve the detailed customer service metric data (e.g., 'ITEM_NOT_RECEIVED') identified as a potential cause based on the analysis of the seller profile metrics obtained in the previous step.",
+          "operationId": "getCustomerServiceMetric",
+          "parameters": [
+            {
+              "name": "customer_service_metric_type",
+              "in": "path",
+              "value": "$inputs.customer_service_metric_type"
+            },
+            {
+              "name": "evaluation_marketplace_id",
+              "in": "query",
+              "value": "$inputs.evaluation_marketplace_id"
+            },
+            {
+              "name": "evaluation_type",
+              "in": "path",
+              "value": "$inputs.evaluation_type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "customerServiceMetricData": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "specificStandardsProfile": "$steps.get-specific-seller-profile.outputs.specificStandardsProfile",
+        "customerServiceMetricData": "$steps.get-relevant-cs-metric.outputs.customerServiceMetricData"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "track-customer-service-metric-trend",
+      "summary": "Compares the seller's current official customer service metric rating with the projected rating for a specific metric type (e.g., 'Item Not As Described') to understand performance trends.",
+      "description": "Compares the seller's current official customer service metric rating with the projected rating for a specific metric type (e.g., 'Item Not As Described') to understand performance trends.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "customer_service_metric_type": {
+            "type": "string"
+          },
+          "evaluation_marketplace_id": {
+            "type": "string"
+          },
+          "evaluation_type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-current-cs-metric",
+          "description": "Retrieve the customer service metric data from the last official evaluation period.",
+          "operationId": "getCustomerServiceMetric",
+          "parameters": [
+            {
+              "name": "customer_service_metric_type",
+              "in": "path",
+              "value": "$inputs.customer_service_metric_type"
+            },
+            {
+              "name": "evaluation_marketplace_id",
+              "in": "query",
+              "value": "$inputs.evaluation_marketplace_id"
+            },
+            {
+              "name": "evaluation_type",
+              "in": "path",
+              "value": "$inputs.evaluation_type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "currentMetricDetails": "$response.body",
+            "customer_service_metric_type": "$response.body",
+            "evaluation_marketplace_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-projected-cs-metric",
+          "description": "Retrieve the projected customer service metric data based on recent performance.",
+          "operationId": "getCustomerServiceMetric",
+          "parameters": [
+            {
+              "name": "customer_service_metric_type",
+              "in": "path",
+              "value": "$steps.get-current-cs-metric.outputs.customer_service_metric_type"
+            },
+            {
+              "name": "evaluation_marketplace_id",
+              "in": "query",
+              "value": "$steps.get-current-cs-metric.outputs.evaluation_marketplace_id"
+            },
+            {
+              "name": "evaluation_type",
+              "in": "path",
+              "value": "$inputs.evaluation_type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "projectedMetricDetails": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "currentMetricDetails": "$steps.get-current-cs-metric.outputs.currentMetricDetails",
+        "customer_service_metric_type": "$steps.get-current-cs-metric.outputs.customer_service_metric_type",
+        "evaluation_marketplace_id": "$steps.get-current-cs-metric.outputs.evaluation_marketplace_id",
+        "projectedMetricDetails": "$steps.get-projected-cs-metric.outputs.projectedMetricDetails"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

@@ -1,0 +1,935 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/jumpseller.com/main/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "full-product-setup-with-variants-and-images",
+      "summary": "Creates a new product, defines its options (e.g., Size, Color), adds values for those options (e.g., Small, Medium, Red, Blue), creates specific variants based on combinations of option values, and uploads images for the product.",
+      "description": "Creates a new product, defines its options (e.g., Size, Color), adds values for those options (e.g., Small, Medium, Red, Blue), creates specific variants based on combinations of option values, and uploads images for the product.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "locale": {
+            "type": "string"
+          },
+          "create-product_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          },
+          "option_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-product",
+          "description": "Create the base product with essential details like name and price.",
+          "operationPath": "openapi_source#/paths/~1products.json/post",
+          "parameters": [
+            {
+              "name": "locale",
+              "in": "query",
+              "value": "$inputs.locale"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-product_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "product_id": "$response.body",
+            "product_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-product-option",
+          "description": "Add an option type to the product (e.g., 'Color').",
+          "operationPath": "openapi_source#/paths/~1products~1{id}~1options.json/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "product_id": "$steps.create-product.outputs.product_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "option_id": "$response.body",
+            "option_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-option-value",
+          "description": "Add a specific value to a product option (e.g., 'Red' for the 'Color' option).",
+          "operationPath": "openapi_source#/paths/~1products~1{id}~1options~1{option_id}~1values.json/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "option_id",
+              "in": "path",
+              "value": "$steps.create-product-option.outputs.option_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "product_id": "$steps.create-product.outputs.product_id",
+              "option_id": "$steps.create-product-option.outputs.option_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "value_id": "$response.body",
+            "value_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-product-variant",
+          "description": "Create a specific variant combining option values (e.g., Red T-Shirt), setting its unique price, SKU, and stock.",
+          "operationPath": "openapi_source#/paths/~1products~1{id}~1variants.json/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "product_id": "$steps.create-product.outputs.product_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "variant_id": "$response.body",
+            "variant_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-product-image",
+          "description": "Upload an image for the product.",
+          "operationPath": "openapi_source#/paths/~1products~1{id}~1images.json/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "product_id": "$steps.create-product.outputs.product_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "image_id": "$response.body",
+            "image_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "product_id": "$steps.create-product.outputs.product_id",
+        "product_details": "$steps.create-product.outputs.product_details",
+        "option_id": "$steps.create-product-option.outputs.option_id",
+        "option_details": "$steps.create-product-option.outputs.option_details",
+        "value_id": "$steps.create-option-value.outputs.value_id",
+        "value_details": "$steps.create-option-value.outputs.value_details",
+        "variant_id": "$steps.create-product-variant.outputs.variant_id",
+        "variant_details": "$steps.create-product-variant.outputs.variant_details",
+        "image_id": "$steps.add-product-image.outputs.image_id",
+        "image_details": "$steps.add-product-image.outputs.image_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "process-and-fulfill-new-paid-orders",
+      "summary": "Retrieves newly paid orders, updates their shipment status to 'in_transit', adds tracking information, and optionally creates a fulfillment record.",
+      "description": "Retrieves newly paid orders, updates their shipment status to 'in_transit', adds tracking information, and optionally creates a fulfillment record.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "update-order-shipment",
+          "description": "Update the shipment status and add tracking details for a specific paid order.",
+          "operationPath": "openapi_source#/paths/~1orders~1{id}.json/put",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "order_id": "$steps.get-paid-orders.outputs.paid_orders_list[0].order.id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_order_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-fulfillment",
+          "description": "Create a fulfillment record for the shipped order (optional, depending on integration needs).",
+          "operationPath": "openapi_source#/paths/~1fulfillments.json/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "order_id": "$steps.update-order-shipment.outputs.updated_order_details.order.id",
+              "tracking_number": "$steps.update-order-shipment.outputs.updated_order_details.order.tracking_number",
+              "tracking_company": "$steps.update-order-shipment.outputs.updated_order_details.order.tracking_company",
+              "shipment_status": "$steps.update-order-shipment.outputs.updated_order_details.order.shipment_status_enum"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "fulfillment_id": "$response.body",
+            "fulfillment_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "updated_order_details": "$steps.update-order-shipment.outputs.updated_order_details",
+        "fulfillment_id": "$steps.create-fulfillment.outputs.fulfillment_id",
+        "fulfillment_details": "$steps.create-fulfillment.outputs.fulfillment_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "update-stock-levels-across-specific-locations",
+      "summary": "Retrieves current stock information for specific products/variants across given locations and then updates the stock levels.",
+      "description": "Retrieves current stock information for specific products/variants across given locations and then updates the stock levels.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "location_ids": {
+            "type": "string"
+          },
+          "product_ids": {
+            "type": "string"
+          },
+          "variant_ids": {
+            "type": "string"
+          },
+          "update-stock-by-location_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-stock-by-location",
+          "description": "Retrieve current stock levels for specified product/variant IDs at specified location IDs.",
+          "operationPath": "openapi_source#/paths/~1products_locations/get",
+          "parameters": [
+            {
+              "name": "location_ids",
+              "in": "query",
+              "value": "$inputs.location_ids"
+            },
+            {
+              "name": "product_ids",
+              "in": "query",
+              "value": "$inputs.product_ids"
+            },
+            {
+              "name": "variant_ids",
+              "in": "query",
+              "value": "$inputs.variant_ids"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "current_stock_levels_array": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-stock-by-location",
+          "description": "Update stock levels for specific product/variant/location combinations.",
+          "operationPath": "openapi_source#/paths/~1products_locations/put",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.update-stock-by-location_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "update_status_message": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "current_stock_levels_array": "$steps.get-stock-by-location.outputs.current_stock_levels_array",
+        "update_status_message": "$steps.update-stock-by-location.outputs.update_status_message"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "customer-segmentation-and-retrieval",
+      "summary": "Creates a customer category (e.g., 'VIP Customers'), adds specific customers to it, and then retrieves all customers belonging to that category.",
+      "description": "Creates a customer category (e.g., 'VIP Customers'), adds specific customers to it, and then retrieves all customers belonging to that category.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-customer-category_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-customer-category",
+          "description": "Create a new category to group customers.",
+          "operationPath": "openapi_source#/paths/~1customer_categories.json/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-customer-category_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "customer_category_id": "$response.body",
+            "customer_category_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-customers-to-category",
+          "description": "Add one or more existing customers (by ID or email) to the created category.",
+          "operationPath": "openapi_source#/paths/~1customer_categories~1{id}~1customers.json/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "customer_category_id": "$steps.create-customer-category.outputs.customer_category_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_category_customers_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-customers-in-category",
+          "description": "Retrieve the list of all customers currently in the specified category.",
+          "operationPath": "openapi_source#/paths/~1customer_categories~1{id}~1customers.json/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "category_customers_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "customer_category_id": "$steps.create-customer-category.outputs.customer_category_id",
+        "customer_category_details": "$steps.create-customer-category.outputs.customer_category_details",
+        "updated_category_customers_list": "$steps.add-customers-to-category.outputs.updated_category_customers_list",
+        "category_customers_list": "$steps.get-customers-in-category.outputs.category_customers_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-customer-order-history",
+      "summary": "Finds a customer by their email address and then retrieves all their past orders.",
+      "description": "Finds a customer by their email address and then retrieves all their past orders.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-customer-by-email",
+          "description": "Look up a customer using their email address.",
+          "operationPath": "openapi_source#/paths/~1customers~1email~1{email}.json/get",
+          "parameters": [
+            {
+              "name": "email",
+              "in": "path",
+              "value": "$inputs.email"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "customer_id": "$response.body",
+            "customer_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-customer-orders",
+          "description": "Retrieve all orders associated with the found customer ID.",
+          "operationPath": "openapi_source#/paths/~1customers~1{id}~1orders.json/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "customer_orders_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "customer_id": "$steps.find-customer-by-email.outputs.customer_id",
+        "customer_details": "$steps.find-customer-by-email.outputs.customer_details",
+        "customer_orders_list": "$steps.get-customer-orders.outputs.customer_orders_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "setup-order-update-notifications",
+      "summary": "Creates a webhook to notify an external system whenever an order's status is updated (e.g., paid, shipped, canceled).",
+      "description": "Creates a webhook to notify an external system whenever an order's status is updated (e.g., paid, shipped, canceled).",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-order-update-hook_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-order-update-hook",
+          "description": "Register a new webhook URL to listen for 'order_updated' events.",
+          "operationPath": "openapi_source#/paths/~1hooks.json/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-order-update-hook_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "hook_id": "$response.body",
+            "hook_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "verify-hook-creation",
+          "description": "Retrieve the created hook details to verify successful registration.",
+          "operationPath": "openapi_source#/paths/~1hooks~1{id}.json/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "verified_hook_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "hook_id": "$steps.create-order-update-hook.outputs.hook_id",
+        "hook_details": "$steps.create-order-update-hook.outputs.hook_details",
+        "verified_hook_details": "$steps.verify-hook-creation.outputs.verified_hook_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-order-documents",
+      "summary": "Retrieves an order, adds a new document (like an invoice) to it, and then updates the details of that document.",
+      "description": "Retrieves an order, adds a new document (like an invoice) to it, and then updates the details of that document.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "public_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-order-details",
+          "description": "Retrieve the details of a specific order.",
+          "operationPath": "openapi_source#/paths/~1orders~1{id}.json/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "order_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-order-document",
+          "description": "Add a new document (e.g., invoice) associated with the order.",
+          "operationPath": "openapi_source#/paths/~1orders~1{id}~1documents.json/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "order_id": "$steps.get-order-details.outputs.order_details.order.id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "document_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-order-document",
+          "description": "Update the details of an existing document associated with the order.",
+          "operationPath": "openapi_source#/paths/~1orders~1{id}~1documents~1{public_id}.json/put",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "public_id",
+              "in": "path",
+              "value": "$steps.add-order-document.outputs.document_details.document.public_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "order_id": "$steps.add-order-document.outputs.document_details.document.order_id",
+              "public_id": "$steps.add-order-document.outputs.document_details.document.public_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_document_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "order_details": "$steps.get-order-details.outputs.order_details",
+        "document_details": "$steps.add-order-document.outputs.document_details",
+        "updated_document_details": "$steps.update-order-document.outputs.updated_document_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-product-custom-fields",
+      "summary": "Creates a new custom field definition for products (e.g., 'Material'), adds this field to a specific product, and then updates the value of that custom field for the product.",
+      "description": "Creates a new custom field definition for products (e.g., 'Material'), adds this field to a specific product, and then updates the value of that custom field for the product.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-custom-field-definition_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          },
+          "product_id": {
+            "type": "string"
+          },
+          "field_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-custom-field-definition",
+          "description": "Define a new custom field available for products.",
+          "operationPath": "openapi_source#/paths/~1custom_fields.json/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-custom-field-definition_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "custom_field_id": "$response.body",
+            "custom_field_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-custom-field-to-product",
+          "description": "Associate the created custom field definition with a specific product and set its initial value.",
+          "operationPath": "openapi_source#/paths/~1products~1{id}~1fields.json/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "custom_field_id": "$steps.create-custom-field-definition.outputs.custom_field_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_product_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-product-custom-field-value",
+          "description": "Update the value of an existing custom field for a specific product.",
+          "operationPath": "openapi_source#/paths/~1products~1{product_id}~1fields~1{field_id}.json/put",
+          "parameters": [
+            {
+              "name": "product_id",
+              "in": "path",
+              "value": "$steps.add-custom-field-to-product.outputs.updated_product_details.product.id"
+            },
+            {
+              "name": "field_id",
+              "in": "path",
+              "value": "$steps.add-custom-field-to-product.outputs.updated_product_details.product.custom_fields[0].id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_custom_field_value_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "custom_field_id": "$steps.create-custom-field-definition.outputs.custom_field_id",
+        "custom_field_details": "$steps.create-custom-field-definition.outputs.custom_field_details",
+        "updated_product_details": "$steps.add-custom-field-to-product.outputs.updated_product_details",
+        "updated_custom_field_value_details": "$steps.update-product-custom-field-value.outputs.updated_custom_field_value_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

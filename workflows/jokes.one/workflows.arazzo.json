@@ -1,0 +1,332 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/jokes.one/main/1.1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "daily-joke-discovery",
+      "summary": "Retrieve categories for Joke of the Day and fetch the joke for a chosen category",
+      "description": "Retrieve categories for Joke of the Day and fetch the joke for a chosen category",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-jod-categories",
+          "description": "Retrieve available categories for the Joke of the Day",
+          "operationPath": "openapi_source#/paths/~1jod~1categories/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "categories": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-jod",
+          "description": "Retrieve the Joke of the Day for a specific category",
+          "operationPath": "openapi_source#/paths/~1jod/get",
+          "parameters": [
+            {
+              "name": "category",
+              "in": "query",
+              "value": "$steps.get-jod-categories.outputs.categories.jod.category"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "joke_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "categories": "$steps.get-jod-categories.outputs.categories",
+        "joke_details": "$steps.get-jod.outputs.joke_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-personal-joke-collection",
+      "summary": "Search for jokes, add to a personal collection, and manage the tags for jokes.",
+      "description": "Search for jokes, add to a personal collection, and manage the tags for jokes.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "query": {
+            "type": "string"
+          },
+          "minlength": {
+            "type": "string"
+          },
+          "maxlength": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string"
+          },
+          "private": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-jokes",
+          "description": "Search for jokes based on category, keyword, or author",
+          "operationPath": "openapi_source#/paths/~1joke~1search/get",
+          "parameters": [
+            {
+              "name": "category",
+              "in": "query",
+              "value": "$inputs.category"
+            },
+            {
+              "name": "query",
+              "in": "query",
+              "value": "$inputs.query"
+            },
+            {
+              "name": "minlength",
+              "in": "query",
+              "value": "$inputs.minlength"
+            },
+            {
+              "name": "maxlength",
+              "in": "query",
+              "value": "$inputs.maxlength"
+            },
+            {
+              "name": "author",
+              "in": "query",
+              "value": "$inputs.author"
+            },
+            {
+              "name": "private",
+              "in": "query",
+              "value": "$inputs.private"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "joke_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-joke",
+          "description": "Add a new joke to a personal collection",
+          "operationPath": "openapi_source#/paths/~1joke/put",
+          "parameters": [
+            {
+              "name": "title",
+              "in": "query",
+              "value": "$steps.search-jokes.outputs.joke_list.title"
+            },
+            {
+              "name": "text",
+              "in": "query",
+              "value": "$steps.search-jokes.outputs.joke_list.joke"
+            },
+            {
+              "name": "author",
+              "in": "query",
+              "value": "$steps.search-jokes.outputs.joke_list.author"
+            },
+            {
+              "name": "tags",
+              "in": "query",
+              "value": "$steps.search-jokes.outputs.joke_list.tags"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "new_joke_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-tag-to-joke",
+          "description": "Add a tag to a joke in the personal collection",
+          "operationPath": "openapi_source#/paths/~1joke~1tags~1add/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "query",
+              "value": "$steps.add-joke.outputs.new_joke_id"
+            },
+            {
+              "name": "tags",
+              "in": "query",
+              "value": "$steps.search-jokes.outputs.joke_list.tags"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "joke_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "remove-tag-from-joke",
+          "description": "Remove a tag from a joke in the personal collection",
+          "operationPath": "openapi_source#/paths/~1joke~1tags~1remove/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "query",
+              "value": "$steps.add-joke.outputs.new_joke_id"
+            },
+            {
+              "name": "tags",
+              "in": "query",
+              "value": "$steps.search-jokes.outputs.joke_list.tags"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "joke_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "joke_list": "$steps.search-jokes.outputs.joke_list",
+        "new_joke_id": "$steps.add-joke.outputs.new_joke_id",
+        "joke_data": "$steps.remove-tag-from-joke.outputs.joke_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

@@ -1,0 +1,331 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/archive.org/search/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "scrape-all-search-results",
+      "summary": "Retrieves a large dataset matching a specific query by iterating through results using the scraping endpoint's cursor mechanism. Useful for bulk data collection or comprehensive analysis.",
+      "description": "Retrieves a large dataset matching a specific query by iterating through results using the scraping endpoint's cursor mechanism. Useful for bulk data collection or comprehensive analysis.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string"
+          },
+          "field": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "string"
+          },
+          "size": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "total_only": {
+            "type": "string"
+          },
+          "callback": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "start-scrape",
+          "description": "Initiate a scrape request with a query, desired fields, sort order, and page size. Retrieves the first batch of results and a cursor for pagination.",
+          "operationPath": "openapi_source#/paths/~1search~1v1~1scrape/get",
+          "parameters": [
+            {
+              "name": "q",
+              "in": "query",
+              "value": "$inputs.q"
+            },
+            {
+              "name": "field",
+              "in": "query",
+              "value": "$inputs.field"
+            },
+            {
+              "name": "sort",
+              "in": "query",
+              "value": "$inputs.sort"
+            },
+            {
+              "name": "size",
+              "in": "query",
+              "value": "$inputs.size"
+            },
+            {
+              "name": "cursor",
+              "in": "query",
+              "value": "$inputs.cursor"
+            },
+            {
+              "name": "total_only",
+              "in": "query",
+              "value": "$inputs.total_only"
+            },
+            {
+              "name": "callback",
+              "in": "query",
+              "value": "$inputs.callback"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "scrape_results_page1": "$response.body"
+          }
+        },
+        {
+          "stepId": "continue-scrape",
+          "description": "Retrieve the next page of scrape results using the cursor obtained from the previous scrape request.",
+          "operationPath": "openapi_source#/paths/~1search~1v1~1scrape/get",
+          "parameters": [
+            {
+              "name": "q",
+              "in": "query",
+              "value": "$inputs.q"
+            },
+            {
+              "name": "field",
+              "in": "query",
+              "value": "$inputs.field"
+            },
+            {
+              "name": "sort",
+              "in": "query",
+              "value": "$inputs.sort"
+            },
+            {
+              "name": "size",
+              "in": "query",
+              "value": "$inputs.size"
+            },
+            {
+              "name": "cursor",
+              "in": "query",
+              "value": "$steps.start-scrape.outputs.scrape_results_page1.cursor"
+            },
+            {
+              "name": "total_only",
+              "in": "query",
+              "value": "$inputs.total_only"
+            },
+            {
+              "name": "callback",
+              "in": "query",
+              "value": "$inputs.callback"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "scrape_results_next_page": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "scrape_results_page1": "$steps.start-scrape.outputs.scrape_results_page1",
+        "scrape_results_next_page": "$steps.continue-scrape.outputs.scrape_results_next_page"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "discover-search-fields-and-perform-basic-search",
+      "summary": "Allows a user to first understand which data fields are available for searching and retrieval, and then perform a standard relevance-based search, potentially requesting specific fields identified in the first step.",
+      "description": "Allows a user to first understand which data fields are available for searching and retrieval, and then perform a standard relevance-based search, potentially requesting specific fields identified in the first step.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "callback": {
+            "type": "string"
+          },
+          "q": {
+            "type": "string"
+          },
+          "field": {
+            "type": "string"
+          },
+          "size": {
+            "type": "string"
+          },
+          "total_only": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-search-fields",
+          "description": "Retrieve the list of metadata fields that can be used in search queries and requested in results.",
+          "operationPath": "openapi_source#/paths/~1search~1v1~1fields/get",
+          "parameters": [
+            {
+              "name": "callback",
+              "in": "query",
+              "value": "$inputs.callback"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "available_fields": "$response.body"
+          }
+        },
+        {
+          "stepId": "perform-targeted-organic-search",
+          "description": "Perform a relevance-based search using a query and specifying desired fields (potentially chosen based on the output of 'get-search-fields').",
+          "operationPath": "openapi_source#/paths/~1search~1v1~1organic/get",
+          "parameters": [
+            {
+              "name": "q",
+              "in": "query",
+              "value": "$inputs.q"
+            },
+            {
+              "name": "field",
+              "in": "query",
+              "value": "$inputs.field"
+            },
+            {
+              "name": "size",
+              "in": "query",
+              "value": "$inputs.size"
+            },
+            {
+              "name": "total_only",
+              "in": "query",
+              "value": "$inputs.total_only"
+            },
+            {
+              "name": "callback",
+              "in": "query",
+              "value": "$inputs.callback"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "search_results": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "available_fields": "$steps.get-search-fields.outputs.available_fields",
+        "search_results": "$steps.perform-targeted-organic-search.outputs.search_results"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

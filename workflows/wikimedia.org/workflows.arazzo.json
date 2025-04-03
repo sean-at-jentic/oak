@@ -1,0 +1,257 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/wikimedia.org/main/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "render-mathematical-formula",
+      "summary": "Checks a TeX formula for validity and correctness, then renders it into a specified visual format (SVG, MML, or PNG). This is useful for displaying mathematical notation dynamically.",
+      "description": "Checks a TeX formula for validity and correctness, then renders it into a specified visual format (SVG, MML, or PNG). This is useful for displaying mathematical notation dynamically.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "q": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "hash": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "check-formula",
+          "description": "Submits a TeX or inline-TeX formula for validation and normalization. Returns formula information and a hash identifier in the 'x-resource-location' header for rendering.",
+          "operationPath": "openapi_source#/paths/~1media~1math~1check~1{type}/post",
+          "parameters": [
+            {
+              "name": "type",
+              "in": "path",
+              "value": "$inputs.type"
+            }
+          ],
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "q": "$inputs.q"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "formula_info": "$response.body",
+            "formula_hash": "$response.body"
+          }
+        },
+        {
+          "stepId": "render-formula",
+          "description": "Retrieves the rendered representation (SVG, MML, or PNG) of a previously checked formula using its hash.",
+          "operationPath": "openapi_source#/paths/~1media~1math~1render~1{format}~1{hash}/get",
+          "parameters": [
+            {
+              "name": "format",
+              "in": "path",
+              "value": "$inputs.format"
+            },
+            {
+              "name": "hash",
+              "in": "path",
+              "value": "$steps.check-formula.outputs.formula_hash"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "rendered_formula": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "formula_info": "$steps.check-formula.outputs.formula_info",
+        "formula_hash": "$steps.check-formula.outputs.formula_hash",
+        "rendered_formula": "$steps.render-formula.outputs.rendered_formula"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-checked-formula-details",
+      "summary": "Checks a TeX formula and then retrieves its stored details (like normalized form and identifier information) using the generated hash. This could be used for analysis or re-displaying formula metadata without re-rendering.",
+      "description": "Checks a TeX formula and then retrieves its stored details (like normalized form and identifier information) using the generated hash. This could be used for analysis or re-displaying formula metadata without re-rendering.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "q": {
+            "type": "string"
+          },
+          "hash": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "check-formula-for-retrieval",
+          "description": "Submits a TeX or inline-TeX formula for validation and normalization. Returns formula information and a hash identifier in the 'x-resource-location' header.",
+          "operationPath": "openapi_source#/paths/~1media~1math~1check~1{type}/post",
+          "parameters": [
+            {
+              "name": "type",
+              "in": "path",
+              "value": "$inputs.type"
+            }
+          ],
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "q": "$inputs.q"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "check_response": "$response.body",
+            "formula_hash": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-formula-details",
+          "description": "Retrieves the stored information (e.g., normalized TeX, identifiers) about a previously checked formula using its hash.",
+          "operationPath": "openapi_source#/paths/~1media~1math~1formula~1{hash}/get",
+          "parameters": [
+            {
+              "name": "hash",
+              "in": "path",
+              "value": "$steps.check-formula-for-retrieval.outputs.formula_hash"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "formula_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "check_response": "$steps.check-formula-for-retrieval.outputs.check_response",
+        "formula_hash": "$steps.check-formula-for-retrieval.outputs.formula_hash",
+        "formula_details": "$steps.get-formula-details.outputs.formula_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

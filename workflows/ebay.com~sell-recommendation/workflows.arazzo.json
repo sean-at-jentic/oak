@@ -1,0 +1,214 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/ebay.com/sell-recommendation/v1.1.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "retrieve-all-recommended-listings-paginated",
+      "summary": "Systematically retrieves all listings recommended for promotion by handling the API's pagination. This ensures the user gets the complete set of recommendations, especially for large inventories.",
+      "description": "Systematically retrieves all listings recommended for promotion by handling the API's pagination. This ensures the user gets the complete set of recommendations, especially for large inventories.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "filter": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "X-EBAY-C-MARKETPLACE-ID": {
+            "type": "string"
+          },
+          "get-first-page-recommendations_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-first-page-recommendations",
+          "description": "Retrieves the first page of recommended listings by calling the find method with offset=0 and a specified limit.",
+          "operationId": "findListingRecommendations",
+          "parameters": [
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "X-EBAY-C-MARKETPLACE-ID",
+              "in": "header",
+              "value": "$inputs.X-EBAY-C-MARKETPLACE-ID"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.get-first-page-recommendations_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "listingRecommendations": "$response.body",
+            "total": "$response.body",
+            "limit": "$response.body",
+            "offset": "$response.body",
+            "next": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-next-page-recommendations",
+          "description": "Retrieves subsequent pages of recommended listings using the 'offset' and 'limit' from the previous step's output until all recommendations are fetched. Note: This step represents the loop logic; in practice, it would be called repeatedly.",
+          "operationId": "findListingRecommendations",
+          "parameters": [
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$steps.get-first-page-recommendations.outputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$steps.get-first-page-recommendations.outputs.offset"
+            },
+            {
+              "name": "X-EBAY-C-MARKETPLACE-ID",
+              "in": "header",
+              "value": "$inputs.X-EBAY-C-MARKETPLACE-ID"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "offset": "$steps.get-first-page-recommendations.outputs.offset",
+              "limit": "$steps.get-first-page-recommendations.outputs.limit"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "listingRecommendations": "$response.body",
+            "total": "$response.body",
+            "limit": "$response.body",
+            "offset": "$response.body",
+            "next": "$response.body",
+            "prev": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "listingRecommendations": "$steps.get-next-page-recommendations.outputs.listingRecommendations",
+        "total": "$steps.get-next-page-recommendations.outputs.total",
+        "limit": "$steps.get-next-page-recommendations.outputs.limit",
+        "offset": "$steps.get-next-page-recommendations.outputs.offset",
+        "next": "$steps.get-next-page-recommendations.outputs.next",
+        "prev": "$steps.get-next-page-recommendations.outputs.prev"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

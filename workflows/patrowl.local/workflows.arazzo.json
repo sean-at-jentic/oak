@@ -1,0 +1,428 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/patrowl.local/main/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "perform-security-scan-and-retrieve-findings",
+      "summary": "Initiates a security scan against specified assets, monitors its status until completion, and then retrieves the identified findings. This is the primary workflow for utilizing a Patrowl engine.",
+      "description": "Initiates a security scan against specified assets, monitors its status until completion, and then retrieves the identified findings. This is the primary workflow for utilizing a Patrowl engine.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "start-scan_body": {
+            "type": "object"
+          },
+          "scanId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "start-scan",
+          "description": "Starts a new security scan with defined assets and options.",
+          "operationId": "StartScanPage",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.start-scan_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "scanId": "$response.body",
+            "scanStartResponse": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-scan-status",
+          "description": "Checks the current status of the initiated scan. This step might need to be polled until the scan status indicates completion.",
+          "operationId": "StatusScanPage",
+          "parameters": [
+            {
+              "name": "scanId",
+              "in": "path",
+              "value": "$steps.start-scan.outputs.scanId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "scanStatusResponse": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-scan-findings",
+          "description": "Retrieves the detailed findings once the scan is finished.",
+          "operationId": "GetFindingPage",
+          "parameters": [
+            {
+              "name": "scanId",
+              "in": "path",
+              "value": "$steps.start-scan.outputs.scanId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "scanFindings": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "scanId": "$steps.start-scan.outputs.scanId",
+        "scanStartResponse": "$steps.start-scan.outputs.scanStartResponse",
+        "scanStatusResponse": "$steps.check-scan-status.outputs.scanStatusResponse",
+        "scanFindings": "$steps.get-scan-findings.outputs.scanFindings"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "perform-scan-retrieve-findings-and-clean-up",
+      "summary": "Executes a full scan lifecycle: starts a scan, waits for completion, retrieves findings, and then cleans up the scan data from the engine.",
+      "description": "Executes a full scan lifecycle: starts a scan, waits for completion, retrieves findings, and then cleans up the scan data from the engine.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "start-scan_body": {
+            "type": "object"
+          },
+          "scanId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "start-scan",
+          "description": "Starts a new security scan.",
+          "operationId": "StartScanPage",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.start-scan_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "scanId": "$response.body",
+            "scanStartResponse": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-scan-status",
+          "description": "Checks scan status (assumes polling until complete).",
+          "operationId": "StatusScanPage",
+          "parameters": [
+            {
+              "name": "scanId",
+              "in": "path",
+              "value": "$steps.start-scan.outputs.scanId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "scanStatusResponse": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-scan-findings",
+          "description": "Retrieves findings for the completed scan.",
+          "operationId": "GetFindingPage",
+          "parameters": [
+            {
+              "name": "scanId",
+              "in": "path",
+              "value": "$steps.start-scan.outputs.scanId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "scanFindings": "$response.body"
+          }
+        },
+        {
+          "stepId": "clean-scan-data",
+          "description": "Cleans up the data associated with the specified scan.",
+          "operationId": "CleanScanPage",
+          "parameters": [
+            {
+              "name": "scanId",
+              "in": "path",
+              "value": "$steps.start-scan.outputs.scanId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "cleanScanResponse": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "scanId": "$steps.start-scan.outputs.scanId",
+        "scanStartResponse": "$steps.start-scan.outputs.scanStartResponse",
+        "scanStatusResponse": "$steps.check-scan-status.outputs.scanStatusResponse",
+        "scanFindings": "$steps.get-scan-findings.outputs.scanFindings",
+        "cleanScanResponse": "$steps.clean-scan-data.outputs.cleanScanResponse"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "start-and-stop-a-scan",
+      "summary": "Initiates a security scan and subsequently stops it before completion. Useful for cancelling scans that are no longer needed or running too long.",
+      "description": "Initiates a security scan and subsequently stops it before completion. Useful for cancelling scans that are no longer needed or running too long.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "start-scan_body": {
+            "type": "object"
+          },
+          "scanId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "start-scan",
+          "description": "Starts a new security scan with defined assets and options.",
+          "operationId": "StartScanPage",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.start-scan_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "scanId": "$response.body",
+            "scanStartResponse": "$response.body"
+          }
+        },
+        {
+          "stepId": "stop-scan",
+          "description": "Stops the specified running scan.",
+          "operationId": "StopScanPage",
+          "parameters": [
+            {
+              "name": "scanId",
+              "in": "path",
+              "value": "$steps.start-scan.outputs.scanId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "stopScanResponse": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "scanId": "$steps.start-scan.outputs.scanId",
+        "scanStartResponse": "$steps.start-scan.outputs.scanStartResponse",
+        "stopScanResponse": "$steps.stop-scan.outputs.stopScanResponse"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "check-engine-health-and-info",
+      "summary": "Verifies if the Patrowl engine is live, ready to accept requests, and retrieves basic information about the engine.",
+      "description": "Verifies if the Patrowl engine is live, ready to accept requests, and retrieves basic information about the engine.",
+      "steps": [
+        {
+          "stepId": "check-liveness",
+          "description": "Checks if the engine process is running.",
+          "operationId": "getLivenessPage",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "livenessStatus": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-readiness",
+          "description": "Checks if the engine is ready to accept scan requests.",
+          "operationId": "getReadinessPage",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "readinessStatus": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-engine-info",
+          "description": "Retrieves basic information about the engine.",
+          "operationId": "getInfoPage",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "engineInfoResponse": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "livenessStatus": "$steps.check-liveness.outputs.livenessStatus",
+        "readinessStatus": "$steps.check-readiness.outputs.readinessStatus",
+        "engineInfoResponse": "$steps.get-engine-info.outputs.engineInfoResponse"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

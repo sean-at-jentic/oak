@@ -1,0 +1,185 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/ebay.com/sell-negotiation/v1.1.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "send-proactive-discount-offer",
+      "summary": "Identifies seller listings that have attracted buyer interest (e.g., watched, added to cart) and sends a time-limited discount offer to those interested buyers for a specific listing to encourage purchase and increase sales velocity.",
+      "description": "Identifies seller listings that have attracted buyer interest (e.g., watched, added to cart) and sends a time-limited discount offer to those interested buyers for a specific listing to encourage purchase and increase sales velocity.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "X-EBAY-C-MARKETPLACE-ID": {
+            "type": "string"
+          },
+          "Content-Type": {
+            "type": "string"
+          },
+          "send-offer-for-one-item_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-eligible-items",
+          "description": "Retrieve a list of the seller's listings that have interested buyers and are eligible for sending offers.",
+          "operationId": "findEligibleItems",
+          "parameters": [
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "X-EBAY-C-MARKETPLACE-ID",
+              "in": "header",
+              "value": "$inputs.X-EBAY-C-MARKETPLACE-ID"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "eligibleItems": "$response.body",
+            "total": "$response.body",
+            "next": "$response.body",
+            "prev": "$response.body"
+          }
+        },
+        {
+          "stepId": "send-offer-for-one-item",
+          "description": "Send a discount offer for a specific eligible listing (identified in the previous step) to all interested buyers.",
+          "operationId": "sendOfferToInterestedBuyers",
+          "parameters": [
+            {
+              "name": "X-EBAY-C-MARKETPLACE-ID",
+              "in": "header",
+              "value": "$inputs.X-EBAY-C-MARKETPLACE-ID"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.send-offer-for-one-item_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "offers": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "eligibleItems": "$steps.find-eligible-items.outputs.eligibleItems",
+        "total": "$steps.find-eligible-items.outputs.total",
+        "next": "$steps.find-eligible-items.outputs.next",
+        "prev": "$steps.find-eligible-items.outputs.prev",
+        "offers": "$steps.send-offer-for-one-item.outputs.offers"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

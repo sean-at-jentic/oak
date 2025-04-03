@@ -1,0 +1,551 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/apache.org/qakka/v1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "process-messages-from-queue",
+      "summary": "Retrieves messages from a specific queue, processes them (implicitly), and acknowledges successful processing.",
+      "description": "Retrieves messages from a specific queue, processes them (implicitly), and acknowledges successful processing.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "queueName": {
+            "type": "string"
+          },
+          "count": {
+            "type": "string"
+          },
+          "queueMessageId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-messages",
+          "description": "Retrieve one or more messages waiting in the specified queue.",
+          "operationId": "getNextMessages",
+          "parameters": [
+            {
+              "name": "queueName",
+              "in": "path",
+              "value": "$inputs.queueName"
+            },
+            {
+              "name": "count",
+              "in": "query",
+              "value": "$inputs.count"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "queueMessages": "$response.body"
+          }
+        },
+        {
+          "stepId": "acknowledge-message",
+          "description": "Acknowledge that a specific message has been successfully processed and remove it from the queue.",
+          "operationId": "ackMessage",
+          "parameters": [
+            {
+              "name": "queueName",
+              "in": "path",
+              "value": "$steps.get-messages.outputs.queueMessages.queueName"
+            },
+            {
+              "name": "queueMessageId",
+              "in": "path",
+              "value": "$steps.get-messages.outputs.queueMessages.queueMessageId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "acknowledgementResponse": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "queueMessages": "$steps.get-messages.outputs.queueMessages",
+        "acknowledgementResponse": "$steps.acknowledge-message.outputs.acknowledgementResponse"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "send-and-retrieve-message-with-data",
+      "summary": "Sends a binary message to a queue, retrieves the message details, fetches the associated data payload, and finally acknowledges the message.",
+      "description": "Sends a binary message to a queue, retrieves the message details, fetches the associated data payload, and finally acknowledges the message.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "queueName": {
+            "type": "string"
+          },
+          "regions": {
+            "type": "string"
+          },
+          "delay": {
+            "type": "string"
+          },
+          "expiration": {
+            "type": "string"
+          },
+          "contentType": {
+            "type": "string"
+          },
+          "send-binary-message_body": {
+            "type": "object"
+          },
+          "count": {
+            "type": "string"
+          },
+          "queueMessageId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "send-binary-message",
+          "description": "Send a message with binary data to a specified queue.",
+          "operationId": "sendMessageBinary",
+          "parameters": [
+            {
+              "name": "queueName",
+              "in": "path",
+              "value": "$inputs.queueName"
+            },
+            {
+              "name": "regions",
+              "in": "query",
+              "value": "$inputs.regions"
+            },
+            {
+              "name": "delay",
+              "in": "query",
+              "value": "$inputs.delay"
+            },
+            {
+              "name": "expiration",
+              "in": "query",
+              "value": "$inputs.expiration"
+            },
+            {
+              "name": "contentType",
+              "in": "query",
+              "value": "$inputs.contentType"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/octet-stream",
+            "payload": "$inputs.send-binary-message_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sendResponse": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-next-message-info",
+          "description": "Retrieve the next available message's metadata from the queue.",
+          "operationId": "getNextMessages",
+          "parameters": [
+            {
+              "name": "queueName",
+              "in": "path",
+              "value": "$inputs.queueName"
+            },
+            {
+              "name": "count",
+              "in": "query",
+              "value": "$inputs.count"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "queueMessageId": "$response.body",
+            "messageId": "$response.body",
+            "contentType": "$response.body",
+            "href": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-message-payload",
+          "description": "Retrieve the actual data payload associated with a specific queue message.",
+          "operationId": "getMessageData",
+          "parameters": [
+            {
+              "name": "queueName",
+              "in": "path",
+              "value": "$inputs.queueName"
+            },
+            {
+              "name": "queueMessageId",
+              "in": "path",
+              "value": "$inputs.queueMessageId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "messageData": "$response.body"
+          }
+        },
+        {
+          "stepId": "acknowledge-processed-message",
+          "description": "Acknowledge that the message (including its data) has been processed.",
+          "operationId": "ackMessage",
+          "parameters": [
+            {
+              "name": "queueName",
+              "in": "path",
+              "value": "$inputs.queueName"
+            },
+            {
+              "name": "queueMessageId",
+              "in": "path",
+              "value": "$inputs.queueMessageId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "acknowledgementResponse": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "sendResponse": "$steps.send-binary-message.outputs.sendResponse",
+        "queueMessageId": "$steps.get-next-message-info.outputs.queueMessageId",
+        "messageId": "$steps.get-next-message-info.outputs.messageId",
+        "contentType": "$steps.get-next-message-info.outputs.contentType",
+        "href": "$steps.get-next-message-info.outputs.href",
+        "messageData": "$steps.get-message-payload.outputs.messageData",
+        "acknowledgementResponse": "$steps.acknowledge-processed-message.outputs.acknowledgementResponse"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "queue-setup-and-configuration-update",
+      "summary": "Creates a new queue and then updates its configuration.",
+      "description": "Creates a new queue and then updates its configuration.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "queueName": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-new-queue",
+          "description": "Create a new message queue.",
+          "operationId": "createQueue",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "createResponse": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-queue-configuration",
+          "description": "Update the configuration settings for the newly created queue.",
+          "operationId": "updateQueueConfig",
+          "parameters": [
+            {
+              "name": "queueName",
+              "in": "path",
+              "value": "$inputs.queueName"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updateResponse": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "createResponse": "$steps.create-new-queue.outputs.createResponse",
+        "updateResponse": "$steps.update-queue-configuration.outputs.updateResponse"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "inspect-queue-configuration",
+      "summary": "Retrieves the list of available queues and then fetches the configuration for a specific queue.",
+      "description": "Retrieves the list of available queues and then fetches the configuration for a specific queue.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "queueName": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-all-queues",
+          "description": "Get a list of all available queues.",
+          "operationId": "getListOfQueues",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "queuesList": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-specific-queue-config",
+          "description": "Retrieve the configuration details for a specific queue from the list.",
+          "operationId": "getQueueConfig",
+          "parameters": [
+            {
+              "name": "queueName",
+              "in": "path",
+              "value": "$steps.list-all-queues.outputs.queuesList.queues[0].name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "queueConfig": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "queuesList": "$steps.list-all-queues.outputs.queuesList",
+        "queueConfig": "$steps.get-specific-queue-config.outputs.queueConfig"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "delete-specific-queue",
+      "summary": "Identifies a queue from the list of all queues and then deletes it.",
+      "description": "Identifies a queue from the list of all queues and then deletes it.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "queueName": {
+            "type": "string"
+          },
+          "confirm": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-queues-for-deletion",
+          "description": "Retrieve the list of all queues to identify the one to delete.",
+          "operationId": "getListOfQueues",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "queuesList": "$response.body"
+          }
+        },
+        {
+          "stepId": "delete-selected-queue",
+          "description": "Delete a specific queue identified from the list.",
+          "operationId": "deleteQueue",
+          "parameters": [
+            {
+              "name": "queueName",
+              "in": "path",
+              "value": "$steps.list-queues-for-deletion.outputs.queuesList.queues[0].name"
+            },
+            {
+              "name": "confirm",
+              "in": "query",
+              "value": "$inputs.confirm"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "deleteResponse": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "queuesList": "$steps.list-queues-for-deletion.outputs.queuesList",
+        "deleteResponse": "$steps.delete-selected-queue.outputs.deleteResponse"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

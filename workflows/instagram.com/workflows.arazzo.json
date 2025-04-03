@@ -1,0 +1,881 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/instagram.com/main/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "interact-with-media-like-and-comment",
+      "summary": "View a specific media post, like it, retrieve its comments, and add a new comment.",
+      "description": "View a specific media post, like it, retrieve its comments, and add a new comment.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "media-id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-media-info",
+          "description": "Get detailed information about a specific media object.",
+          "operationPath": "openapi_source#/paths/~1media~1{media-id}/get",
+          "parameters": [
+            {
+              "name": "media-id",
+              "in": "path",
+              "value": "$inputs.media-id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "media_entry": "$response.body",
+            "media_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "like-media",
+          "description": "Set a like on the media object by the authenticated user.",
+          "operationPath": "openapi_source#/paths/~1media~1{media-id}~1likes/post",
+          "parameters": [
+            {
+              "name": "media-id",
+              "in": "path",
+              "value": "$steps.get-media-info.outputs.media_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "like_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-media-comments",
+          "description": "Retrieve the list of comments for the media object.",
+          "operationPath": "openapi_source#/paths/~1media~1{media-id}~1comments/get",
+          "parameters": [
+            {
+              "name": "media-id",
+              "in": "path",
+              "value": "$steps.get-media-info.outputs.media_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "comments_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "post-comment",
+          "description": "Create a new comment on the media object.",
+          "operationPath": "openapi_source#/paths/~1media~1{media-id}~1comments/post",
+          "parameters": [
+            {
+              "name": "media-id",
+              "in": "path",
+              "value": "$steps.get-media-info.outputs.media_id"
+            },
+            {
+              "name": "text",
+              "in": "query",
+              "value": "$inputs.text"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "post_comment_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "media_entry": "$steps.get-media-info.outputs.media_entry",
+        "media_id": "$steps.get-media-info.outputs.media_id",
+        "like_status": "$steps.like-media.outputs.like_status",
+        "comments_list": "$steps.get-media-comments.outputs.comments_list",
+        "post_comment_status": "$steps.post-comment.outputs.post_comment_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "find-and-follow-a-user",
+      "summary": "Search for a specific user by name, view their profile, and then follow them.",
+      "description": "Search for a specific user by name, view their profile, and then follow them.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string"
+          },
+          "count": {
+            "type": "string"
+          },
+          "user-id": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-user",
+          "description": "Search for users based on a query string (name).",
+          "operationPath": "openapi_source#/paths/~1users~1search/get",
+          "parameters": [
+            {
+              "name": "q",
+              "in": "query",
+              "value": "$inputs.q"
+            },
+            {
+              "name": "count",
+              "in": "query",
+              "value": "$inputs.count"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "found_users": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-user-profile",
+          "description": "Get detailed profile information for a specific user ID found in the search results.",
+          "operationPath": "openapi_source#/paths/~1users~1{user-id}/get",
+          "parameters": [
+            {
+              "name": "user-id",
+              "in": "path",
+              "value": "$steps.search-user.outputs.found_users.data[0].id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_profile": "$response.body",
+            "user_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "follow-user",
+          "description": "Modify the relationship to follow the target user.",
+          "operationPath": "openapi_source#/paths/~1users~1{user-id}~1relationship/post",
+          "parameters": [
+            {
+              "name": "user-id",
+              "in": "path",
+              "value": "$steps.get-user-profile.outputs.user_id"
+            },
+            {
+              "name": "action",
+              "in": "query",
+              "value": "$inputs.action"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "relationship_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "found_users": "$steps.search-user.outputs.found_users",
+        "user_profile": "$steps.get-user-profile.outputs.user_profile",
+        "user_id": "$steps.get-user-profile.outputs.user_id",
+        "relationship_status": "$steps.follow-user.outputs.relationship_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "explore-content-by-tag",
+      "summary": "Search for a relevant tag, get information about it, and then retrieve recent media associated with that tag.",
+      "description": "Search for a relevant tag, get information about it, and then retrieve recent media associated with that tag.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string"
+          },
+          "tag-name": {
+            "type": "string"
+          },
+          "count": {
+            "type": "string"
+          },
+          "min_tag_id": {
+            "type": "string"
+          },
+          "max_tag_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-tag",
+          "description": "Search for tags by name.",
+          "operationPath": "openapi_source#/paths/~1tags~1search/get",
+          "parameters": [
+            {
+              "name": "q",
+              "in": "query",
+              "value": "$inputs.q"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "found_tags": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-tag-info",
+          "description": "Get information about a specific tag, such as media count.",
+          "operationPath": "openapi_source#/paths/~1tags~1{tag-name}/get",
+          "parameters": [
+            {
+              "name": "tag-name",
+              "in": "path",
+              "value": "$steps.search-tag.outputs.found_tags.data[0].name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tag_info": "$response.body",
+            "tag_name": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-recent-tag-media",
+          "description": "Retrieve a list of recent media posts tagged with the specified tag name.",
+          "operationPath": "openapi_source#/paths/~1tags~1{tag-name}~1media~1recent/get",
+          "parameters": [
+            {
+              "name": "tag-name",
+              "in": "path",
+              "value": "$steps.get-tag-info.outputs.tag_name"
+            },
+            {
+              "name": "count",
+              "in": "query",
+              "value": "$inputs.count"
+            },
+            {
+              "name": "min_tag_id",
+              "in": "query",
+              "value": "$inputs.min_tag_id"
+            },
+            {
+              "name": "max_tag_id",
+              "in": "query",
+              "value": "$inputs.max_tag_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tagged_media_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "found_tags": "$steps.search-tag.outputs.found_tags",
+        "tag_info": "$steps.get-tag-info.outputs.tag_info",
+        "tag_name": "$steps.get-tag-info.outputs.tag_name",
+        "tagged_media_list": "$steps.get-recent-tag-media.outputs.tagged_media_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "find-media-near-a-specific-location",
+      "summary": "Search for Instagram locations near a given geographic coordinate, select a location, and retrieve recent media posted from that location.",
+      "description": "Search for Instagram locations near a given geographic coordinate, select a location, and retrieve recent media posted from that location.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "distance": {
+            "type": "string"
+          },
+          "facebook_places_id": {
+            "type": "string"
+          },
+          "foursquare_id": {
+            "type": "string"
+          },
+          "lat": {
+            "type": "string"
+          },
+          "lng": {
+            "type": "string"
+          },
+          "foursquare_v2_id": {
+            "type": "string"
+          },
+          "location-id": {
+            "type": "string"
+          },
+          "min_timestamp": {
+            "type": "string"
+          },
+          "max_timestamp": {
+            "type": "string"
+          },
+          "min_id": {
+            "type": "string"
+          },
+          "max_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-locations",
+          "description": "Search for locations by geographic coordinates (latitude/longitude).",
+          "operationPath": "openapi_source#/paths/~1locations~1search/get",
+          "parameters": [
+            {
+              "name": "distance",
+              "in": "query",
+              "value": "$inputs.distance"
+            },
+            {
+              "name": "facebook_places_id",
+              "in": "query",
+              "value": "$inputs.facebook_places_id"
+            },
+            {
+              "name": "foursquare_id",
+              "in": "query",
+              "value": "$inputs.foursquare_id"
+            },
+            {
+              "name": "lat",
+              "in": "query",
+              "value": "$inputs.lat"
+            },
+            {
+              "name": "lng",
+              "in": "query",
+              "value": "$inputs.lng"
+            },
+            {
+              "name": "foursquare_v2_id",
+              "in": "query",
+              "value": "$inputs.foursquare_v2_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "found_locations": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-location-info",
+          "description": "Get detailed information about a specific location ID found in the search.",
+          "operationPath": "openapi_source#/paths/~1locations~1{location-id}/get",
+          "parameters": [
+            {
+              "name": "location-id",
+              "in": "path",
+              "value": "$steps.search-locations.outputs.found_locations.data[0].id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "location_info": "$response.body",
+            "location_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-recent-location-media",
+          "description": "Retrieve a list of recent media posts associated with the specified location ID.",
+          "operationPath": "openapi_source#/paths/~1locations~1{location-id}~1media~1recent/get",
+          "parameters": [
+            {
+              "name": "location-id",
+              "in": "path",
+              "value": "$steps.get-location-info.outputs.location_id"
+            },
+            {
+              "name": "min_timestamp",
+              "in": "query",
+              "value": "$inputs.min_timestamp"
+            },
+            {
+              "name": "max_timestamp",
+              "in": "query",
+              "value": "$inputs.max_timestamp"
+            },
+            {
+              "name": "min_id",
+              "in": "query",
+              "value": "$inputs.min_id"
+            },
+            {
+              "name": "max_id",
+              "in": "query",
+              "value": "$inputs.max_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "location_media_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "found_locations": "$steps.search-locations.outputs.found_locations",
+        "location_info": "$steps.get-location-info.outputs.location_info",
+        "location_id": "$steps.get-location-info.outputs.location_id",
+        "location_media_list": "$steps.get-recent-location-media.outputs.location_media_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "view-user-profile-and-recent-posts",
+      "summary": "Retrieve basic profile information for a user and then fetch their most recent media posts.",
+      "description": "Retrieve basic profile information for a user and then fetch their most recent media posts.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "user-id": {
+            "type": "string"
+          },
+          "count": {
+            "type": "string"
+          },
+          "max_timestamp": {
+            "type": "string"
+          },
+          "min_timestamp": {
+            "type": "string"
+          },
+          "min_id": {
+            "type": "string"
+          },
+          "max_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-user-info",
+          "description": "Get basic information about a user using their ID.",
+          "operationPath": "openapi_source#/paths/~1users~1{user-id}/get",
+          "parameters": [
+            {
+              "name": "user-id",
+              "in": "path",
+              "value": "$inputs.user-id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_profile": "$response.body",
+            "user_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-user-recent-media",
+          "description": "Get the most recent media published by the specified user.",
+          "operationPath": "openapi_source#/paths/~1users~1{user-id}~1media~1recent/get",
+          "parameters": [
+            {
+              "name": "user-id",
+              "in": "path",
+              "value": "$steps.get-user-info.outputs.user_id"
+            },
+            {
+              "name": "count",
+              "in": "query",
+              "value": "$inputs.count"
+            },
+            {
+              "name": "max_timestamp",
+              "in": "query",
+              "value": "$inputs.max_timestamp"
+            },
+            {
+              "name": "min_timestamp",
+              "in": "query",
+              "value": "$inputs.min_timestamp"
+            },
+            {
+              "name": "min_id",
+              "in": "query",
+              "value": "$inputs.min_id"
+            },
+            {
+              "name": "max_id",
+              "in": "query",
+              "value": "$inputs.max_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_media_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "user_profile": "$steps.get-user-info.outputs.user_profile",
+        "user_id": "$steps.get-user-info.outputs.user_id",
+        "user_media_list": "$steps.get-user-recent-media.outputs.user_media_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-follow-requests",
+      "summary": "Retrieve the list of users requesting to follow the authenticated user, and then approve or ignore a specific request.",
+      "description": "Retrieve the list of users requesting to follow the authenticated user, and then approve or ignore a specific request.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "user-id": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-follow-requests",
+          "description": "List the users who have requested the authenticated user's permission to follow.",
+          "operationPath": "openapi_source#/paths/~1users~1self~1requested-by/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "follow_requests": "$response.body"
+          }
+        },
+        {
+          "stepId": "process-follow-request",
+          "description": "Modify the relationship to approve or ignore a follow request from a specific user.",
+          "operationPath": "openapi_source#/paths/~1users~1{user-id}~1relationship/post",
+          "parameters": [
+            {
+              "name": "user-id",
+              "in": "path",
+              "value": "$steps.get-follow-requests.outputs.follow_requests.data[0].id"
+            },
+            {
+              "name": "action",
+              "in": "query",
+              "value": "$inputs.action"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "relationship_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "follow_requests": "$steps.get-follow-requests.outputs.follow_requests",
+        "relationship_status": "$steps.process-follow-request.outputs.relationship_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "moderate-comments-on-own-media",
+      "summary": "Retrieve recent media posted by the authenticated user, get the comments for a specific post, and delete an unwanted comment.",
+      "description": "Retrieve recent media posted by the authenticated user, get the comments for a specific post, and delete an unwanted comment.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "media-id": {
+            "type": "string"
+          },
+          "comment-id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-comments-for-own-media",
+          "description": "Get the list of comments for a specific media object owned by the user.",
+          "operationPath": "openapi_source#/paths/~1media~1{media-id}~1comments/get",
+          "parameters": [
+            {
+              "name": "media-id",
+              "in": "path",
+              "value": "$steps.get-own-recent-media.outputs.own_media_list.data[0].id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "comments_list": "$response.body",
+            "media_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "delete-comment",
+          "description": "Remove a specific comment from the user's media object.",
+          "operationPath": "openapi_source#/paths/~1media~1{media-id}~1comments~1{comment-id}/delete",
+          "parameters": [
+            {
+              "name": "media-id",
+              "in": "path",
+              "value": "$steps.get-comments-for-own-media.outputs.media_id"
+            },
+            {
+              "name": "comment-id",
+              "in": "path",
+              "value": "$steps.get-comments-for-own-media.outputs.comments_list.data[0].id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "delete_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "comments_list": "$steps.get-comments-for-own-media.outputs.comments_list",
+        "media_id": "$steps.get-comments-for-own-media.outputs.media_id",
+        "delete_status": "$steps.delete-comment.outputs.delete_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

@@ -1,0 +1,442 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/hubapi.com/webhooks/v3/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "initial-app-webhook-configuration-and-first-subscription",
+      "summary": "Sets up the webhook target URL and throttling for an app, then creates the first event subscription. Essential for enabling webhook notifications for a new app integration.",
+      "description": "Sets up the webhook target URL and throttling for an app, then creates the first event subscription. Essential for enabling webhook notifications for a new app integration.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "appId": {
+            "type": "string"
+          },
+          "targetUrl": {
+            "type": "string"
+          },
+          "eventType": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "configure-webhook-settings",
+          "description": "Define the target URL where HubSpot will send notifications and configure throttling limits.",
+          "operationId": "put-/webhooks/v3/{appId}/settings_configure",
+          "parameters": [
+            {
+              "name": "appId",
+              "in": "path",
+              "value": "$inputs.appId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "targetUrl": "$inputs.targetUrl"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "settings_targetUrl": "$response.body",
+            "settings_throttling": "$response.body",
+            "settings_createdAt": "$response.body",
+            "settings_updatedAt": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-first-subscription",
+          "description": "Create the initial subscription to a specific HubSpot event type (e.g., contact creation).",
+          "operationId": "post-/webhooks/v3/{appId}/subscriptions_create",
+          "parameters": [
+            {
+              "name": "appId",
+              "in": "path",
+              "value": "$inputs.appId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "eventType": "$inputs.eventType"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "subscription_id": "$response.body",
+            "subscription_eventType": "$response.body",
+            "subscription_active": "$response.body",
+            "subscription_createdAt": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "settings_targetUrl": "$steps.configure-webhook-settings.outputs.settings_targetUrl",
+        "settings_throttling": "$steps.configure-webhook-settings.outputs.settings_throttling",
+        "settings_createdAt": "$steps.configure-webhook-settings.outputs.settings_createdAt",
+        "settings_updatedAt": "$steps.configure-webhook-settings.outputs.settings_updatedAt",
+        "subscription_id": "$steps.create-first-subscription.outputs.subscription_id",
+        "subscription_eventType": "$steps.create-first-subscription.outputs.subscription_eventType",
+        "subscription_active": "$steps.create-first-subscription.outputs.subscription_active",
+        "subscription_createdAt": "$steps.create-first-subscription.outputs.subscription_createdAt"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "bulk-activatedeactivate-subscriptions",
+      "summary": "Efficiently activates or deactivates multiple webhook subscriptions for an app in a single batch request.",
+      "description": "Efficiently activates or deactivates multiple webhook subscriptions for an app in a single batch request.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "appId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-subscriptions-for-batch-update",
+          "description": "Retrieve the list of subscriptions to identify the IDs needed for the batch update.",
+          "operationId": "get-/webhooks/v3/{appId}/subscriptions_getAll",
+          "parameters": [
+            {
+              "name": "appId",
+              "in": "path",
+              "value": "$inputs.appId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "subscriptions_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "batch-update-subscription-status",
+          "description": "Send a batch request to update the 'active' status of multiple subscriptions.",
+          "operationId": "post-/webhooks/v3/{appId}/subscriptions/batch/update_updateBatch",
+          "parameters": [
+            {
+              "name": "appId",
+              "in": "path",
+              "value": "$inputs.appId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "batch_update_inputs": "$steps.list-subscriptions-for-batch-update.outputs.subscriptions_list.results"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "batch_response_status": "$response.body",
+            "batch_results": "$response.body",
+            "batch_errors": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "subscriptions_list": "$steps.list-subscriptions-for-batch-update.outputs.subscriptions_list",
+        "batch_response_status": "$steps.batch-update-subscription-status.outputs.batch_response_status",
+        "batch_results": "$steps.batch-update-subscription-status.outputs.batch_results",
+        "batch_errors": "$steps.batch-update-subscription-status.outputs.batch_errors"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "review-and-modify-specific-subscription-status",
+      "summary": "Lists existing subscriptions for an app and then updates the active status (pauses or resumes) of a specific subscription.",
+      "description": "Lists existing subscriptions for an app and then updates the active status (pauses or resumes) of a specific subscription.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "appId": {
+            "type": "string"
+          },
+          "subscriptionId": {
+            "type": "string"
+          },
+          "active": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-all-subscriptions",
+          "description": "Retrieve a list of all current webhook subscriptions for the specified app.",
+          "operationId": "get-/webhooks/v3/{appId}/subscriptions_getAll",
+          "parameters": [
+            {
+              "name": "appId",
+              "in": "path",
+              "value": "$inputs.appId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "subscriptions_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-subscription-status",
+          "description": "Update the active status of a single subscription identified by its ID.",
+          "operationId": "patch-/webhooks/v3/{appId}/subscriptions/{subscriptionId}_update",
+          "parameters": [
+            {
+              "name": "subscriptionId",
+              "in": "path",
+              "value": "$steps.list-all-subscriptions.outputs.subscriptions_list.results[0].id"
+            },
+            {
+              "name": "appId",
+              "in": "path",
+              "value": "$inputs.appId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "subscriptionId": "$steps.list-all-subscriptions.outputs.subscriptions_list.results[0].id",
+              "active": "$inputs.active"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_subscription_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "subscriptions_list": "$steps.list-all-subscriptions.outputs.subscriptions_list",
+        "updated_subscription_details": "$steps.update-subscription-status.outputs.updated_subscription_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "update-webhook-target-url-or-throttling",
+      "summary": "Modifies the core webhook settings for an app, such as changing the target URL where notifications are sent or adjusting the throttling configuration.",
+      "description": "Modifies the core webhook settings for an app, such as changing the target URL where notifications are sent or adjusting the throttling configuration.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "appId": {
+            "type": "string"
+          },
+          "targetUrl": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-current-webhook-settings",
+          "description": "Retrieve the current webhook settings (target URL, throttling) for reference before updating.",
+          "operationId": "get-/webhooks/v3/{appId}/settings_getAll",
+          "parameters": [
+            {
+              "name": "appId",
+              "in": "path",
+              "value": "$inputs.appId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "current_settings_targetUrl": "$response.body",
+            "current_settings_throttling": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-webhook-settings",
+          "description": "Update the webhook settings with a new target URL and/or throttling configuration.",
+          "operationId": "put-/webhooks/v3/{appId}/settings_configure",
+          "parameters": [
+            {
+              "name": "appId",
+              "in": "path",
+              "value": "$inputs.appId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "targetUrl": "$inputs.targetUrl"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_settings_targetUrl": "$response.body",
+            "updated_settings_throttling": "$response.body",
+            "updated_settings_createdAt": "$response.body",
+            "updated_settings_updatedAt": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "current_settings_targetUrl": "$steps.get-current-webhook-settings.outputs.current_settings_targetUrl",
+        "current_settings_throttling": "$steps.get-current-webhook-settings.outputs.current_settings_throttling",
+        "updated_settings_targetUrl": "$steps.update-webhook-settings.outputs.updated_settings_targetUrl",
+        "updated_settings_throttling": "$steps.update-webhook-settings.outputs.updated_settings_throttling",
+        "updated_settings_createdAt": "$steps.update-webhook-settings.outputs.updated_settings_createdAt",
+        "updated_settings_updatedAt": "$steps.update-webhook-settings.outputs.updated_settings_updatedAt"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

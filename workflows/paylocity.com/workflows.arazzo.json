@@ -1,0 +1,648 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/paylocity.com/main/2/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "onboard-new-employee-directly",
+      "summary": "Adds a new employee directly into the Paylocity Web Pay system, including essential personal, address, position, pay rate, tax, and status information. This workflow assumes all required data is available upfront.",
+      "description": "Adds a new employee directly into the Paylocity Web Pay system, including essential personal, address, position, pay rate, tax, and status information. This workflow assumes all required data is available upfront.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "companyId": {
+            "type": "string"
+          },
+          "codeResource": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "add-employee_body": {
+            "type": "object"
+          },
+          "employeeId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-company-codes",
+          "description": "Retrieve necessary company codes (e.g., positions, pay grades, tax codes, cost centers) to ensure valid data entry for the new employee. This step might be repeated for different codeResources.",
+          "operationId": "Get All Company Codes and Descriptions by Resource",
+          "parameters": [
+            {
+              "name": "companyId",
+              "in": "path",
+              "value": "$inputs.companyId"
+            },
+            {
+              "name": "codeResource",
+              "in": "path",
+              "value": "$inputs.codeResource"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "companyCodes": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-custom-fields",
+          "description": "Retrieve custom field definitions required by the company for new hires.",
+          "operationId": "Get All Custom Fields by category",
+          "parameters": [
+            {
+              "name": "companyId",
+              "in": "path",
+              "value": "$inputs.companyId"
+            },
+            {
+              "name": "category",
+              "in": "path",
+              "value": "$inputs.category"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "customFieldDefinitions": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-employee",
+          "description": "Submit the new employee's comprehensive data to Paylocity Web Pay.",
+          "operationId": "Add employee",
+          "parameters": [
+            {
+              "name": "companyId",
+              "in": "path",
+              "value": "$inputs.companyId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.add-employee_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "employeeId": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-emergency-contacts",
+          "description": "Add emergency contact information for the newly added employee.",
+          "operationId": "Add or update emergency contacts",
+          "parameters": [
+            {
+              "name": "companyId",
+              "in": "path",
+              "value": "$inputs.companyId"
+            },
+            {
+              "name": "employeeId",
+              "in": "path",
+              "value": "$steps.add-employee.outputs.employeeId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "employeeId": "$steps.add-employee.outputs.employeeId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_message": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-benefit-setup",
+          "description": "Add benefit setup details for the newly added employee.",
+          "operationId": "Update or add employee benefit setup",
+          "parameters": [
+            {
+              "name": "companyId",
+              "in": "path",
+              "value": "$inputs.companyId"
+            },
+            {
+              "name": "employeeId",
+              "in": "path",
+              "value": "$steps.add-employee.outputs.employeeId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "employeeId": "$steps.add-employee.outputs.employeeId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_message": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "companyCodes": "$steps.get-company-codes.outputs.companyCodes",
+        "customFieldDefinitions": "$steps.get-custom-fields.outputs.customFieldDefinitions",
+        "employeeId": "$steps.add-employee.outputs.employeeId",
+        "status_message": "$steps.add-benefit-setup.outputs.status_message"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "update-employee-primary-pay-rate",
+      "summary": "Updates an existing employee's primary pay rate information, including rate/salary, pay type, frequency, and effective date.",
+      "description": "Updates an existing employee's primary pay rate information, including rate/salary, pay type, frequency, and effective date.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "companyId": {
+            "type": "string"
+          },
+          "employeeId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-employee-data",
+          "description": "Retrieve the current full employee record to ensure the update is based on the latest data (optional but recommended for context).",
+          "operationId": "Get employee",
+          "parameters": [
+            {
+              "name": "companyId",
+              "in": "path",
+              "value": "$inputs.companyId"
+            },
+            {
+              "name": "employeeId",
+              "in": "path",
+              "value": "$inputs.employeeId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "employee_record": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-employee-payrate",
+          "description": "Submit the updated primary pay rate details using a PATCH request.",
+          "operationId": "Update employee",
+          "parameters": [
+            {
+              "name": "companyId",
+              "in": "path",
+              "value": "$inputs.companyId"
+            },
+            {
+              "name": "employeeId",
+              "in": "path",
+              "value": "$inputs.employeeId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "employeeId": "$inputs.employeeId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_message": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "employee_record": "$steps.get-employee-data.outputs.employee_record",
+        "status_message": "$steps.update-employee-payrate.outputs.status_message"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-employee-earnings",
+      "summary": "Adds, updates, or retrieves specific earnings information for an employee.",
+      "description": "Adds, updates, or retrieves specific earnings information for an employee.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "companyId": {
+            "type": "string"
+          },
+          "employeeId": {
+            "type": "string"
+          },
+          "add-or-update-earning_body": {
+            "type": "object"
+          },
+          "earningCode": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-or-update-earning",
+          "description": "Add a new earning or update an existing one for the employee.",
+          "operationId": "Add or update an employee earning",
+          "parameters": [
+            {
+              "name": "companyId",
+              "in": "path",
+              "value": "$inputs.companyId"
+            },
+            {
+              "name": "employeeId",
+              "in": "path",
+              "value": "$inputs.employeeId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.add-or-update-earning_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_message": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-specific-earning",
+          "description": "Retrieve the details of a specific earning record identified by code and start date.",
+          "operationId": "Get Earning by Earning Code and Start Date",
+          "parameters": [
+            {
+              "name": "companyId",
+              "in": "path",
+              "value": "$inputs.companyId"
+            },
+            {
+              "name": "employeeId",
+              "in": "path",
+              "value": "$inputs.employeeId"
+            },
+            {
+              "name": "earningCode",
+              "in": "path",
+              "value": "$inputs.earningCode"
+            },
+            {
+              "name": "startDate",
+              "in": "path",
+              "value": "$inputs.startDate"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "earning_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "status_message": "$steps.add-or-update-earning.outputs.status_message",
+        "earning_details": "$steps.get-specific-earning.outputs.earning_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "update-employee-sensitive-data",
+      "summary": "Updates an employee's sensitive information, such as ethnicity, gender identity, veteran status, or disability information.",
+      "description": "Updates an employee's sensitive information, such as ethnicity, gender identity, veteran status, or disability information.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "companyId": {
+            "type": "string"
+          },
+          "codeResource": {
+            "type": "string"
+          },
+          "employeeId": {
+            "type": "string"
+          },
+          "update-sensitive-data_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-sensitive-data-codes",
+          "description": "Retrieve valid codes for sensitive data fields (e.g., ethnicity, legalGender, preferredPronouns, disabilityClassification). Repeat for needed resources.",
+          "operationId": "Get All Company Codes and Descriptions by Resource",
+          "parameters": [
+            {
+              "name": "companyId",
+              "in": "path",
+              "value": "$inputs.companyId"
+            },
+            {
+              "name": "codeResource",
+              "in": "path",
+              "value": "$inputs.codeResource"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sensitiveDataCodes": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-sensitive-data",
+          "description": "Submit the updated sensitive data for the employee.",
+          "operationId": "Add or update Sensitive Data",
+          "parameters": [
+            {
+              "name": "companyId",
+              "in": "path",
+              "value": "$inputs.companyId"
+            },
+            {
+              "name": "employeeId",
+              "in": "path",
+              "value": "$inputs.employeeId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.update-sensitive-data_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_message": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "sensitiveDataCodes": "$steps.get-sensitive-data-codes.outputs.sensitiveDataCodes",
+        "status_message": "$steps.update-sensitive-data.outputs.status_message"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-employee-local-taxes",
+      "summary": "Adds or retrieves local tax information for a specific employee.",
+      "description": "Adds or retrieves local tax information for a specific employee.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "companyId": {
+            "type": "string"
+          },
+          "employeeId": {
+            "type": "string"
+          },
+          "add-local-tax_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-local-tax",
+          "description": "Add a new local tax configuration for the employee.",
+          "operationId": "Add local tax",
+          "parameters": [
+            {
+              "name": "companyId",
+              "in": "path",
+              "value": "$inputs.companyId"
+            },
+            {
+              "name": "employeeId",
+              "in": "path",
+              "value": "$inputs.employeeId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.add-local-tax_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_code_201": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-local-taxes",
+          "description": "Retrieve all existing local tax configurations for the employee.",
+          "operationId": "Get all local taxes",
+          "parameters": [
+            {
+              "name": "companyId",
+              "in": "path",
+              "value": "$inputs.companyId"
+            },
+            {
+              "name": "employeeId",
+              "in": "path",
+              "value": "$inputs.employeeId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "localTaxes_array": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "status_code_201": "$steps.add-local-tax.outputs.status_code_201",
+        "localTaxes_array": "$steps.get-local-taxes.outputs.localTaxes_array"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

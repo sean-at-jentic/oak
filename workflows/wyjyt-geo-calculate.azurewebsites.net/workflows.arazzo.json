@@ -1,0 +1,182 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/wyjyt-geo-calculate.azurewebsites.net/main/0.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "calculate-distance-between-standardized-coordinates",
+      "summary": "Converts two geographic coordinates from potentially different input formats/systems into a single standardized format, and then calculates the distance and bearing between them. Ensures consistency before calculation.",
+      "description": "Converts two geographic coordinates from potentially different input formats/systems into a single standardized format, and then calculates the distance and bearing between them. Ensures consistency before calculation.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "coordinates": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "system": {
+            "type": "string"
+          },
+          "useEllipse": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "convert-coordinate-1",
+          "description": "Convert the first coordinate to a standard format (e.g., latlon decimal). Assumes input 'coordinates' string contains only one coordinate for this step.",
+          "operationId": "Convert",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "coordinates": "$inputs.coordinates",
+              "format": "$inputs.format",
+              "system": "$inputs.system"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "coordinates": "$response.body"
+          }
+        },
+        {
+          "stepId": "convert-coordinate-2",
+          "description": "Convert the second coordinate to the same standard format. Assumes input 'coordinates' string contains only one coordinate for this step.",
+          "operationId": "Convert",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "coordinates": "$inputs.coordinates",
+              "format": "$inputs.format",
+              "system": "$inputs.system"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "coordinates": "$response.body"
+          }
+        },
+        {
+          "stepId": "calculate-distance",
+          "description": "Calculate the distance and bearing between the two standardized coordinates.",
+          "operationId": "Distance",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "coordinate1": "$steps.convert-coordinate-1.outputs.coordinates",
+              "coordinate2": "$steps.convert-coordinate-2.outputs.coordinates",
+              "useEllipse": "$inputs.useEllipse"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "bearing": "$response.body",
+            "meters": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "coordinates": "$steps.convert-coordinate-2.outputs.coordinates",
+        "bearing": "$steps.calculate-distance.outputs.bearing",
+        "meters": "$steps.calculate-distance.outputs.meters"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

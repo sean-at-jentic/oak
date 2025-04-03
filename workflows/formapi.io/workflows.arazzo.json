@@ -1,0 +1,1150 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/formapi.io/main/v1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "generate-single-pdf-from-template",
+      "summary": "Fills a specific PDF template with provided data, checks the generation status, and retrieves the download URL for the final PDF.",
+      "description": "Fills a specific PDF template with provided data, checks the generation status, and retrieves the download URL for the final PDF.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "template_id": {
+            "type": "string"
+          },
+          "wait": {
+            "type": "string"
+          },
+          "generate-pdf_body": {
+            "type": "object"
+          },
+          "submission_id": {
+            "type": "string"
+          },
+          "include_data": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "generate-pdf",
+          "description": "Submit data to generate a PDF from a specific template. Assumes 'wait=true' (default on sync API) or requires polling.",
+          "operationId": "generatePdf",
+          "parameters": [
+            {
+              "name": "template_id",
+              "in": "path",
+              "value": "$inputs.template_id"
+            },
+            {
+              "name": "wait",
+              "in": "query",
+              "value": "$inputs.wait"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.generate-pdf_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "submission.id": "$response.body",
+            "submission.state": "$response.body",
+            "submission.download_url": "$response.body",
+            "submission.permanent_download_url": "$response.body",
+            "status": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-pdf-status",
+          "description": "Check the status of the PDF generation. Useful if 'wait=false' was used in the generation step or to re-check later.",
+          "operationId": "getSubmission",
+          "parameters": [
+            {
+              "name": "submission_id",
+              "in": "path",
+              "value": "$inputs.submission_id"
+            },
+            {
+              "name": "include_data",
+              "in": "query",
+              "value": "$inputs.include_data"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "state": "$response.body",
+            "download_url": "$response.body",
+            "permanent_download_url": "$response.body",
+            "processed_at": "$response.body",
+            "expired": "$response.body",
+            "expires_at": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "submission.id": "$steps.generate-pdf.outputs.submission.id",
+        "submission.state": "$steps.generate-pdf.outputs.submission.state",
+        "submission.download_url": "$steps.generate-pdf.outputs.submission.download_url",
+        "submission.permanent_download_url": "$steps.generate-pdf.outputs.submission.permanent_download_url",
+        "status": "$steps.generate-pdf.outputs.status",
+        "id": "$steps.check-pdf-status.outputs.id",
+        "state": "$steps.check-pdf-status.outputs.state",
+        "download_url": "$steps.check-pdf-status.outputs.download_url",
+        "permanent_download_url": "$steps.check-pdf-status.outputs.permanent_download_url",
+        "processed_at": "$steps.check-pdf-status.outputs.processed_at",
+        "expired": "$steps.check-pdf-status.outputs.expired",
+        "expires_at": "$steps.check-pdf-status.outputs.expires_at"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "request-datasignature-via-email",
+      "summary": "Generates a PDF submission that requires input from one or more people (data requests), creates a token for accessing the form, and optionally logs the email sending event.",
+      "description": "Generates a PDF submission that requires input from one or more people (data requests), creates a token for accessing the form, and optionally logs the email sending event.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "template_id": {
+            "type": "string"
+          },
+          "wait": {
+            "type": "string"
+          },
+          "generate-pdf-with-data-request_body": {
+            "type": "object"
+          },
+          "data_request_id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "log-email-sent-event_body": {
+            "type": "object"
+          },
+          "submission_id": {
+            "type": "string"
+          },
+          "include_data": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "generate-pdf-with-data-request",
+          "description": "Generate a submission specifying data requests for required signers/fillers.",
+          "operationId": "generatePdf",
+          "parameters": [
+            {
+              "name": "template_id",
+              "in": "path",
+              "value": "$inputs.template_id"
+            },
+            {
+              "name": "wait",
+              "in": "query",
+              "value": "$inputs.wait"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.generate-pdf-with-data-request_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "submission.id": "$response.body",
+            "submission.state": "$response.body",
+            "submission.data_requests": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-data-request-token",
+          "description": "Create a unique, expiring token and URL for a specific data request participant.",
+          "operationId": "createDataRequestToken",
+          "parameters": [
+            {
+              "name": "data_request_id",
+              "in": "path",
+              "value": "$inputs.data_request_id"
+            },
+            {
+              "name": "type",
+              "in": "query",
+              "value": "$inputs.type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "token.id": "$response.body",
+            "token.secret": "$response.body",
+            "token.data_request_url": "$response.body",
+            "token.expires_at": "$response.body"
+          }
+        },
+        {
+          "stepId": "log-email-sent-event",
+          "description": "Log an event indicating that the data request link was sent to the participant.",
+          "operationId": "createDataRequestEvent",
+          "parameters": [
+            {
+              "name": "data_request_id",
+              "in": "path",
+              "value": "$inputs.data_request_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.log-email-sent-event_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "event.id": "$response.body",
+            "status": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-data-request-completion",
+          "description": "Periodically check if the participant has completed their data request.",
+          "operationId": "getDataRequest",
+          "parameters": [
+            {
+              "name": "data_request_id",
+              "in": "path",
+              "value": "$inputs.data_request_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "state": "$response.body",
+            "completed_at": "$response.body",
+            "data": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-final-submission-status",
+          "description": "Check the overall submission status after all data requests are expected to be completed.",
+          "operationId": "getSubmission",
+          "parameters": [
+            {
+              "name": "submission_id",
+              "in": "path",
+              "value": "$inputs.submission_id"
+            },
+            {
+              "name": "include_data",
+              "in": "query",
+              "value": "$inputs.include_data"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "state": "$response.body",
+            "download_url": "$response.body",
+            "processed_at": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "submission.id": "$steps.generate-pdf-with-data-request.outputs.submission.id",
+        "submission.state": "$steps.generate-pdf-with-data-request.outputs.submission.state",
+        "submission.data_requests": "$steps.generate-pdf-with-data-request.outputs.submission.data_requests",
+        "token.id": "$steps.create-data-request-token.outputs.token.id",
+        "token.secret": "$steps.create-data-request-token.outputs.token.secret",
+        "token.data_request_url": "$steps.create-data-request-token.outputs.token.data_request_url",
+        "token.expires_at": "$steps.create-data-request-token.outputs.token.expires_at",
+        "event.id": "$steps.log-email-sent-event.outputs.event.id",
+        "status": "$steps.log-email-sent-event.outputs.status",
+        "id": "$steps.check-final-submission-status.outputs.id",
+        "state": "$steps.check-final-submission-status.outputs.state",
+        "completed_at": "$steps.check-data-request-completion.outputs.completed_at",
+        "data": "$steps.check-data-request-completion.outputs.data",
+        "download_url": "$steps.check-final-submission-status.outputs.download_url",
+        "processed_at": "$steps.check-final-submission-status.outputs.processed_at"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "batch-generate-pdfs",
+      "summary": "Efficiently generates multiple PDFs based on a list of data submissions for one or more templates in a single batch job, then checks the batch status.",
+      "description": "Efficiently generates multiple PDFs based on a list of data submissions for one or more templates in a single batch job, then checks the batch status.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "wait": {
+            "type": "string"
+          },
+          "batch-generate-pdfs_body": {
+            "type": "object"
+          },
+          "submission_batch_id": {
+            "type": "string"
+          },
+          "include_submissions": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "batch-generate-pdfs",
+          "description": "Submit multiple PDF generation requests in a single batch. Assumes 'wait=true' (default on sync API) or requires polling.",
+          "operationId": "batchGeneratePdfs",
+          "parameters": [
+            {
+              "name": "wait",
+              "in": "query",
+              "value": "$inputs.wait"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.batch-generate-pdfs_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "submission_batch.id": "$response.body",
+            "submission_batch.state": "$response.body",
+            "submissions": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-batch-status",
+          "description": "Check the status of the batch PDF generation job. Optionally includes details of individual submissions.",
+          "operationId": "getSubmissionBatch",
+          "parameters": [
+            {
+              "name": "submission_batch_id",
+              "in": "path",
+              "value": "$inputs.submission_batch_id"
+            },
+            {
+              "name": "include_submissions",
+              "in": "query",
+              "value": "$inputs.include_submissions"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "state": "$response.body",
+            "completion_percentage": "$response.body",
+            "error_count": "$response.body",
+            "pending_count": "$response.body",
+            "total_count": "$response.body",
+            "processed_at": "$response.body",
+            "submissions": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "submission_batch.id": "$steps.batch-generate-pdfs.outputs.submission_batch.id",
+        "submission_batch.state": "$steps.batch-generate-pdfs.outputs.submission_batch.state",
+        "submissions": "$steps.check-batch-status.outputs.submissions",
+        "id": "$steps.check-batch-status.outputs.id",
+        "state": "$steps.check-batch-status.outputs.state",
+        "completion_percentage": "$steps.check-batch-status.outputs.completion_percentage",
+        "error_count": "$steps.check-batch-status.outputs.error_count",
+        "pending_count": "$steps.check-batch-status.outputs.pending_count",
+        "total_count": "$steps.check-batch-status.outputs.total_count",
+        "processed_at": "$steps.check-batch-status.outputs.processed_at"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-pdf-template-via-presigned-upload",
+      "summary": "Gets a presigned URL, allows client-side upload, creates a template from the upload, checks processing, adds fields, and publishes a version.",
+      "description": "Gets a presigned URL, allows client-side upload, creates a template from the upload, checks processing, adds fields, and publishes a version.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "template_id": {
+            "type": "string"
+          },
+          "publish-template-version_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-presign-url",
+          "description": "Request a presigned URL to upload the template PDF directly to S3.",
+          "operationId": "getPresignUrl",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "url": "$response.body",
+            "fields": "$response.body",
+            "method": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-template-from-upload",
+          "description": "Create the template record using the cache_id obtained after uploading to the presigned URL.",
+          "operationId": "createPDFTemplateFromUpload",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "template.document.id (cache_id)": "$steps.get-presign-url.outputs.fields.key"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "document_state": "$response.body",
+            "name": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-template-processing",
+          "description": "Poll the template status until the document is processed.",
+          "operationId": "getTemplate",
+          "parameters": [
+            {
+              "name": "template_id",
+              "in": "path",
+              "value": "$steps.create-template-from-upload.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "document_state": "$response.body",
+            "document_processed": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-template-fields",
+          "description": "Add form fields (definitions) to the processed template.",
+          "operationId": "addFieldsToTemplate",
+          "parameters": [
+            {
+              "name": "template_id",
+              "in": "path",
+              "value": "$steps.check-template-processing.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "template_id": "$steps.check-template-processing.outputs.id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body",
+            "new_field_ids": "$response.body",
+            "errors": "$response.body"
+          }
+        },
+        {
+          "stepId": "publish-template-version",
+          "description": "Publish the draft template changes as a new version.",
+          "operationId": "publishTemplateVersion",
+          "parameters": [
+            {
+              "name": "template_id",
+              "in": "path",
+              "value": "$inputs.template_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.publish-template-version_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body",
+            "result.version": "$response.body",
+            "result.published_at": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "url": "$steps.get-presign-url.outputs.url",
+        "fields": "$steps.get-presign-url.outputs.fields",
+        "method": "$steps.get-presign-url.outputs.method",
+        "id": "$steps.check-template-processing.outputs.id",
+        "document_state": "$steps.check-template-processing.outputs.document_state",
+        "name": "$steps.create-template-from-upload.outputs.name",
+        "document_processed": "$steps.check-template-processing.outputs.document_processed",
+        "status": "$steps.publish-template-version.outputs.status",
+        "new_field_ids": "$steps.add-template-fields.outputs.new_field_ids",
+        "errors": "$steps.add-template-fields.outputs.errors",
+        "result.version": "$steps.publish-template-version.outputs.result.version",
+        "result.published_at": "$steps.publish-template-version.outputs.result.published_at"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "combine-various-pdf-sources",
+      "summary": "Merges PDFs from diverse sources including existing submissions, templates, uploaded custom files, and external URLs into one document.",
+      "description": "Merges PDFs from diverse sources including existing submissions, templates, uploaded custom files, and external URLs into one document.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "combine-flexible-sources_body": {
+            "type": "object"
+          },
+          "combined_submission_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-presign-url-for-custom-file",
+          "description": "Request a presigned URL to upload a custom PDF file.",
+          "operationId": "getPresignUrl",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "url": "$response.body",
+            "fields": "$response.body",
+            "method": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-custom-file",
+          "description": "Create a custom file record from the uploaded file using its cache_id.",
+          "operationId": "createCustomFileFromUpload",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "cache_id": "$steps.get-presign-url-for-custom-file.outputs.fields.key"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "custom_file.id": "$response.body",
+            "custom_file.url": "$response.body",
+            "status": "$response.body"
+          }
+        },
+        {
+          "stepId": "combine-flexible-sources",
+          "description": "Combine PDFs specifying sources by type (submission, template, custom_file, url) and their respective IDs or URLs.",
+          "operationId": "combinePdfs",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.combine-flexible-sources_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "combined_submission.id": "$response.body",
+            "combined_submission.state": "$response.body",
+            "status": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-flexible-combined-status",
+          "description": "Check the status of the flexible combined submission job.",
+          "operationId": "getCombinedSubmission",
+          "parameters": [
+            {
+              "name": "combined_submission_id",
+              "in": "path",
+              "value": "$inputs.combined_submission_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "state": "$response.body",
+            "download_url": "$response.body",
+            "processed_at": "$response.body",
+            "pdf_hash": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "url": "$steps.get-presign-url-for-custom-file.outputs.url",
+        "fields": "$steps.get-presign-url-for-custom-file.outputs.fields",
+        "method": "$steps.get-presign-url-for-custom-file.outputs.method",
+        "custom_file.id": "$steps.create-custom-file.outputs.custom_file.id",
+        "custom_file.url": "$steps.create-custom-file.outputs.custom_file.url",
+        "status": "$steps.combine-flexible-sources.outputs.status",
+        "combined_submission.id": "$steps.combine-flexible-sources.outputs.combined_submission.id",
+        "combined_submission.state": "$steps.combine-flexible-sources.outputs.combined_submission.state",
+        "id": "$steps.check-flexible-combined-status.outputs.id",
+        "state": "$steps.check-flexible-combined-status.outputs.state",
+        "download_url": "$steps.check-flexible-combined-status.outputs.download_url",
+        "processed_at": "$steps.check-flexible-combined-status.outputs.processed_at",
+        "pdf_hash": "$steps.check-flexible-combined-status.outputs.pdf_hash"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "combine-multiple-generated-pdfs",
+      "summary": "Merges several previously generated PDF submissions into a single combined PDF document.",
+      "description": "Merges several previously generated PDF submissions into a single combined PDF document.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "wait": {
+            "type": "string"
+          },
+          "combine-submissions_body": {
+            "type": "object"
+          },
+          "combined_submission_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "combine-submissions",
+          "description": "Request merging of multiple existing submissions identified by their IDs.",
+          "operationId": "combineSubmissions",
+          "parameters": [
+            {
+              "name": "wait",
+              "in": "query",
+              "value": "$inputs.wait"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.combine-submissions_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "combined_submission.id": "$response.body",
+            "combined_submission.state": "$response.body",
+            "status": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-combined-submission-status",
+          "description": "Check the status of the combined submission job and retrieve the download URL when processed.",
+          "operationId": "getCombinedSubmission",
+          "parameters": [
+            {
+              "name": "combined_submission_id",
+              "in": "path",
+              "value": "$inputs.combined_submission_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "state": "$response.body",
+            "download_url": "$response.body",
+            "processed_at": "$response.body",
+            "pdf_hash": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "combined_submission.id": "$steps.combine-submissions.outputs.combined_submission.id",
+        "combined_submission.state": "$steps.combine-submissions.outputs.combined_submission.state",
+        "status": "$steps.combine-submissions.outputs.status",
+        "id": "$steps.check-combined-submission-status.outputs.id",
+        "state": "$steps.check-combined-submission-status.outputs.state",
+        "download_url": "$steps.check-combined-submission-status.outputs.download_url",
+        "processed_at": "$steps.check-combined-submission-status.outputs.processed_at",
+        "pdf_hash": "$steps.check-combined-submission-status.outputs.pdf_hash"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "generate-and-expire-pdf",
+      "summary": "Generates a PDF from a template with a defined expiration time, retrieves it, and optionally expires it immediately.",
+      "description": "Generates a PDF from a template with a defined expiration time, retrieves it, and optionally expires it immediately.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "template_id": {
+            "type": "string"
+          },
+          "wait": {
+            "type": "string"
+          },
+          "generate-expiring-pdf_body": {
+            "type": "object"
+          },
+          "submission_id": {
+            "type": "string"
+          },
+          "include_data": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "generate-expiring-pdf",
+          "description": "Generate a PDF submission with an expiration time (in seconds).",
+          "operationId": "generatePdf",
+          "parameters": [
+            {
+              "name": "template_id",
+              "in": "path",
+              "value": "$inputs.template_id"
+            },
+            {
+              "name": "wait",
+              "in": "query",
+              "value": "$inputs.wait"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.generate-expiring-pdf_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "submission.id": "$response.body",
+            "submission.state": "$response.body",
+            "submission.expires_at": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-expiring-submission",
+          "description": "Retrieve the submission details, including its download URL and expiration status.",
+          "operationId": "getSubmission",
+          "parameters": [
+            {
+              "name": "submission_id",
+              "in": "path",
+              "value": "$inputs.submission_id"
+            },
+            {
+              "name": "include_data",
+              "in": "query",
+              "value": "$inputs.include_data"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "state": "$response.body",
+            "download_url": "$response.body",
+            "expired": "$response.body",
+            "expires_at": "$response.body"
+          }
+        },
+        {
+          "stepId": "expire-submission-immediately",
+          "description": "Manually expire the submission before its scheduled expiration time.",
+          "operationId": "expireSubmission",
+          "parameters": [
+            {
+              "name": "submission_id",
+              "in": "path",
+              "value": "$steps.get-expiring-submission.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "submission_preview": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "submission.id": "$steps.generate-expiring-pdf.outputs.submission.id",
+        "submission.state": "$steps.generate-expiring-pdf.outputs.submission.state",
+        "submission.expires_at": "$steps.generate-expiring-pdf.outputs.submission.expires_at",
+        "id": "$steps.get-expiring-submission.outputs.id",
+        "state": "$steps.get-expiring-submission.outputs.state",
+        "download_url": "$steps.get-expiring-submission.outputs.download_url",
+        "expired": "$steps.get-expiring-submission.outputs.expired",
+        "expires_at": "$steps.get-expiring-submission.outputs.expires_at",
+        "submission_preview": "$steps.expire-submission-immediately.outputs.submission_preview"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "organize-templates-into-folders",
+      "summary": "Creates a new folder, moves an existing template into it, and then lists the templates within that folder.",
+      "description": "Creates a new folder, moves an existing template into it, and then lists the templates within that folder.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-new-folder_body": {
+            "type": "object"
+          },
+          "template_id": {
+            "type": "string"
+          },
+          "query": {
+            "type": "string"
+          },
+          "parent_folder_id": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "per_page": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-new-folder",
+          "description": "Create a new folder, optionally within a parent folder.",
+          "operationId": "createFolder",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-new-folder_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "name": "$response.body",
+            "path": "$response.body",
+            "parent_folder_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "move-template-to-folder",
+          "description": "Move an existing template into the newly created folder.",
+          "operationId": "moveTemplateToFolder",
+          "parameters": [
+            {
+              "name": "template_id",
+              "in": "path",
+              "value": "$inputs.template_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "parent_folder_id": "$steps.create-new-folder.outputs.id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "name": "$response.body",
+            "path": "$response.body",
+            "parent_folder_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-templates-in-folder",
+          "description": "List templates filtered by the parent folder ID.",
+          "operationId": "listTemplates",
+          "parameters": [
+            {
+              "name": "query",
+              "in": "query",
+              "value": "$inputs.query"
+            },
+            {
+              "name": "parent_folder_id",
+              "in": "query",
+              "value": "$steps.move-template-to-folder.outputs.parent_folder_id"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "per_page",
+              "in": "query",
+              "value": "$inputs.per_page"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "templates": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.move-template-to-folder.outputs.id",
+        "name": "$steps.move-template-to-folder.outputs.name",
+        "path": "$steps.move-template-to-folder.outputs.path",
+        "parent_folder_id": "$steps.move-template-to-folder.outputs.parent_folder_id",
+        "templates": "$steps.list-templates-in-folder.outputs.templates"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

@@ -1,0 +1,860 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/circleci.com/main/v1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "trigger-and-monitor-build",
+      "summary": "Triggers a new build for a specific project and then retrieves its detailed status and information.",
+      "description": "Triggers a new build for a specific project and then retrieves its detailed status and information.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "project": {
+            "type": "string"
+          },
+          "trigger-build_body": {
+            "type": "object"
+          },
+          "build_num": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "trigger-build",
+          "description": "Triggers a new build for the specified project.",
+          "operationPath": "openapi_source#/paths/~1project~1{username}~1{project}/post",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project",
+              "in": "path",
+              "value": "$inputs.project"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.trigger-build_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "build_num": "$response.body",
+            "status": "$response.body",
+            "vcs_revision": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-build-details",
+          "description": "Retrieves the full details of the triggered build.",
+          "operationPath": "openapi_source#/paths/~1project~1{username}~1{project}~1{build_num}/get",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project",
+              "in": "path",
+              "value": "$inputs.project"
+            },
+            {
+              "name": "build_num",
+              "in": "path",
+              "value": "$steps.trigger-build.outputs.build_num"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "build_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "build_num": "$steps.trigger-build.outputs.build_num",
+        "status": "$steps.trigger-build.outputs.status",
+        "vcs_revision": "$steps.trigger-build.outputs.vcs_revision",
+        "build_details": "$steps.get-build-details.outputs.build_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-build-artifacts",
+      "summary": "Finds the latest successful build for a project's main branch and retrieves the list of artifacts produced by it.",
+      "description": "Finds the latest successful build for a project's main branch and retrieves the list of artifacts produced by it.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "project": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "filter": {
+            "type": "string"
+          },
+          "build_num": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-latest-successful-build",
+          "description": "Retrieves recent builds for a project, assuming filtering for the latest successful build on the main branch.",
+          "operationPath": "openapi_source#/paths/~1project~1{username}~1{project}/get",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project",
+              "in": "path",
+              "value": "$inputs.project"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "selected_build_num": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-build-artifacts",
+          "description": "Lists the artifacts produced by the selected build.",
+          "operationPath": "openapi_source#/paths/~1project~1{username}~1{project}~1{build_num}~1artifacts/get",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project",
+              "in": "path",
+              "value": "$inputs.project"
+            },
+            {
+              "name": "build_num",
+              "in": "path",
+              "value": "$steps.find-latest-successful-build.outputs.selected_build_num"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "artifacts_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "selected_build_num": "$steps.find-latest-successful-build.outputs.selected_build_num",
+        "artifacts_list": "$steps.get-build-artifacts.outputs.artifacts_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retry-failed-build-and-check-status",
+      "summary": "Identifies the most recent failed build for a project, retries it, and then retrieves the details of the new build attempt.",
+      "description": "Identifies the most recent failed build for a project, retries it, and then retrieves the details of the new build attempt.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "project": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "filter": {
+            "type": "string"
+          },
+          "build_num": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-failed-build",
+          "description": "Retrieves the most recent build for a project, filtering for a failed status.",
+          "operationPath": "openapi_source#/paths/~1project~1{username}~1{project}/get",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project",
+              "in": "path",
+              "value": "$inputs.project"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "failed_build_num": "$response.body"
+          }
+        },
+        {
+          "stepId": "retry-the-build",
+          "description": "Retries the specified failed build.",
+          "operationPath": "openapi_source#/paths/~1project~1{username}~1{project}~1{build_num}~1retry/post",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project",
+              "in": "path",
+              "value": "$inputs.project"
+            },
+            {
+              "name": "build_num",
+              "in": "path",
+              "value": "$steps.find-failed-build.outputs.failed_build_num"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "new_build_num": "$response.body",
+            "new_build_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-retry-build-details",
+          "description": "Retrieves the full details of the new build created by the retry action.",
+          "operationPath": "openapi_source#/paths/~1project~1{username}~1{project}~1{build_num}/get",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project",
+              "in": "path",
+              "value": "$inputs.project"
+            },
+            {
+              "name": "build_num",
+              "in": "path",
+              "value": "$steps.retry-the-build.outputs.new_build_num"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "retry_build_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "failed_build_num": "$steps.find-failed-build.outputs.failed_build_num",
+        "new_build_num": "$steps.retry-the-build.outputs.new_build_num",
+        "new_build_status": "$steps.retry-the-build.outputs.new_build_status",
+        "retry_build_details": "$steps.get-retry-build-details.outputs.retry_build_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "analyze-test-results-for-latest-branch-build",
+      "summary": "Retrieves the test results from the most recent build completed on a specific branch of a project.",
+      "description": "Retrieves the test results from the most recent build completed on a specific branch of a project.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "project": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "filter": {
+            "type": "string"
+          },
+          "build_num": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-latest-branch-build",
+          "description": "Retrieves the most recent build for a specific branch.",
+          "operationPath": "openapi_source#/paths/~1project~1{username}~1{project}/get",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project",
+              "in": "path",
+              "value": "$inputs.project"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "latest_build_num": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-test-results",
+          "description": "Retrieves the test metadata for the specified build.",
+          "operationPath": "openapi_source#/paths/~1project~1{username}~1{project}~1{build_num}~1tests/get",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project",
+              "in": "path",
+              "value": "$inputs.project"
+            },
+            {
+              "name": "build_num",
+              "in": "path",
+              "value": "$steps.get-latest-branch-build.outputs.latest_build_num"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "test_results": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "latest_build_num": "$steps.get-latest-branch-build.outputs.latest_build_num",
+        "test_results": "$steps.get-test-results.outputs.test_results"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "configure-project-secret-and-trigger-build",
+      "summary": "Adds a new environment variable (e.g., a secret) to a project and then triggers a new build, which can utilize this variable.",
+      "description": "Adds a new environment variable (e.g., a secret) to a project and then triggers a new build, which can utilize this variable.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "project": {
+            "type": "string"
+          },
+          "trigger-build-with-new-secret_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-environment-variable",
+          "description": "Creates a new environment variable for the project.",
+          "operationPath": "openapi_source#/paths/~1project~1{username}~1{project}~1envvar/post",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project",
+              "in": "path",
+              "value": "$inputs.project"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "added_env_var_name": "$response.body"
+          }
+        },
+        {
+          "stepId": "trigger-build-with-new-secret",
+          "description": "Triggers a new build for the project, which can now access the newly added environment variable.",
+          "operationPath": "openapi_source#/paths/~1project~1{username}~1{project}/post",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project",
+              "in": "path",
+              "value": "$inputs.project"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.trigger-build-with-new-secret_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "build_num": "$response.body",
+            "status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "added_env_var_name": "$steps.add-environment-variable.outputs.added_env_var_name",
+        "build_num": "$steps.trigger-build-with-new-secret.outputs.build_num",
+        "status": "$steps.trigger-build-with-new-secret.outputs.status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "clean-cache-and-rerun-build",
+      "summary": "Clears the build cache for a project and then triggers a new build. Useful for troubleshooting cache-related build issues.",
+      "description": "Clears the build cache for a project and then triggers a new build. Useful for troubleshooting cache-related build issues.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "project": {
+            "type": "string"
+          },
+          "trigger-fresh-build_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "clear-project-cache",
+          "description": "Clears the build cache for the specified project.",
+          "operationPath": "openapi_source#/paths/~1project~1{username}~1{project}~1build-cache/delete",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project",
+              "in": "path",
+              "value": "$inputs.project"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "cache_clear_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "trigger-fresh-build",
+          "description": "Triggers a new build for the project after the cache has been cleared.",
+          "operationPath": "openapi_source#/paths/~1project~1{username}~1{project}/post",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project",
+              "in": "path",
+              "value": "$inputs.project"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.trigger-fresh-build_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "build_num": "$response.body",
+            "status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "cache_clear_status": "$steps.clear-project-cache.outputs.cache_clear_status",
+        "build_num": "$steps.trigger-fresh-build.outputs.build_num",
+        "status": "$steps.trigger-fresh-build.outputs.status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "add-and-retrieve-deploy-key",
+      "summary": "Creates a new deploy key for a project and immediately retrieves its details, including the public key needed for configuration in the Git provider.",
+      "description": "Creates a new deploy key for a project and immediately retrieves its details, including the public key needed for configuration in the Git provider.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "project": {
+            "type": "string"
+          },
+          "create-deploy-key_body": {
+            "type": "object"
+          },
+          "fingerprint": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-deploy-key",
+          "description": "Creates a new checkout key of type 'deploy-key'.",
+          "operationPath": "openapi_source#/paths/~1project~1{username}~1{project}~1checkout-key/post",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project",
+              "in": "path",
+              "value": "$inputs.project"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-deploy-key_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "fingerprint": "$response.body",
+            "public_key": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-deploy-key-details",
+          "description": "Retrieves the details of the newly created deploy key using its fingerprint.",
+          "operationPath": "openapi_source#/paths/~1project~1{username}~1{project}~1checkout-key~1{fingerprint}/get",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "project",
+              "in": "path",
+              "value": "$inputs.project"
+            },
+            {
+              "name": "fingerprint",
+              "in": "path",
+              "value": "$steps.create-deploy-key.outputs.fingerprint"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "key_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "fingerprint": "$steps.create-deploy-key.outputs.fingerprint",
+        "public_key": "$steps.create-deploy-key.outputs.public_key",
+        "key_details": "$steps.get-deploy-key-details.outputs.key_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

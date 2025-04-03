@@ -1,0 +1,325 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/languagetool.org/main/1.1.2/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "check-text-with-language-selection",
+      "summary": "Retrieves available languages and then checks a text using a user-selected language, ensuring appropriate rules and spell checking are applied.",
+      "description": "Retrieves available languages and then checks a text using a user-selected language, ensuring appropriate rules and spell checking are applied.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "check-text-selected-language_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-languages",
+          "description": "Fetch the list of supported languages.",
+          "operationPath": "openapi_source#/paths/~1languages/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "languages_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-text-selected-language",
+          "description": "Submit text for checking using a specific language code obtained from the available languages.",
+          "operationPath": "openapi_source#/paths/~1check/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": "$inputs.check-text-selected-language_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "language": "$response.body",
+            "matches": "$response.body",
+            "software": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "languages_list": "$steps.list-languages.outputs.languages_list",
+        "language": "$steps.check-text-selected-language.outputs.language",
+        "matches": "$steps.check-text-selected-language.outputs.matches",
+        "software": "$steps.check-text-selected-language.outputs.software"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-personal-dictionary",
+      "summary": "Allows users to add custom words (e.g., names, technical terms) to their personal dictionary and view the dictionary contents.",
+      "description": "Allows users to add custom words (e.g., names, technical terms) to their personal dictionary and view the dictionary contents.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "add-word-to-dictionary_body": {
+            "type": "object"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "apiKey": {
+            "type": "string"
+          },
+          "dicts": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-word-to-dictionary",
+          "description": "Add a specific word to the user's personal dictionary.",
+          "operationPath": "openapi_source#/paths/~1words~1add/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": "$inputs.add-word-to-dictionary_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "added": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-dictionary-words",
+          "description": "Retrieve the list of words currently in the user's personal dictionary.",
+          "operationPath": "openapi_source#/paths/~1words/get",
+          "parameters": [
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "username",
+              "in": "query",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "apiKey",
+              "in": "query",
+              "value": "$inputs.apiKey"
+            },
+            {
+              "name": "dicts",
+              "in": "query",
+              "value": "$inputs.dicts"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "words": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "added": "$steps.add-word-to-dictionary.outputs.added",
+        "words": "$steps.list-dictionary-words.outputs.words"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "check-text-using-personal-dictionary",
+      "summary": "Adds a word to the personal dictionary and then performs a grammar check, ensuring the newly added word is not flagged as an error.",
+      "description": "Adds a word to the personal dictionary and then performs a grammar check, ensuring the newly added word is not flagged as an error.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "add-custom-word_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-custom-word",
+          "description": "Add a custom word (e.g., a brand name or technical term) to the user's dictionary.",
+          "operationPath": "openapi_source#/paths/~1words~1add/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": "$inputs.add-custom-word_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "added": "$response.body",
+            "username": "$response.body",
+            "apiKey": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-text-with-custom-word",
+          "description": "Check a text containing the custom word; the check should now ignore the added word.",
+          "operationPath": "openapi_source#/paths/~1check/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "username": "$steps.add-custom-word.outputs.username",
+              "apiKey": "$steps.add-custom-word.outputs.apiKey"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "language": "$response.body",
+            "matches": "$response.body",
+            "software": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "added": "$steps.add-custom-word.outputs.added",
+        "username": "$steps.add-custom-word.outputs.username",
+        "apiKey": "$steps.add-custom-word.outputs.apiKey",
+        "language": "$steps.check-text-with-custom-word.outputs.language",
+        "matches": "$steps.check-text-with-custom-word.outputs.matches",
+        "software": "$steps.check-text-with-custom-word.outputs.software"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

@@ -1,0 +1,762 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/lufthansa.com/public/1.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "check-flight-schedule-and-status",
+      "summary": "Find scheduled flights for a specific route and date, then check the real-time status of a selected flight from that schedule.",
+      "description": "Find scheduled flights for a specific route and date, then check the real-time status of a selected flight from that schedule.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "origin": {
+            "type": "string"
+          },
+          "destination": {
+            "type": "string"
+          },
+          "fromDateTime": {
+            "type": "string"
+          },
+          "Accept": {
+            "type": "string"
+          },
+          "directFlights": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "flightNumber": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-flight-schedule",
+          "description": "Retrieve the list of scheduled flights between two airports on a given date.",
+          "operationId": "OperationsSchedulesFromDateTimeByOriginAndDestinationGet",
+          "parameters": [
+            {
+              "name": "origin",
+              "in": "path",
+              "value": "$inputs.origin"
+            },
+            {
+              "name": "destination",
+              "in": "path",
+              "value": "$inputs.destination"
+            },
+            {
+              "name": "fromDateTime",
+              "in": "path",
+              "value": "$inputs.fromDateTime"
+            },
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "directFlights",
+              "in": "query",
+              "value": "$inputs.directFlights"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "scheduleList": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-flight-status",
+          "description": "Get the current status (e.g., delayed, on-time, boarding) of a specific flight identified from the schedule.",
+          "operationId": "OperationsFlightstatusByFlightNumberAndDateGet",
+          "parameters": [
+            {
+              "name": "flightNumber",
+              "in": "path",
+              "value": "$steps.get-flight-schedule.outputs.scheduleList.Flight[0].OperatingCarrier.FlightNumber"
+            },
+            {
+              "name": "date",
+              "in": "path",
+              "value": "$steps.get-flight-schedule.outputs.scheduleList.Flight[0].Departure.ScheduledTimeLocal.DateTime"
+            },
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "flightStatusDetails": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "scheduleList": "$steps.get-flight-schedule.outputs.scheduleList",
+        "flightStatusDetails": "$steps.get-flight-status.outputs.flightStatusDetails"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "passenger-pre-flight-information-check",
+      "summary": "Check the status of a specific flight and then find available lounges at the departure airport, potentially filtering by cabin class or frequent flyer status.",
+      "description": "Check the status of a specific flight and then find available lounges at the departure airport, potentially filtering by cabin class or frequent flyer status.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "flightNumber": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          },
+          "Accept": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "cabinClass": {
+            "type": "string"
+          },
+          "tierCode": {
+            "type": "string"
+          },
+          "lang": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "check-specific-flight-status",
+          "description": "Retrieve the real-time status of a known flight.",
+          "operationId": "OperationsFlightstatusByFlightNumberAndDateGet",
+          "parameters": [
+            {
+              "name": "flightNumber",
+              "in": "path",
+              "value": "$inputs.flightNumber"
+            },
+            {
+              "name": "date",
+              "in": "path",
+              "value": "$inputs.date"
+            },
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "flightStatusDetails": "$response.body",
+            "departureAirportCode": "$response.body",
+            "cabinClass": "$response.body"
+          }
+        },
+        {
+          "stepId": "find-departure-lounges",
+          "description": "Find lounge information at the flight's departure airport.",
+          "operationId": "OffersLoungesByLocationGet",
+          "parameters": [
+            {
+              "name": "location",
+              "in": "path",
+              "value": "$steps.check-specific-flight-status.outputs.departureAirportCode"
+            },
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "cabinClass",
+              "in": "query",
+              "value": "$steps.check-specific-flight-status.outputs.cabinClass"
+            },
+            {
+              "name": "tierCode",
+              "in": "query",
+              "value": "$inputs.tierCode"
+            },
+            {
+              "name": "lang",
+              "in": "query",
+              "value": "$inputs.lang"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "loungeDetails": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "flightStatusDetails": "$steps.check-specific-flight-status.outputs.flightStatusDetails",
+        "departureAirportCode": "$steps.check-specific-flight-status.outputs.departureAirportCode",
+        "cabinClass": "$steps.check-specific-flight-status.outputs.cabinClass",
+        "loungeDetails": "$steps.find-departure-lounges.outputs.loungeDetails"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "check-flight-status-and-view-seatmap",
+      "summary": "Allows a passenger to check their flight's current status and then view the seat map for their cabin class to plan seat selection.",
+      "description": "Allows a passenger to check their flight's current status and then view the seat map for their cabin class to plan seat selection.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "flightNumber": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          },
+          "Accept": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "origin": {
+            "type": "string"
+          },
+          "destination": {
+            "type": "string"
+          },
+          "cabinClass": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-flight-status-for-seatmap",
+          "description": "Get the flight status, which implicitly confirms details like origin, destination, and date needed for the seatmap.",
+          "operationId": "OperationsFlightstatusByFlightNumberAndDateGet",
+          "parameters": [
+            {
+              "name": "flightNumber",
+              "in": "path",
+              "value": "$inputs.flightNumber"
+            },
+            {
+              "name": "date",
+              "in": "path",
+              "value": "$inputs.date"
+            },
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "flightStatusDetails": "$response.body",
+            "origin": "$response.body",
+            "destination": "$response.body",
+            "date": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-seat-map",
+          "description": "Retrieve the seat map for a specific flight, date, and cabin class.",
+          "operationId": "OffersSeatmapsDestinationDateCabinClassByFlightNumberAndOriginGet",
+          "parameters": [
+            {
+              "name": "flightNumber",
+              "in": "path",
+              "value": "$inputs.flightNumber"
+            },
+            {
+              "name": "origin",
+              "in": "path",
+              "value": "$steps.get-flight-status-for-seatmap.outputs.origin"
+            },
+            {
+              "name": "destination",
+              "in": "path",
+              "value": "$steps.get-flight-status-for-seatmap.outputs.destination"
+            },
+            {
+              "name": "date",
+              "in": "path",
+              "value": "$steps.get-flight-status-for-seatmap.outputs.date"
+            },
+            {
+              "name": "cabinClass",
+              "in": "path",
+              "value": "$inputs.cabinClass"
+            },
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "seatMapDetails": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "flightStatusDetails": "$steps.get-flight-status-for-seatmap.outputs.flightStatusDetails",
+        "origin": "$steps.get-flight-status-for-seatmap.outputs.origin",
+        "destination": "$steps.get-flight-status-for-seatmap.outputs.destination",
+        "date": "$steps.get-flight-status-for-seatmap.outputs.date",
+        "seatMapDetails": "$steps.get-seat-map.outputs.seatMapDetails"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "find-nearest-airport-and-check-departures",
+      "summary": "Identify the closest airport based on geographic coordinates and then retrieve the status of upcoming departures from that airport.",
+      "description": "Identify the closest airport based on geographic coordinates and then retrieve the status of upcoming departures from that airport.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "latitude": {
+            "type": "string"
+          },
+          "longitude": {
+            "type": "string"
+          },
+          "Accept": {
+            "type": "string"
+          },
+          "lang": {
+            "type": "string"
+          },
+          "airportCode": {
+            "type": "string"
+          },
+          "fromDateTime": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-nearest-airport",
+          "description": "Find the 5 airports closest to the provided latitude and longitude.",
+          "operationId": "ReferencesAirportsNearestByLatitudeAndLongitudeGet",
+          "parameters": [
+            {
+              "name": "latitude",
+              "in": "path",
+              "value": "$inputs.latitude"
+            },
+            {
+              "name": "longitude",
+              "in": "path",
+              "value": "$inputs.longitude"
+            },
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "lang",
+              "in": "query",
+              "value": "$inputs.lang"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "nearestAirportList": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-departures-from-nearest",
+          "description": "Get the status of departing flights from the identified nearest airport.",
+          "operationId": "OperationsFlightstatusDeparturesByAirportCodeAndFromDateTimeGet",
+          "parameters": [
+            {
+              "name": "airportCode",
+              "in": "path",
+              "value": "$steps.find-nearest-airport.outputs.nearestAirportList.Airport[0].AirportCode"
+            },
+            {
+              "name": "fromDateTime",
+              "in": "path",
+              "value": "$inputs.fromDateTime"
+            },
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "departureFlightsStatus": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "nearestAirportList": "$steps.find-nearest-airport.outputs.nearestAirportList",
+        "departureFlightsStatus": "$steps.get-departures-from-nearest.outputs.departureFlightsStatus"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "check-flight-status-and-aircraft-details",
+      "summary": "Retrieve the status for a specific flight and then look up details about the type of aircraft scheduled for that flight.",
+      "description": "Retrieve the status for a specific flight and then look up details about the type of aircraft scheduled for that flight.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "flightNumber": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          },
+          "Accept": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "aircraftCode": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-flight-status-for-aircraft-check",
+          "description": "Get the flight status, assuming the response includes the aircraft code.",
+          "operationId": "OperationsFlightstatusByFlightNumberAndDateGet",
+          "parameters": [
+            {
+              "name": "flightNumber",
+              "in": "path",
+              "value": "$inputs.flightNumber"
+            },
+            {
+              "name": "date",
+              "in": "path",
+              "value": "$inputs.date"
+            },
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "flightStatusDetails": "$response.body",
+            "aircraftCode": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-aircraft-details",
+          "description": "Retrieve technical details and information about a specific aircraft type using its code.",
+          "operationId": "ReferencesAircraftByAircraftCodeGet",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "aircraftCode",
+              "in": "path",
+              "value": "$steps.get-flight-status-for-aircraft-check.outputs.aircraftCode"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "aircraftDetails": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "flightStatusDetails": "$steps.get-flight-status-for-aircraft-check.outputs.flightStatusDetails",
+        "aircraftCode": "$steps.get-flight-status-for-aircraft-check.outputs.aircraftCode",
+        "aircraftDetails": "$steps.get-aircraft-details.outputs.aircraftDetails"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

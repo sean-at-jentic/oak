@@ -1,0 +1,589 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/etsi.local/MEC010-2_AppPkgMgmt/2.1.1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "onboard-new-application-package",
+      "summary": "Onboards a new MEC application package by creating the resource, uploading the package content, and verifying the onboarding status. This is the fundamental process for adding new applications to the MEC platform.",
+      "description": "Onboards a new MEC application package by creating the resource, uploading the package content, and verifying the onboarding status. This is the fundamental process for adding new applications to the MEC platform.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-package-resource_body": {
+            "type": "object"
+          },
+          "appPkgId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-package-resource",
+          "description": "Creates an application package resource entry in the MEO, providing metadata and the location of the package.",
+          "operationId": "app_packagesPOST",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-package-resource_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "appPkgId": "$response.body",
+            "appDId": "$response.body",
+            "onboardingState": "$response.body",
+            "appPkgContentLink": "$response.body"
+          }
+        },
+        {
+          "stepId": "upload-package-content",
+          "description": "Uploads the actual application package content (e.g., a ZIP file) associated with the created resource.",
+          "operationId": "appPkgPUT",
+          "parameters": [
+            {
+              "name": "appPkgId",
+              "in": "path",
+              "value": "$steps.create-package-resource.outputs.appPkgId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/zip",
+            "payload": {
+              "appPkgId": "$steps.create-package-resource.outputs.appPkgId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "uploadStatus": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-onboarding-status",
+          "description": "Polls the status of the application package resource to confirm it has reached the 'ONBOARDED' state after processing.",
+          "operationId": "app_packageGET",
+          "parameters": [
+            {
+              "name": "appPkgId",
+              "in": "path",
+              "value": "$steps.create-package-resource.outputs.appPkgId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "appPkgInfo": "$response.body",
+            "onboardingState": "$response.body",
+            "operationalState": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "appPkgId": "$steps.create-package-resource.outputs.appPkgId",
+        "appDId": "$steps.create-package-resource.outputs.appDId",
+        "onboardingState": "$steps.check-onboarding-status.outputs.onboardingState",
+        "appPkgContentLink": "$steps.create-package-resource.outputs.appPkgContentLink",
+        "uploadStatus": "$steps.upload-package-content.outputs.uploadStatus",
+        "appPkgInfo": "$steps.check-onboarding-status.outputs.appPkgInfo",
+        "operationalState": "$steps.check-onboarding-status.outputs.operationalState"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-notifications-for-package-changes",
+      "summary": "Sets up, lists, and removes subscriptions for receiving asynchronous notifications about application package events (like onboarding completion, state changes, or deletion).",
+      "description": "Sets up, lists, and removes subscriptions for receiving asynchronous notifications about application package events (like onboarding completion, state changes, or deletion).",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-notification-subscription_body": {
+            "type": "object"
+          },
+          "subscriptionId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-notification-subscription",
+          "description": "Creates a subscription to receive notifications for specific application package events at a given callback URI.",
+          "operationId": "subscriptionsPOST",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-notification-subscription_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "subscriptionId": "$response.body",
+            "subscriptionInfo": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-active-subscriptions",
+          "description": "Retrieves a list of all active notification subscriptions.",
+          "operationId": "subscriptionsGET",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "subscriptionList": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-subscription-details",
+          "description": "Retrieves the details of a specific notification subscription.",
+          "operationId": "individualSubscriptionGET",
+          "parameters": [
+            {
+              "name": "subscriptionId",
+              "in": "path",
+              "value": "$steps.create-notification-subscription.outputs.subscriptionId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "subscriptionInfo": "$response.body"
+          }
+        },
+        {
+          "stepId": "delete-notification-subscription",
+          "description": "Deletes an existing notification subscription.",
+          "operationId": "individualSubscriptionDELETE",
+          "parameters": [
+            {
+              "name": "subscriptionId",
+              "in": "path",
+              "value": "$steps.create-notification-subscription.outputs.subscriptionId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "deletionStatus": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "subscriptionId": "$steps.create-notification-subscription.outputs.subscriptionId",
+        "subscriptionInfo": "$steps.get-subscription-details.outputs.subscriptionInfo",
+        "subscriptionList": "$steps.list-active-subscriptions.outputs.subscriptionList",
+        "deletionStatus": "$steps.delete-notification-subscription.outputs.deletionStatus"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "inspect-application-package-details",
+      "summary": "Retrieves comprehensive information about a specific onboarded application package, including its metadata, application descriptor (AppD), and allows downloading the package content.",
+      "description": "Retrieves comprehensive information about a specific onboarded application package, including its metadata, application descriptor (AppD), and allows downloading the package content.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "appPkgId": {
+            "type": "string"
+          },
+          "filter": {
+            "type": "string"
+          },
+          "all_fields": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "string"
+          },
+          "exclude_fields": {
+            "type": "string"
+          },
+          "exclude_default": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-package-info",
+          "description": "Retrieve the main information record for a specific application package.",
+          "operationId": "app_packageGET",
+          "parameters": [
+            {
+              "name": "appPkgId",
+              "in": "path",
+              "value": "$inputs.appPkgId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "appPkgInfo": "$response.body",
+            "appDId": "$response.body",
+            "appDLink": "$response.body",
+            "appPkgContentLink": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-package-appd",
+          "description": "Retrieve the Application Descriptor (AppD) content for the specified package.",
+          "operationId": "appPkgIdGET",
+          "parameters": [
+            {
+              "name": "appPkgId",
+              "in": "path",
+              "value": "$steps.get-package-info.outputs.appPkgInfo.id"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            },
+            {
+              "name": "all_fields",
+              "in": "query",
+              "value": "$inputs.all_fields"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            },
+            {
+              "name": "exclude_fields",
+              "in": "query",
+              "value": "$inputs.exclude_fields"
+            },
+            {
+              "name": "exclude_default",
+              "in": "query",
+              "value": "$inputs.exclude_default"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "appDContent": "$response.body"
+          }
+        },
+        {
+          "stepId": "download-package-content",
+          "description": "Download the actual binary content of the application package.",
+          "operationId": "appPkgGET",
+          "parameters": [
+            {
+              "name": "appPkgId",
+              "in": "path",
+              "value": "$steps.get-package-info.outputs.appPkgInfo.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "packageBinaryContent": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "appPkgInfo": "$steps.get-package-info.outputs.appPkgInfo",
+        "appDId": "$steps.get-package-info.outputs.appDId",
+        "appDLink": "$steps.get-package-info.outputs.appDLink",
+        "appPkgContentLink": "$steps.get-package-info.outputs.appPkgContentLink",
+        "appDContent": "$steps.get-package-appd.outputs.appDContent",
+        "packageBinaryContent": "$steps.download-package-content.outputs.packageBinaryContent"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "enabledisable-application-package-usage",
+      "summary": "Changes the operational state of an onboarded application package to either allow ('ENABLED') or prevent ('DISABLED') its use for instantiating new application instances.",
+      "description": "Changes the operational state of an onboarded application package to either allow ('ENABLED') or prevent ('DISABLED') its use for instantiating new application instances.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "appPkgId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-current-package-state",
+          "description": "Retrieve the current information and operational state of the application package.",
+          "operationId": "app_packageGET",
+          "parameters": [
+            {
+              "name": "appPkgId",
+              "in": "path",
+              "value": "$inputs.appPkgId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "appPkgInfo": "$response.body",
+            "currentOperationalState": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-package-state",
+          "description": "Updates the operational state of the application package (e.g., from DISABLED to ENABLED).",
+          "operationId": "app_packagePATCH",
+          "parameters": [
+            {
+              "name": "appPkgId",
+              "in": "path",
+              "value": "$steps.get-current-package-state.outputs.appPkgInfo.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "appPkgId": "$steps.get-current-package-state.outputs.appPkgInfo.id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updatedOperationalState": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "appPkgInfo": "$steps.get-current-package-state.outputs.appPkgInfo",
+        "currentOperationalState": "$steps.get-current-package-state.outputs.currentOperationalState",
+        "updatedOperationalState": "$steps.update-package-state.outputs.updatedOperationalState"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "clean-up-unused-application-package",
+      "summary": "Identifies and deletes an application package that is no longer in use, freeing up resources on the MEO. Includes a check to ensure the package is not currently being used.",
+      "description": "Identifies and deletes an application package that is no longer in use, freeing up resources on the MEO. Includes a check to ensure the package is not currently being used.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "appPkgId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "check-package-usage",
+          "description": "Retrieve package details to verify its usage state before deletion.",
+          "operationId": "app_packageGET",
+          "parameters": [
+            {
+              "name": "appPkgId",
+              "in": "path",
+              "value": "$inputs.appPkgId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "appPkgInfo": "$response.body",
+            "usageState": "$response.body"
+          }
+        },
+        {
+          "stepId": "delete-package",
+          "description": "Deletes the specified application package resource and its associated content from the MEO. Should only be performed if usageState is 'NOT_IN_USE'.",
+          "operationId": "app_packageDELETE",
+          "parameters": [
+            {
+              "name": "appPkgId",
+              "in": "path",
+              "value": "$steps.check-package-usage.outputs.appPkgInfo.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "deletionStatus": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "appPkgInfo": "$steps.check-package-usage.outputs.appPkgInfo",
+        "usageState": "$steps.check-package-usage.outputs.usageState",
+        "deletionStatus": "$steps.delete-package.outputs.deletionStatus"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

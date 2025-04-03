@@ -1,0 +1,1075 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/ebay.com/sell-fulfillment/v1.20.6/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "standard-order-fulfillment",
+      "summary": "Finds orders ready for fulfillment, retrieves their details, creates shipping fulfillments (including tracking), and optionally verifies the fulfillment details. This is a core workflow for sellers using the API to manage their shipping process.",
+      "description": "Finds orders ready for fulfillment, retrieves their details, creates shipping fulfillments (including tracking), and optionally verifies the fulfillment details. This is a core workflow for sellers using the API to manage their shipping process.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "fieldGroups": {
+            "type": "string"
+          },
+          "filter": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "orderIds": {
+            "type": "string"
+          },
+          "orderId": {
+            "type": "string"
+          },
+          "Content-Type": {
+            "type": "string"
+          },
+          "fulfillmentId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-new-orders",
+          "description": "Search for orders that are paid but not yet fully shipped.",
+          "operationId": "getOrders",
+          "parameters": [
+            {
+              "name": "fieldGroups",
+              "in": "query",
+              "value": "$inputs.fieldGroups"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "orderIds",
+              "in": "query",
+              "value": "$inputs.orderIds"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "orders": "$response.body",
+            "total": "$response.body",
+            "next": "$response.body",
+            "prev": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-order-details",
+          "description": "Retrieve the full details for a specific order identified in the previous step.",
+          "operationId": "getOrder",
+          "parameters": [
+            {
+              "name": "fieldGroups",
+              "in": "query",
+              "value": "$inputs.fieldGroups"
+            },
+            {
+              "name": "orderId",
+              "in": "path",
+              "value": "$steps.find-new-orders.outputs.orders.orderId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Order": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-fulfillment",
+          "description": "Create a shipping fulfillment record for the order, including line items, shipping carrier, and tracking number.",
+          "operationId": "createShippingFulfillment",
+          "parameters": [
+            {
+              "name": "orderId",
+              "in": "path",
+              "value": "$steps.get-order-details.outputs.Order.orderId"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "orderId": "$steps.get-order-details.outputs.Order.orderId",
+              "ShippingFulfillmentDetails": "$steps.get-order-details.outputs.Order"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Location_Header": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-fulfillment-details",
+          "description": "Retrieve the details of the newly created shipping fulfillment to verify.",
+          "operationId": "getShippingFulfillment",
+          "parameters": [
+            {
+              "name": "fulfillmentId",
+              "in": "path",
+              "value": "$steps.create-fulfillment.outputs.Location_Header"
+            },
+            {
+              "name": "orderId",
+              "in": "path",
+              "value": "$steps.create-fulfillment.outputs.Location_Header"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ShippingFulfillment": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "orders": "$steps.find-new-orders.outputs.orders",
+        "total": "$steps.find-new-orders.outputs.total",
+        "next": "$steps.find-new-orders.outputs.next",
+        "prev": "$steps.find-new-orders.outputs.prev",
+        "Order": "$steps.get-order-details.outputs.Order",
+        "Location_Header": "$steps.create-fulfillment.outputs.Location_Header",
+        "ShippingFulfillment": "$steps.get-fulfillment-details.outputs.ShippingFulfillment"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "payment-dispute-management-contest",
+      "summary": "Identifies payment disputes requiring seller action, retrieves dispute details, uploads supporting evidence files, adds evidence to the dispute record, and formally contests the dispute. This workflow helps sellers manage and respond to buyer payment disputes effectively.",
+      "description": "Identifies payment disputes requiring seller action, retrieves dispute details, uploads supporting evidence files, adds evidence to the dispute record, and formally contests the dispute. This workflow helps sellers manage and respond to buyer payment disputes effectively.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "string"
+          },
+          "buyer_username": {
+            "type": "string"
+          },
+          "open_date_from": {
+            "type": "string"
+          },
+          "open_date_to": {
+            "type": "string"
+          },
+          "payment_dispute_status": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "payment_dispute_id": {
+            "type": "string"
+          },
+          "Content-Type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-actionable-disputes",
+          "description": "Search for payment disputes that currently require action from the seller.",
+          "operationId": "getPaymentDisputeSummaries",
+          "parameters": [
+            {
+              "name": "order_id",
+              "in": "query",
+              "value": "$inputs.order_id"
+            },
+            {
+              "name": "buyer_username",
+              "in": "query",
+              "value": "$inputs.buyer_username"
+            },
+            {
+              "name": "open_date_from",
+              "in": "query",
+              "value": "$inputs.open_date_from"
+            },
+            {
+              "name": "open_date_to",
+              "in": "query",
+              "value": "$inputs.open_date_to"
+            },
+            {
+              "name": "payment_dispute_status",
+              "in": "query",
+              "value": "$inputs.payment_dispute_status"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "paymentDisputeSummaries": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-dispute-details",
+          "description": "Retrieve the full details of a specific payment dispute identified in the previous step.",
+          "operationId": "getPaymentDispute",
+          "parameters": [
+            {
+              "name": "payment_dispute_id",
+              "in": "path",
+              "value": "$steps.find-actionable-disputes.outputs.paymentDisputeSummaries.paymentDisputeId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "PaymentDispute": "$response.body"
+          }
+        },
+        {
+          "stepId": "upload-evidence-file",
+          "description": "Upload a binary evidence file (e.g., proof of shipment, item condition photo). Repeat this step for each file.",
+          "operationId": "uploadEvidenceFile",
+          "parameters": [
+            {
+              "name": "payment_dispute_id",
+              "in": "path",
+              "value": "$steps.get-dispute-details.outputs.PaymentDispute.paymentDisputeId"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "FileEvidence": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-evidence-set",
+          "description": "Associate the uploaded evidence file(s) with the payment dispute, creating a new evidence set.",
+          "operationId": "addEvidence",
+          "parameters": [
+            {
+              "name": "payment_dispute_id",
+              "in": "path",
+              "value": "$steps.get-dispute-details.outputs.PaymentDispute.paymentDisputeId"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "payment_dispute_id": "$steps.get-dispute-details.outputs.PaymentDispute.paymentDisputeId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "AddEvidencePaymentDisputeResponse": "$response.body"
+          }
+        },
+        {
+          "stepId": "contest-the-dispute",
+          "description": "Formally contest the payment dispute after uploading all necessary evidence.",
+          "operationId": "contestPaymentDispute",
+          "parameters": [
+            {
+              "name": "payment_dispute_id",
+              "in": "path",
+              "value": "$steps.get-dispute-details.outputs.PaymentDispute.paymentDisputeId"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "payment_dispute_id": "$steps.get-dispute-details.outputs.PaymentDispute.paymentDisputeId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "204_Success": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "paymentDisputeSummaries": "$steps.find-actionable-disputes.outputs.paymentDisputeSummaries",
+        "PaymentDispute": "$steps.get-dispute-details.outputs.PaymentDispute",
+        "FileEvidence": "$steps.upload-evidence-file.outputs.FileEvidence",
+        "AddEvidencePaymentDisputeResponse": "$steps.add-evidence-set.outputs.AddEvidencePaymentDisputeResponse",
+        "204_Success": "$steps.contest-the-dispute.outputs.204_Success"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "order-refund-process",
+      "summary": "Retrieves details for a specific order, issues a full or partial refund (at order or line item level), and allows checking the refund status later. This workflow handles common post-sale adjustments.",
+      "description": "Retrieves details for a specific order, issues a full or partial refund (at order or line item level), and allows checking the refund status later. This workflow handles common post-sale adjustments.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "fieldGroups": {
+            "type": "string"
+          },
+          "orderId": {
+            "type": "string"
+          },
+          "order_id": {
+            "type": "string"
+          },
+          "Content-Type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-order-for-refund",
+          "description": "Retrieve the full details for the order requiring a refund.",
+          "operationId": "getOrder",
+          "parameters": [
+            {
+              "name": "fieldGroups",
+              "in": "query",
+              "value": "$inputs.fieldGroups"
+            },
+            {
+              "name": "orderId",
+              "in": "path",
+              "value": "$inputs.orderId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Order": "$response.body"
+          }
+        },
+        {
+          "stepId": "issue-order-refund",
+          "description": "Issue a refund for the specified order or specific line items within it.",
+          "operationId": "issueRefund",
+          "parameters": [
+            {
+              "name": "order_id",
+              "in": "path",
+              "value": "$steps.get-order-for-refund.outputs.Order.orderId"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "order_id": "$steps.get-order-for-refund.outputs.Order.orderId",
+              "IssueRefundRequest": "$steps.get-order-for-refund.outputs.Order"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Refund": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-refund-status",
+          "description": "Retrieve the order details again later to check the status of the issued refund.",
+          "operationId": "getOrder",
+          "parameters": [
+            {
+              "name": "fieldGroups",
+              "in": "query",
+              "value": "$inputs.fieldGroups"
+            },
+            {
+              "name": "orderId",
+              "in": "path",
+              "value": "$steps.issue-order-refund.outputs.Refund.refundId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Order": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "Order": "$steps.check-refund-status.outputs.Order",
+        "Refund": "$steps.issue-order-refund.outputs.Refund"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "payment-dispute-management-accept",
+      "summary": "Identifies payment disputes requiring seller action, retrieves dispute details, and formally accepts the dispute, potentially providing a return address if required. This is an alternative resolution path for payment disputes.",
+      "description": "Identifies payment disputes requiring seller action, retrieves dispute details, and formally accepts the dispute, potentially providing a return address if required. This is an alternative resolution path for payment disputes.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "string"
+          },
+          "buyer_username": {
+            "type": "string"
+          },
+          "open_date_from": {
+            "type": "string"
+          },
+          "open_date_to": {
+            "type": "string"
+          },
+          "payment_dispute_status": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "payment_dispute_id": {
+            "type": "string"
+          },
+          "Content-Type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-actionable-disputes",
+          "description": "Search for payment disputes that currently require action from the seller.",
+          "operationId": "getPaymentDisputeSummaries",
+          "parameters": [
+            {
+              "name": "order_id",
+              "in": "query",
+              "value": "$inputs.order_id"
+            },
+            {
+              "name": "buyer_username",
+              "in": "query",
+              "value": "$inputs.buyer_username"
+            },
+            {
+              "name": "open_date_from",
+              "in": "query",
+              "value": "$inputs.open_date_from"
+            },
+            {
+              "name": "open_date_to",
+              "in": "query",
+              "value": "$inputs.open_date_to"
+            },
+            {
+              "name": "payment_dispute_status",
+              "in": "query",
+              "value": "$inputs.payment_dispute_status"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "paymentDisputeSummaries": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-dispute-details",
+          "description": "Retrieve the full details of a specific payment dispute identified in the previous step.",
+          "operationId": "getPaymentDispute",
+          "parameters": [
+            {
+              "name": "payment_dispute_id",
+              "in": "path",
+              "value": "$steps.find-actionable-disputes.outputs.paymentDisputeSummaries.paymentDisputeId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "PaymentDispute": "$response.body"
+          }
+        },
+        {
+          "stepId": "accept-the-dispute",
+          "description": "Formally accept the payment dispute, potentially providing return address details.",
+          "operationId": "acceptPaymentDispute",
+          "parameters": [
+            {
+              "name": "payment_dispute_id",
+              "in": "path",
+              "value": "$steps.get-dispute-details.outputs.PaymentDispute.paymentDisputeId"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "payment_dispute_id": "$steps.get-dispute-details.outputs.PaymentDispute.paymentDisputeId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "204_Success": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "paymentDisputeSummaries": "$steps.find-actionable-disputes.outputs.paymentDisputeSummaries",
+        "PaymentDispute": "$steps.get-dispute-details.outputs.PaymentDispute",
+        "204_Success": "$steps.accept-the-dispute.outputs.204_Success"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "dispute-investigation",
+      "summary": "Finds a specific payment dispute using known criteria (like order ID), retrieves its full details, reviews the activity history, and downloads any associated evidence files provided by the seller.",
+      "description": "Finds a specific payment dispute using known criteria (like order ID), retrieves its full details, reviews the activity history, and downloads any associated evidence files provided by the seller.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "string"
+          },
+          "buyer_username": {
+            "type": "string"
+          },
+          "open_date_from": {
+            "type": "string"
+          },
+          "open_date_to": {
+            "type": "string"
+          },
+          "payment_dispute_status": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "payment_dispute_id": {
+            "type": "string"
+          },
+          "evidence_id": {
+            "type": "string"
+          },
+          "file_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-specific-dispute",
+          "description": "Search for payment dispute summaries using a specific order ID.",
+          "operationId": "getPaymentDisputeSummaries",
+          "parameters": [
+            {
+              "name": "order_id",
+              "in": "query",
+              "value": "$inputs.order_id"
+            },
+            {
+              "name": "buyer_username",
+              "in": "query",
+              "value": "$inputs.buyer_username"
+            },
+            {
+              "name": "open_date_from",
+              "in": "query",
+              "value": "$inputs.open_date_from"
+            },
+            {
+              "name": "open_date_to",
+              "in": "query",
+              "value": "$inputs.open_date_to"
+            },
+            {
+              "name": "payment_dispute_status",
+              "in": "query",
+              "value": "$inputs.payment_dispute_status"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "paymentDisputeSummaries": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-dispute-details",
+          "description": "Retrieve the full details of the specific payment dispute.",
+          "operationId": "getPaymentDispute",
+          "parameters": [
+            {
+              "name": "payment_dispute_id",
+              "in": "path",
+              "value": "$steps.find-specific-dispute.outputs.paymentDisputeSummaries.paymentDisputeId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "PaymentDispute": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-dispute-activity",
+          "description": "Retrieve the chronological activity log for the payment dispute.",
+          "operationId": "getActivities",
+          "parameters": [
+            {
+              "name": "payment_dispute_id",
+              "in": "path",
+              "value": "$steps.get-dispute-details.outputs.PaymentDispute.paymentDisputeId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "PaymentDisputeActivityHistory": "$response.body"
+          }
+        },
+        {
+          "stepId": "download-evidence",
+          "description": "Download a specific evidence file associated with the dispute.",
+          "operationId": "fetchEvidenceContent",
+          "parameters": [
+            {
+              "name": "payment_dispute_id",
+              "in": "path",
+              "value": "$steps.get-dispute-details.outputs.PaymentDispute.paymentDisputeId"
+            },
+            {
+              "name": "evidence_id",
+              "in": "query",
+              "value": "$steps.get-dispute-details.outputs.PaymentDispute.evidence[0].evidenceId"
+            },
+            {
+              "name": "file_id",
+              "in": "query",
+              "value": "$steps.get-dispute-details.outputs.PaymentDispute.evidence[0].files[0].fileId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "binary_file_content": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "paymentDisputeSummaries": "$steps.find-specific-dispute.outputs.paymentDisputeSummaries",
+        "PaymentDispute": "$steps.get-dispute-details.outputs.PaymentDispute",
+        "PaymentDisputeActivityHistory": "$steps.get-dispute-activity.outputs.PaymentDisputeActivityHistory",
+        "binary_file_content": "$steps.download-evidence.outputs.binary_file_content"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "order-status-monitoring",
+      "summary": "Periodically checks for recently modified orders, retrieves detailed status for specific orders, and checks their fulfillment status. Useful for dashboards or automated tracking systems.",
+      "description": "Periodically checks for recently modified orders, retrieves detailed status for specific orders, and checks their fulfillment status. Useful for dashboards or automated tracking systems.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "fieldGroups": {
+            "type": "string"
+          },
+          "filter": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "orderIds": {
+            "type": "string"
+          },
+          "orderId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-modified-orders",
+          "description": "Search for orders modified since a specific timestamp.",
+          "operationId": "getOrders",
+          "parameters": [
+            {
+              "name": "fieldGroups",
+              "in": "query",
+              "value": "$inputs.fieldGroups"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "orderIds",
+              "in": "query",
+              "value": "$inputs.orderIds"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "orders": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-order-status",
+          "description": "Retrieve the full details and current status for a specific order.",
+          "operationId": "getOrder",
+          "parameters": [
+            {
+              "name": "fieldGroups",
+              "in": "query",
+              "value": "$inputs.fieldGroups"
+            },
+            {
+              "name": "orderId",
+              "in": "path",
+              "value": "$steps.find-modified-orders.outputs.orders.orderId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Order": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-fulfillment-status",
+          "description": "Retrieve the fulfillment details for the order to check shipping status.",
+          "operationId": "getShippingFulfillments",
+          "parameters": [
+            {
+              "name": "orderId",
+              "in": "path",
+              "value": "$steps.get-order-status.outputs.Order.orderId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ShippingFulfillmentPagedCollection": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "orders": "$steps.find-modified-orders.outputs.orders",
+        "Order": "$steps.get-order-status.outputs.Order",
+        "ShippingFulfillmentPagedCollection": "$steps.check-fulfillment-status.outputs.ShippingFulfillmentPagedCollection"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

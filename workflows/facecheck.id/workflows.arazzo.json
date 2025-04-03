@@ -1,0 +1,338 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/facecheck.id/main/v1.02/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "basic-face-search",
+      "summary": "Upload an image containing a face and perform a synchronous search across the internet, waiting for the results.",
+      "description": "Upload an image containing a face and perform a synchronous search across the internet, waiting for the results.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "upload-image_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "upload-image",
+          "description": "Uploads one or more images containing faces to initiate a search request.",
+          "operationPath": "openapi_source#/paths/~1api~1upload_pic/post",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": "$inputs.upload-image_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id_search": "$response.body"
+          }
+        },
+        {
+          "stepId": "start-synchronous-search",
+          "description": "Initiates the face search using the ID from the upload step and waits for the results to complete.",
+          "operationPath": "openapi_source#/paths/~1api~1search/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id_search": "$steps.upload-image.outputs.id_search"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "search_results (from output.items)": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id_search": "$steps.upload-image.outputs.id_search",
+        "search_results (from output.items)": "$steps.start-synchronous-search.outputs.search_results (from output.items)"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "asynchronous-face-search-with-status-check",
+      "summary": "Upload an image, start an asynchronous search, and then periodically check the search status until results are available. Suitable for long-running searches.",
+      "description": "Upload an image, start an asynchronous search, and then periodically check the search status until results are available. Suitable for long-running searches.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "upload-image-async_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "upload-image-async",
+          "description": "Uploads one or more images containing faces to initiate a search request.",
+          "operationPath": "openapi_source#/paths/~1api~1upload_pic/post",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": "$inputs.upload-image-async_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id_search": "$response.body"
+          }
+        },
+        {
+          "stepId": "start-asynchronous-search",
+          "description": "Initiates the face search asynchronously, returning immediately with progress information.",
+          "operationPath": "openapi_source#/paths/~1api~1search/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id_search": "$steps.upload-image-async.outputs.id_search"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id_search": "$response.body",
+            "progress": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-search-status",
+          "description": "Checks the status and progress of an ongoing asynchronous search. Repeat this step until the search is complete.",
+          "operationPath": "openapi_source#/paths/~1api~1search/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id_search": "$steps.start-asynchronous-search.outputs.id_search"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "progress": "$response.body",
+            "search_results (from output.items when complete)": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id_search": "$steps.start-asynchronous-search.outputs.id_search",
+        "progress": "$steps.check-search-status.outputs.progress",
+        "search_results (from output.items when complete)": "$steps.check-search-status.outputs.search_results (from output.items when complete)"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "face-search-with-image-refinement",
+      "summary": "Upload multiple images for a search, remove an unwanted image, and then initiate the search with the refined image set.",
+      "description": "Upload multiple images for a search, remove an unwanted image, and then initiate the search with the refined image set.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "upload-multiple-images_body": {
+            "type": "object"
+          },
+          "id_search": {
+            "type": "string"
+          },
+          "id_pic": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "upload-multiple-images",
+          "description": "Uploads multiple images associated with a single search request.",
+          "operationPath": "openapi_source#/paths/~1api~1upload_pic/post",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": "$inputs.upload-multiple-images_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id_search": "$response.body",
+            "uploaded_images (from input array, containing id_pic)": "$response.body"
+          }
+        },
+        {
+          "stepId": "remove-specific-image",
+          "description": "Removes a specific image from the search request using its picture ID.",
+          "operationPath": "openapi_source#/paths/~1api~1delete_pic/post",
+          "parameters": [
+            {
+              "name": "id_search",
+              "in": "query",
+              "value": "$steps.upload-multiple-images.outputs.id_search"
+            },
+            {
+              "name": "id_pic",
+              "in": "query",
+              "value": "$inputs.id_pic"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "deletion_confirmation (message/error status)": "$response.body"
+          }
+        },
+        {
+          "stepId": "start-refined-search",
+          "description": "Initiates the face search using the refined set of images.",
+          "operationPath": "openapi_source#/paths/~1api~1search/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id_search": "$steps.upload-multiple-images.outputs.id_search"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "search_results (from output.items)": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id_search": "$steps.upload-multiple-images.outputs.id_search",
+        "uploaded_images (from input array, containing id_pic)": "$steps.upload-multiple-images.outputs.uploaded_images (from input array, containing id_pic)",
+        "deletion_confirmation (message/error status)": "$steps.remove-specific-image.outputs.deletion_confirmation (message/error status)",
+        "search_results (from output.items)": "$steps.start-refined-search.outputs.search_results (from output.items)"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

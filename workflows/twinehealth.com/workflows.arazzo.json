@@ -1,0 +1,1750 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/twinehealth.com/main/v7.78.1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "api-authentication-and-context-retrieval",
+      "summary": "Authenticates the client application using OAuth 2.0 client credentials and retrieves the associated organization and group context for the obtained token.",
+      "description": "Authenticates the client application using OAuth 2.0 client credentials and retrieves the associated organization and group context for the obtained token.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "include": {
+            "type": "string"
+          },
+          "get-oauth-token_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-oauth-token",
+          "description": "Request an OAuth 2.0 access token using client credentials.",
+          "operationId": "createToken",
+          "parameters": [
+            {
+              "name": "include",
+              "in": "query",
+              "value": "$inputs.include"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.get-oauth-token_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "access_token": "$response.body",
+            "refresh_token": "$response.body",
+            "expires_in": "$response.body",
+            "token_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-token-organization",
+          "description": "Retrieve the organization associated with the access token.",
+          "operationId": "fetchTokenOrganization",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "organization_id": "$response.body",
+            "organization_name": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-token-groups",
+          "description": "Retrieve the groups the access token provides access to.",
+          "operationId": "fetchTokenGroups",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "group_ids": "$response.body",
+            "group_names": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "access_token": "$steps.get-oauth-token.outputs.access_token",
+        "refresh_token": "$steps.get-oauth-token.outputs.refresh_token",
+        "expires_in": "$steps.get-oauth-token.outputs.expires_in",
+        "token_id": "$steps.get-oauth-token.outputs.token_id",
+        "organization_id": "$steps.get-token-organization.outputs.organization_id",
+        "organization_name": "$steps.get-token-organization.outputs.organization_name",
+        "group_ids": "$steps.get-token-groups.outputs.group_ids",
+        "group_names": "$steps.get-token-groups.outputs.group_names"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "sync-patient-record-from-external-system",
+      "summary": "Finds a patient using an external identifier (e.g., from an EMR) and updates their record in Fitbit Plus. Useful for keeping patient demographics synchronized.",
+      "description": "Finds a patient using an external identifier (e.g., from an EMR) and updates their record in Fitbit Plus. Useful for keeping patient demographics synchronized.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "filter[groups]": {
+            "type": "string"
+          },
+          "filter[organization]": {
+            "type": "string"
+          },
+          "filter[identifier][system]": {
+            "type": "string"
+          },
+          "filter[identifier][value]": {
+            "type": "string"
+          },
+          "filter[archived]": {
+            "type": "string"
+          },
+          "filter[created_at]": {
+            "type": "string"
+          },
+          "filter[updated_at]": {
+            "type": "string"
+          },
+          "page[number]": {
+            "type": "string"
+          },
+          "page[size]": {
+            "type": "string"
+          },
+          "page[limit]": {
+            "type": "string"
+          },
+          "page[cursor]": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-patient-by-identifier",
+          "description": "Search for a patient using an identifier system and value within a specific organization.",
+          "operationId": "fetchPatients",
+          "parameters": [
+            {
+              "name": "filter[groups]",
+              "in": "query",
+              "value": "$inputs.filter[groups]"
+            },
+            {
+              "name": "filter[organization]",
+              "in": "query",
+              "value": "$inputs.filter[organization]"
+            },
+            {
+              "name": "filter[identifier][system]",
+              "in": "query",
+              "value": "$inputs.filter[identifier][system]"
+            },
+            {
+              "name": "filter[identifier][value]",
+              "in": "query",
+              "value": "$inputs.filter[identifier][value]"
+            },
+            {
+              "name": "filter[archived]",
+              "in": "query",
+              "value": "$inputs.filter[archived]"
+            },
+            {
+              "name": "filter[created_at]",
+              "in": "query",
+              "value": "$inputs.filter[created_at]"
+            },
+            {
+              "name": "filter[updated_at]",
+              "in": "query",
+              "value": "$inputs.filter[updated_at]"
+            },
+            {
+              "name": "page[number]",
+              "in": "query",
+              "value": "$inputs.page[number]"
+            },
+            {
+              "name": "page[size]",
+              "in": "query",
+              "value": "$inputs.page[size]"
+            },
+            {
+              "name": "page[limit]",
+              "in": "query",
+              "value": "$inputs.page[limit]"
+            },
+            {
+              "name": "page[cursor]",
+              "in": "query",
+              "value": "$inputs.page[cursor]"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "patient_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-patient-record",
+          "description": "Update the found patient's record with new information.",
+          "operationId": "updatePatient",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/vnd.api+json",
+            "payload": {
+              "patient_id": "$steps.find-patient-by-identifier.outputs.patient_list[0].id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_patient_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "patient_list": "$steps.find-patient-by-identifier.outputs.patient_list",
+        "updated_patient_data": "$steps.update-patient-record.outputs.updated_patient_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-patient-care-plan-action",
+      "summary": "Creates a new action within a patient's care plan, retrieves it for verification, and allows for updates.",
+      "description": "Creates a new action within a patient's care plan, retrieves it for verification, and allows for updates.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "filter[groups]": {
+            "type": "string"
+          },
+          "filter[organization]": {
+            "type": "string"
+          },
+          "filter[identifier][system]": {
+            "type": "string"
+          },
+          "filter[identifier][value]": {
+            "type": "string"
+          },
+          "filter[archived]": {
+            "type": "string"
+          },
+          "filter[created_at]": {
+            "type": "string"
+          },
+          "filter[updated_at]": {
+            "type": "string"
+          },
+          "page[number]": {
+            "type": "string"
+          },
+          "page[size]": {
+            "type": "string"
+          },
+          "page[limit]": {
+            "type": "string"
+          },
+          "page[cursor]": {
+            "type": "string"
+          },
+          "filter[patient]": {
+            "type": "string"
+          },
+          "include": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-patient-for-plan",
+          "description": "Find the patient for whom the action will be created.",
+          "operationId": "fetchPatients",
+          "parameters": [
+            {
+              "name": "filter[groups]",
+              "in": "query",
+              "value": "$inputs.filter[groups]"
+            },
+            {
+              "name": "filter[organization]",
+              "in": "query",
+              "value": "$inputs.filter[organization]"
+            },
+            {
+              "name": "filter[identifier][system]",
+              "in": "query",
+              "value": "$inputs.filter[identifier][system]"
+            },
+            {
+              "name": "filter[identifier][value]",
+              "in": "query",
+              "value": "$inputs.filter[identifier][value]"
+            },
+            {
+              "name": "filter[archived]",
+              "in": "query",
+              "value": "$inputs.filter[archived]"
+            },
+            {
+              "name": "filter[created_at]",
+              "in": "query",
+              "value": "$inputs.filter[created_at]"
+            },
+            {
+              "name": "filter[updated_at]",
+              "in": "query",
+              "value": "$inputs.filter[updated_at]"
+            },
+            {
+              "name": "page[number]",
+              "in": "query",
+              "value": "$inputs.page[number]"
+            },
+            {
+              "name": "page[size]",
+              "in": "query",
+              "value": "$inputs.page[size]"
+            },
+            {
+              "name": "page[limit]",
+              "in": "query",
+              "value": "$inputs.page[limit]"
+            },
+            {
+              "name": "page[cursor]",
+              "in": "query",
+              "value": "$inputs.page[cursor]"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "patient_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-plan-summary",
+          "description": "Retrieve the patient's plan summary to get the plan ID.",
+          "operationId": "fetchPatientPlanSummaries",
+          "parameters": [
+            {
+              "name": "filter[patient]",
+              "in": "query",
+              "value": "$inputs.filter[patient]"
+            },
+            {
+              "name": "filter[groups]",
+              "in": "query",
+              "value": "$inputs.filter[groups]"
+            },
+            {
+              "name": "filter[organization]",
+              "in": "query",
+              "value": "$inputs.filter[organization]"
+            },
+            {
+              "name": "include",
+              "in": "query",
+              "value": "$inputs.include"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "plan_summary_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-plan-action",
+          "description": "Create a new action within the patient's plan.",
+          "operationId": "createAction",
+          "requestBody": {
+            "contentType": "application/vnd.api+json",
+            "payload": {
+              "plan_id": "$steps.get-plan-summary.outputs.plan_summary_list[0].id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "created_action_data": "$response.body",
+            "action_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-created-action",
+          "description": "Retrieve the newly created action for verification.",
+          "operationId": "fetchAction",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-plan-action",
+          "description": "Update the details of the action if necessary.",
+          "operationId": "updateAction",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/vnd.api+json",
+            "payload": {
+              "action_id": "$steps.create-plan-action.outputs.action_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "final_action_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "patient_list": "$steps.find-patient-for-plan.outputs.patient_list",
+        "plan_summary_list": "$steps.get-plan-summary.outputs.plan_summary_list",
+        "created_action_data": "$steps.create-plan-action.outputs.created_action_data",
+        "action_id": "$steps.create-plan-action.outputs.action_id",
+        "action_data": "$steps.get-created-action.outputs.action_data",
+        "final_action_data": "$steps.update-plan-action.outputs.final_action_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "full-patient-reward-cycle",
+      "summary": "Sets up a reward program for a group, activates it for a patient, allocates a reward, records the earning of the reward, and finally fulfills the earned reward.",
+      "description": "Sets up a reward program for a group, activates it for a patient, allocates a reward, records the earning of the reward, and finally fulfills the earned reward.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "filter[organization]": {
+            "type": "string"
+          },
+          "filter[name]": {
+            "type": "string"
+          },
+          "filter[groups]": {
+            "type": "string"
+          },
+          "filter[identifier][system]": {
+            "type": "string"
+          },
+          "filter[identifier][value]": {
+            "type": "string"
+          },
+          "filter[archived]": {
+            "type": "string"
+          },
+          "filter[created_at]": {
+            "type": "string"
+          },
+          "filter[updated_at]": {
+            "type": "string"
+          },
+          "page[number]": {
+            "type": "string"
+          },
+          "page[size]": {
+            "type": "string"
+          },
+          "page[limit]": {
+            "type": "string"
+          },
+          "page[cursor]": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-or-create-group",
+          "description": "Find an existing group by name within the organization. (Assumes group exists for this workflow).",
+          "operationId": "fetchGroups",
+          "parameters": [
+            {
+              "name": "filter[organization]",
+              "in": "query",
+              "value": "$inputs.filter[organization]"
+            },
+            {
+              "name": "filter[name]",
+              "in": "query",
+              "value": "$inputs.filter[name]"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "group_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-reward-program",
+          "description": "Create a new reward program associated with the group.",
+          "operationId": "createRewardProgram",
+          "requestBody": {
+            "contentType": "application/vnd.api+json",
+            "payload": {
+              "group_id": "$steps.find-or-create-group.outputs.group_list[0].id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "created_program_data": "$response.body",
+            "program_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "find-reward-patient",
+          "description": "Find the patient to enroll in the reward program.",
+          "operationId": "fetchPatients",
+          "parameters": [
+            {
+              "name": "filter[groups]",
+              "in": "query",
+              "value": "$inputs.filter[groups]"
+            },
+            {
+              "name": "filter[organization]",
+              "in": "query",
+              "value": "$inputs.filter[organization]"
+            },
+            {
+              "name": "filter[identifier][system]",
+              "in": "query",
+              "value": "$inputs.filter[identifier][system]"
+            },
+            {
+              "name": "filter[identifier][value]",
+              "in": "query",
+              "value": "$inputs.filter[identifier][value]"
+            },
+            {
+              "name": "filter[archived]",
+              "in": "query",
+              "value": "$inputs.filter[archived]"
+            },
+            {
+              "name": "filter[created_at]",
+              "in": "query",
+              "value": "$inputs.filter[created_at]"
+            },
+            {
+              "name": "filter[updated_at]",
+              "in": "query",
+              "value": "$inputs.filter[updated_at]"
+            },
+            {
+              "name": "page[number]",
+              "in": "query",
+              "value": "$inputs.page[number]"
+            },
+            {
+              "name": "page[size]",
+              "in": "query",
+              "value": "$inputs.page[size]"
+            },
+            {
+              "name": "page[limit]",
+              "in": "query",
+              "value": "$inputs.page[limit]"
+            },
+            {
+              "name": "page[cursor]",
+              "in": "query",
+              "value": "$inputs.page[cursor]"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "patient_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "activate-reward-program",
+          "description": "Activate the created reward program for the specific patient.",
+          "operationId": "createRewardProgramActivation",
+          "requestBody": {
+            "contentType": "application/vnd.api+json",
+            "payload": {
+              "patient_id": "$steps.find-reward-patient.outputs.patient_list[0].id",
+              "program_id": "$steps.create-reward-program.outputs.program_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "created_activation_data": "$response.body",
+            "activation_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "allocate-reward",
+          "description": "Allocate a specific reward to the patient under the activated program.",
+          "operationId": "createReward",
+          "requestBody": {
+            "contentType": "application/vnd.api+json",
+            "payload": {
+              "activation_id": "$steps.activate-reward-program.outputs.activation_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "created_reward_data": "$response.body",
+            "reward_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "record-reward-earning",
+          "description": "Record that the patient has earned the allocated reward.",
+          "operationId": "createRewardEarning",
+          "requestBody": {
+            "contentType": "application/vnd.api+json",
+            "payload": {
+              "reward_id": "$steps.allocate-reward.outputs.reward_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "created_earning_data": "$response.body",
+            "earning_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-earning-status",
+          "description": "Check if the reward earning is ready for fulfillment.",
+          "operationId": "fetchRewardEarning",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "earning_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "fulfill-reward-earning",
+          "description": "Mark the earned reward as fulfilled.",
+          "operationId": "createRewardEarningFulfillment",
+          "requestBody": {
+            "contentType": "application/vnd.api+json",
+            "payload": {
+              "earning_id": "$steps.record-reward-earning.outputs.earning_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "created_fulfillment_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "group_list": "$steps.find-or-create-group.outputs.group_list",
+        "created_program_data": "$steps.create-reward-program.outputs.created_program_data",
+        "program_id": "$steps.create-reward-program.outputs.program_id",
+        "patient_list": "$steps.find-reward-patient.outputs.patient_list",
+        "created_activation_data": "$steps.activate-reward-program.outputs.created_activation_data",
+        "activation_id": "$steps.activate-reward-program.outputs.activation_id",
+        "created_reward_data": "$steps.allocate-reward.outputs.created_reward_data",
+        "reward_id": "$steps.allocate-reward.outputs.reward_id",
+        "created_earning_data": "$steps.record-reward-earning.outputs.created_earning_data",
+        "earning_id": "$steps.record-reward-earning.outputs.earning_id",
+        "earning_data": "$steps.check-earning-status.outputs.earning_data",
+        "created_fulfillment_data": "$steps.fulfill-reward-earning.outputs.created_fulfillment_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "record-new-patient-health-metric",
+      "summary": "Finds a patient and records a new health metric (e.g., blood pressure, weight) for them. Essential for tracking patient progress.",
+      "description": "Finds a patient and records a new health metric (e.g., blood pressure, weight) for them. Essential for tracking patient progress.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "filter[groups]": {
+            "type": "string"
+          },
+          "filter[organization]": {
+            "type": "string"
+          },
+          "filter[identifier][system]": {
+            "type": "string"
+          },
+          "filter[identifier][value]": {
+            "type": "string"
+          },
+          "filter[archived]": {
+            "type": "string"
+          },
+          "filter[created_at]": {
+            "type": "string"
+          },
+          "filter[updated_at]": {
+            "type": "string"
+          },
+          "page[number]": {
+            "type": "string"
+          },
+          "page[size]": {
+            "type": "string"
+          },
+          "page[limit]": {
+            "type": "string"
+          },
+          "page[cursor]": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-patient",
+          "description": "Search for a patient using an identifier system and value or other filters.",
+          "operationId": "fetchPatients",
+          "parameters": [
+            {
+              "name": "filter[groups]",
+              "in": "query",
+              "value": "$inputs.filter[groups]"
+            },
+            {
+              "name": "filter[organization]",
+              "in": "query",
+              "value": "$inputs.filter[organization]"
+            },
+            {
+              "name": "filter[identifier][system]",
+              "in": "query",
+              "value": "$inputs.filter[identifier][system]"
+            },
+            {
+              "name": "filter[identifier][value]",
+              "in": "query",
+              "value": "$inputs.filter[identifier][value]"
+            },
+            {
+              "name": "filter[archived]",
+              "in": "query",
+              "value": "$inputs.filter[archived]"
+            },
+            {
+              "name": "filter[created_at]",
+              "in": "query",
+              "value": "$inputs.filter[created_at]"
+            },
+            {
+              "name": "filter[updated_at]",
+              "in": "query",
+              "value": "$inputs.filter[updated_at]"
+            },
+            {
+              "name": "page[number]",
+              "in": "query",
+              "value": "$inputs.page[number]"
+            },
+            {
+              "name": "page[size]",
+              "in": "query",
+              "value": "$inputs.page[size]"
+            },
+            {
+              "name": "page[limit]",
+              "in": "query",
+              "value": "$inputs.page[limit]"
+            },
+            {
+              "name": "page[cursor]",
+              "in": "query",
+              "value": "$inputs.page[cursor]"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "patient_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-health-metric",
+          "description": "Create a new health metric record for the specified patient.",
+          "operationId": "createPatientHealthMetric",
+          "requestBody": {
+            "contentType": "application/vnd.api+json",
+            "payload": {
+              "patient_id": "$steps.find-patient.outputs.patient_list[0].id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "created_metric_data": "$response.body",
+            "metric_id": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "patient_list": "$steps.find-patient.outputs.patient_list",
+        "created_metric_data": "$steps.create-health-metric.outputs.created_metric_data",
+        "metric_id": "$steps.create-health-metric.outputs.metric_id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "schedule-and-complete-patient-check-in",
+      "summary": "Schedules a 'plan-check-in' calendar event for a patient and their coach, retrieves the event, and marks it as complete.",
+      "description": "Schedules a 'plan-check-in' calendar event for a patient and their coach, retrieves the event, and marks it as complete.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "filter[groups]": {
+            "type": "string"
+          },
+          "filter[organization]": {
+            "type": "string"
+          },
+          "filter[identifier][system]": {
+            "type": "string"
+          },
+          "filter[identifier][value]": {
+            "type": "string"
+          },
+          "filter[archived]": {
+            "type": "string"
+          },
+          "filter[created_at]": {
+            "type": "string"
+          },
+          "filter[updated_at]": {
+            "type": "string"
+          },
+          "page[number]": {
+            "type": "string"
+          },
+          "page[size]": {
+            "type": "string"
+          },
+          "page[limit]": {
+            "type": "string"
+          },
+          "page[cursor]": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-checkin-patient",
+          "description": "Find the patient for the check-in.",
+          "operationId": "fetchPatients",
+          "parameters": [
+            {
+              "name": "filter[groups]",
+              "in": "query",
+              "value": "$inputs.filter[groups]"
+            },
+            {
+              "name": "filter[organization]",
+              "in": "query",
+              "value": "$inputs.filter[organization]"
+            },
+            {
+              "name": "filter[identifier][system]",
+              "in": "query",
+              "value": "$inputs.filter[identifier][system]"
+            },
+            {
+              "name": "filter[identifier][value]",
+              "in": "query",
+              "value": "$inputs.filter[identifier][value]"
+            },
+            {
+              "name": "filter[archived]",
+              "in": "query",
+              "value": "$inputs.filter[archived]"
+            },
+            {
+              "name": "filter[created_at]",
+              "in": "query",
+              "value": "$inputs.filter[created_at]"
+            },
+            {
+              "name": "filter[updated_at]",
+              "in": "query",
+              "value": "$inputs.filter[updated_at]"
+            },
+            {
+              "name": "page[number]",
+              "in": "query",
+              "value": "$inputs.page[number]"
+            },
+            {
+              "name": "page[size]",
+              "in": "query",
+              "value": "$inputs.page[size]"
+            },
+            {
+              "name": "page[limit]",
+              "in": "query",
+              "value": "$inputs.page[limit]"
+            },
+            {
+              "name": "page[cursor]",
+              "in": "query",
+              "value": "$inputs.page[cursor]"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "patient_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-patient-coach",
+          "description": "Get the coach(es) assigned to the patient.",
+          "operationId": "fetchPatientCoaches",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "coach_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "schedule-checkin-event",
+          "description": "Create a 'plan-check-in' calendar event for the patient and coach.",
+          "operationId": "createCalendarEvent",
+          "requestBody": {
+            "contentType": "application/vnd.api+json",
+            "payload": {
+              "owner_patient_id": "$steps.find-checkin-patient.outputs.patient_list[0].id",
+              "attendee_patient_id": "$steps.find-checkin-patient.outputs.patient_list[0].id",
+              "attendee_coach_id": "$steps.get-patient-coach.outputs.coach_list[0].id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "created_event_data": "$response.body",
+            "event_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-scheduled-event",
+          "description": "Retrieve the details of the scheduled check-in event.",
+          "operationId": "fetchCalendarEvent",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "event_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "complete-checkin-event",
+          "description": "Mark the check-in event as completed by the coach.",
+          "operationId": "updateCalendarEvent",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/vnd.api+json",
+            "payload": {
+              "event_id": "$steps.schedule-checkin-event.outputs.event_id",
+              "completed_by_coach_id": "$steps.get-patient-coach.outputs.coach_list[0].id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_event_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "patient_list": "$steps.find-checkin-patient.outputs.patient_list",
+        "coach_list": "$steps.get-patient-coach.outputs.coach_list",
+        "created_event_data": "$steps.schedule-checkin-event.outputs.created_event_data",
+        "event_id": "$steps.schedule-checkin-event.outputs.event_id",
+        "event_data": "$steps.get-scheduled-event.outputs.event_data",
+        "updated_event_data": "$steps.complete-checkin-event.outputs.updated_event_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-comprehensive-patient-health-overview",
+      "summary": "Gathers a comprehensive overview of a patient's health status, including their plan, metrics, results, and health profile answers. Useful for reporting or dashboard displays.",
+      "description": "Gathers a comprehensive overview of a patient's health status, including their plan, metrics, results, and health profile answers. Useful for reporting or dashboard displays.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "filter[groups]": {
+            "type": "string"
+          },
+          "filter[organization]": {
+            "type": "string"
+          },
+          "filter[identifier][system]": {
+            "type": "string"
+          },
+          "filter[identifier][value]": {
+            "type": "string"
+          },
+          "filter[archived]": {
+            "type": "string"
+          },
+          "filter[created_at]": {
+            "type": "string"
+          },
+          "filter[updated_at]": {
+            "type": "string"
+          },
+          "page[number]": {
+            "type": "string"
+          },
+          "page[size]": {
+            "type": "string"
+          },
+          "page[limit]": {
+            "type": "string"
+          },
+          "page[cursor]": {
+            "type": "string"
+          },
+          "filter[patient]": {
+            "type": "string"
+          },
+          "include": {
+            "type": "string"
+          },
+          "filter[actions]": {
+            "type": "string"
+          },
+          "filter[start_at]": {
+            "type": "string"
+          },
+          "filter[end_at]": {
+            "type": "string"
+          },
+          "filter[threads]": {
+            "type": "string"
+          },
+          "page[after]": {
+            "type": "string"
+          },
+          "filter[attendees]": {
+            "type": "string"
+          },
+          "filter[type]": {
+            "type": "string"
+          },
+          "filter[completed]": {
+            "type": "string"
+          },
+          "filter[completed_at]": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-target-patient",
+          "description": "Find the patient using an identifier.",
+          "operationId": "fetchPatients",
+          "parameters": [
+            {
+              "name": "filter[groups]",
+              "in": "query",
+              "value": "$inputs.filter[groups]"
+            },
+            {
+              "name": "filter[organization]",
+              "in": "query",
+              "value": "$inputs.filter[organization]"
+            },
+            {
+              "name": "filter[identifier][system]",
+              "in": "query",
+              "value": "$inputs.filter[identifier][system]"
+            },
+            {
+              "name": "filter[identifier][value]",
+              "in": "query",
+              "value": "$inputs.filter[identifier][value]"
+            },
+            {
+              "name": "filter[archived]",
+              "in": "query",
+              "value": "$inputs.filter[archived]"
+            },
+            {
+              "name": "filter[created_at]",
+              "in": "query",
+              "value": "$inputs.filter[created_at]"
+            },
+            {
+              "name": "filter[updated_at]",
+              "in": "query",
+              "value": "$inputs.filter[updated_at]"
+            },
+            {
+              "name": "page[number]",
+              "in": "query",
+              "value": "$inputs.page[number]"
+            },
+            {
+              "name": "page[size]",
+              "in": "query",
+              "value": "$inputs.page[size]"
+            },
+            {
+              "name": "page[limit]",
+              "in": "query",
+              "value": "$inputs.page[limit]"
+            },
+            {
+              "name": "page[cursor]",
+              "in": "query",
+              "value": "$inputs.page[cursor]"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "patient_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-patient-plan-summary",
+          "description": "Retrieve the patient's plan summary, including actions, bundles, and current results.",
+          "operationId": "fetchPatientPlanSummaries",
+          "parameters": [
+            {
+              "name": "filter[patient]",
+              "in": "query",
+              "value": "$inputs.filter[patient]"
+            },
+            {
+              "name": "filter[groups]",
+              "in": "query",
+              "value": "$inputs.filter[groups]"
+            },
+            {
+              "name": "filter[organization]",
+              "in": "query",
+              "value": "$inputs.filter[organization]"
+            },
+            {
+              "name": "include",
+              "in": "query",
+              "value": "$inputs.include"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "plan_summary_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-patient-health-profile",
+          "description": "Retrieve the patient's health profile, including questions and potentially answers/definitions if included.",
+          "operationId": "fetchHealthProfiles",
+          "parameters": [
+            {
+              "name": "filter[patient]",
+              "in": "query",
+              "value": "$inputs.filter[patient]"
+            },
+            {
+              "name": "filter[groups]",
+              "in": "query",
+              "value": "$inputs.filter[groups]"
+            },
+            {
+              "name": "filter[organization]",
+              "in": "query",
+              "value": "$inputs.filter[organization]"
+            },
+            {
+              "name": "page[number]",
+              "in": "query",
+              "value": "$inputs.page[number]"
+            },
+            {
+              "name": "page[size]",
+              "in": "query",
+              "value": "$inputs.page[size]"
+            },
+            {
+              "name": "page[limit]",
+              "in": "query",
+              "value": "$inputs.page[limit]"
+            },
+            {
+              "name": "page[cursor]",
+              "in": "query",
+              "value": "$inputs.page[cursor]"
+            },
+            {
+              "name": "include",
+              "in": "query",
+              "value": "$inputs.include"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "health_profile_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-patient-metrics",
+          "description": "Retrieve all recorded health metrics for the patient.",
+          "operationId": "fetchPatientHealthMetrics",
+          "parameters": [
+            {
+              "name": "filter[patient]",
+              "in": "query",
+              "value": "$inputs.filter[patient]"
+            },
+            {
+              "name": "filter[groups]",
+              "in": "query",
+              "value": "$inputs.filter[groups]"
+            },
+            {
+              "name": "filter[organization]",
+              "in": "query",
+              "value": "$inputs.filter[organization]"
+            },
+            {
+              "name": "page[number]",
+              "in": "query",
+              "value": "$inputs.page[number]"
+            },
+            {
+              "name": "page[size]",
+              "in": "query",
+              "value": "$inputs.page[size]"
+            },
+            {
+              "name": "page[limit]",
+              "in": "query",
+              "value": "$inputs.page[limit]"
+            },
+            {
+              "name": "page[cursor]",
+              "in": "query",
+              "value": "$inputs.page[cursor]"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "metrics_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-patient-results",
+          "description": "Retrieve patient health results (often linked to actions).",
+          "operationId": "fetchPatientHealthResults",
+          "parameters": [
+            {
+              "name": "filter[patient]",
+              "in": "query",
+              "value": "$inputs.filter[patient]"
+            },
+            {
+              "name": "filter[actions]",
+              "in": "query",
+              "value": "$inputs.filter[actions]"
+            },
+            {
+              "name": "filter[start_at]",
+              "in": "query",
+              "value": "$inputs.filter[start_at]"
+            },
+            {
+              "name": "filter[end_at]",
+              "in": "query",
+              "value": "$inputs.filter[end_at]"
+            },
+            {
+              "name": "filter[threads]",
+              "in": "query",
+              "value": "$inputs.filter[threads]"
+            },
+            {
+              "name": "filter[created_at]",
+              "in": "query",
+              "value": "$inputs.filter[created_at]"
+            },
+            {
+              "name": "filter[updated_at]",
+              "in": "query",
+              "value": "$inputs.filter[updated_at]"
+            },
+            {
+              "name": "page[number]",
+              "in": "query",
+              "value": "$inputs.page[number]"
+            },
+            {
+              "name": "page[size]",
+              "in": "query",
+              "value": "$inputs.page[size]"
+            },
+            {
+              "name": "page[limit]",
+              "in": "query",
+              "value": "$inputs.page[limit]"
+            },
+            {
+              "name": "page[after]",
+              "in": "query",
+              "value": "$inputs.page[after]"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "results_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-patient-calendar-events",
+          "description": "Retrieve upcoming or past calendar events for the patient.",
+          "operationId": "fetchCalendarEvents",
+          "parameters": [
+            {
+              "name": "filter[patient]",
+              "in": "query",
+              "value": "$inputs.filter[patient]"
+            },
+            {
+              "name": "filter[groups]",
+              "in": "query",
+              "value": "$inputs.filter[groups]"
+            },
+            {
+              "name": "filter[organization]",
+              "in": "query",
+              "value": "$inputs.filter[organization]"
+            },
+            {
+              "name": "filter[attendees]",
+              "in": "query",
+              "value": "$inputs.filter[attendees]"
+            },
+            {
+              "name": "filter[type]",
+              "in": "query",
+              "value": "$inputs.filter[type]"
+            },
+            {
+              "name": "filter[completed]",
+              "in": "query",
+              "value": "$inputs.filter[completed]"
+            },
+            {
+              "name": "filter[start_at]",
+              "in": "query",
+              "value": "$inputs.filter[start_at]"
+            },
+            {
+              "name": "filter[end_at]",
+              "in": "query",
+              "value": "$inputs.filter[end_at]"
+            },
+            {
+              "name": "filter[completed_at]",
+              "in": "query",
+              "value": "$inputs.filter[completed_at]"
+            },
+            {
+              "name": "filter[created_at]",
+              "in": "query",
+              "value": "$inputs.filter[created_at]"
+            },
+            {
+              "name": "filter[updated_at]",
+              "in": "query",
+              "value": "$inputs.filter[updated_at]"
+            },
+            {
+              "name": "page[number]",
+              "in": "query",
+              "value": "$inputs.page[number]"
+            },
+            {
+              "name": "page[size]",
+              "in": "query",
+              "value": "$inputs.page[size]"
+            },
+            {
+              "name": "page[limit]",
+              "in": "query",
+              "value": "$inputs.page[limit]"
+            },
+            {
+              "name": "page[cursor]",
+              "in": "query",
+              "value": "$inputs.page[cursor]"
+            },
+            {
+              "name": "include",
+              "in": "query",
+              "value": "$inputs.include"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "calendar_events_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "patient_list": "$steps.find-target-patient.outputs.patient_list",
+        "plan_summary_list": "$steps.get-patient-plan-summary.outputs.plan_summary_list",
+        "health_profile_list": "$steps.get-patient-health-profile.outputs.health_profile_list",
+        "metrics_list": "$steps.get-patient-metrics.outputs.metrics_list",
+        "results_list": "$steps.get-patient-results.outputs.results_list",
+        "calendar_events_list": "$steps.get-patient-calendar-events.outputs.calendar_events_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

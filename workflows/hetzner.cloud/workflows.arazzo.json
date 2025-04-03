@@ -1,0 +1,1412 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/hetzner.cloud/main/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "provision-new-server-with-ssh-key",
+      "summary": "Creates a new SSH key and then provisions a new server using that key for secure access.",
+      "description": "Creates a new SSH key and then provisions a new server using that key for secure access.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "public_key": {
+            "type": "string"
+          },
+          "server_type": {
+            "type": "string"
+          },
+          "image": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-ssh-key",
+          "description": "Create a new SSH key by providing a name and the public key content.",
+          "operationPath": "openapi_source#/paths/~1ssh_keys/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name",
+              "public_key": "$inputs.public_key"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ssh_key_id": "$response.body",
+            "ssh_key_name": "$response.body",
+            "ssh_key_fingerprint": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-server",
+          "description": "Create a new server, specifying its type, image, location, and injecting the previously created SSH key.",
+          "operationPath": "openapi_source#/paths/~1servers/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "ssh_keys": "$steps.create-ssh-key.outputs.ssh_key_id",
+              "name": "$inputs.name",
+              "server_type": "$inputs.server_type",
+              "image": "$inputs.image"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "server_id": "$response.body",
+            "server_name": "$response.body",
+            "server_status": "$response.body",
+            "action_id": "$response.body",
+            "next_action_ids": "$response.body",
+            "root_password": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-server-creation-action",
+          "description": "Check the status of the server creation action.",
+          "operationPath": "openapi_source#/paths/~1actions~1{id}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_status": "$response.body",
+            "action_progress": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "ssh_key_id": "$steps.create-ssh-key.outputs.ssh_key_id",
+        "ssh_key_name": "$steps.create-ssh-key.outputs.ssh_key_name",
+        "ssh_key_fingerprint": "$steps.create-ssh-key.outputs.ssh_key_fingerprint",
+        "server_id": "$steps.create-server.outputs.server_id",
+        "server_name": "$steps.create-server.outputs.server_name",
+        "server_status": "$steps.create-server.outputs.server_status",
+        "action_id": "$steps.create-server.outputs.action_id",
+        "next_action_ids": "$steps.create-server.outputs.next_action_ids",
+        "root_password": "$steps.create-server.outputs.root_password",
+        "action_status": "$steps.check-server-creation-action.outputs.action_status",
+        "action_progress": "$steps.check-server-creation-action.outputs.action_progress"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "setup-basic-load-balancer",
+      "summary": "Creates a Load Balancer, adds a service (e.g., HTTP on port 80), and adds target servers.",
+      "description": "Creates a Load Balancer, adds a service (e.g., HTTP on port 80), and adds target servers.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "load_balancer_type": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "protocol": {
+            "type": "string"
+          },
+          "listen_port": {
+            "type": "string"
+          },
+          "destination_port": {
+            "type": "string"
+          },
+          "proxyprotocol": {
+            "type": "string"
+          },
+          "health_check": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-load-balancer",
+          "description": "Create a new Load Balancer specifying its name, type, location/network zone, and algorithm.",
+          "operationPath": "openapi_source#/paths/~1load_balancers/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name",
+              "load_balancer_type": "$inputs.load_balancer_type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "load_balancer_id": "$response.body",
+            "action_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-lb-creation-action",
+          "description": "Check the status of the Load Balancer creation action.",
+          "operationPath": "openapi_source#/paths/~1actions~1{id}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-lb-service",
+          "description": "Add a service definition to the Load Balancer (e.g., listen on port 80, forward to port 8080).",
+          "operationPath": "openapi_source#/paths/~1load_balancers~1{id}~1actions~1add_service/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "load_balancer_id": "$steps.create-load-balancer.outputs.load_balancer_id",
+              "protocol": "$inputs.protocol",
+              "listen_port": "$inputs.listen_port",
+              "destination_port": "$inputs.destination_port",
+              "proxyprotocol": "$inputs.proxyprotocol",
+              "health_check": "$inputs.health_check"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-add-service-action",
+          "description": "Check the status of the add service action.",
+          "operationPath": "openapi_source#/paths/~1actions~1{id}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-lb-target",
+          "description": "Add a target (Server, Label Selector, or IP) to the Load Balancer.",
+          "operationPath": "openapi_source#/paths/~1load_balancers~1{id}~1actions~1add_target/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "load_balancer_id": "$steps.create-load-balancer.outputs.load_balancer_id",
+              "type": "$inputs.type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_id": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "load_balancer_id": "$steps.create-load-balancer.outputs.load_balancer_id",
+        "action_id": "$steps.add-lb-target.outputs.action_id",
+        "action_status": "$steps.check-add-service-action.outputs.action_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "configure-high-availability-with-floating-ip",
+      "summary": "Creates a Floating IP and assigns it to a primary server. Later, it can be unassigned and reassigned to a secondary server for failover.",
+      "description": "Creates a Floating IP and assigns it to a primary server. Later, it can be unassigned and reassigned to a secondary server for failover.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-floating-ip",
+          "description": "Create a new Floating IP, specifying its type and home location or initial server.",
+          "operationPath": "openapi_source#/paths/~1floating_ips/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "type": "$inputs.type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "floating_ip_id": "$response.body",
+            "floating_ip_address": "$response.body",
+            "action_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "assign-floating-ip-initial",
+          "description": "Assign the Floating IP to the primary server (if not assigned during creation).",
+          "operationPath": "openapi_source#/paths/~1floating_ips~1{id}~1actions~1assign/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "floating_ip_id": "$steps.create-floating-ip.outputs.floating_ip_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-assign-action-initial",
+          "description": "Check the status of the initial Floating IP assignment action.",
+          "operationPath": "openapi_source#/paths/~1actions~1{id}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "unassign-floating-ip",
+          "description": "Unassign the Floating IP from the current server (e.g., during maintenance or failover).",
+          "operationPath": "openapi_source#/paths/~1floating_ips~1{id}~1actions~1unassign/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-unassign-action",
+          "description": "Check the status of the Floating IP unassignment action.",
+          "operationPath": "openapi_source#/paths/~1actions~1{id}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "assign-floating-ip-secondary",
+          "description": "Assign the Floating IP to a secondary/failover server.",
+          "operationPath": "openapi_source#/paths/~1floating_ips~1{id}~1actions~1assign/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "floating_ip_id": "$steps.create-floating-ip.outputs.floating_ip_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_id": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "floating_ip_id": "$steps.create-floating-ip.outputs.floating_ip_id",
+        "floating_ip_address": "$steps.create-floating-ip.outputs.floating_ip_address",
+        "action_id": "$steps.assign-floating-ip-secondary.outputs.action_id",
+        "action_status": "$steps.check-unassign-action.outputs.action_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "setup-server-in-private-network",
+      "summary": "Creates a private network, adds a subnet, and attaches an existing server to it.",
+      "description": "Creates a private network, adds a subnet, and attaches an existing server to it.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "ip_range": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "network_zone": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-network",
+          "description": "Create a new private network with a specified name and IP range.",
+          "operationPath": "openapi_source#/paths/~1networks/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name",
+              "ip_range": "$inputs.ip_range"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "network_id": "$response.body",
+            "network_name": "$response.body",
+            "network_ip_range": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-subnet-to-network",
+          "description": "Add a subnet to the newly created network.",
+          "operationPath": "openapi_source#/paths/~1networks~1{id}~1actions~1add_subnet/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "network_id": "$steps.create-network.outputs.network_id",
+              "type": "$inputs.type",
+              "network_zone": "$inputs.network_zone"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-add-subnet-action",
+          "description": "Check the status of the add subnet action.",
+          "operationPath": "openapi_source#/paths/~1actions~1{id}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "attach-server-to-network",
+          "description": "Attach an existing server to the created network.",
+          "operationPath": "openapi_source#/paths/~1servers~1{id}~1actions~1attach_to_network/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "network_id": "$steps.create-network.outputs.network_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_id": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "network_id": "$steps.create-network.outputs.network_id",
+        "network_name": "$steps.create-network.outputs.network_name",
+        "network_ip_range": "$steps.create-network.outputs.network_ip_range",
+        "action_id": "$steps.attach-server-to-network.outputs.action_id",
+        "action_status": "$steps.check-add-subnet-action.outputs.action_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "scale-server-vertically",
+      "summary": "Resize an existing server to a different server type (upgrading or downgrading CPU, RAM, Disk). Requires server shutdown.",
+      "description": "Resize an existing server to a different server type (upgrading or downgrading CPU, RAM, Disk). Requires server shutdown.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "upgrade_disk": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-server-details",
+          "description": "Get current details of the server, including its status and type.",
+          "operationPath": "openapi_source#/paths/~1servers~1{id}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "server_id": "$response.body",
+            "server_status": "$response.body",
+            "current_server_type": "$response.body"
+          }
+        },
+        {
+          "stepId": "shutdown-server",
+          "description": "Gracefully shut down the server before changing its type.",
+          "operationPath": "openapi_source#/paths/~1servers~1{id}~1actions~1shutdown/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-shutdown-action",
+          "description": "Poll the shutdown action status until it completes.",
+          "operationPath": "openapi_source#/paths/~1actions~1{id}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "change-server-type",
+          "description": "Change the server type to the desired new type. Server must be off.",
+          "operationPath": "openapi_source#/paths/~1servers~1{id}~1actions~1change_type/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "server_id": "$steps.get-server-details.outputs.server_id",
+              "upgrade_disk": "$inputs.upgrade_disk"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-resize-action",
+          "description": "Poll the resize action status until it completes.",
+          "operationPath": "openapi_source#/paths/~1actions~1{id}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "poweron-server",
+          "description": "Power the server back on after resizing.",
+          "operationPath": "openapi_source#/paths/~1servers~1{id}~1actions~1poweron/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_id": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "server_id": "$steps.get-server-details.outputs.server_id",
+        "server_status": "$steps.get-server-details.outputs.server_status",
+        "current_server_type": "$steps.get-server-details.outputs.current_server_type",
+        "action_id": "$steps.poweron-server.outputs.action_id",
+        "action_status": "$steps.check-resize-action.outputs.action_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "apply-firewall-rules-to-servers",
+      "summary": "Creates a Firewall with specific rules and applies it to one or more servers.",
+      "description": "Creates a Firewall with specific rules and applies it to one or more servers.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "apply_to": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-firewall",
+          "description": "Create a new Firewall with a name and initial set of rules.",
+          "operationPath": "openapi_source#/paths/~1firewalls/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "firewall_id": "$response.body",
+            "action_ids": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-firewall-creation-action",
+          "description": "Check the status of the firewall creation and initial application actions.",
+          "operationPath": "openapi_source#/paths/~1actions~1{id}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "apply-firewall-to-resources",
+          "description": "Apply the created Firewall to additional servers or label selectors.",
+          "operationPath": "openapi_source#/paths/~1firewalls~1{id}~1actions~1apply_to_resources/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "firewall_id": "$steps.create-firewall.outputs.firewall_id",
+              "apply_to": "$inputs.apply_to"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_ids": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "firewall_id": "$steps.create-firewall.outputs.firewall_id",
+        "action_ids": "$steps.apply-firewall-to-resources.outputs.action_ids",
+        "action_status": "$steps.check-firewall-creation-action.outputs.action_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-server-snapshot",
+      "summary": "Creates a snapshot Image from an existing server's disk, useful for backups or creating templates.",
+      "description": "Creates a snapshot Image from an existing server's disk, useful for backups or creating templates.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "labels": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-server-for-snapshot",
+          "description": "Get details of the server to be snapshotted.",
+          "operationPath": "openapi_source#/paths/~1servers~1{id}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "server_id": "$response.body",
+            "server_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-server-image",
+          "description": "Initiate the creation of a snapshot image from the server.",
+          "operationPath": "openapi_source#/paths/~1servers~1{id}~1actions~1create_image/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "server_id": "$steps.get-server-for-snapshot.outputs.server_id",
+              "description": "$inputs.description",
+              "type": "$inputs.type",
+              "labels": "$inputs.labels"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "image_id": "$response.body",
+            "image_type": "$response.body",
+            "image_status": "$response.body",
+            "action_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-image-creation-action",
+          "description": "Check the status of the image creation action until it completes.",
+          "operationPath": "openapi_source#/paths/~1actions~1{id}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-image-details",
+          "description": "Retrieve details of the created image to confirm availability.",
+          "operationPath": "openapi_source#/paths/~1images~1{id}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "image_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "server_id": "$steps.get-server-for-snapshot.outputs.server_id",
+        "server_status": "$steps.get-server-for-snapshot.outputs.server_status",
+        "image_id": "$steps.create-server-image.outputs.image_id",
+        "image_type": "$steps.create-server-image.outputs.image_type",
+        "image_status": "$steps.create-server-image.outputs.image_status",
+        "action_id": "$steps.create-server-image.outputs.action_id",
+        "action_status": "$steps.check-image-creation-action.outputs.action_status",
+        "image_details": "$steps.get-image-details.outputs.image_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "attach-volume-to-server",
+      "summary": "Creates a new volume and attaches it to a specified server.",
+      "description": "Creates a new volume and attaches it to a specified server.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "size": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-volume",
+          "description": "Create a new volume, optionally specifying the server to attach to immediately.",
+          "operationPath": "openapi_source#/paths/~1volumes/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "size": "$inputs.size",
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "volume_id": "$response.body",
+            "action_id": "$response.body",
+            "next_action_ids": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-volume-creation-action",
+          "description": "Check the status of the volume creation action.",
+          "operationPath": "openapi_source#/paths/~1actions~1{id}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "attach-volume-to-server",
+          "description": "Attach the volume to a server (if not done during creation).",
+          "operationPath": "openapi_source#/paths/~1volumes~1{id}~1actions~1attach/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "volume_id": "$steps.create-volume.outputs.volume_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-volume-attach-action",
+          "description": "Check the status of the volume attach action.",
+          "operationPath": "openapi_source#/paths/~1actions~1{id}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "volume_id": "$steps.create-volume.outputs.volume_id",
+        "action_id": "$steps.attach-volume-to-server.outputs.action_id",
+        "next_action_ids": "$steps.create-volume.outputs.next_action_ids",
+        "action_status": "$steps.check-volume-attach-action.outputs.action_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-lets-encrypt-certificate-lifecycle",
+      "summary": "Creates a managed Let's Encrypt certificate and retries issuance if it fails.",
+      "description": "Creates a managed Let's Encrypt certificate and retries issuance if it fails.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-managed-certificate",
+          "description": "Request a new managed Let's Encrypt certificate for specified domains.",
+          "operationPath": "openapi_source#/paths/~1certificates/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "certificate_id": "$response.body",
+            "action_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-certificate-issuance-action",
+          "description": "Check the status of the certificate issuance action.",
+          "operationPath": "openapi_source#/paths/~1actions~1{id}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_status": "$response.body",
+            "action_error": "$response.body"
+          }
+        },
+        {
+          "stepId": "retry-certificate-issuance",
+          "description": "Retry the certificate issuance or renewal if the previous action failed.",
+          "operationPath": "openapi_source#/paths/~1certificates~1{id}~1actions~1retry/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_id": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "certificate_id": "$steps.create-managed-certificate.outputs.certificate_id",
+        "action_id": "$steps.retry-certificate-issuance.outputs.action_id",
+        "action_status": "$steps.check-certificate-issuance-action.outputs.action_status",
+        "action_error": "$steps.check-certificate-issuance-action.outputs.action_error"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "request-server-console-access",
+      "summary": "Requests temporary VNC console access credentials for a server.",
+      "description": "Requests temporary VNC console access credentials for a server.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "request-server-console",
+          "description": "Request VNC console access for a specific server.",
+          "operationPath": "openapi_source#/paths/~1servers~1{id}~1actions~1request_console/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "wss_url": "$response.body",
+            "password": "$response.body",
+            "action_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-console-action",
+          "description": "Check the status of the console request action.",
+          "operationPath": "openapi_source#/paths/~1actions~1{id}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "wss_url": "$steps.request-server-console.outputs.wss_url",
+        "password": "$steps.request-server-console.outputs.password",
+        "action_id": "$steps.request-server-console.outputs.action_id",
+        "action_status": "$steps.check-console-action.outputs.action_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

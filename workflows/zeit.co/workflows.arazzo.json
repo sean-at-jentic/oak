@@ -1,0 +1,229 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/zeit.co/main/v2019-01-07/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "get-specific-domain-details",
+      "summary": "Retrieves the full list of domains associated with an account or team, allowing the user to identify a specific domain name, and then fetches the detailed configuration and status for that particular domain.",
+      "description": "Retrieves the full list of domains associated with an account or team, allowing the user to identify a specific domain name, and then fetches the detailed configuration and status for that particular domain.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "teamId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-all-domains",
+          "description": "Retrieve the list of all domains to find the target domain name.",
+          "operationId": "getDomains",
+          "parameters": [
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "domain_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-domain-details",
+          "description": "Get detailed information for a specific domain using its name obtained from the previous step.",
+          "operationId": "getDomain",
+          "parameters": [
+            {
+              "name": "name",
+              "in": "path",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "domain_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "domain_list": "$steps.list-all-domains.outputs.domain_list",
+        "domain_details": "$steps.get-domain-details.outputs.domain_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "clean-up-specific-webhook",
+      "summary": "Finds a specific webhook by listing all existing webhooks for an account or team, allowing the user to identify the target webhook's ID, and then deletes that specific webhook.",
+      "description": "Finds a specific webhook by listing all existing webhooks for an account or team, allowing the user to identify the target webhook's ID, and then deletes that specific webhook.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "teamId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-all-webhooks",
+          "description": "Retrieve the list of all webhooks to find the ID of the webhook to be deleted.",
+          "operationId": "getWebhooks",
+          "parameters": [
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "webhook_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "delete-specific-webhook",
+          "description": "Delete the webhook identified by its ID from the previous step.",
+          "operationId": "deleteWebhooks",
+          "parameters": [
+            {
+              "name": "teamId",
+              "in": "query",
+              "value": "$inputs.teamId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "deletion_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "webhook_list": "$steps.list-all-webhooks.outputs.webhook_list",
+        "deletion_status": "$steps.delete-specific-webhook.outputs.deletion_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

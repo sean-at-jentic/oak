@@ -1,0 +1,1149 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/handwrytten.com/main/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "send-a-personalized-card",
+      "summary": "Authenticates a user, allows them to select a card and font, and sends a personalized handwritten card to a recipient using the simplified single-step order process.",
+      "description": "Authenticates a user, allows them to select a card and font, and sends a personalized handwritten card to a recipient using the simplified single-step order process.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "login": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "login-user",
+          "description": "Authenticate user credentials to obtain a session UID.",
+          "operationId": "login",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "login": "$inputs.login",
+              "password": "$inputs.password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "uid": "$response.body",
+            "user_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-available-cards",
+          "description": "List available cards, including user-specific ones, optionally filtering by category.",
+          "operationId": "listCards",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "uid": "$steps.login-user.outputs.uid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "cards_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "select-card",
+          "description": "Get detailed information for a specific card selected from the list.",
+          "operationId": "filterableCardDetails",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "uid": "$steps.login-user.outputs.uid",
+              "card_id": "$steps.list-available-cards.outputs.cards_list[0].id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "card_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-handwriting-fonts",
+          "description": "List available handwriting styles (fonts) to choose from.",
+          "operationId": "fontsList",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "fonts_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "send-card-order",
+          "description": "Send the selected card with a custom message, chosen font, and recipient/sender details in a single API call.",
+          "operationId": "singleStepOrder",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "uid": "$steps.login-user.outputs.uid",
+              "card_id": "$steps.select-card.outputs.card_details.id",
+              "font_label": "$steps.list-handwriting-fonts.outputs.fonts_list[0].label",
+              "message": "$inputs.message"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "order_details": "$response.body",
+            "status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "uid": "$steps.login-user.outputs.uid",
+        "user_id": "$steps.login-user.outputs.user_id",
+        "cards_list": "$steps.list-available-cards.outputs.cards_list",
+        "card_details": "$steps.select-card.outputs.card_details",
+        "fonts_list": "$steps.list-handwriting-fonts.outputs.fonts_list",
+        "order_details": "$steps.send-card-order.outputs.order_details",
+        "status": "$steps.send-card-order.outputs.status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "user-onboarding-and-first-card-send",
+      "summary": "Registers a new user, logs them in, optionally updates their return address, allows them to select a card and font, and sends their first card.",
+      "description": "Registers a new user, logs them in, optionally updates their return address, allows them to select a card and font, and sends their first card.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "login": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "fname": {
+            "type": "string"
+          },
+          "lname": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "register-new-user",
+          "description": "Register a new user account.",
+          "operationId": "register",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "login": "$inputs.login",
+              "password": "$inputs.password",
+              "fname": "$inputs.fname",
+              "lname": "$inputs.lname"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_id": "$response.body",
+            "status": "$response.body"
+          }
+        },
+        {
+          "stepId": "login-new-user",
+          "description": "Log in with the newly registered credentials to obtain a session UID.",
+          "operationId": "login",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "login": "$inputs.login",
+              "password": "$inputs.password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "uid": "$response.body",
+            "user_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-initial-address",
+          "description": "Retrieve the user's default address information (potentially to get the address ID for updating).",
+          "operationId": "userAddress",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "uid": "$steps.login-new-user.outputs.uid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "address_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-return-address",
+          "description": "Update the user's default return address information.",
+          "operationId": "updateUserAddress",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "uid": "$steps.login-new-user.outputs.uid",
+              "address_id": "$steps.get-initial-address.outputs.address_details.response.id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_address_details": "$response.body",
+            "status": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-available-cards",
+          "description": "List available cards for the new user.",
+          "operationId": "listCards",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "uid": "$steps.login-new-user.outputs.uid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "cards_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-handwriting-fonts",
+          "description": "List available handwriting styles (fonts).",
+          "operationId": "fontsList",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "fonts_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "send-first-card",
+          "description": "Send the user's first card.",
+          "operationId": "singleStepOrder",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "uid": "$steps.login-new-user.outputs.uid",
+              "card_id": "$steps.list-available-cards.outputs.cards_list[0].id",
+              "font_label": "$steps.list-handwriting-fonts.outputs.fonts_list[0].label",
+              "sender_name": "$steps.update-return-address.outputs.updated_address_details.response.name",
+              "sender_address1": "$steps.update-return-address.outputs.updated_address_details.response.address1",
+              "sender_city": "$steps.update-return-address.outputs.updated_address_details.response.city",
+              "sender_state": "$steps.update-return-address.outputs.updated_address_details.response.state",
+              "sender_zip": "$steps.update-return-address.outputs.updated_address_details.response.zip",
+              "message": "$inputs.message"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "order_details": "$response.body",
+            "status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "user_id": "$steps.login-new-user.outputs.user_id",
+        "status": "$steps.send-first-card.outputs.status",
+        "uid": "$steps.login-new-user.outputs.uid",
+        "address_details": "$steps.get-initial-address.outputs.address_details",
+        "updated_address_details": "$steps.update-return-address.outputs.updated_address_details",
+        "cards_list": "$steps.list-available-cards.outputs.cards_list",
+        "fonts_list": "$steps.list-handwriting-fonts.outputs.fonts_list",
+        "order_details": "$steps.send-first-card.outputs.order_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-and-send-a-custom-branded-card",
+      "summary": "Allows a user to upload branding assets (logo/cover), create a custom card design based on a template, and then send that custom card.",
+      "description": "Allows a user to upload branding assets (logo/cover), create a custom card design based on a template, and then send that custom card.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "login": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "cover_size_percent": {
+            "type": "string"
+          },
+          "footer_align": {
+            "type": "string"
+          },
+          "footer_font_size": {
+            "type": "string"
+          },
+          "header_align": {
+            "type": "string"
+          },
+          "header_auto_size": {
+            "type": "string"
+          },
+          "header_font_size": {
+            "type": "string"
+          },
+          "logo_size_percent": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "login-user",
+          "description": "Authenticate user credentials.",
+          "operationId": "login",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "login": "$inputs.login",
+              "password": "$inputs.password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "uid": "$response.body",
+            "user_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "upload-logo-image",
+          "description": "Upload a logo image for the card header/back.",
+          "operationId": "uploadCustomLogo",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "uid": "$steps.login-user.outputs.uid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "logo_id": "$response.body",
+            "status": "$response.body"
+          }
+        },
+        {
+          "stepId": "upload-cover-image",
+          "description": "Upload a cover image for the card front.",
+          "operationId": "uploadCustomLogo",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "uid": "$steps.login-user.outputs.uid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "cover_id": "$response.body",
+            "status": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-customizer-fonts",
+          "description": "List fonts available for use in the card customizer (header/footer text).",
+          "operationId": "fontsListForCustomizer",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "customizer_fonts_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-custom-card-design",
+          "description": "Create a new custom card design using a base template, uploaded images, custom text, and selected customizer fonts.",
+          "operationId": "CreateCustomCard",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "uid": "$steps.login-user.outputs.uid",
+              "logo_id": "$steps.upload-logo-image.outputs.logo_id",
+              "cover_id": "$steps.upload-cover-image.outputs.cover_id",
+              "header_font_id": "$steps.list-customizer-fonts.outputs.customizer_fonts_list[0].id",
+              "footer_font_id": "$steps.list-customizer-fonts.outputs.customizer_fonts_list[1].id",
+              "cover_size_percent": "$inputs.cover_size_percent",
+              "footer_align": "$inputs.footer_align",
+              "footer_font_size": "$inputs.footer_font_size",
+              "header_align": "$inputs.header_align",
+              "header_auto_size": "$inputs.header_auto_size",
+              "header_font_size": "$inputs.header_font_size",
+              "logo_size_percent": "$inputs.logo_size_percent",
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "custom_card_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-handwriting-fonts",
+          "description": "List available handwriting styles for the main message.",
+          "operationId": "fontsList",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "fonts_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "send-custom-card-order",
+          "description": "Send the newly created custom card.",
+          "operationId": "singleStepOrder",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "uid": "$steps.login-user.outputs.uid",
+              "card_id": "$steps.create-custom-card-design.outputs.custom_card_details.id",
+              "font_label": "$steps.list-handwriting-fonts.outputs.fonts_list[0].label",
+              "message": "$inputs.message"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "order_details": "$response.body",
+            "status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "uid": "$steps.login-user.outputs.uid",
+        "user_id": "$steps.login-user.outputs.user_id",
+        "logo_id": "$steps.upload-logo-image.outputs.logo_id",
+        "status": "$steps.send-custom-card-order.outputs.status",
+        "cover_id": "$steps.upload-cover-image.outputs.cover_id",
+        "customizer_fonts_list": "$steps.list-customizer-fonts.outputs.customizer_fonts_list",
+        "custom_card_details": "$steps.create-custom-card-design.outputs.custom_card_details",
+        "fonts_list": "$steps.list-handwriting-fonts.outputs.fonts_list",
+        "order_details": "$steps.send-custom-card-order.outputs.order_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "send-a-card-with-a-gift-card",
+      "summary": "Authenticates a user, allows selection of a standard card, font, and a gift card denomination, then sends the card with the included gift card.",
+      "description": "Authenticates a user, allows selection of a standard card, font, and a gift card denomination, then sends the card with the included gift card.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "login": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "login-user",
+          "description": "Authenticate user credentials.",
+          "operationId": "login",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "login": "$inputs.login",
+              "password": "$inputs.password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "uid": "$response.body",
+            "user_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-available-cards",
+          "description": "List available cards.",
+          "operationId": "listCards",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "uid": "$steps.login-user.outputs.uid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "cards_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-handwriting-fonts",
+          "description": "List available handwriting styles.",
+          "operationId": "fontsList",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "fonts_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-gift-cards",
+          "description": "List available gift cards and their denominations.",
+          "operationId": "getGiftCardDetails",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "gift_cards_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "send-card-with-gift",
+          "description": "Send the selected card and gift card denomination.",
+          "operationId": "singleStepOrder",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "uid": "$steps.login-user.outputs.uid",
+              "card_id": "$steps.list-available-cards.outputs.cards_list[0].id",
+              "font_label": "$steps.list-handwriting-fonts.outputs.fonts_list[0].label",
+              "denomination_id": "$steps.list-gift-cards.outputs.gift_cards_list[0].denominations[0].id",
+              "message": "$inputs.message"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "order_details": "$response.body",
+            "status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "uid": "$steps.login-user.outputs.uid",
+        "user_id": "$steps.login-user.outputs.user_id",
+        "cards_list": "$steps.list-available-cards.outputs.cards_list",
+        "fonts_list": "$steps.list-handwriting-fonts.outputs.fonts_list",
+        "gift_cards_list": "$steps.list-gift-cards.outputs.gift_cards_list",
+        "order_details": "$steps.send-card-with-gift.outputs.order_details",
+        "status": "$steps.send-card-with-gift.outputs.status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "account-maintenance---password-change",
+      "summary": "Allows an authenticated user to change their account password.",
+      "description": "Allows an authenticated user to change their account password.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "login": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "new_password": {
+            "type": "string"
+          },
+          "old_password": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "login-user",
+          "description": "Authenticate user credentials to get UID.",
+          "operationId": "login",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "login": "$inputs.login",
+              "password": "$inputs.password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "uid": "$response.body",
+            "user_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "change-user-password",
+          "description": "Change the user's password using the old password and UID.",
+          "operationId": "changePassword",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "uid": "$steps.login-user.outputs.uid",
+              "new_password": "$inputs.new_password",
+              "old_password": "$inputs.old_password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "uid": "$steps.login-user.outputs.uid",
+        "user_id": "$steps.login-user.outputs.user_id",
+        "status": "$steps.change-user-password.outputs.status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "add-recipient-and-send-card",
+      "summary": "Adds a new recipient to the user's address book and immediately sends them a card.",
+      "description": "Adds a new recipient to the user's address book and immediately sends them a card.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "login": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "address1": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "zip": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "login-user",
+          "description": "Authenticate user credentials.",
+          "operationId": "login",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "login": "$inputs.login",
+              "password": "$inputs.password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "uid": "$response.body",
+            "user_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-new-recipient",
+          "description": "Add a new recipient address to the user's profile.",
+          "operationId": "addRecipientAddress",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "uid": "$steps.login-user.outputs.uid",
+              "address1": "$inputs.address1",
+              "city": "$inputs.city",
+              "name": "$inputs.name",
+              "state": "$inputs.state",
+              "zip": "$inputs.zip"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "new_recipient_details": "$response.body",
+            "status": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-available-cards",
+          "description": "List available cards.",
+          "operationId": "listCards",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "uid": "$steps.login-user.outputs.uid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "cards_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-handwriting-fonts",
+          "description": "List available handwriting styles.",
+          "operationId": "fontsList",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "fonts_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "send-card-to-new-recipient",
+          "description": "Send a card to the newly added recipient.",
+          "operationId": "singleStepOrder",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "uid": "$steps.login-user.outputs.uid",
+              "card_id": "$steps.list-available-cards.outputs.cards_list[0].id",
+              "font_label": "$steps.list-handwriting-fonts.outputs.fonts_list[0].label",
+              "recipient_name": "$steps.add-new-recipient.outputs.new_recipient_details.response.name",
+              "recipient_address1": "$steps.add-new-recipient.outputs.new_recipient_details.response.address1",
+              "recipient_city": "$steps.add-new-recipient.outputs.new_recipient_details.response.city",
+              "recipient_state": "$steps.add-new-recipient.outputs.new_recipient_details.response.state",
+              "recipient_zip": "$steps.add-new-recipient.outputs.new_recipient_details.response.zip",
+              "message": "$inputs.message"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "order_details": "$response.body",
+            "status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "uid": "$steps.login-user.outputs.uid",
+        "user_id": "$steps.login-user.outputs.user_id",
+        "new_recipient_details": "$steps.add-new-recipient.outputs.new_recipient_details",
+        "status": "$steps.send-card-to-new-recipient.outputs.status",
+        "cards_list": "$steps.list-available-cards.outputs.cards_list",
+        "fonts_list": "$steps.list-handwriting-fonts.outputs.fonts_list",
+        "order_details": "$steps.send-card-to-new-recipient.outputs.order_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-template-and-send-card-using-it",
+      "summary": "Creates a reusable message template and then immediately uses that template's message content to send a card.",
+      "description": "Creates a reusable message template and then immediately uses that template's message content to send a card.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "login": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "login-user",
+          "description": "Authenticate user credentials.",
+          "operationId": "login",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "login": "$inputs.login",
+              "password": "$inputs.password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "uid": "$response.body",
+            "user_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-message-template",
+          "description": "Create a new message template.",
+          "operationId": "createTemplate",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "uid": "$steps.login-user.outputs.uid",
+              "message": "$inputs.message",
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "created_template_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-available-cards",
+          "description": "List available cards.",
+          "operationId": "listCards",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "uid": "$steps.login-user.outputs.uid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "cards_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-handwriting-fonts",
+          "description": "List available handwriting styles.",
+          "operationId": "fontsList",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "fonts_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "send-card-with-template-message",
+          "description": "Send a card using the message from the newly created template.",
+          "operationId": "singleStepOrder",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "uid": "$steps.login-user.outputs.uid",
+              "card_id": "$steps.list-available-cards.outputs.cards_list[0].id",
+              "message": "$steps.create-message-template.outputs.created_template_details[0].message",
+              "font_label": "$steps.list-handwriting-fonts.outputs.fonts_list[0].label"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "order_details": "$response.body",
+            "status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "uid": "$steps.login-user.outputs.uid",
+        "user_id": "$steps.login-user.outputs.user_id",
+        "created_template_details": "$steps.create-message-template.outputs.created_template_details",
+        "cards_list": "$steps.list-available-cards.outputs.cards_list",
+        "fonts_list": "$steps.list-handwriting-fonts.outputs.fonts_list",
+        "order_details": "$steps.send-card-with-template-message.outputs.order_details",
+        "status": "$steps.send-card-with-template-message.outputs.status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

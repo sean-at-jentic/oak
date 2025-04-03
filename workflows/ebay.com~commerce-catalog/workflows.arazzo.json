@@ -1,0 +1,572 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/ebay.com/commerce-catalog/v1_beta.5.2/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "find-and-select-catalog-product-for-listing",
+      "summary": "Searches for eBay catalog products based on seller criteria (keywords, category, or identifier), allows the seller to select a match, and retrieves the full product details to pre-fill a listing. This is the core workflow for leveraging the catalog.",
+      "description": "Searches for eBay catalog products based on seller criteria (keywords, category, or identifier), allows the seller to select a match, and retrieves the full product details to pre-fill a listing. This is the core workflow for leveraging the catalog.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-EBAY-C-MARKETPLACE-ID": {
+            "type": "string"
+          },
+          "aspect_filter": {
+            "type": "string"
+          },
+          "category_ids": {
+            "type": "string"
+          },
+          "fieldgroups": {
+            "type": "string"
+          },
+          "gtin": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "mpn": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "q": {
+            "type": "string"
+          },
+          "epid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-catalog-products",
+          "description": "Search for product summaries using keywords, category IDs, GTIN, or MPN.",
+          "operationId": "search",
+          "parameters": [
+            {
+              "name": "X-EBAY-C-MARKETPLACE-ID",
+              "in": "header",
+              "value": "$inputs.X-EBAY-C-MARKETPLACE-ID"
+            },
+            {
+              "name": "aspect_filter",
+              "in": "query",
+              "value": "$inputs.aspect_filter"
+            },
+            {
+              "name": "category_ids",
+              "in": "query",
+              "value": "$inputs.category_ids"
+            },
+            {
+              "name": "fieldgroups",
+              "in": "query",
+              "value": "$inputs.fieldgroups"
+            },
+            {
+              "name": "gtin",
+              "in": "query",
+              "value": "$inputs.gtin"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "mpn",
+              "in": "query",
+              "value": "$inputs.mpn"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "q",
+              "in": "query",
+              "value": "$inputs.q"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "productSummaries": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-selected-product-details",
+          "description": "Retrieve the full details of a specific product selected from the search results using its ePID.",
+          "operationId": "getProduct",
+          "parameters": [
+            {
+              "name": "X-EBAY-C-MARKETPLACE-ID",
+              "in": "header",
+              "value": "$inputs.X-EBAY-C-MARKETPLACE-ID"
+            },
+            {
+              "name": "epid",
+              "in": "path",
+              "value": "$steps.search-catalog-products.outputs.productSummaries.epid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Product": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "productSummaries": "$steps.search-catalog-products.outputs.productSummaries",
+        "Product": "$steps.get-selected-product-details.outputs.Product"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "refine-product-search-using-aspects",
+      "summary": "Performs an initial product search, retrieves aspect refinements (like color, size distributions), allows the user to select specific aspect values, and then performs a refined search to narrow down results before fetching full product details.",
+      "description": "Performs an initial product search, retrieves aspect refinements (like color, size distributions), allows the user to select specific aspect values, and then performs a refined search to narrow down results before fetching full product details.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-EBAY-C-MARKETPLACE-ID": {
+            "type": "string"
+          },
+          "aspect_filter": {
+            "type": "string"
+          },
+          "category_ids": {
+            "type": "string"
+          },
+          "fieldgroups": {
+            "type": "string"
+          },
+          "gtin": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "mpn": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "q": {
+            "type": "string"
+          },
+          "epid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "initial-search-with-refinements",
+          "description": "Perform an initial search using keywords or category, requesting aspect refinement data.",
+          "operationId": "search",
+          "parameters": [
+            {
+              "name": "X-EBAY-C-MARKETPLACE-ID",
+              "in": "header",
+              "value": "$inputs.X-EBAY-C-MARKETPLACE-ID"
+            },
+            {
+              "name": "aspect_filter",
+              "in": "query",
+              "value": "$inputs.aspect_filter"
+            },
+            {
+              "name": "category_ids",
+              "in": "query",
+              "value": "$inputs.category_ids"
+            },
+            {
+              "name": "fieldgroups",
+              "in": "query",
+              "value": "$inputs.fieldgroups"
+            },
+            {
+              "name": "gtin",
+              "in": "query",
+              "value": "$inputs.gtin"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "mpn",
+              "in": "query",
+              "value": "$inputs.mpn"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "q",
+              "in": "query",
+              "value": "$inputs.q"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "productSummaries": "$response.body",
+            "refinement": "$response.body"
+          }
+        },
+        {
+          "stepId": "refined-search-by-aspects",
+          "description": "Perform a second search using an aspect_filter constructed based on user selection from the refinement data provided in the previous step.",
+          "operationId": "search",
+          "parameters": [
+            {
+              "name": "X-EBAY-C-MARKETPLACE-ID",
+              "in": "header",
+              "value": "$inputs.X-EBAY-C-MARKETPLACE-ID"
+            },
+            {
+              "name": "aspect_filter",
+              "in": "query",
+              "value": "$steps.initial-search-with-refinements.outputs.refinement"
+            },
+            {
+              "name": "category_ids",
+              "in": "query",
+              "value": "$inputs.category_ids"
+            },
+            {
+              "name": "fieldgroups",
+              "in": "query",
+              "value": "$inputs.fieldgroups"
+            },
+            {
+              "name": "gtin",
+              "in": "query",
+              "value": "$inputs.gtin"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "mpn",
+              "in": "query",
+              "value": "$inputs.mpn"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "q",
+              "in": "query",
+              "value": "$inputs.q"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "productSummaries": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-refined-product-details",
+          "description": "Retrieve the full details of a specific product selected from the refined search results using its ePID.",
+          "operationId": "getProduct",
+          "parameters": [
+            {
+              "name": "X-EBAY-C-MARKETPLACE-ID",
+              "in": "header",
+              "value": "$inputs.X-EBAY-C-MARKETPLACE-ID"
+            },
+            {
+              "name": "epid",
+              "in": "path",
+              "value": "$steps.refined-search-by-aspects.outputs.productSummaries.epid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Product": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "productSummaries": "$steps.refined-search-by-aspects.outputs.productSummaries",
+        "refinement": "$steps.initial-search-with-refinements.outputs.refinement",
+        "Product": "$steps.get-refined-product-details.outputs.Product"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "find-product-by-identifier-gtinmpn",
+      "summary": "Directly searches for a specific catalog product using a known identifier (GTIN or MPN) and retrieves its full details. Useful when the seller has the product's barcode or manufacturer part number.",
+      "description": "Directly searches for a specific catalog product using a known identifier (GTIN or MPN) and retrieves its full details. Useful when the seller has the product's barcode or manufacturer part number.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-EBAY-C-MARKETPLACE-ID": {
+            "type": "string"
+          },
+          "aspect_filter": {
+            "type": "string"
+          },
+          "category_ids": {
+            "type": "string"
+          },
+          "fieldgroups": {
+            "type": "string"
+          },
+          "gtin": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "mpn": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "q": {
+            "type": "string"
+          },
+          "epid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-by-identifier",
+          "description": "Search for product summaries using a specific GTIN or MPN.",
+          "operationId": "search",
+          "parameters": [
+            {
+              "name": "X-EBAY-C-MARKETPLACE-ID",
+              "in": "header",
+              "value": "$inputs.X-EBAY-C-MARKETPLACE-ID"
+            },
+            {
+              "name": "aspect_filter",
+              "in": "query",
+              "value": "$inputs.aspect_filter"
+            },
+            {
+              "name": "category_ids",
+              "in": "query",
+              "value": "$inputs.category_ids"
+            },
+            {
+              "name": "fieldgroups",
+              "in": "query",
+              "value": "$inputs.fieldgroups"
+            },
+            {
+              "name": "gtin",
+              "in": "query",
+              "value": "$inputs.gtin"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "mpn",
+              "in": "query",
+              "value": "$inputs.mpn"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "q",
+              "in": "query",
+              "value": "$inputs.q"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "productSummaries": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-identified-product-details",
+          "description": "Retrieve the full details of the product found via its identifier using its ePID.",
+          "operationId": "getProduct",
+          "parameters": [
+            {
+              "name": "X-EBAY-C-MARKETPLACE-ID",
+              "in": "header",
+              "value": "$inputs.X-EBAY-C-MARKETPLACE-ID"
+            },
+            {
+              "name": "epid",
+              "in": "path",
+              "value": "$steps.search-by-identifier.outputs.productSummaries.epid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Product": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "productSummaries": "$steps.search-by-identifier.outputs.productSummaries",
+        "Product": "$steps.get-identified-product-details.outputs.Product"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

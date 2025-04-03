@@ -1,0 +1,1566 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/atlassian.com/jira/1001.0.0-SNAPSHOT-636312f2dc6e26921216979d4ae12655beeff255/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "create-and-configure-custom-field",
+      "summary": "Creates a new custom field, defines its context (projects and issue types it applies to), and associates it with specific projects and issue types.",
+      "description": "Creates a new custom field, defines its context (projects and issue types it applies to), and associates it with specific projects and issue types.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "fieldId": {
+            "type": "string"
+          },
+          "contextId": {
+            "type": "string"
+          },
+          "issueTypeIds": {
+            "type": "string"
+          },
+          "projectIds": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-custom-field",
+          "description": "Creates a new custom field.",
+          "operationId": "createCustomField",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name",
+              "type": "$inputs.type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "key": "$response.body",
+            "name": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-custom-field-context",
+          "description": "Creates a context for the custom field, specifying its name and description.",
+          "operationId": "createCustomFieldContext",
+          "parameters": [
+            {
+              "name": "fieldId",
+              "in": "path",
+              "value": "$steps.create-custom-field.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "fieldId": "$steps.create-custom-field.outputs.id",
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "name": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-issue-types-to-context",
+          "description": "Adds specific issue types to the custom field context.",
+          "operationId": "addIssueTypesToContext",
+          "parameters": [
+            {
+              "name": "fieldId",
+              "in": "path",
+              "value": "$steps.create-custom-field.outputs.id"
+            },
+            {
+              "name": "contextId",
+              "in": "path",
+              "value": "$steps.create-custom-field-context.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "fieldId": "$steps.create-custom-field.outputs.id",
+              "contextId": "$steps.create-custom-field-context.outputs.id",
+              "issueTypeIds": "$inputs.issueTypeIds"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "context_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "assign-projects-to-context",
+          "description": "Assigns the custom field context to specific projects.",
+          "operationId": "assignProjectsToCustomFieldContext",
+          "parameters": [
+            {
+              "name": "fieldId",
+              "in": "path",
+              "value": "$steps.create-custom-field.outputs.id"
+            },
+            {
+              "name": "contextId",
+              "in": "path",
+              "value": "$steps.create-custom-field-context.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "fieldId": "$steps.create-custom-field.outputs.id",
+              "contextId": "$steps.create-custom-field-context.outputs.id",
+              "projectIds": "$inputs.projectIds"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "context_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-custom-field-context.outputs.id",
+        "key": "$steps.create-custom-field.outputs.key",
+        "name": "$steps.create-custom-field-context.outputs.name",
+        "context_data": "$steps.assign-projects-to-context.outputs.context_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "bulk-transition-issues-and-monitor-progress",
+      "summary": "Finds issues using JQL, identifies common available transitions, performs a bulk transition, and monitors the progress of the bulk operation.",
+      "description": "Finds issues using JQL, identifies common available transitions, performs a bulk transition, and monitors the progress of the bulk operation.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "string"
+          },
+          "jql": {
+            "type": "string"
+          },
+          "issueIdsOrKeys": {
+            "type": "string"
+          },
+          "endingBefore": {
+            "type": "string"
+          },
+          "startingAfter": {
+            "type": "string"
+          },
+          "taskId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-issues",
+          "description": "Search for issues using JQL to identify the set of issues for bulk transition.",
+          "operationId": "searchForIssuesUsingJqlPost",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "fields": "$inputs.fields",
+              "jql": "$inputs.jql"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "issues": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-available-bulk-transitions",
+          "description": "Retrieve available transitions common to the specified issues.",
+          "operationId": "getAvailableTransitions",
+          "parameters": [
+            {
+              "name": "issueIdsOrKeys",
+              "in": "query",
+              "value": "$steps.search-issues.outputs.issues.key"
+            },
+            {
+              "name": "endingBefore",
+              "in": "query",
+              "value": "$inputs.endingBefore"
+            },
+            {
+              "name": "startingAfter",
+              "in": "query",
+              "value": "$inputs.startingAfter"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "availableTransitions": "$response.body"
+          }
+        },
+        {
+          "stepId": "submit-bulk-transition",
+          "description": "Submit the bulk transition request for the selected issues and transition.",
+          "operationId": "submitBulkTransition",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "selectedIssueIdsOrKeys": "$steps.search-issues.outputs.issues[*].key",
+              "transitionId": "$steps.get-available-bulk-transitions.outputs.availableTransitions[0].transitions[0].transitionId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "taskId": "$response.body"
+          }
+        },
+        {
+          "stepId": "monitor-bulk-transition-progress",
+          "description": "Check the progress and status of the submitted bulk transition task.",
+          "operationId": "getBulkOperationProgress",
+          "parameters": [
+            {
+              "name": "taskId",
+              "in": "path",
+              "value": "$steps.submit-bulk-transition.outputs.taskId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body",
+            "progressPercent": "$response.body",
+            "processedAccessibleIssues": "$response.body",
+            "failedAccessibleIssues": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "issues": "$steps.search-issues.outputs.issues",
+        "availableTransitions": "$steps.get-available-bulk-transitions.outputs.availableTransitions",
+        "taskId": "$steps.submit-bulk-transition.outputs.taskId",
+        "status": "$steps.monitor-bulk-transition-progress.outputs.status",
+        "progressPercent": "$steps.monitor-bulk-transition-progress.outputs.progressPercent",
+        "processedAccessibleIssues": "$steps.monitor-bulk-transition-progress.outputs.processedAccessibleIssues",
+        "failedAccessibleIssues": "$steps.monitor-bulk-transition-progress.outputs.failedAccessibleIssues"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-and-link-issues",
+      "summary": "Creates two issues and then links them together with a specified link type.",
+      "description": "Creates two issues and then links them together with a specified link type.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "updateHistory": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "string"
+          },
+          "update": {
+            "type": "string"
+          },
+          "inwardIssue": {
+            "type": "string"
+          },
+          "outwardIssue": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-first-issue",
+          "description": "Create the first issue.",
+          "operationId": "createIssue",
+          "parameters": [
+            {
+              "name": "updateHistory",
+              "in": "query",
+              "value": "$inputs.updateHistory"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "fields": "$inputs.fields",
+              "update": "$inputs.update"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "key": "$response.body",
+            "self": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-second-issue",
+          "description": "Create the second issue.",
+          "operationId": "createIssue",
+          "parameters": [
+            {
+              "name": "updateHistory",
+              "in": "query",
+              "value": "$inputs.updateHistory"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "fields": "$inputs.fields",
+              "update": "$inputs.update"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "key": "$response.body",
+            "self": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-link-types",
+          "description": "Retrieve available issue link types.",
+          "operationId": "getIssueLinkTypes",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "issueLinkTypes": "$response.body"
+          }
+        },
+        {
+          "stepId": "link-the-issues",
+          "description": "Create a link between the two created issues.",
+          "operationId": "linkIssues",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "inwardIssue": "$inputs.inwardIssue",
+              "outwardIssue": "$inputs.outwardIssue",
+              "type": "$inputs.type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "issues_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-second-issue.outputs.id",
+        "key": "$steps.create-second-issue.outputs.key",
+        "self": "$steps.create-second-issue.outputs.self",
+        "issueLinkTypes": "$steps.get-link-types.outputs.issueLinkTypes",
+        "issues_data": "$steps.link-the-issues.outputs.issues_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "configure-project-issue-security",
+      "summary": "Creates an issue security scheme, adds security levels to it, assigns members to those levels, and finally associates the scheme with a project.",
+      "description": "Creates an issue security scheme, adds security levels to it, assigns members to those levels, and finally associates the scheme with a project.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "schemeId": {
+            "type": "string"
+          },
+          "levels": {
+            "type": "string"
+          },
+          "startAt": {
+            "type": "string"
+          },
+          "maxResults": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "onlyDefault": {
+            "type": "string"
+          },
+          "levelId": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-issue-security-scheme",
+          "description": "Create a new issue security scheme.",
+          "operationId": "createIssueSecurityScheme",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-security-levels",
+          "description": "Add security levels to the created scheme.",
+          "operationId": "addSecurityLevel",
+          "parameters": [
+            {
+              "name": "schemeId",
+              "in": "path",
+              "value": "$steps.create-issue-security-scheme.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "schemeId": "$steps.create-issue-security-scheme.outputs.id",
+              "levels": "$inputs.levels"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "levels_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-security-levels",
+          "description": "Retrieve the newly created security levels to get their IDs.",
+          "operationId": "getSecurityLevels",
+          "parameters": [
+            {
+              "name": "startAt",
+              "in": "query",
+              "value": "$inputs.startAt"
+            },
+            {
+              "name": "maxResults",
+              "in": "query",
+              "value": "$inputs.maxResults"
+            },
+            {
+              "name": "id",
+              "in": "query",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "schemeId",
+              "in": "query",
+              "value": "$steps.create-issue-security-scheme.outputs.id"
+            },
+            {
+              "name": "onlyDefault",
+              "in": "query",
+              "value": "$inputs.onlyDefault"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "values": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-members-to-security-level",
+          "description": "Add members (users/groups) to a specific security level within the scheme.",
+          "operationId": "addSecurityLevelMembers",
+          "parameters": [
+            {
+              "name": "schemeId",
+              "in": "path",
+              "value": "$steps.create-issue-security-scheme.outputs.id"
+            },
+            {
+              "name": "levelId",
+              "in": "path",
+              "value": "$steps.get-security-levels.outputs.values.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "schemeId": "$steps.create-issue-security-scheme.outputs.id",
+              "levelId": "$steps.get-security-levels.outputs.values[0].id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "level_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "associate-security-scheme-to-project",
+          "description": "Associate the configured issue security scheme with a specific project.",
+          "operationId": "associateSchemesToProjects",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "schemeId": "$steps.create-issue-security-scheme.outputs.id",
+              "projectId": "$inputs.projectId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-issue-security-scheme.outputs.id",
+        "levels_data": "$steps.add-security-levels.outputs.levels_data",
+        "values": "$steps.get-security-levels.outputs.values",
+        "level_data": "$steps.add-members-to-security-level.outputs.level_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-and-assign-project-role",
+      "summary": "Creates a new project role and assigns specific users or groups as actors to that role within a given project.",
+      "description": "Creates a new project role and assigns specific users or groups as actors to that role within a given project.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "projectIdOrKey": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "group": {
+            "type": "string"
+          },
+          "groupId": {
+            "type": "string"
+          },
+          "user": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-project-role",
+          "description": "Creates a new project role.",
+          "operationId": "createProjectRole",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "description": "$inputs.description",
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "name": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-actors-to-project-role",
+          "description": "Assigns users and/or groups as actors to the newly created project role for a specific project.",
+          "operationId": "addActorUsers",
+          "parameters": [
+            {
+              "name": "projectIdOrKey",
+              "in": "path",
+              "value": "$inputs.projectIdOrKey"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-project-role.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.create-project-role.outputs.id",
+              "group": "$inputs.group",
+              "groupId": "$inputs.groupId",
+              "user": "$inputs.user"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "name": "$response.body",
+            "actors": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.add-actors-to-project-role.outputs.id",
+        "name": "$steps.add-actors-to-project-role.outputs.name",
+        "actors": "$steps.add-actors-to-project-role.outputs.actors"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "add-and-configure-dashboard-gadget",
+      "summary": "Finds an existing dashboard, identifies available gadgets, adds a specific gadget to the dashboard, and then updates its configuration (title, position, color).",
+      "description": "Finds an existing dashboard, identifies available gadgets, adds a specific gadget to the dashboard, and then updates its configuration (title, position, color).",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "dashboardId": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "position": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "uri": {
+            "type": "string"
+          },
+          "gadgetId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-dashboard",
+          "description": "Retrieve details of a specific dashboard to confirm its existence.",
+          "operationId": "getDashboard",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "name": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-available-gadgets",
+          "description": "Get a list of all available gadgets that can be added to dashboards.",
+          "operationId": "getAllAvailableDashboardGadgets",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "gadgets": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-gadget-to-dashboard",
+          "description": "Add a selected gadget to the specified dashboard.",
+          "operationId": "addGadget",
+          "parameters": [
+            {
+              "name": "dashboardId",
+              "in": "path",
+              "value": "$steps.get-dashboard.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "dashboardId": "$steps.get-dashboard.outputs.id",
+              "moduleKey": "$steps.get-available-gadgets.outputs.gadgets[0].moduleKey",
+              "color": "$inputs.color",
+              "position": "$inputs.position",
+              "title": "$inputs.title",
+              "uri": "$inputs.uri"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "title": "$response.body",
+            "moduleKey": "$response.body",
+            "uri": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-gadget-configuration",
+          "description": "Update the configuration (title, color, position) of the newly added gadget.",
+          "operationId": "updateGadget",
+          "parameters": [
+            {
+              "name": "dashboardId",
+              "in": "path",
+              "value": "$steps.get-dashboard.outputs.id"
+            },
+            {
+              "name": "gadgetId",
+              "in": "path",
+              "value": "$steps.add-gadget-to-dashboard.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "dashboardId": "$steps.get-dashboard.outputs.id",
+              "gadgetId": "$steps.add-gadget-to-dashboard.outputs.id",
+              "color": "$inputs.color",
+              "position": "$inputs.position",
+              "title": "$inputs.title"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "configuration_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.add-gadget-to-dashboard.outputs.id",
+        "name": "$steps.get-dashboard.outputs.name",
+        "gadgets": "$steps.get-available-gadgets.outputs.gadgets",
+        "title": "$steps.add-gadget-to-dashboard.outputs.title",
+        "moduleKey": "$steps.add-gadget-to-dashboard.outputs.moduleKey",
+        "uri": "$steps.add-gadget-to-dashboard.outputs.uri",
+        "configuration_data": "$steps.update-gadget-configuration.outputs.configuration_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-issue-attachments",
+      "summary": "Adds an attachment to an issue, retrieves its metadata, and optionally retrieves its content or thumbnail.",
+      "description": "Adds an attachment to an issue, retrieves its metadata, and optionally retrieves its content or thumbnail.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "issueIdOrKey": {
+            "type": "string"
+          },
+          "add-attachment-to-issue_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          },
+          "redirect": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-attachment-to-issue",
+          "description": "Uploads one or more files as attachments to a specific issue.",
+          "operationId": "addAttachment",
+          "parameters": [
+            {
+              "name": "issueIdOrKey",
+              "in": "path",
+              "value": "$inputs.issueIdOrKey"
+            }
+          ],
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": "$inputs.add-attachment-to-issue_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "attachments": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-attachment-metadata",
+          "description": "Retrieves the metadata for a specific attachment.",
+          "operationId": "getAttachment",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.add-attachment-to-issue.outputs.attachments.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "filename": "$response.body",
+            "author": "$response.body",
+            "created": "$response.body",
+            "size": "$response.body",
+            "mimeType": "$response.body",
+            "content": "$response.body",
+            "thumbnail": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-attachment-content",
+          "description": "Downloads the content of the attachment.",
+          "operationId": "getAttachmentContent",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.add-attachment-to-issue.outputs.attachments.id"
+            },
+            {
+              "name": "redirect",
+              "in": "query",
+              "value": "$inputs.redirect"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "file_content": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "attachments": "$steps.add-attachment-to-issue.outputs.attachments",
+        "id": "$steps.get-attachment-metadata.outputs.id",
+        "filename": "$steps.get-attachment-metadata.outputs.filename",
+        "author": "$steps.get-attachment-metadata.outputs.author",
+        "created": "$steps.get-attachment-metadata.outputs.created",
+        "size": "$steps.get-attachment-metadata.outputs.size",
+        "mimeType": "$steps.get-attachment-metadata.outputs.mimeType",
+        "content": "$steps.get-attachment-metadata.outputs.content",
+        "thumbnail": "$steps.get-attachment-metadata.outputs.thumbnail",
+        "file_content": "$steps.get-attachment-content.outputs.file_content"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-project-versions",
+      "summary": "Creates a new version for a project, updates its details (like release date or description), and retrieves the count of issues associated with it.",
+      "description": "Creates a new version for a project, updates its details (like release date or description), and retrieves the count of issues associated with it.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "releaseDate": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "archived": {
+            "type": "string"
+          },
+          "released": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-project-version",
+          "description": "Create a new version for a specified project.",
+          "operationId": "createVersion",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "description": "$inputs.description",
+              "name": "$inputs.name",
+              "projectId": "$inputs.projectId",
+              "releaseDate": "$inputs.releaseDate",
+              "startDate": "$inputs.startDate"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "name": "$response.body",
+            "self": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-project-version",
+          "description": "Update the details of the created project version.",
+          "operationId": "updateVersion",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-project-version.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.create-project-version.outputs.id",
+              "archived": "$inputs.archived",
+              "description": "$inputs.description",
+              "name": "$inputs.name",
+              "releaseDate": "$inputs.releaseDate",
+              "released": "$inputs.released",
+              "startDate": "$inputs.startDate"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "name": "$response.body",
+            "self": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-version-issue-counts",
+          "description": "Get the count of issues related to the updated version.",
+          "operationId": "getVersionRelatedIssues",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.update-project-version.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "issuesFixedCount": "$response.body",
+            "issuesAffectedCount": "$response.body",
+            "issueCountWithCustomFieldsShowingVersion": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.update-project-version.outputs.id",
+        "name": "$steps.update-project-version.outputs.name",
+        "self": "$steps.update-project-version.outputs.self",
+        "issuesFixedCount": "$steps.get-version-issue-counts.outputs.issuesFixedCount",
+        "issuesAffectedCount": "$steps.get-version-issue-counts.outputs.issuesAffectedCount",
+        "issueCountWithCustomFieldsShowingVersion": "$steps.get-version-issue-counts.outputs.issueCountWithCustomFieldsShowingVersion"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "check-user-permissions-for-project",
+      "summary": "Retrieves the permissions a specific user has for a given project.",
+      "description": "Retrieves the permissions a specific user has for a given project.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "expand": {
+            "type": "string"
+          },
+          "projectIdOrKey": {
+            "type": "string"
+          },
+          "properties": {
+            "type": "string"
+          },
+          "projectPermissions": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-user",
+          "description": "Get user details, including account ID.",
+          "operationId": "getUser",
+          "parameters": [
+            {
+              "name": "accountId",
+              "in": "query",
+              "value": "$inputs.accountId"
+            },
+            {
+              "name": "username",
+              "in": "query",
+              "value": "$inputs.username"
+            },
+            {
+              "name": "key",
+              "in": "query",
+              "value": "$inputs.key"
+            },
+            {
+              "name": "expand",
+              "in": "query",
+              "value": "$inputs.expand"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "accountId": "$response.body",
+            "displayName": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-project",
+          "description": "Get project details, including project ID.",
+          "operationId": "getProject",
+          "parameters": [
+            {
+              "name": "projectIdOrKey",
+              "in": "path",
+              "value": "$inputs.projectIdOrKey"
+            },
+            {
+              "name": "expand",
+              "in": "query",
+              "value": "$inputs.expand"
+            },
+            {
+              "name": "properties",
+              "in": "query",
+              "value": "$inputs.properties"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "key": "$response.body",
+            "name": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-user-permissions-for-project",
+          "description": "Check the specified permissions for the user within the context of the project.",
+          "operationId": "getBulkPermissions",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "accountId": "$steps.get-user.outputs.accountId",
+              "projectPermissions": "$inputs.projectPermissions"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "projectPermissions": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "accountId": "$steps.get-user.outputs.accountId",
+        "displayName": "$steps.get-user.outputs.displayName",
+        "id": "$steps.get-project.outputs.id",
+        "key": "$steps.get-project.outputs.key",
+        "name": "$steps.get-project.outputs.name",
+        "projectPermissions": "$steps.get-user-permissions-for-project.outputs.projectPermissions"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "log-work-and-verify",
+      "summary": "Logs work against an issue and then retrieves the worklog details to verify the entry.",
+      "description": "Logs work against an issue and then retrieves the worklog details to verify the entry.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "issueIdOrKey": {
+            "type": "string"
+          },
+          "notifyUsers": {
+            "type": "string"
+          },
+          "adjustEstimate": {
+            "type": "string"
+          },
+          "newEstimate": {
+            "type": "string"
+          },
+          "reduceBy": {
+            "type": "string"
+          },
+          "expand": {
+            "type": "string"
+          },
+          "overrideEditableFlag": {
+            "type": "string"
+          },
+          "comment": {
+            "type": "string"
+          },
+          "started": {
+            "type": "string"
+          },
+          "timeSpent": {
+            "type": "string"
+          },
+          "visibility": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-worklog",
+          "description": "Adds a worklog entry to a specific issue.",
+          "operationId": "addWorklog",
+          "parameters": [
+            {
+              "name": "issueIdOrKey",
+              "in": "path",
+              "value": "$inputs.issueIdOrKey"
+            },
+            {
+              "name": "notifyUsers",
+              "in": "query",
+              "value": "$inputs.notifyUsers"
+            },
+            {
+              "name": "adjustEstimate",
+              "in": "query",
+              "value": "$inputs.adjustEstimate"
+            },
+            {
+              "name": "newEstimate",
+              "in": "query",
+              "value": "$inputs.newEstimate"
+            },
+            {
+              "name": "reduceBy",
+              "in": "query",
+              "value": "$inputs.reduceBy"
+            },
+            {
+              "name": "expand",
+              "in": "query",
+              "value": "$inputs.expand"
+            },
+            {
+              "name": "overrideEditableFlag",
+              "in": "query",
+              "value": "$inputs.overrideEditableFlag"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "comment": "$inputs.comment",
+              "started": "$inputs.started",
+              "timeSpent": "$inputs.timeSpent",
+              "visibility": "$inputs.visibility"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "issueId": "$response.body",
+            "timeSpentSeconds": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-worklog",
+          "description": "Retrieves the details of the newly created worklog to verify.",
+          "operationId": "getWorklog",
+          "parameters": [
+            {
+              "name": "issueIdOrKey",
+              "in": "path",
+              "value": "$steps.add-worklog.outputs.issueId"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.add-worklog.outputs.id"
+            },
+            {
+              "name": "expand",
+              "in": "query",
+              "value": "$inputs.expand"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body",
+            "author": "$response.body",
+            "timeSpent": "$response.body",
+            "started": "$response.body",
+            "comment": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.get-worklog.outputs.id",
+        "issueId": "$steps.add-worklog.outputs.issueId",
+        "timeSpentSeconds": "$steps.add-worklog.outputs.timeSpentSeconds",
+        "author": "$steps.get-worklog.outputs.author",
+        "timeSpent": "$steps.get-worklog.outputs.timeSpent",
+        "started": "$steps.get-worklog.outputs.started",
+        "comment": "$steps.get-worklog.outputs.comment"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

@@ -1,0 +1,815 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/ebay.com/sell-account/v1.9.2/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "initial-business-policy-setup-for-marketplace",
+      "summary": "Creates the essential set of business policies (Fulfillment, Payment, Return) required for a seller to list items in a specific marketplace.",
+      "description": "Creates the essential set of business policies (Fulfillment, Payment, Return) required for a seller to list items in a specific marketplace.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Content-Type": {
+            "type": "string"
+          },
+          "create-initial-fulfillment-policy_body": {
+            "type": "object"
+          },
+          "create-initial-payment-policy_body": {
+            "type": "object"
+          },
+          "create-initial-return-policy_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-initial-fulfillment-policy",
+          "description": "Create a new fulfillment policy for the target marketplace.",
+          "operationId": "createFulfillmentPolicy",
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-initial-fulfillment-policy_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "fulfillmentPolicyId": "$response.body",
+            "warnings": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-initial-payment-policy",
+          "description": "Create a new payment policy for the target marketplace.",
+          "operationId": "createPaymentPolicy",
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-initial-payment-policy_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "paymentPolicyId": "$response.body",
+            "warnings": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-initial-return-policy",
+          "description": "Create a new return policy for the target marketplace.",
+          "operationId": "createReturnPolicy",
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-initial-return-policy_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "returnPolicyId": "$response.body",
+            "warnings": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "fulfillmentPolicyId": "$steps.create-initial-fulfillment-policy.outputs.fulfillmentPolicyId",
+        "warnings": "$steps.create-initial-return-policy.outputs.warnings",
+        "paymentPolicyId": "$steps.create-initial-payment-policy.outputs.paymentPolicyId",
+        "returnPolicyId": "$steps.create-initial-return-policy.outputs.returnPolicyId"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "configure-fulfillment-policy-with-rate-table",
+      "summary": "Retrieves available shipping rate tables for a country and then creates a new fulfillment policy utilizing one of those tables for shipping cost calculation.",
+      "description": "Retrieves available shipping rate tables for a country and then creates a new fulfillment policy utilizing one of those tables for shipping cost calculation.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "country_code": {
+            "type": "string"
+          },
+          "Content-Type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-shipping-rate-tables",
+          "description": "Retrieve shipping rate tables for a specific country.",
+          "operationId": "getRateTables",
+          "parameters": [
+            {
+              "name": "country_code",
+              "in": "query",
+              "value": "$inputs.country_code"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "rateTables": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-fulfillment-policy-with-rate-table",
+          "description": "Create a new fulfillment policy, associating a specific shipping rate table.",
+          "operationId": "createFulfillmentPolicy",
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "rateTableId": "$steps.get-shipping-rate-tables.outputs.rateTables[0].rateTableId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "fulfillmentPolicyId": "$response.body",
+            "warnings": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "rateTables": "$steps.get-shipping-rate-tables.outputs.rateTables",
+        "fulfillmentPolicyId": "$steps.create-fulfillment-policy-with-rate-table.outputs.fulfillmentPolicyId",
+        "warnings": "$steps.create-fulfillment-policy-with-rate-table.outputs.warnings"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "check-account-readiness-and-eligibility",
+      "summary": "Checks the seller's registration status, selling limits, and eligibility for advertising programs to assess account readiness.",
+      "description": "Checks the seller's registration status, selling limits, and eligibility for advertising programs to assess account readiness.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "program_types": {
+            "type": "string"
+          },
+          "X-EBAY-C-MARKETPLACE-ID": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-seller-privileges",
+          "description": "Retrieve seller registration status and selling limits.",
+          "operationId": "getPrivileges",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sellingPrivileges": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-advertising-eligibility",
+          "description": "Check seller eligibility for specified eBay advertising programs for a given marketplace.",
+          "operationId": "getAdvertisingEligibility",
+          "parameters": [
+            {
+              "name": "program_types",
+              "in": "query",
+              "value": "$inputs.program_types"
+            },
+            {
+              "name": "X-EBAY-C-MARKETPLACE-ID",
+              "in": "header",
+              "value": "$inputs.X-EBAY-C-MARKETPLACE-ID"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "advertisingEligibility": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "sellingPrivileges": "$steps.get-seller-privileges.outputs.sellingPrivileges",
+        "advertisingEligibility": "$steps.check-advertising-eligibility.outputs.advertisingEligibility"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "update-existing-fulfillment-policy-by-name",
+      "summary": "Finds a specific fulfillment policy by its name and marketplace, retrieves its full details, and then updates it.",
+      "description": "Finds a specific fulfillment policy by its name and marketplace, retrieves its full details, and then updates it.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Content-Language": {
+            "type": "string"
+          },
+          "marketplace_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "fulfillmentPolicyId": {
+            "type": "string"
+          },
+          "Content-Type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-fulfillment-policy-by-name",
+          "description": "Retrieve a fulfillment policy using its name and marketplace ID.",
+          "operationId": "getFulfillmentPolicyByName",
+          "parameters": [
+            {
+              "name": "Content-Language",
+              "in": "header",
+              "value": "$inputs.Content-Language"
+            },
+            {
+              "name": "marketplace_id",
+              "in": "query",
+              "value": "$inputs.marketplace_id"
+            },
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "FulfillmentPolicy": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-retrieved-fulfillment-policy",
+          "description": "Update the fulfillment policy retrieved in the previous step.",
+          "operationId": "updateFulfillmentPolicy",
+          "parameters": [
+            {
+              "name": "fulfillmentPolicyId",
+              "in": "path",
+              "value": "$steps.get-fulfillment-policy-by-name.outputs.FulfillmentPolicy.fulfillmentPolicyId"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "fulfillmentPolicyId": "$steps.get-fulfillment-policy-by-name.outputs.FulfillmentPolicy.fulfillmentPolicyId",
+              "FulfillmentPolicyRequest": "$steps.get-fulfillment-policy-by-name.outputs.FulfillmentPolicy"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "SetFulfillmentPolicyResponse": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "FulfillmentPolicy": "$steps.get-fulfillment-policy-by-name.outputs.FulfillmentPolicy",
+        "SetFulfillmentPolicyResponse": "$steps.update-retrieved-fulfillment-policy.outputs.SetFulfillmentPolicyResponse"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-seller-program-participation",
+      "summary": "Checks which programs a seller is opted into, opts them into a new program, and optionally verifies the opt-in status later.",
+      "description": "Checks which programs a seller is opted into, opts them into a new program, and optionally verifies the opt-in status later.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Content-Type": {
+            "type": "string"
+          },
+          "opt-into-seller-program_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "check-current-programs",
+          "description": "Get the list of programs the seller is currently opted into.",
+          "operationId": "getOptedInPrograms",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "programs": "$response.body"
+          }
+        },
+        {
+          "stepId": "opt-into-seller-program",
+          "description": "Opt the seller into a specific eBay seller program.",
+          "operationId": "optInToProgram",
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.opt-into-seller-program_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "optInStatus": "$response.body"
+          }
+        },
+        {
+          "stepId": "verify-program-opt-in",
+          "description": "Re-check the list of opted-in programs after a delay to confirm the opt-in was processed.",
+          "operationId": "getOptedInPrograms",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updatedPrograms": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "programs": "$steps.check-current-programs.outputs.programs",
+        "optInStatus": "$steps.opt-into-seller-program.outputs.optInStatus",
+        "updatedPrograms": "$steps.verify-program-opt-in.outputs.updatedPrograms"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-and-verify-custom-compliance-policy",
+      "summary": "Creates a new custom policy (e.g., for product compliance or take-back) and then retrieves it using the generated ID to verify its details.",
+      "description": "Creates a new custom policy (e.g., for product compliance or take-back) and then retrieves it using the generated ID to verify its details.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Content-Type": {
+            "type": "string"
+          },
+          "create-new-custom-policy_body": {
+            "type": "object"
+          },
+          "custom_policy_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-new-custom-policy",
+          "description": "Create a new custom policy (e.g., PRODUCT_COMPLIANCE or TAKE_BACK).",
+          "operationId": "createCustomPolicy",
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-new-custom-policy_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "LocationHeader": "$response.body"
+          }
+        },
+        {
+          "stepId": "verify-custom-policy-creation",
+          "description": "Retrieve the newly created custom policy by its ID (extracted from Location header) to verify.",
+          "operationId": "getCustomPolicy",
+          "parameters": [
+            {
+              "name": "custom_policy_id",
+              "in": "path",
+              "value": "$steps.create-new-custom-policy.outputs.LocationHeader"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "CustomPolicy": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "LocationHeader": "$steps.create-new-custom-policy.outputs.LocationHeader",
+        "CustomPolicy": "$steps.verify-custom-policy-creation.outputs.CustomPolicy"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "update-existing-custom-policy",
+      "summary": "Retrieves the current details of a specific custom policy and then updates it, ensuring all required fields are included in the update request.",
+      "description": "Retrieves the current details of a specific custom policy and then updates it, ensuring all required fields are included in the update request.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "custom_policy_id": {
+            "type": "string"
+          },
+          "Content-Type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-specific-custom-policy",
+          "description": "Retrieve the current details of the custom policy to be updated.",
+          "operationId": "getCustomPolicy",
+          "parameters": [
+            {
+              "name": "custom_policy_id",
+              "in": "path",
+              "value": "$inputs.custom_policy_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "CustomPolicy": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-the-custom-policy",
+          "description": "Update the custom policy, providing the complete policy details including unchanged fields.",
+          "operationId": "updateCustomPolicy",
+          "parameters": [
+            {
+              "name": "custom_policy_id",
+              "in": "path",
+              "value": "$steps.get-specific-custom-policy.outputs.CustomPolicy.customPolicyId"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "custom_policy_id": "$steps.get-specific-custom-policy.outputs.CustomPolicy.customPolicyId",
+              "CustomPolicyRequest": "$steps.get-specific-custom-policy.outputs.CustomPolicy"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "http_status_204": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "CustomPolicy": "$steps.get-specific-custom-policy.outputs.CustomPolicy",
+        "http_status_204": "$steps.update-the-custom-policy.outputs.http_status_204"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "configure-sales-tax-for-specific-jurisdiction",
+      "summary": "Retrieves existing sales tax configurations for a country (e.g., Canada or US territory) and then creates or updates the tax rate for a specific jurisdiction within that country.",
+      "description": "Retrieves existing sales tax configurations for a country (e.g., Canada or US territory) and then creates or updates the tax rate for a specific jurisdiction within that country.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "country_code": {
+            "type": "string"
+          },
+          "countryCode": {
+            "type": "string"
+          },
+          "jurisdictionId": {
+            "type": "string"
+          },
+          "Content-Type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-existing-sales-taxes",
+          "description": "Retrieve all sales tax entries for a specific country (e.g., CA or US).",
+          "operationId": "getSalesTaxes",
+          "parameters": [
+            {
+              "name": "country_code",
+              "in": "query",
+              "value": "$inputs.country_code"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "salesTaxes": "$response.body"
+          }
+        },
+        {
+          "stepId": "set-jurisdiction-sales-tax",
+          "description": "Create or update the sales tax rate and rules for a specific jurisdiction (e.g., a Canadian province or US territory).",
+          "operationId": "createOrReplaceSalesTax",
+          "parameters": [
+            {
+              "name": "countryCode",
+              "in": "path",
+              "value": "$steps.get-existing-sales-taxes.outputs.salesTaxes.salesTaxes[0].countryCode"
+            },
+            {
+              "name": "jurisdictionId",
+              "in": "path",
+              "value": "$inputs.jurisdictionId"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "countryCode": "$steps.get-existing-sales-taxes.outputs.salesTaxes.salesTaxes[0].countryCode"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "http_status_204": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "salesTaxes": "$steps.get-existing-sales-taxes.outputs.salesTaxes",
+        "http_status_204": "$steps.set-jurisdiction-sales-tax.outputs.http_status_204"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

@@ -1,0 +1,325 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/httpbin.org/main/0.9.2/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "cookie-management-test",
+      "summary": "Sets a cookie, verifies its presence by retrieving the cookie list, deletes the specific cookie, and verifies its absence by retrieving the list again. Tests the client's ability to handle cookie lifecycle operations.",
+      "description": "Sets a cookie, verifies its presence by retrieving the cookie list, deletes the specific cookie, and verifies its absence by retrieving the list again. Tests the client's ability to handle cookie lifecycle operations.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "freeform": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "set-cookie",
+          "description": "Sets a cookie with the specified name and value via path parameters. The endpoint then redirects to /cookies.",
+          "operationPath": "openapi_source#/paths/~1cookies~1set~1{name}~1{value}/get",
+          "parameters": [
+            {
+              "name": "name",
+              "in": "path",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "value",
+              "in": "path",
+              "value": "$inputs.value"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "cookie_name": "$response.body",
+            "cookie_value": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-cookies-after-set",
+          "description": "Retrieves and returns all cookies sent by the client (which should include the one set in the previous step). Used to verify the cookie was set.",
+          "operationPath": "openapi_source#/paths/~1cookies/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "cookies_object": "$response.body"
+          }
+        },
+        {
+          "stepId": "delete-cookie",
+          "description": "Deletes cookies specified as query parameters (e.g., /cookies/delete?cookieName=someValue). Redirects to /cookies.",
+          "operationPath": "openapi_source#/paths/~1cookies~1delete/get",
+          "parameters": [
+            {
+              "name": "freeform",
+              "in": "query",
+              "value": "$inputs.freeform"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "cookie_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-cookies-after-delete",
+          "description": "Retrieves cookies again to verify that the cookie deleted in the previous step is no longer present in the client's request.",
+          "operationPath": "openapi_source#/paths/~1cookies/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "cookies_object": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "cookie_name": "$steps.set-cookie.outputs.cookie_name",
+        "cookie_value": "$steps.set-cookie.outputs.cookie_value",
+        "cookies_object": "$steps.get-cookies-after-delete.outputs.cookies_object",
+        "cookie_data": "$steps.delete-cookie.outputs.cookie_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "etag-conditional-request-test",
+      "summary": "Performs an initial request to a cacheable endpoint, extracts the ETag from the response header, then performs a second conditional request using the ETag in the 'If-None-Match' header. Tests if the client and server correctly handle a 304 Not Modified response.",
+      "description": "Performs an initial request to a cacheable endpoint, extracts the ETag from the response header, then performs a second conditional request using the ETag in the 'If-None-Match' header. Tests if the client and server correctly handle a 304 Not Modified response.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "If-Modified-Since": {
+            "type": "string"
+          },
+          "If-None-Match": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-resource-with-etag",
+          "description": "Retrieves a cacheable resource. The response headers should contain caching directives like ETag.",
+          "operationPath": "openapi_source#/paths/~1cache/get",
+          "parameters": [
+            {
+              "name": "If-Modified-Since",
+              "in": "header",
+              "value": "$inputs.If-Modified-Since"
+            },
+            {
+              "name": "If-None-Match",
+              "in": "header",
+              "value": "$inputs.If-None-Match"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "etag_value": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-resource-conditionally",
+          "description": "Attempts to retrieve the same resource, but includes the 'If-None-Match' header with the ETag obtained from the first request's response header. Expects a 304 response if the resource hasn't changed.",
+          "operationPath": "openapi_source#/paths/~1cache/get",
+          "parameters": [
+            {
+              "name": "If-Modified-Since",
+              "in": "header",
+              "value": "$inputs.If-Modified-Since"
+            },
+            {
+              "name": "If-None-Match",
+              "in": "header",
+              "value": "$inputs.If-None-Match"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "resource_or_304_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "etag_value": "$steps.get-resource-with-etag.outputs.etag_value",
+        "resource_or_304_status": "$steps.get-resource-conditionally.outputs.resource_or_304_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "inspect-request-data",
+      "summary": "Sends data using various HTTP methods (POST, PUT, PATCH, DELETE) and uses the '/anything' endpoint to get a full reflection of the request details (headers, body, args, method, origin IP, etc.) for debugging purposes.",
+      "description": "Sends data using various HTTP methods (POST, PUT, PATCH, DELETE) and uses the '/anything' endpoint to get a full reflection of the request details (headers, body, args, method, origin IP, etc.) for debugging purposes.",
+      "steps": [
+        {
+          "stepId": "send-data",
+          "description": "Send data using POST, PUT, PATCH, or DELETE method. The response typically echoes back parts of the request like form data or args.",
+          "operationPath": "openapi_source#/paths/~1post/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "reflected_request_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "inspect-request-details",
+          "description": "Send the same request (method and data) to the '/anything' endpoint to receive a detailed JSON response reflecting all aspects of the incoming request for inspection.",
+          "operationPath": "openapi_source#/paths/~1anything/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "full_request_reflection": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "reflected_request_data": "$steps.send-data.outputs.reflected_request_data",
+        "full_request_reflection": "$steps.inspect-request-details.outputs.full_request_reflection"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

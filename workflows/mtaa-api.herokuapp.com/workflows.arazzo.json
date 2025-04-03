@@ -1,0 +1,522 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/mtaa-api.herokuapp.com/main/1.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "find-streets-in-a-specific-ward",
+      "summary": "Drills down through the Tanzanian location hierarchy (Region -> District -> Ward) to retrieve all streets within a specified ward. Useful for populating address forms or location-based services requiring street-level data.",
+      "description": "Drills down through the Tanzanian location hierarchy (Region -> District -> Ward) to retrieve all streets within a specified ward. Useful for populating address forms or location-based services requiring street-level data.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "country": {
+            "type": "string"
+          },
+          "region": {
+            "type": "string"
+          },
+          "district": {
+            "type": "string"
+          },
+          "ward": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-regions",
+          "description": "Retrieve all available regions in Tanzania.",
+          "operationId": "Tanzania-regions",
+          "parameters": [
+            {
+              "name": "country",
+              "in": "path",
+              "value": "$inputs.country"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "regions_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-districts",
+          "description": "Retrieve all districts within a selected region.",
+          "operationId": "Districts-in-a-region",
+          "parameters": [
+            {
+              "name": "country",
+              "in": "path",
+              "value": "$inputs.country"
+            },
+            {
+              "name": "region",
+              "in": "path",
+              "value": "$inputs.region"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "districts_list": "$response.body",
+            "region_postcode": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-wards",
+          "description": "Retrieve all wards within a selected district.",
+          "operationId": "Wards-in-a-district",
+          "parameters": [
+            {
+              "name": "country",
+              "in": "path",
+              "value": "$inputs.country"
+            },
+            {
+              "name": "region",
+              "in": "path",
+              "value": "$inputs.region"
+            },
+            {
+              "name": "district",
+              "in": "path",
+              "value": "$inputs.district"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "wards_list": "$response.body",
+            "district_postcode": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-streets",
+          "description": "Retrieve all streets within a selected ward.",
+          "operationId": "streets-in-a-ward",
+          "parameters": [
+            {
+              "name": "country",
+              "in": "path",
+              "value": "$inputs.country"
+            },
+            {
+              "name": "region",
+              "in": "path",
+              "value": "$inputs.region"
+            },
+            {
+              "name": "district",
+              "in": "path",
+              "value": "$inputs.district"
+            },
+            {
+              "name": "ward",
+              "in": "path",
+              "value": "$inputs.ward"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "streets_list": "$response.body",
+            "ward_postcode": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "regions_list": "$steps.get-regions.outputs.regions_list",
+        "districts_list": "$steps.get-districts.outputs.districts_list",
+        "region_postcode": "$steps.get-districts.outputs.region_postcode",
+        "wards_list": "$steps.get-wards.outputs.wards_list",
+        "district_postcode": "$steps.get-wards.outputs.district_postcode",
+        "streets_list": "$steps.get-streets.outputs.streets_list",
+        "ward_postcode": "$steps.get-streets.outputs.ward_postcode"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "explore-full-location-hierarchy-to-neighborhood",
+      "summary": "Performs a complete drilldown through Tanzania's location hierarchy: Region -> District -> Ward -> Street -> Neighborhood. Useful for applications requiring the most granular location data available through the API.",
+      "description": "Performs a complete drilldown through Tanzania's location hierarchy: Region -> District -> Ward -> Street -> Neighborhood. Useful for applications requiring the most granular location data available through the API.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "country": {
+            "type": "string"
+          },
+          "region": {
+            "type": "string"
+          },
+          "district": {
+            "type": "string"
+          },
+          "ward": {
+            "type": "string"
+          },
+          "street": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "fetch-regions",
+          "description": "Retrieve all available regions in Tanzania.",
+          "operationId": "Tanzania-regions",
+          "parameters": [
+            {
+              "name": "country",
+              "in": "path",
+              "value": "$inputs.country"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "regions_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "fetch-districts",
+          "description": "Retrieve all districts within a selected region.",
+          "operationId": "Districts-in-a-region",
+          "parameters": [
+            {
+              "name": "country",
+              "in": "path",
+              "value": "$inputs.country"
+            },
+            {
+              "name": "region",
+              "in": "path",
+              "value": "$inputs.region"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "districts_list": "$response.body",
+            "region_postcode": "$response.body"
+          }
+        },
+        {
+          "stepId": "fetch-wards",
+          "description": "Retrieve all wards within a selected district.",
+          "operationId": "Wards-in-a-district",
+          "parameters": [
+            {
+              "name": "country",
+              "in": "path",
+              "value": "$inputs.country"
+            },
+            {
+              "name": "region",
+              "in": "path",
+              "value": "$inputs.region"
+            },
+            {
+              "name": "district",
+              "in": "path",
+              "value": "$inputs.district"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "wards_list": "$response.body",
+            "district_postcode": "$response.body"
+          }
+        },
+        {
+          "stepId": "fetch-streets",
+          "description": "Retrieve all streets within a selected ward.",
+          "operationId": "streets-in-a-ward",
+          "parameters": [
+            {
+              "name": "country",
+              "in": "path",
+              "value": "$inputs.country"
+            },
+            {
+              "name": "region",
+              "in": "path",
+              "value": "$inputs.region"
+            },
+            {
+              "name": "district",
+              "in": "path",
+              "value": "$inputs.district"
+            },
+            {
+              "name": "ward",
+              "in": "path",
+              "value": "$inputs.ward"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "streets_list": "$response.body",
+            "ward_postcode": "$response.body"
+          }
+        },
+        {
+          "stepId": "fetch-neighborhoods",
+          "description": "Retrieve all neighborhoods within a selected street.",
+          "operationId": "neighborhood-in-a-street-",
+          "parameters": [
+            {
+              "name": "country",
+              "in": "path",
+              "value": "$inputs.country"
+            },
+            {
+              "name": "region",
+              "in": "path",
+              "value": "$inputs.region"
+            },
+            {
+              "name": "district",
+              "in": "path",
+              "value": "$inputs.district"
+            },
+            {
+              "name": "ward",
+              "in": "path",
+              "value": "$inputs.ward"
+            },
+            {
+              "name": "street",
+              "in": "path",
+              "value": "$inputs.street"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "neighborhoods_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "regions_list": "$steps.fetch-regions.outputs.regions_list",
+        "districts_list": "$steps.fetch-districts.outputs.districts_list",
+        "region_postcode": "$steps.fetch-districts.outputs.region_postcode",
+        "wards_list": "$steps.fetch-wards.outputs.wards_list",
+        "district_postcode": "$steps.fetch-wards.outputs.district_postcode",
+        "streets_list": "$steps.fetch-streets.outputs.streets_list",
+        "ward_postcode": "$steps.fetch-streets.outputs.ward_postcode",
+        "neighborhoods_list": "$steps.fetch-neighborhoods.outputs.neighborhoods_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "find-districts-in-a-specific-region",
+      "summary": "Retrieves all districts within a specified Tanzanian region. Useful for applications needing district-level data for a selected region, such as regional dashboards or higher-level address selection.",
+      "description": "Retrieves all districts within a specified Tanzanian region. Useful for applications needing district-level data for a selected region, such as regional dashboards or higher-level address selection.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "country": {
+            "type": "string"
+          },
+          "region": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-regions",
+          "description": "Retrieve all available regions in Tanzania to allow user selection.",
+          "operationId": "Tanzania-regions",
+          "parameters": [
+            {
+              "name": "country",
+              "in": "path",
+              "value": "$inputs.country"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "regions_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-districts-in-region",
+          "description": "Retrieve all districts and the postcode for the selected region.",
+          "operationId": "Districts-in-a-region",
+          "parameters": [
+            {
+              "name": "country",
+              "in": "path",
+              "value": "$inputs.country"
+            },
+            {
+              "name": "region",
+              "in": "path",
+              "value": "$inputs.region"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "districts_list": "$response.body",
+            "region_postcode": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "regions_list": "$steps.list-regions.outputs.regions_list",
+        "districts_list": "$steps.list-districts-in-region.outputs.districts_list",
+        "region_postcode": "$steps.list-districts-in-region.outputs.region_postcode"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

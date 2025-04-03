@@ -1,0 +1,151 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/va.gov/forms/0.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "find-form-by-keyword-and-get-details",
+      "summary": "Searches for VA forms using a keyword or partial name/title, then retrieves the detailed information for a specific form found in the search results. Useful when the exact form name is unknown.",
+      "description": "Searches for VA forms using a keyword or partial name/title, then retrieves the detailed information for a specific form found in the search results. Useful when the exact form name is unknown.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "form_name": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-forms",
+          "description": "Search for VA forms using a query string (keyword, partial name, etc.).",
+          "operationId": "findForms",
+          "parameters": [
+            {
+              "name": "query",
+              "in": "query",
+              "value": "$inputs.query"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "forms_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-form-details",
+          "description": "Retrieve detailed information, including revision history and metadata, for a specific form identified from the search results.",
+          "operationId": "findFormByFormName",
+          "parameters": [
+            {
+              "name": "form_name",
+              "in": "path",
+              "value": "$steps.search-forms.outputs.forms_list.data[0].attributes.form_name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "form_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "forms_list": "$steps.search-forms.outputs.forms_list",
+        "form_details": "$steps.get-form-details.outputs.form_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

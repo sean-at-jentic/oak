@@ -1,0 +1,1037 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/redirection.io/main/2.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "setup-new-project-and-domain",
+      "summary": "Creates a new project within the organization and associates a domain with it. This is the initial setup required before adding redirection rules.",
+      "description": "Creates a new project within the organization and associates a domain with it. This is the initial setup required before adding redirection rules.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-project_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-project",
+          "description": "Create a new project resource.",
+          "operationId": "createProject",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-project_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "project_id": "$response.body",
+            "project_slug": "$response.body",
+            "project_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-domain",
+          "description": "Create a new domain and associate it with the newly created project.",
+          "operationId": "createDomain",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "project_iri": "$steps.create-project.outputs.project_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "domain_id": "$response.body",
+            "domain_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "verify-domain",
+          "description": "Retrieve the details of the newly created domain to verify its configuration.",
+          "operationId": "getDomain",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "verified_domain_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "project_id": "$steps.create-project.outputs.project_id",
+        "project_slug": "$steps.create-project.outputs.project_slug",
+        "project_details": "$steps.create-project.outputs.project_details",
+        "domain_id": "$steps.create-domain.outputs.domain_id",
+        "domain_details": "$steps.create-domain.outputs.domain_details",
+        "verified_domain_details": "$steps.verify-domain.outputs.verified_domain_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-and-publish-simple-redirection-rule",
+      "summary": "Creates a basic redirection rule (source URL, target URL, status code) for a specific project and then publishes it to make it live.",
+      "description": "Creates a basic redirection rule (source URL, target URL, status code) for a specific project and then publishes it to make it live.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "searchAfterId": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-project",
+          "description": "List projects to find the ID of the target project.",
+          "operationId": "getProjects",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "projects_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-simple-redirection",
+          "description": "Create a new simple redirection rule as a draft.",
+          "operationId": "createRedirection",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "project_iri": "$steps.find-project.outputs.projects_list[0].id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "draft_id": "$response.body",
+            "draft_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "publish-changes",
+          "description": "Publish all draft rules for the project, making the new redirection live.",
+          "operationId": "publishProject",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "publish_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "verify-published-rule",
+          "description": "List the published rules for the project to verify the new redirection is active.",
+          "operationId": "getRules",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "query",
+              "value": "$steps.find-project.outputs.projects_list.id"
+            },
+            {
+              "name": "searchAfterId",
+              "in": "query",
+              "value": "$inputs.searchAfterId"
+            },
+            {
+              "name": "tags",
+              "in": "query",
+              "value": "$inputs.tags"
+            },
+            {
+              "name": "enabled",
+              "in": "query",
+              "value": "$inputs.enabled"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "published_rules_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "projects_list": "$steps.find-project.outputs.projects_list",
+        "draft_id": "$steps.create-simple-redirection.outputs.draft_id",
+        "draft_details": "$steps.create-simple-redirection.outputs.draft_details",
+        "publish_status": "$steps.publish-changes.outputs.publish_status",
+        "published_rules_list": "$steps.verify-published-rule.outputs.published_rules_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-and-publish-advanced-rule",
+      "summary": "Creates a more complex rule with specific triggers and actions for a project, then publishes it.",
+      "description": "Creates a more complex rule with specific triggers and actions for a project, then publishes it.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "string"
+          },
+          "create-advanced-rule_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "searchAfterId": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-project-for-advanced-rule",
+          "description": "List projects to find the ID of the target project.",
+          "operationId": "getProjects",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "projects_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-advanced-rule",
+          "description": "Create a new complex rule as a draft using the RuleWrite schema.",
+          "operationId": "createRule",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-advanced-rule_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "draft_id": "$response.body",
+            "draft_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "publish-advanced-rule-changes",
+          "description": "Publish all draft rules for the project, making the new advanced rule live.",
+          "operationId": "publishProject",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "publish_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "verify-published-advanced-rule",
+          "description": "List the published rules for the project to verify the new advanced rule is active.",
+          "operationId": "getRules",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "query",
+              "value": "$steps.find-project-for-advanced-rule.outputs.projects_list.id"
+            },
+            {
+              "name": "searchAfterId",
+              "in": "query",
+              "value": "$inputs.searchAfterId"
+            },
+            {
+              "name": "tags",
+              "in": "query",
+              "value": "$inputs.tags"
+            },
+            {
+              "name": "enabled",
+              "in": "query",
+              "value": "$inputs.enabled"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "published_rules_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "projects_list": "$steps.find-project-for-advanced-rule.outputs.projects_list",
+        "draft_id": "$steps.create-advanced-rule.outputs.draft_id",
+        "draft_details": "$steps.create-advanced-rule.outputs.draft_details",
+        "publish_status": "$steps.publish-advanced-rule-changes.outputs.publish_status",
+        "published_rules_list": "$steps.verify-published-advanced-rule.outputs.published_rules_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "update-and-publish-existing-rule",
+      "summary": "Finds an existing published rule, updates its definition, and then publishes the changes.",
+      "description": "Finds an existing published rule, updates its definition, and then publishes the changes.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "searchAfterId": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-project-for-update",
+          "description": "List projects to find the ID of the target project.",
+          "operationId": "getProjects",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "projects_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "find-rule-to-update",
+          "description": "List published rules for the project to find the ID of the rule to update.",
+          "operationId": "getRules",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "query",
+              "value": "$steps.find-project-for-update.outputs.projects_list.id"
+            },
+            {
+              "name": "searchAfterId",
+              "in": "query",
+              "value": "$inputs.searchAfterId"
+            },
+            {
+              "name": "tags",
+              "in": "query",
+              "value": "$inputs.tags"
+            },
+            {
+              "name": "enabled",
+              "in": "query",
+              "value": "$inputs.enabled"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "published_rules_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-rule",
+          "description": "Update the definition of the selected rule. This creates a draft change.",
+          "operationId": "updateRule",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "rule_id": "$steps.find-rule-to-update.outputs.published_rules_list[0].id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "draft_id": "$response.body",
+            "draft_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "publish-updated-rule",
+          "description": "Publish the draft changes, applying the rule update.",
+          "operationId": "publishProject",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "publish_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "verify-updated-rule",
+          "description": "Retrieve the updated rule details to confirm the changes.",
+          "operationId": "getRule",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_rule_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "projects_list": "$steps.find-project-for-update.outputs.projects_list",
+        "published_rules_list": "$steps.find-rule-to-update.outputs.published_rules_list",
+        "draft_id": "$steps.update-rule.outputs.draft_id",
+        "draft_details": "$steps.update-rule.outputs.draft_details",
+        "publish_status": "$steps.publish-updated-rule.outputs.publish_status",
+        "updated_rule_details": "$steps.verify-updated-rule.outputs.updated_rule_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "delete-and-publish-rule-removal",
+      "summary": "Finds an existing published rule, marks it for deletion (creating a draft), and then publishes the change to remove the rule.",
+      "description": "Finds an existing published rule, marks it for deletion (creating a draft), and then publishes the change to remove the rule.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "searchAfterId": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-project-for-delete",
+          "description": "List projects to find the ID of the target project.",
+          "operationId": "getProjects",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "projects_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "find-rule-to-delete",
+          "description": "List published rules for the project to find the ID of the rule to delete.",
+          "operationId": "getRules",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "query",
+              "value": "$steps.find-project-for-delete.outputs.projects_list.id"
+            },
+            {
+              "name": "searchAfterId",
+              "in": "query",
+              "value": "$inputs.searchAfterId"
+            },
+            {
+              "name": "tags",
+              "in": "query",
+              "value": "$inputs.tags"
+            },
+            {
+              "name": "enabled",
+              "in": "query",
+              "value": "$inputs.enabled"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "published_rules_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "delete-rule",
+          "description": "Mark the selected rule for deletion. This creates a draft change with status 'delete'.",
+          "operationId": "deleteRule",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "draft_id": "$response.body",
+            "draft_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "publish-deleted-rule",
+          "description": "Publish the draft changes, effectively removing the rule.",
+          "operationId": "publishProject",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "publish_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "verify-rule-deletion",
+          "description": "List published rules again to confirm the rule has been removed.",
+          "operationId": "getRules",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "query",
+              "value": "$steps.find-project-for-delete.outputs.projects_list.id"
+            },
+            {
+              "name": "searchAfterId",
+              "in": "query",
+              "value": "$inputs.searchAfterId"
+            },
+            {
+              "name": "tags",
+              "in": "query",
+              "value": "$inputs.tags"
+            },
+            {
+              "name": "enabled",
+              "in": "query",
+              "value": "$inputs.enabled"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "current_published_rules": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "projects_list": "$steps.find-project-for-delete.outputs.projects_list",
+        "published_rules_list": "$steps.find-rule-to-delete.outputs.published_rules_list",
+        "draft_id": "$steps.delete-rule.outputs.draft_id",
+        "draft_details": "$steps.delete-rule.outputs.draft_details",
+        "publish_status": "$steps.publish-deleted-rule.outputs.publish_status",
+        "current_published_rules": "$steps.verify-rule-deletion.outputs.current_published_rules"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "review-and-cancel-draft-changes",
+      "summary": "Retrieves pending draft changes for a project and allows canceling a specific change before it gets published.",
+      "description": "Retrieves pending draft changes for a project and allows canceling a specific change before it gets published.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "searchAfterId": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-project-for-draft-review",
+          "description": "List projects to find the ID of the target project.",
+          "operationId": "getProjects",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "projects_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-draft-changes",
+          "description": "Retrieve the list of all draft rule changes for the project.",
+          "operationId": "getDrafts",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "query",
+              "value": "$steps.find-project-for-draft-review.outputs.projects_list.id"
+            },
+            {
+              "name": "searchAfterId",
+              "in": "query",
+              "value": "$inputs.searchAfterId"
+            },
+            {
+              "name": "tags",
+              "in": "query",
+              "value": "$inputs.tags"
+            },
+            {
+              "name": "enabled",
+              "in": "query",
+              "value": "$inputs.enabled"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "drafts_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-specific-draft-details",
+          "description": "Get the details of a specific draft change identified from the list.",
+          "operationId": "getDraft",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "specific_draft_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "cancel-draft-change",
+          "description": "Delete/cancel the selected draft change, preventing it from being published.",
+          "operationId": "deleteDraft",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "cancel_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "projects_list": "$steps.find-project-for-draft-review.outputs.projects_list",
+        "drafts_list": "$steps.get-draft-changes.outputs.drafts_list",
+        "specific_draft_details": "$steps.get-specific-draft-details.outputs.specific_draft_details",
+        "cancel_status": "$steps.cancel-draft-change.outputs.cancel_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "get-organization-and-project-details",
+      "summary": "Retrieves details about the organization and then fetches specific information for one of its projects.",
+      "description": "Retrieves details about the organization and then fetches specific information for one of its projects.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-organization-info",
+          "description": "Retrieve details of the organization, including a list of associated projects.",
+          "operationId": "getOrganization",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "organization_details": "$response.body",
+            "project_list_summary": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-specific-project-details",
+          "description": "Retrieve detailed information about a specific project identified from the organization details.",
+          "operationId": "getProject",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "project_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "organization_details": "$steps.get-organization-info.outputs.organization_details",
+        "project_list_summary": "$steps.get-organization-info.outputs.project_list_summary",
+        "project_details": "$steps.get-specific-project-details.outputs.project_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

@@ -1,0 +1,435 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/ebay.com/sell-compliance/1.4.3/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "investigate-specific-compliance-violations",
+      "summary": "Identifies a specific type of compliance violation from the summary and retrieves the detailed list of affected listings and violation details for that type.",
+      "description": "Identifies a specific type of compliance violation from the summary and retrieves the detailed list of affected listings and violation details for that type.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-EBAY-C-MARKETPLACE-ID": {
+            "type": "string"
+          },
+          "compliance_type": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "listing_id": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "filter": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-violation-summary",
+          "description": "Retrieve counts of listing violations grouped by compliance type and marketplace to identify areas needing investigation.",
+          "operationId": "getListingViolationsSummary",
+          "parameters": [
+            {
+              "name": "X-EBAY-C-MARKETPLACE-ID",
+              "in": "header",
+              "value": "$inputs.X-EBAY-C-MARKETPLACE-ID"
+            },
+            {
+              "name": "compliance_type",
+              "in": "query",
+              "value": "$inputs.compliance_type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "violation_summaries": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-specific-violation-details",
+          "description": "Retrieve detailed information for listings violating a specific compliance type identified in the summary.",
+          "operationId": "getListingViolations",
+          "parameters": [
+            {
+              "name": "X-EBAY-C-MARKETPLACE-ID",
+              "in": "header",
+              "value": "$inputs.X-EBAY-C-MARKETPLACE-ID"
+            },
+            {
+              "name": "compliance_type",
+              "in": "query",
+              "value": "$steps.get-violation-summary.outputs.violation_summaries.complianceType"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "listing_id",
+              "in": "query",
+              "value": "$inputs.listing_id"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "detailed_violations": "$response.body",
+            "pagination_info": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "violation_summaries": "$steps.get-violation-summary.outputs.violation_summaries",
+        "detailed_violations": "$steps.get-specific-violation-details.outputs.detailed_violations",
+        "pagination_info": "$steps.get-specific-violation-details.outputs.pagination_info"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "prioritize-and-address-critical-violations",
+      "summary": "Focuses investigation on listings that are currently 'OUT_OF_COMPLIANCE' for a specific violation type, helping sellers address the most urgent issues first.",
+      "description": "Focuses investigation on listings that are currently 'OUT_OF_COMPLIANCE' for a specific violation type, helping sellers address the most urgent issues first.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-EBAY-C-MARKETPLACE-ID": {
+            "type": "string"
+          },
+          "compliance_type": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "listing_id": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "filter": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-violation-summary-for-critical",
+          "description": "Retrieve violation counts to identify compliance types with issues.",
+          "operationId": "getListingViolationsSummary",
+          "parameters": [
+            {
+              "name": "X-EBAY-C-MARKETPLACE-ID",
+              "in": "header",
+              "value": "$inputs.X-EBAY-C-MARKETPLACE-ID"
+            },
+            {
+              "name": "compliance_type",
+              "in": "query",
+              "value": "$inputs.compliance_type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "violation_summaries": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-out-of-compliance-details",
+          "description": "Retrieve detailed information specifically for listings that are 'OUT_OF_COMPLIANCE' for the selected compliance type.",
+          "operationId": "getListingViolations",
+          "parameters": [
+            {
+              "name": "X-EBAY-C-MARKETPLACE-ID",
+              "in": "header",
+              "value": "$inputs.X-EBAY-C-MARKETPLACE-ID"
+            },
+            {
+              "name": "compliance_type",
+              "in": "query",
+              "value": "$steps.get-violation-summary-for-critical.outputs.violation_summaries.complianceType"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "listing_id",
+              "in": "query",
+              "value": "$inputs.listing_id"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "critical_violations_details": "$response.body",
+            "pagination_info": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "violation_summaries": "$steps.get-violation-summary-for-critical.outputs.violation_summaries",
+        "critical_violations_details": "$steps.get-out-of-compliance-details.outputs.critical_violations_details",
+        "pagination_info": "$steps.get-out-of-compliance-details.outputs.pagination_info"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "proactively-address-at-risk-listings",
+      "summary": "Identifies listings that are 'AT_RISK' of becoming non-compliant for a specific violation type, allowing sellers to take preventative action.",
+      "description": "Identifies listings that are 'AT_RISK' of becoming non-compliant for a specific violation type, allowing sellers to take preventative action.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-EBAY-C-MARKETPLACE-ID": {
+            "type": "string"
+          },
+          "compliance_type": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "listing_id": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "filter": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-violation-summary-for-at-risk",
+          "description": "Retrieve violation counts to identify compliance types with potential future issues.",
+          "operationId": "getListingViolationsSummary",
+          "parameters": [
+            {
+              "name": "X-EBAY-C-MARKETPLACE-ID",
+              "in": "header",
+              "value": "$inputs.X-EBAY-C-MARKETPLACE-ID"
+            },
+            {
+              "name": "compliance_type",
+              "in": "query",
+              "value": "$inputs.compliance_type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "violation_summaries": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-at-risk-details",
+          "description": "Retrieve detailed information specifically for listings that are 'AT_RISK' for the selected compliance type.",
+          "operationId": "getListingViolations",
+          "parameters": [
+            {
+              "name": "X-EBAY-C-MARKETPLACE-ID",
+              "in": "header",
+              "value": "$inputs.X-EBAY-C-MARKETPLACE-ID"
+            },
+            {
+              "name": "compliance_type",
+              "in": "query",
+              "value": "$steps.get-violation-summary-for-at-risk.outputs.violation_summaries.complianceType"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "listing_id",
+              "in": "query",
+              "value": "$inputs.listing_id"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "at_risk_violations_details": "$response.body",
+            "pagination_info": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "violation_summaries": "$steps.get-violation-summary-for-at-risk.outputs.violation_summaries",
+        "at_risk_violations_details": "$steps.get-at-risk-details.outputs.at_risk_violations_details",
+        "pagination_info": "$steps.get-at-risk-details.outputs.pagination_info"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

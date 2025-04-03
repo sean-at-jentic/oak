@@ -1,0 +1,299 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/authentiq.io/main/1.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "user-authentication-and-profile-retrieval-authorization-code-flow",
+      "summary": "Completes the server-side part of the OpenID Connect Authorization Code flow. After the user authenticates via the /authorize endpoint (browser redirect), the application exchanges the received authorization code for tokens and then uses the access token to retrieve the user's profile information.",
+      "description": "Completes the server-side part of the OpenID Connect Authorization Code flow. After the user authenticates via the /authorize endpoint (browser redirect), the application exchanges the received authorization code for tokens and then uses the access token to retrieve the user's profile information.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Authorization": {
+            "type": "string"
+          },
+          "exchange-auth-code_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "exchange-auth-code",
+          "description": "Exchange the authorization code received from the /authorize redirect for an ID token and an access token.",
+          "operationId": "token",
+          "parameters": [
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$inputs.Authorization"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": "$inputs.exchange-auth-code_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "access_token": "$response.body",
+            "id_token": "$response.body",
+            "token_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-user-profile",
+          "description": "Retrieve the authenticated user's profile details using the access token.",
+          "operationId": "userInfo",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_profile": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "access_token": "$steps.exchange-auth-code.outputs.access_token",
+        "id_token": "$steps.exchange-auth-code.outputs.id_token",
+        "token_details": "$steps.exchange-auth-code.outputs.token_details",
+        "user_profile": "$steps.get-user-profile.outputs.user_profile"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "register-and-verify-new-application-client",
+      "summary": "Registers a new client application with Authentiq Connect and then retrieves its configuration to verify successful registration. This is typically done by a developer setting up their application to use Authentiq for authentication.",
+      "description": "Registers a new client application with Authentiq Connect and then retrieves its configuration to verify successful registration. This is typically done by a developer setting up their application to use Authentiq for authentication.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "client_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "register-client",
+          "description": "Register a new client application by providing its configuration details.",
+          "operationId": "createClient",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "client_id": "$response.body",
+            "client_location_header": "$response.body"
+          }
+        },
+        {
+          "stepId": "verify-client-registration",
+          "description": "Retrieve the details of the newly registered client using its client_id to confirm registration.",
+          "operationId": "getClient",
+          "parameters": [
+            {
+              "name": "client_id",
+              "in": "path",
+              "value": "$steps.register-client.outputs.client_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "client_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "client_id": "$steps.register-client.outputs.client_id",
+        "client_location_header": "$steps.register-client.outputs.client_location_header",
+        "client_details": "$steps.verify-client-registration.outputs.client_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "update-client-application-configuration",
+      "summary": "Retrieves the current configuration of a registered client application and then updates it with new details (e.g., adding a new redirect URI).",
+      "description": "Retrieves the current configuration of a registered client application and then updates it with new details (e.g., adding a new redirect URI).",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "client_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-client-config",
+          "description": "Retrieve the current configuration details of a specific client application.",
+          "operationId": "getClient",
+          "parameters": [
+            {
+              "name": "client_id",
+              "in": "path",
+              "value": "$inputs.client_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "current_client_config": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-client-config",
+          "description": "Update the configuration of the specified client application.",
+          "operationId": "updateClient",
+          "parameters": [
+            {
+              "name": "client_id",
+              "in": "path",
+              "value": "$steps.get-client-config.outputs.current_client_config.client_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "client_id": "$steps.get-client-config.outputs.current_client_config.client_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "new_client_config": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "current_client_config": "$steps.get-client-config.outputs.current_client_config",
+        "new_client_config": "$steps.update-client-config.outputs.new_client_config"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

@@ -1,0 +1,201 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/sheerseo.com/main/0.0.1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "check-keyword-rank",
+      "summary": "Submit one or more keyword ranking jobs for specific domains and keywords, then retrieve the ranking results once processed. This allows users to track their website's position in search results for target keywords.",
+      "description": "Submit one or more keyword ranking jobs for specific domains and keywords, then retrieve the ranking results once processed. This allows users to track their website's position in search results for target keywords.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "submit-rank-jobs_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "submit-rank-jobs",
+          "description": "Submit tasks to check the search engine rank for specified domain/keyword combinations.",
+          "operationId": "rankSubmit",
+          "requestBody": {
+            "contentType": "application/json; charset=utf-8",
+            "payload": "$inputs.submit-rank-jobs_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tasks (KeywordTask: keyword, localization_code, localization_zip, search_engine, status, task_id)": "$response.body"
+          }
+        },
+        {
+          "stepId": "collect-rank-results",
+          "description": "Retrieve the results of previously submitted rank checking tasks using their task IDs.",
+          "operationId": "rankCollect",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tasks (rankCollectResponse details: task_id, status, ready, rank, local_pack_rank, etc.)": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "tasks (KeywordTask: keyword, localization_code, localization_zip, search_engine, status, task_id)": "$steps.submit-rank-jobs.outputs.tasks (KeywordTask: keyword, localization_code, localization_zip, search_engine, status, task_id)",
+        "tasks (rankCollectResponse details: task_id, status, ready, rank, local_pack_rank, etc.)": "$steps.collect-rank-results.outputs.tasks (rankCollectResponse details: task_id, status, ready, rank, local_pack_rank, etc.)"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-serp-data",
+      "summary": "Submit one or more jobs to retrieve the full Search Engine Results Page (SERP) for specific keywords, then collect the detailed SERP data (organic results) once available. This is valuable for analyzing competitors and understanding the search landscape.",
+      "description": "Submit one or more jobs to retrieve the full Search Engine Results Page (SERP) for specific keywords, then collect the detailed SERP data (organic results) once available. This is valuable for analyzing competitors and understanding the search landscape.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "submit-serp-jobs_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "submit-serp-jobs",
+          "description": "Submit tasks to retrieve the full SERP for specified keywords and locations.",
+          "operationId": "serpSubmit",
+          "requestBody": {
+            "contentType": "application/json; charset=utf-8",
+            "payload": "$inputs.submit-serp-jobs_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tasks (KeywordTask: keyword, localization_code, localization_zip, search_engine, status, task_id)": "$response.body"
+          }
+        },
+        {
+          "stepId": "collect-serp-results",
+          "description": "Retrieve the results (organic listings) of previously submitted SERP retrieval tasks using their task IDs.",
+          "operationId": "serpCollect",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tasks (serpCollectResponse details: task_id, status, ready, num_results, organic_results, etc.)": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "tasks (KeywordTask: keyword, localization_code, localization_zip, search_engine, status, task_id)": "$steps.submit-serp-jobs.outputs.tasks (KeywordTask: keyword, localization_code, localization_zip, search_engine, status, task_id)",
+        "tasks (serpCollectResponse details: task_id, status, ready, num_results, organic_results, etc.)": "$steps.collect-serp-results.outputs.tasks (serpCollectResponse details: task_id, status, ready, num_results, organic_results, etc.)"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

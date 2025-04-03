@@ -1,0 +1,273 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/zapier.com/nla/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "execute-action-and-check-status",
+      "summary": "Discovers available Zapier actions, executes a chosen action using natural language instructions, and then retrieves the execution log to check the status and results. This is the primary workflow for using the AI Actions API.",
+      "description": "Discovers available Zapier actions, executes a chosen action using natural language instructions, and then retrieves the execution log to check the status and results. This is the primary workflow for using the AI Actions API.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "exposed_app_action_id": {
+            "type": "string"
+          },
+          "execution_log_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-actions",
+          "description": "Retrieve the list of actions currently exposed and available for execution.",
+          "operationId": "list_exposed_actions",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "actions_list": "$response.body",
+            "configuration_link": "$response.body"
+          }
+        },
+        {
+          "stepId": "execute-action",
+          "description": "Execute a specific action identified by its ID, providing natural language instructions.",
+          "operationId": "execute_app_action_endpoint",
+          "parameters": [
+            {
+              "name": "exposed_app_action_id",
+              "in": "path",
+              "value": "$steps.list-actions.outputs.actions_list.results[0].id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "exposed_app_action_id": "$steps.list-actions.outputs.actions_list.results[0].id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "execution_log_id": "$response.body",
+            "action_used": "$response.body",
+            "input_params": "$response.body",
+            "review_url": "$response.body",
+            "result": "$response.body",
+            "status": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-execution-status",
+          "description": "Retrieve the detailed execution log for the action triggered in the previous step.",
+          "operationId": "get_execution_log_endpoint",
+          "parameters": [
+            {
+              "name": "execution_log_id",
+              "in": "path",
+              "value": "$steps.execute-action.outputs.execution_log_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "execution_log_id": "$response.body",
+            "action_used": "$response.body",
+            "input_params": "$response.body",
+            "review_url": "$response.body",
+            "result": "$response.body",
+            "additional_results": "$response.body",
+            "status": "$response.body",
+            "error": "$response.body",
+            "assistant_hint": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "actions_list": "$steps.list-actions.outputs.actions_list",
+        "configuration_link": "$steps.list-actions.outputs.configuration_link",
+        "execution_log_id": "$steps.get-execution-status.outputs.execution_log_id",
+        "action_used": "$steps.get-execution-status.outputs.action_used",
+        "input_params": "$steps.get-execution-status.outputs.input_params",
+        "review_url": "$steps.get-execution-status.outputs.review_url",
+        "result": "$steps.get-execution-status.outputs.result",
+        "status": "$steps.get-execution-status.outputs.status",
+        "additional_results": "$steps.get-execution-status.outputs.additional_results",
+        "error": "$steps.get-execution-status.outputs.error",
+        "assistant_hint": "$steps.get-execution-status.outputs.assistant_hint"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "preview-action-before-execution",
+      "summary": "Allows a user or application to preview how Zapier AI Actions will interpret natural language instructions for a specific action before actually executing it. This helps prevent unintended consequences.",
+      "description": "Allows a user or application to preview how Zapier AI Actions will interpret natural language instructions for a specific action before actually executing it. This helps prevent unintended consequences.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "exposed_app_action_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-available-actions",
+          "description": "Retrieve the list of actions currently exposed and available for execution.",
+          "operationId": "list_exposed_actions",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "actions_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "preview-action-execution",
+          "description": "Submit natural language instructions for an action with the preview flag set to true. Returns the interpreted parameters without running the action.",
+          "operationId": "execute_app_action_endpoint",
+          "parameters": [
+            {
+              "name": "exposed_app_action_id",
+              "in": "path",
+              "value": "$steps.list-available-actions.outputs.actions_list.results[0].id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "exposed_app_action_id": "$steps.list-available-actions.outputs.actions_list.results[0].id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "execution_log_id": "$response.body",
+            "action_used": "$response.body",
+            "input_params": "$response.body",
+            "review_url": "$response.body",
+            "status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "actions_list": "$steps.list-available-actions.outputs.actions_list",
+        "execution_log_id": "$steps.preview-action-execution.outputs.execution_log_id",
+        "action_used": "$steps.preview-action-execution.outputs.action_used",
+        "input_params": "$steps.preview-action-execution.outputs.input_params",
+        "review_url": "$steps.preview-action-execution.outputs.review_url",
+        "status": "$steps.preview-action-execution.outputs.status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

@@ -1,0 +1,606 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/digitalocean.com/main/2.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "provision-and-secure-a-new-droplet",
+      "summary": "Creates a new Droplet (virtual machine), then creates a firewall and applies it to the new Droplet to secure it.",
+      "description": "Creates a new Droplet (virtual machine), then creates a firewall and applies it to the new Droplet to secure it.",
+      "steps": [
+        {
+          "stepId": "create-droplet",
+          "description": "Provision a new virtual machine (Droplet). Requires specifying name, region, size, and image.",
+          "operationPath": "openapi_source#/paths/~1v2~1droplets/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "create-firewall",
+          "description": "Create a new cloud firewall with specified inbound and outbound rules.",
+          "operationPath": "openapi_source#/paths/~1v2~1firewalls/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "assign-firewall-to-droplet",
+          "description": "Assign the newly created firewall rules to the newly created Droplet.",
+          "operationPath": "openapi_source#/paths/~1v2~1firewalls~1{firewall_id}~1droplets/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        }
+      ],
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "deploy-application-on-app-platform",
+      "summary": "Creates a new application definition on the App Platform and triggers its first deployment.",
+      "description": "Creates a new application definition on the App Platform and triggers its first deployment.",
+      "steps": [
+        {
+          "stepId": "create-app",
+          "description": "Define and create a new application based on an App Spec.",
+          "operationPath": "openapi_source#/paths/~1v2~1apps/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "get-app-details",
+          "description": "Retrieve the details of the newly created application.",
+          "operationPath": "openapi_source#/paths/~1v2~1apps~1{id}/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "trigger-app-deployment",
+          "description": "Initiate a new deployment for the application.",
+          "operationPath": "openapi_source#/paths/~1v2~1apps~1{app_id}~1deployments/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "get-deployment-status",
+          "description": "Check the status of the triggered deployment.",
+          "operationPath": "openapi_source#/paths/~1v2~1apps~1{app_id}~1deployments~1{deployment_id}/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        }
+      ],
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "add-persistent-block-storage-to-droplet",
+      "summary": "Creates a new block storage volume and attaches it to an existing Droplet for persistent data storage.",
+      "description": "Creates a new block storage volume and attaches it to an existing Droplet for persistent data storage.",
+      "steps": [
+        {
+          "stepId": "create-volume",
+          "description": "Create a new block storage volume in a specific region.",
+          "operationPath": "openapi_source#/paths/~1v2~1volumes/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "attach-volume-to-droplet",
+          "description": "Attach the created volume to a specified Droplet. Requires volume_id and droplet_id.",
+          "operationPath": "openapi_source#/paths/~1v2~1volumes~1{volume_id}~1actions/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "get-volume-action-status",
+          "description": "Check the status of the volume attachment action.",
+          "operationPath": "openapi_source#/paths/~1v2~1volumes~1{volume_id}~1actions~1{action_id}/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        }
+      ],
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "setup-basic-load-balancer",
+      "summary": "Creates a load balancer, adds existing Droplets to it, and configures a forwarding rule.",
+      "description": "Creates a load balancer, adds existing Droplets to it, and configures a forwarding rule.",
+      "steps": [
+        {
+          "stepId": "create-load-balancer",
+          "description": "Create a new load balancer in a specific region.",
+          "operationPath": "openapi_source#/paths/~1v2~1load_balancers/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "add-droplets-to-lb",
+          "description": "Add a list of Droplet IDs to the newly created load balancer.",
+          "operationPath": "openapi_source#/paths/~1v2~1load_balancers~1{lb_id}~1droplets/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "add-forwarding-rule-to-lb",
+          "description": "Add forwarding rules (e.g., HTTP port 80 to Droplet port 80) to the load balancer.",
+          "operationPath": "openapi_source#/paths/~1v2~1load_balancers~1{lb_id}~1forwarding_rules/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        }
+      ],
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-managed-database-cluster-and-user",
+      "summary": "Provisions a new managed database cluster (e.g., PostgreSQL, MySQL), waits for it to be ready, and then creates a database user.",
+      "description": "Provisions a new managed database cluster (e.g., PostgreSQL, MySQL), waits for it to be ready, and then creates a database user.",
+      "steps": [
+        {
+          "stepId": "create-database-cluster",
+          "description": "Create a new managed database cluster.",
+          "operationPath": "openapi_source#/paths/~1v2~1databases/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "get-database-cluster-status",
+          "description": "Retrieve the database cluster details to check its status (poll until 'online').",
+          "operationPath": "openapi_source#/paths/~1v2~1databases~1{database_cluster_uuid}/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "create-database-user",
+          "description": "Create a new user within the database cluster.",
+          "operationPath": "openapi_source#/paths/~1v2~1databases~1{database_cluster_uuid}~1users/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        }
+      ],
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-domain-dns-records",
+      "summary": "Adds a domain to DigitalOcean DNS management and then creates a specific DNS record (e.g., an A record) for that domain.",
+      "description": "Adds a domain to DigitalOcean DNS management and then creates a specific DNS record (e.g., an A record) for that domain.",
+      "steps": [
+        {
+          "stepId": "add-domain",
+          "description": "Add a domain name to be managed by DigitalOcean DNS.",
+          "operationPath": "openapi_source#/paths/~1v2~1domains/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "create-dns-record",
+          "description": "Create a new DNS record (e.g., A, CNAME, MX) for the specified domain.",
+          "operationPath": "openapi_source#/paths/~1v2~1domains~1{domain_name}~1records/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        }
+      ],
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "setup-high-availability-with-reserved-ip",
+      "summary": "Creates a Reserved IP and assigns it to a specified Droplet to provide a static, transferable IP address.",
+      "description": "Creates a Reserved IP and assigns it to a specified Droplet to provide a static, transferable IP address.",
+      "steps": [
+        {
+          "stepId": "create-reserved-ip",
+          "description": "Create a new Reserved IP address in a specific region or assigned to a Droplet.",
+          "operationPath": "openapi_source#/paths/~1v2~1reserved_ips/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "assign-reserved-ip",
+          "description": "Assign the created Reserved IP to a specific Droplet.",
+          "operationPath": "openapi_source#/paths/~1v2~1reserved_ips~1{reserved_ip}~1actions/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "get-reserved-ip-action-status",
+          "description": "Check the status of the Reserved IP assignment action.",
+          "operationPath": "openapi_source#/paths/~1v2~1reserved_ips~1{reserved_ip}~1actions~1{action_id}/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        }
+      ],
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-droplet-snapshot-for-backup",
+      "summary": "Initiates a snapshot action for a specific Droplet and then retrieves the action status.",
+      "description": "Initiates a snapshot action for a specific Droplet and then retrieves the action status.",
+      "steps": [
+        {
+          "stepId": "initiate-droplet-snapshot",
+          "description": "Trigger the snapshot creation process for a given Droplet.",
+          "operationPath": "openapi_source#/paths/~1v2~1droplets~1{droplet_id}~1actions/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "get-snapshot-action-status",
+          "description": "Check the status of the snapshot creation action.",
+          "operationPath": "openapi_source#/paths/~1v2~1droplets~1{droplet_id}~1actions~1{action_id}/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        }
+      ],
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "scale-kubernetes-cluster-node-pool",
+      "summary": "Retrieves an existing Kubernetes cluster, adds a new node pool to it, and then retrieves the details of the new node pool.",
+      "description": "Retrieves an existing Kubernetes cluster, adds a new node pool to it, and then retrieves the details of the new node pool.",
+      "steps": [
+        {
+          "stepId": "get-kubernetes-cluster",
+          "description": "Retrieve details of an existing Kubernetes cluster.",
+          "operationPath": "openapi_source#/paths/~1v2~1kubernetes~1clusters~1{cluster_id}/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "add-node-pool",
+          "description": "Add a new node pool to the specified Kubernetes cluster.",
+          "operationPath": "openapi_source#/paths/~1v2~1kubernetes~1clusters~1{cluster_id}~1node_pools/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "get-node-pool-details",
+          "description": "Retrieve the details and status of the newly created node pool.",
+          "operationPath": "openapi_source#/paths/~1v2~1kubernetes~1clusters~1{cluster_id}~1node_pools~1{node_pool_id}/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        }
+      ],
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "organize-resources-into-a-project",
+      "summary": "Creates a new project and assigns existing resources (like a Droplet and a Domain) to it.",
+      "description": "Creates a new project and assigns existing resources (like a Droplet and a Domain) to it.",
+      "steps": [
+        {
+          "stepId": "create-project",
+          "description": "Create a new project for organizing resources.",
+          "operationPath": "openapi_source#/paths/~1v2~1projects/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "assign-resources-to-project",
+          "description": "Assign a list of resources (identified by URNs) to the created project.",
+          "operationPath": "openapi_source#/paths/~1v2~1projects~1{project_id}~1resources/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        }
+      ],
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "check-billing-information",
+      "summary": "Retrieves the current account balance and lists recent billing history.",
+      "description": "Retrieves the current account balance and lists recent billing history.",
+      "steps": [
+        {
+          "stepId": "get-account-balance",
+          "description": "Retrieve the current account balance.",
+          "operationPath": "openapi_source#/paths/~1v2~1customers~1my~1balance/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "get-billing-history",
+          "description": "Retrieve the list of billing events for the account.",
+          "operationPath": "openapi_source#/paths/~1v2~1customers~1my~1billing_history/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        }
+      ],
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

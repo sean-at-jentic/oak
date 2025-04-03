@@ -1,0 +1,732 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/postmarkapp.com/account/0.9.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "full-domain-setup-and-verification",
+      "summary": "Creates a new sending domain, retrieves the necessary DNS configuration details (SPF, DKIM, Return-Path), and triggers Postmark to verify these records after the user has updated their DNS.",
+      "description": "Creates a new sending domain, retrieves the necessary DNS configuration details (SPF, DKIM, Return-Path), and triggers Postmark to verify these records after the user has updated their DNS.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-Postmark-Account-Token": {
+            "type": "string"
+          },
+          "create-domain_body": {
+            "type": "object"
+          },
+          "domainid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-domain",
+          "description": "Register a new domain with Postmark.",
+          "operationId": "createDomain",
+          "parameters": [
+            {
+              "name": "X-Postmark-Account-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Account-Token"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-domain_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "domain_id": "$response.body",
+            "spf_host": "$response.body",
+            "spf_text_value": "$response.body",
+            "dkim_pending_host": "$response.body",
+            "dkim_pending_text_value": "$response.body",
+            "return_path_domain_cname_value": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-domain-details-for-dns",
+          "description": "Retrieve detailed domain information, including DNS records needed for verification.",
+          "operationId": "getDomain",
+          "parameters": [
+            {
+              "name": "X-Postmark-Account-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Account-Token"
+            },
+            {
+              "name": "domainid",
+              "in": "path",
+              "value": "$steps.create-domain.outputs.domain_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "domain_details": "$response.body",
+            "spf_host": "$response.body",
+            "spf_text_value": "$response.body",
+            "dkim_pending_host": "$response.body",
+            "dkim_pending_text_value": "$response.body",
+            "return_path_domain_cname_value": "$response.body"
+          }
+        },
+        {
+          "stepId": "verify-domain-spf",
+          "description": "Request Postmark to check the domain's SPF DNS record.",
+          "operationId": "requestSPFVerificationForDomain",
+          "parameters": [
+            {
+              "name": "X-Postmark-Account-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Account-Token"
+            },
+            {
+              "name": "domainid",
+              "in": "path",
+              "value": "$steps.create-domain.outputs.domain_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "spf_verification_result": "$response.body"
+          }
+        },
+        {
+          "stepId": "verify-domain-dkim",
+          "description": "Request Postmark to check the domain's DKIM DNS record.",
+          "operationId": "requestDkimVerificationForDomain",
+          "parameters": [
+            {
+              "name": "X-Postmark-Account-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Account-Token"
+            },
+            {
+              "name": "domainid",
+              "in": "path",
+              "value": "$steps.create-domain.outputs.domain_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "dkim_verification_result": "$response.body"
+          }
+        },
+        {
+          "stepId": "verify-domain-return-path",
+          "description": "Request Postmark to check the domain's Return-Path DNS record.",
+          "operationId": "requestReturnPathVerificationForDomain",
+          "parameters": [
+            {
+              "name": "X-Postmark-Account-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Account-Token"
+            },
+            {
+              "name": "domainid",
+              "in": "path",
+              "value": "$steps.create-domain.outputs.domain_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "return_path_verification_result": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "domain_id": "$steps.create-domain.outputs.domain_id",
+        "spf_host": "$steps.get-domain-details-for-dns.outputs.spf_host",
+        "spf_text_value": "$steps.get-domain-details-for-dns.outputs.spf_text_value",
+        "dkim_pending_host": "$steps.get-domain-details-for-dns.outputs.dkim_pending_host",
+        "dkim_pending_text_value": "$steps.get-domain-details-for-dns.outputs.dkim_pending_text_value",
+        "return_path_domain_cname_value": "$steps.get-domain-details-for-dns.outputs.return_path_domain_cname_value",
+        "domain_details": "$steps.get-domain-details-for-dns.outputs.domain_details",
+        "spf_verification_result": "$steps.verify-domain-spf.outputs.spf_verification_result",
+        "dkim_verification_result": "$steps.verify-domain-dkim.outputs.dkim_verification_result",
+        "return_path_verification_result": "$steps.verify-domain-return-path.outputs.return_path_verification_result"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "add-and-confirm-sender-signature",
+      "summary": "Creates a new sender signature (email address), checks its confirmation status, and optionally resends the confirmation email if it hasn't been confirmed.",
+      "description": "Creates a new sender signature (email address), checks its confirmation status, and optionally resends the confirmation email if it hasn't been confirmed.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-Postmark-Account-Token": {
+            "type": "string"
+          },
+          "create-sender-signature_body": {
+            "type": "object"
+          },
+          "signatureid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-sender-signature",
+          "description": "Create a new sender signature.",
+          "operationId": "createSenderSignature",
+          "parameters": [
+            {
+              "name": "X-Postmark-Account-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Account-Token"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-sender-signature_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "signature_id": "$response.body",
+            "confirmed_status": "$response.body",
+            "email_address": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-signature-status",
+          "description": "Retrieve the details of the sender signature, including its confirmation status.",
+          "operationId": "getSenderSignature",
+          "parameters": [
+            {
+              "name": "X-Postmark-Account-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Account-Token"
+            },
+            {
+              "name": "signatureid",
+              "in": "path",
+              "value": "$steps.create-sender-signature.outputs.signature_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "signature_details": "$response.body",
+            "confirmed_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "resend-confirmation-email",
+          "description": "Resend the confirmation email to the sender signature address (useful if the initial email was missed or confirmation status is false).",
+          "operationId": "resendSenderSignatureConfirmationEmail",
+          "parameters": [
+            {
+              "name": "X-Postmark-Account-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Account-Token"
+            },
+            {
+              "name": "signatureid",
+              "in": "path",
+              "value": "$steps.create-sender-signature.outputs.signature_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "standard_response": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "signature_id": "$steps.create-sender-signature.outputs.signature_id",
+        "confirmed_status": "$steps.check-signature-status.outputs.confirmed_status",
+        "email_address": "$steps.create-sender-signature.outputs.email_address",
+        "signature_details": "$steps.check-signature-status.outputs.signature_details",
+        "standard_response": "$steps.resend-confirmation-email.outputs.standard_response"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "rotate-domain-dkim-key",
+      "summary": "Initiates the rotation of the DKIM key for a domain, retrieves the new pending DNS values, and triggers verification after the user updates their DNS records.",
+      "description": "Initiates the rotation of the DKIM key for a domain, retrieves the new pending DNS values, and triggers verification after the user updates their DNS records.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-Postmark-Account-Token": {
+            "type": "string"
+          },
+          "domainid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "initiate-dkim-rotation",
+          "description": "Request a new DKIM key for the specified domain.",
+          "operationId": "rotateDKIMKeyForDomain",
+          "parameters": [
+            {
+              "name": "X-Postmark-Account-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Account-Token"
+            },
+            {
+              "name": "domainid",
+              "in": "path",
+              "value": "$inputs.domainid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "dkim_rotation_response": "$response.body",
+            "dkim_pending_host": "$response.body",
+            "dkim_pending_text_value": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-rotated-dkim-details",
+          "description": "Retrieve domain details to confirm the pending DKIM values after rotation request.",
+          "operationId": "getDomain",
+          "parameters": [
+            {
+              "name": "X-Postmark-Account-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Account-Token"
+            },
+            {
+              "name": "domainid",
+              "in": "path",
+              "value": "$steps.initiate-dkim-rotation.outputs.dkim_rotation_response.ID"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "domain_details": "$response.body",
+            "dkim_pending_host": "$response.body",
+            "dkim_pending_text_value": "$response.body"
+          }
+        },
+        {
+          "stepId": "verify-rotated-dkim",
+          "description": "Request Postmark to verify the new DKIM record after DNS has been updated.",
+          "operationId": "requestDkimVerificationForDomain",
+          "parameters": [
+            {
+              "name": "X-Postmark-Account-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Account-Token"
+            },
+            {
+              "name": "domainid",
+              "in": "path",
+              "value": "$steps.initiate-dkim-rotation.outputs.dkim_rotation_response.ID"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "dkim_verification_result": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "dkim_rotation_response": "$steps.initiate-dkim-rotation.outputs.dkim_rotation_response",
+        "dkim_pending_host": "$steps.get-rotated-dkim-details.outputs.dkim_pending_host",
+        "dkim_pending_text_value": "$steps.get-rotated-dkim-details.outputs.dkim_pending_text_value",
+        "domain_details": "$steps.get-rotated-dkim-details.outputs.domain_details",
+        "dkim_verification_result": "$steps.verify-rotated-dkim.outputs.dkim_verification_result"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "promote-templates-between-servers",
+      "summary": "Copies email templates from a specified source server to a destination server, useful for promoting templates from staging to production environments.",
+      "description": "Copies email templates from a specified source server to a destination server, useful for promoting templates from staging to production environments.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-Postmark-Account-Token": {
+            "type": "string"
+          },
+          "count": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-source-server",
+          "description": "List servers, potentially filtering by name, to find the source server ID.",
+          "operationId": "listServers",
+          "parameters": [
+            {
+              "name": "X-Postmark-Account-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Account-Token"
+            },
+            {
+              "name": "count",
+              "in": "query",
+              "value": "$inputs.count"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "servers_list": "$response.body",
+            "source_server_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "find-destination-server",
+          "description": "List servers, potentially filtering by name, to find the destination server ID.",
+          "operationId": "listServers",
+          "parameters": [
+            {
+              "name": "X-Postmark-Account-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Account-Token"
+            },
+            {
+              "name": "count",
+              "in": "query",
+              "value": "$inputs.count"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "servers_list": "$response.body",
+            "destination_server_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "push-templates",
+          "description": "Push templates from the source server to the destination server.",
+          "operationId": "pushTemplates",
+          "parameters": [
+            {
+              "name": "X-Postmark-Account-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Account-Token"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "SourceServerId": "$steps.find-source-server.outputs.source_server_id",
+              "DestinationServerId": "$steps.find-destination-server.outputs.destination_server_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "push_results": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "servers_list": "$steps.find-destination-server.outputs.servers_list",
+        "source_server_id": "$steps.find-source-server.outputs.source_server_id",
+        "destination_server_id": "$steps.find-destination-server.outputs.destination_server_id",
+        "push_results": "$steps.push-templates.outputs.push_results"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-and-configure-server",
+      "summary": "Creates a new Postmark server and immediately updates its configuration settings, such as webhook URLs or tracking options.",
+      "description": "Creates a new Postmark server and immediately updates its configuration settings, such as webhook URLs or tracking options.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-Postmark-Account-Token": {
+            "type": "string"
+          },
+          "create-server_body": {
+            "type": "object"
+          },
+          "serverid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-server",
+          "description": "Create a new server with initial settings.",
+          "operationId": "createServer",
+          "parameters": [
+            {
+              "name": "X-Postmark-Account-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Account-Token"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-server_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "server_id": "$response.body",
+            "server_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-server-configuration",
+          "description": "Update the configuration of the newly created server.",
+          "operationId": "editServerInformation",
+          "parameters": [
+            {
+              "name": "X-Postmark-Account-Token",
+              "in": "header",
+              "value": "$inputs.X-Postmark-Account-Token"
+            },
+            {
+              "name": "serverid",
+              "in": "path",
+              "value": "$steps.create-server.outputs.server_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "serverid": "$steps.create-server.outputs.server_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_server_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "server_id": "$steps.create-server.outputs.server_id",
+        "server_details": "$steps.create-server.outputs.server_details",
+        "updated_server_details": "$steps.update-server-configuration.outputs.updated_server_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

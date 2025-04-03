@@ -1,0 +1,420 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/parliament.uk/treaties/v1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "track-parliamentary-progress-of-a-specific-treaty",
+      "summary": "Retrieves the details of a specific treaty and then lists all associated parliamentary business items, allowing users to follow its legislative journey.",
+      "description": "Retrieves the details of a specific treaty and then lists all associated parliamentary business items, allowing users to follow its legislative journey.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-treaty-by-id",
+          "description": "Retrieve details of a specific treaty using its ID.",
+          "operationId": "GetTreatyById",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "treaty_details": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-treaty-business-items",
+          "description": "Retrieve all parliamentary business items associated with the specified treaty.",
+          "operationId": "GetBusinessItemsByTreatyId",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-treaty-by-id.outputs.treaty_details.value.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "business_item_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "treaty_details": "$steps.get-treaty-by-id.outputs.treaty_details",
+        "business_item_list": "$steps.get-treaty-business-items.outputs.business_item_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "find-treaties-by-government-department",
+      "summary": "Searches for treaties associated with a specific government department ID and then retrieves the full details for one of those treaties.",
+      "description": "Searches for treaties associated with a specific government department ID and then retrieves the full details for one of those treaties.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "SearchText": {
+            "type": "string"
+          },
+          "GovernmentOrganisationId": {
+            "type": "string"
+          },
+          "Series": {
+            "type": "string"
+          },
+          "ParliamentaryProcess": {
+            "type": "string"
+          },
+          "DebateScheduled": {
+            "type": "string"
+          },
+          "MotionsTabledAboutATreaty": {
+            "type": "string"
+          },
+          "CommitteeRaisedConcerns": {
+            "type": "string"
+          },
+          "House": {
+            "type": "string"
+          },
+          "Skip": {
+            "type": "string"
+          },
+          "Take": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-treaties-by-department",
+          "description": "Search for treaties, filtering by the Government Organisation ID.",
+          "operationId": "GetTreaties",
+          "parameters": [
+            {
+              "name": "SearchText",
+              "in": "query",
+              "value": "$inputs.SearchText"
+            },
+            {
+              "name": "GovernmentOrganisationId",
+              "in": "query",
+              "value": "$inputs.GovernmentOrganisationId"
+            },
+            {
+              "name": "Series",
+              "in": "query",
+              "value": "$inputs.Series"
+            },
+            {
+              "name": "ParliamentaryProcess",
+              "in": "query",
+              "value": "$inputs.ParliamentaryProcess"
+            },
+            {
+              "name": "DebateScheduled",
+              "in": "query",
+              "value": "$inputs.DebateScheduled"
+            },
+            {
+              "name": "MotionsTabledAboutATreaty",
+              "in": "query",
+              "value": "$inputs.MotionsTabledAboutATreaty"
+            },
+            {
+              "name": "CommitteeRaisedConcerns",
+              "in": "query",
+              "value": "$inputs.CommitteeRaisedConcerns"
+            },
+            {
+              "name": "House",
+              "in": "query",
+              "value": "$inputs.House"
+            },
+            {
+              "name": "Skip",
+              "in": "query",
+              "value": "$inputs.Skip"
+            },
+            {
+              "name": "Take",
+              "in": "query",
+              "value": "$inputs.Take"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "treaty_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-treaty-details",
+          "description": "Retrieve the full details for a specific treaty found in the previous step.",
+          "operationId": "GetTreatyById",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.find-treaties-by-department.outputs.treaty_list.items[0].value.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "treaty_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "treaty_list": "$steps.find-treaties-by-department.outputs.treaty_list",
+        "treaty_details": "$steps.get-treaty-details.outputs.treaty_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "explore-specific-parliamentary-action-for-a-treaty",
+      "summary": "Retrieves all parliamentary business items for a treaty and then gets the detailed information for a specific business item.",
+      "description": "Retrieves all parliamentary business items for a treaty and then gets the detailed information for a specific business item.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-treaty-business-items-for-exploration",
+          "description": "Retrieve all parliamentary business items associated with a specific treaty ID.",
+          "operationId": "GetBusinessItemsByTreatyId",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "business_item_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-specific-business-item",
+          "description": "Retrieve the details of a single, specific business item identified from the previous step.",
+          "operationId": "GetBusinessItemById",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-treaty-business-items-for-exploration.outputs.business_item_list.items[0].value.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "business_item_details": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "business_item_list": "$steps.get-treaty-business-items-for-exploration.outputs.business_item_list",
+        "business_item_details": "$steps.get-specific-business-item.outputs.business_item_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "fetch-treaty-filter-options",
+      "summary": "Retrieves lists of Government Organisations and Series Memberships to provide context for filtering treaty searches.",
+      "description": "Retrieves lists of Government Organisations and Series Memberships to provide context for filtering treaty searches.",
+      "steps": [
+        {
+          "stepId": "get-organisations",
+          "description": "Retrieve a list of all government organisations.",
+          "operationId": "GetOrganisations",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "organisation_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-series-memberships",
+          "description": "Retrieve a list of all treaty series memberships.",
+          "operationId": "GetSeriesMemberships",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "series_membership_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "organisation_list": "$steps.get-organisations.outputs.organisation_list",
+        "series_membership_list": "$steps.get-series-memberships.outputs.series_membership_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

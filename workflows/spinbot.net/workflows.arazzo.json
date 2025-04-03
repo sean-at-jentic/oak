@@ -1,0 +1,331 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/spinbot.net/main/1.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "extract-and-rewrite-article",
+      "summary": "Extracts the main content from a given URL and then rewrites it using the 'pretty spinner' for better human readability. This is useful for repurposing web content while avoiding plagiarism.",
+      "description": "Extracts the main content from a given URL and then rewrites it using the 'pretty spinner' for better human readability. This is useful for repurposing web content while avoiding plagiarism.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "extract-article_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "extract-article",
+          "description": "Extract the main article content from a web page URL.",
+          "operationId": "postArticle",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": "$inputs.extract-article_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "rewrite-extracted-article",
+          "description": "Rewrite the extracted article text to make it unique and human-readable.",
+          "operationId": "postPrettySpinner",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "text": "$steps.extract-article.outputs.extracted_article_json.text"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        }
+      ],
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "check-credits-before-rewriting-article",
+      "summary": "Checks the user's available credits before submitting an article for rewriting. Helps manage API usage costs.",
+      "description": "Checks the user's available credits before submitting an article for rewriting. Helps manage API usage costs.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "rewrite-article-after-check_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "check-user-credits",
+          "description": "Retrieve the user's current credit balance using their API key.",
+          "operationId": "getInfo",
+          "parameters": [
+            {
+              "name": "key",
+              "in": "query",
+              "value": "$inputs.key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "credit_info": "$response.body"
+          }
+        },
+        {
+          "stepId": "rewrite-article-after-check",
+          "description": "Rewrite the provided article text (assuming sufficient credits were confirmed from the previous step).",
+          "operationId": "postPrettySpinner",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": "$inputs.rewrite-article-after-check_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        }
+      ],
+      "outputs": {
+        "credit_info": "$steps.check-user-credits.outputs.credit_info"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "check-credits-before-extracting-article",
+      "summary": "Checks the user's available credits before submitting a URL for article extraction. Helps manage API usage costs.",
+      "description": "Checks the user's available credits before submitting a URL for article extraction. Helps manage API usage costs.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "extract-article-after-check_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "check-credits-before-extract",
+          "description": "Retrieve the user's current credit balance using their API key.",
+          "operationId": "getInfo",
+          "parameters": [
+            {
+              "name": "key",
+              "in": "query",
+              "value": "$inputs.key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "credit_info": "$response.body"
+          }
+        },
+        {
+          "stepId": "extract-article-after-check",
+          "description": "Extract the main article content from a web page URL (assuming sufficient credits were confirmed from the previous step).",
+          "operationId": "postArticle",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": "$inputs.extract-article-after-check_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        }
+      ],
+      "outputs": {
+        "credit_info": "$steps.check-credits-before-extract.outputs.credit_info"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "extract-and-generate-spintax",
+      "summary": "Extracts the main content from a given URL and then generates a spintax version of the text. This allows users to create multiple variations of the content manually or programmatically.",
+      "description": "Extracts the main content from a given URL and then generates a spintax version of the text. This allows users to create multiple variations of the content manually or programmatically.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "extract-article-for-spintax_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "extract-article-for-spintax",
+          "description": "Extract the main article content from a web page URL.",
+          "operationId": "postArticle",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": "$inputs.extract-article-for-spintax_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "generate-spintax-from-extracted",
+          "description": "Generate spintax format for the extracted article text.",
+          "operationId": "postSpintax",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "text": "$steps.extract-article-for-spintax.outputs.extracted_article_json.text"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        }
+      ],
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

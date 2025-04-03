@@ -1,0 +1,1026 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "/apis/openapi/whatsapp.openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "register-whats-app-business-account",
+      "summary": "Registers a new phone number for the WhatsApp Business API by requesting a code via SMS or voice and then verifying that code.",
+      "description": "Registers a new phone number for the WhatsApp Business API by requesting a code via SMS or voice and then verifying that code.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "cc": {
+            "type": "string"
+          },
+          "phone_number": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "cert": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "request-registration-code",
+          "description": "Request a registration code to be sent via SMS or voice call.",
+          "operationId": "RequestCode",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "cc": "$inputs.cc",
+              "phone_number": "$inputs.phone_number",
+              "method": "$inputs.method",
+              "cert": "$inputs.cert"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "vname": "$response.body"
+          }
+        },
+        {
+          "stepId": "verify-registration-code",
+          "description": "Submit the received registration code to verify the phone number.",
+          "operationId": "RegisterAccount",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "code": "$inputs.code"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "registration_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "vname": "$steps.request-registration-code.outputs.vname",
+        "registration_status": "$steps.verify-registration-code.outputs.registration_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "send-media-message-image",
+      "summary": "Uploads an image file and then sends it as a message to a specified WhatsApp contact.",
+      "description": "Uploads an image file and then sends it as a message to a specified WhatsApp contact.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "new_password": {
+            "type": "string"
+          },
+          "contacts": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "login-user",
+          "description": "Authenticate and get an access token.",
+          "operationId": "LoginUser",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "new_password": "$inputs.new_password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "token": "$response.body",
+            "expires_after": "$response.body"
+          }
+        },
+        {
+          "stepId": "upload-image",
+          "description": "Upload an image file to the media storage.",
+          "operationId": "UploadMedia",
+          "requestBody": {
+            "contentType": "application/pdf",
+            "payload": {
+              "auth_token": "$steps.login-user.outputs.token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "media_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-contact-validity",
+          "description": "Verify if the recipient phone number is a valid WhatsApp user.",
+          "operationId": "CheckContact",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "auth_token": "$steps.login-user.outputs.token",
+              "contacts": "$inputs.contacts"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "contacts_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "send-image-message",
+          "description": "Send the uploaded image as a message.",
+          "operationId": "SendMessage",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "auth_token": "$steps.login-user.outputs.token",
+              "image_id": "$steps.upload-image.outputs.media_id",
+              "to": "$steps.check-contact-validity.outputs.contacts_status[0].wa_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "message_id": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "token": "$steps.login-user.outputs.token",
+        "expires_after": "$steps.login-user.outputs.expires_after",
+        "media_id": "$steps.upload-image.outputs.media_id",
+        "contacts_status": "$steps.check-contact-validity.outputs.contacts_status",
+        "message_id": "$steps.send-image-message.outputs.message_id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "send-text-message-to-contact",
+      "summary": "Checks if a phone number is a valid WhatsApp contact and then sends a text message to them.",
+      "description": "Checks if a phone number is a valid WhatsApp contact and then sends a text message to them.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "new_password": {
+            "type": "string"
+          },
+          "contacts": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "login-user",
+          "description": "Authenticate and get an access token.",
+          "operationId": "LoginUser",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "new_password": "$inputs.new_password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "token": "$response.body",
+            "expires_after": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-contact-validity",
+          "description": "Verify if one or more phone numbers are valid WhatsApp users.",
+          "operationId": "CheckContact",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "auth_token": "$steps.login-user.outputs.token",
+              "contacts": "$inputs.contacts"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "contacts_status": "$response.body"
+          }
+        },
+        {
+          "stepId": "send-text-message",
+          "description": "Send a text message to a validated WhatsApp ID.",
+          "operationId": "SendMessage",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "auth_token": "$steps.login-user.outputs.token",
+              "to": "$steps.check-contact-validity.outputs.contacts_status[0].wa_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "message_id": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "token": "$steps.login-user.outputs.token",
+        "expires_after": "$steps.login-user.outputs.expires_after",
+        "contacts_status": "$steps.check-contact-validity.outputs.contacts_status",
+        "message_id": "$steps.send-text-message.outputs.message_id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "update-business-profile",
+      "summary": "Retrieves the current business profile information and then updates it with new details.",
+      "description": "Retrieves the current business profile information and then updates it with new details.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "new_password": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "vertical": {
+            "type": "string"
+          },
+          "websites": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "login-user",
+          "description": "Authenticate and get an access token.",
+          "operationId": "LoginUser",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "new_password": "$inputs.new_password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "token": "$response.body",
+            "expires_after": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-business-profile",
+          "description": "Retrieve the current business profile details.",
+          "operationId": "GetBusinessProfile",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "current_profile": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-business-profile",
+          "description": "Update the business profile with new information.",
+          "operationId": "updateBusinessProfile",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "auth_token": "$steps.login-user.outputs.token",
+              "address": "$inputs.address",
+              "description": "$inputs.description",
+              "email": "$inputs.email",
+              "vertical": "$inputs.vertical",
+              "websites": "$inputs.websites"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "update_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "token": "$steps.login-user.outputs.token",
+        "expires_after": "$steps.login-user.outputs.expires_after",
+        "current_profile": "$steps.get-business-profile.outputs.current_profile",
+        "update_status": "$steps.update-business-profile.outputs.update_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "configure-application-webhook",
+      "summary": "Retrieves current application settings and updates the webhook configuration for receiving inbound messages and status updates.",
+      "description": "Retrieves current application settings and updates the webhook configuration for receiving inbound messages and status updates.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "new_password": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "login-user",
+          "description": "Authenticate and get an access token.",
+          "operationId": "LoginUser",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "new_password": "$inputs.new_password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "token": "$response.body",
+            "expires_after": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-application-settings",
+          "description": "Retrieve the current application settings, including webhook configuration.",
+          "operationId": "GetApplicationSettings",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "application_settings": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-webhook-settings",
+          "description": "Update the application settings, specifically the webhook URL and concurrency.",
+          "operationId": "UpdateApplicationSettings",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "auth_token": "$steps.login-user.outputs.token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "update_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "token": "$steps.login-user.outputs.token",
+        "expires_after": "$steps.login-user.outputs.expires_after",
+        "application_settings": "$steps.get-application-settings.outputs.application_settings",
+        "update_status": "$steps.update-webhook-settings.outputs.update_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "enable-two-step-verification",
+      "summary": "Secures the WhatsApp Business account by enabling two-step verification with a PIN.",
+      "description": "Secures the WhatsApp Business account by enabling two-step verification with a PIN.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "new_password": {
+            "type": "string"
+          },
+          "pin": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "login-user",
+          "description": "Authenticate and get an access token.",
+          "operationId": "LoginUser",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "new_password": "$inputs.new_password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "token": "$response.body",
+            "expires_after": "$response.body"
+          }
+        },
+        {
+          "stepId": "enable-two-step",
+          "description": "Enable two-step verification by setting a 6-digit PIN.",
+          "operationId": "EnableTwoStep",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "auth_token": "$steps.login-user.outputs.token",
+              "pin": "$inputs.pin"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "enable_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "token": "$steps.login-user.outputs.token",
+        "expires_after": "$steps.login-user.outputs.expires_after",
+        "enable_status": "$steps.enable-two-step.outputs.enable_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-and-customize-group",
+      "summary": "Creates a new WhatsApp group, retrieves its information, and then sets a custom group icon.",
+      "description": "Creates a new WhatsApp group, retrieves its information, and then sets a custom group icon.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "new_password": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "GroupId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "login-user",
+          "description": "Authenticate and get an access token.",
+          "operationId": "LoginUser",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "new_password": "$inputs.new_password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "token": "$response.body",
+            "expires_after": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-group",
+          "description": "Create a new group with a specified subject.",
+          "operationId": "CreateGroup",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "auth_token": "$steps.login-user.outputs.token",
+              "subject": "$inputs.subject"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "group_id": "$response.body",
+            "creation_time": "$response.body"
+          }
+        },
+        {
+          "stepId": "set-group-icon",
+          "description": "Upload and set an icon for the newly created group.",
+          "operationId": "SetGroupIcon",
+          "parameters": [
+            {
+              "name": "GroupId",
+              "in": "path",
+              "value": "$steps.create-group.outputs.group_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "auth_token": "$steps.login-user.outputs.token",
+              "GroupId": "$steps.create-group.outputs.group_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "set_icon_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "token": "$steps.login-user.outputs.token",
+        "expires_after": "$steps.login-user.outputs.expires_after",
+        "group_id": "$steps.create-group.outputs.group_id",
+        "creation_time": "$steps.create-group.outputs.creation_time",
+        "set_icon_status": "$steps.set-group-icon.outputs.set_icon_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "backup-and-restore-application-settings",
+      "summary": "Creates an encrypted backup of the application settings and provides the steps to restore them later.",
+      "description": "Creates an encrypted backup of the application settings and provides the steps to restore them later.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "new_password": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "login-user",
+          "description": "Authenticate and get an access token.",
+          "operationId": "LoginUser",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "new_password": "$inputs.new_password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "token": "$response.body",
+            "expires_after": "$response.body"
+          }
+        },
+        {
+          "stepId": "backup-settings",
+          "description": "Create an encrypted backup of the application settings using a password.",
+          "operationId": "BackupSettings",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "auth_token": "$steps.login-user.outputs.token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "backup_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "restore-settings",
+          "description": "Restore application settings from a previously created encrypted backup.",
+          "operationId": "RestoreSettings",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "auth_token": "$steps.login-user.outputs.token",
+              "restore_data": "$steps.backup-settings.outputs.backup_data"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "restore_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "token": "$steps.login-user.outputs.token",
+        "expires_after": "$steps.login-user.outputs.expires_after",
+        "backup_data": "$steps.backup-settings.outputs.backup_data",
+        "restore_status": "$steps.restore-settings.outputs.restore_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-group-participants-remove",
+      "summary": "Retrieves information about a group, including participants, and then removes specified participants.",
+      "description": "Retrieves information about a group, including participants, and then removes specified participants.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "new_password": {
+            "type": "string"
+          },
+          "GroupId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "login-user",
+          "description": "Authenticate and get an access token.",
+          "operationId": "LoginUser",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "new_password": "$inputs.new_password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "token": "$response.body",
+            "expires_after": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-group-info",
+          "description": "Retrieve detailed information about a specific group, including the list of participants.",
+          "operationId": "GetGroupInfo",
+          "parameters": [
+            {
+              "name": "GroupId",
+              "in": "path",
+              "value": "$inputs.GroupId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "group_info": "$response.body"
+          }
+        },
+        {
+          "stepId": "remove-group-participant",
+          "description": "Remove one or more participants from the group using their WhatsApp IDs.",
+          "operationId": "RemoveGroupParticipant",
+          "parameters": [
+            {
+              "name": "GroupId",
+              "in": "path",
+              "value": "$steps.get-group-info.outputs.group_info.groups[0].id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "auth_token": "$steps.login-user.outputs.token",
+              "GroupId": "$steps.get-group-info.outputs.group_info.groups[0].id",
+              "wa_ids": "$steps.get-group-info.outputs.group_info.groups[0].participants"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "removal_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "token": "$steps.login-user.outputs.token",
+        "expires_after": "$steps.login-user.outputs.expires_after",
+        "group_info": "$steps.get-group-info.outputs.group_info",
+        "removal_status": "$steps.remove-group-participant.outputs.removal_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "check-service-health",
+      "summary": "Verifies the operational status of the WhatsApp Business API service.",
+      "description": "Verifies the operational status of the WhatsApp Business API service.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "new_password": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "login-user",
+          "description": "Authenticate and get an access token.",
+          "operationId": "LoginUser",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "new_password": "$inputs.new_password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "token": "$response.body",
+            "expires_after": "$response.body"
+          }
+        },
+        {
+          "stepId": "check-health",
+          "description": "Check the health status of the API gateway.",
+          "operationId": "CheckHealth",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "health_status": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "token": "$steps.login-user.outputs.token",
+        "expires_after": "$steps.login-user.outputs.expires_after",
+        "health_status": "$steps.check-health.outputs.health_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
