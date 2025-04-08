@@ -1,9 +1,27 @@
 # The Open Agentic Knowledge (OAK) repository
 
-[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-40c463.svg)](CODE_OF_CONDUCT.md)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
+<div style="display: flex; justify-content: space-between; align-items: center;">
+  <div>
+    <a href="https://discord.gg/J22TNGqe">
+      <img src="https://img.shields.io/badge/JOIN%20OUR%20DISCORD-COMMUNITY-7289DA?style=plastic&logo=discord&logoColor=white" alt="Discord">
+    </a>
+  </div>
+  <div>
+    <a href="CODE_OF_CONDUCT.md">
+      <img src="https://img.shields.io/badge/Contributor%20Covenant-2.1-40c463.svg" alt="Contributor Covenant">
+    </a>
+    <a href="LICENSE.md">
+      <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT">
+    </a>
+  </div>
+</div>
+
+<br/>
+
+> **Join our community!** Connect with contributors and users on [Discord](https://discord.gg/J22TNGqe) to discuss ideas, ask questions, and collaborate on the OAK repository.
 
 ## Overview
+
 ### The agentic knowedge layer
 
 AI agents depend on APIs. Their capabilities are defined by the APIs they know about, and their reliability is defined by the quality of that knowledge. Documentation was previously nice-to-have, but for AI it's a *need-to-have*. The goal of this project is to collate all knowledge about all the world's APIs into a communal, detailed, comprehensive, structured documentation catalog designed for use by AI.  This allows AI to accurately generate API integration code, and it allows agents to plan and interact with APIs reliably, without intermediaries.
@@ -29,7 +47,6 @@ The repository focuses on:
 1. Reference implementations of libraries to allow easy execution of API operations and workflows in this repository.
 1. Evaluations and scorecards to measure API knowledge completeness, accuracy and AI-readiness
 1. RFCs for extensions to open formats used in the repository, and any other proposals.
-
 
 ## Project Stage
 
