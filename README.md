@@ -1,26 +1,13 @@
 # The Open Agentic Knowledge (OAK) repository
 
-<div style="display: flex; justify-content: space-between; align-items: center;">
-  <div>
-    <a href="https://discord.gg/J22TNGqe">
-      <img src="https://img.shields.io/badge/JOIN%20OUR%20DISCORD-COMMUNITY-7289DA?style=plastic&logo=discord&logoColor=white" alt="Discord">
-    </a>
-  </div>
-  <div>
-    <a href="CODE_OF_CONDUCT.md">
-      <img src="https://img.shields.io/badge/Contributor%20Covenant-2.1-40c463.svg" alt="Contributor Covenant">
-    </a>
-    <a href="LICENSE.md">
-      <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT">
-    </a>
-  </div>
-</div>
-
-<br/>
+[![Discord](https://img.shields.io/badge/JOIN%20OUR%20DISCORD-COMMUNITY-7289DA?style=plastic&logo=discord&logoColor=white)](https://discord.gg/J22TNGqe)
 
 > **Join our community!** Connect with contributors and users on [Discord](https://discord.gg/J22TNGqe) to discuss ideas, ask questions, and collaborate on the OAK repository.
 
 ## Overview
+
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-40c463.svg)](CODE_OF_CONDUCT.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
 
 ### The agentic knowedge layer
 
