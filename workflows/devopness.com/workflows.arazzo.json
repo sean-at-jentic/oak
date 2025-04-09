@@ -1,74 +1,2637 @@
 {
-    "arazzo": "1.0.1",
-    "info": {
-        "title": "TO DO Jef: Manually define workflows in this file in case Jentic auto generator doesn't do it for us",
-        "version": "1.0.0",
-        "description": "TO DO Jef: I'm guessing Jentic will auto generate the contents of this file and replace this note. Keeping it here to see diff after generators do their trick."
-    },
-    "sourceDescriptions": [
-        {
-            "name": "openapi_source",
-            "url": "./apis/openapi/devopness.com/main/1.0.0/openapi.json",
-            "type": "openapi"
-        }
-    ],
-    "workflows": [],
-    "components": {
-        "successActions": {
-            "default_success": {
-                "name": "default_success",
-                "type": "end"
-            }
-        },
-        "failureActions": {
-            "auth_failure": {
-                "name": "auth_failure",
-                "type": "end",
-                "criteria": [
-                    {
-                        "condition": "$statusCode == 401"
-                    }
-                ]
-            },
-            "permission_denied": {
-                "name": "permission_denied",
-                "type": "end",
-                "criteria": [
-                    {
-                        "condition": "$statusCode == 403"
-                    }
-                ]
-            },
-            "not_found": {
-                "name": "not_found",
-                "type": "end",
-                "criteria": [
-                    {
-                        "condition": "$statusCode == 404"
-                    }
-                ]
-            },
-            "server_error": {
-                "name": "server_error",
-                "type": "retry",
-                "retryAfter": 2,
-                "retryLimit": 3,
-                "criteria": [
-                    {
-                        "condition": "$statusCode >= 500"
-                    }
-                ]
-            },
-            "default_retry": {
-                "name": "default_retry",
-                "type": "retry",
-                "retryAfter": 1,
-                "retryLimit": 3
-            },
-            "default_failure": {
-                "name": "default_failure",
-                "type": "end"
-            }
-        }
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Devopness API - Painless essential DevOps to everyone",
+    "summary": "Workflows for automating common Devopness tasks like provisioning infrastructure, deploying applications, and managing teams."
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/devopness.com/main/1.0.0/openapi.json",
+      "type": "openapi"
     }
+  ],
+  "workflows": [
+    {
+      "workflowId": "user-authentication-and-profile-retrieval",
+      "summary": "Authenticates a user using email and password, retrieves an access token, and then fetches the authenticated user's profile details.",
+      "description": "Authenticates a user using email and password, retrieves an access token, and then fetches the authenticated user's profile details.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Accept": {
+            "type": "string"
+          },
+          "Content-Type": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "Authorization": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "login-user",
+          "description": "Authenticate user credentials and receive access and refresh tokens.",
+          "operationId": "loginUser",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "email": "$inputs.email",
+              "password": "$inputs.password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "access_token": "$response.body#access_token",
+            "refresh_token": "$response.body#refresh_token",
+            "expires_in": "$response.body#expires_in"
+          }
+        },
+        {
+          "stepId": "get-user-me",
+          "description": "Retrieve the profile information for the currently authenticated user.",
+          "operationId": "getUserMe",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $steps.login-user.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_id": "$response.body#id",
+            "name": "$response.body#name",
+            "email": "$response.body#email",
+            "url_slug": "$response.body#url_slug",
+            "language": "$response.body#language",
+            "active": "$response.body#active",
+            "social_accounts": "$response.body#social_accounts",
+            "created_at": "$response.body#created_at",
+            "updated_at": "$response.body#updated_at"
+          }
+        }
+      ],
+      "outputs": {
+        "access_token": "$steps.login-user.outputs.access_token",
+        "refresh_token": "$steps.login-user.outputs.refresh_token",
+        "expires_in": "$steps.login-user.outputs.expires_in",
+        "user_id": "$steps.get-user-me.outputs.user_id",
+        "name": "$steps.get-user-me.outputs.name",
+        "email": "$steps.get-user-me.outputs.email",
+        "url_slug": "$steps.get-user-me.outputs.url_slug",
+        "language": "$steps.get-user-me.outputs.language",
+        "active": "$steps.get-user-me.outputs.active",
+        "social_accounts": "$steps.get-user-me.outputs.social_accounts",
+        "created_at": "$steps.get-user-me.outputs.created_at",
+        "updated_at": "$steps.get-user-me.outputs.updated_at"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "provision-and-connect-a-new-server",
+      "summary": "Adds a server definition to an environment (potentially triggering cloud provisioning), retrieves the connection command, and simulates the server connecting back.",
+      "description": "Adds a server definition to an environment (potentially triggering cloud provisioning), retrieves the connection command, and simulates the server connecting back.",
+      "dependsOn" : ["user-authentication-and-profile-retrieval"],
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Accept": {
+            "type": "string"
+          },
+          "Authorization": {
+            "type": "string"
+          },
+          "Content-Type": {
+            "type": "string"
+          },
+          "environment_id": {
+            "type": "string"
+          },
+          "hostname": {
+            "type": "string"
+          },
+          "provision_input": {
+            "type": "string"
+          },
+          "server_id": {
+            "type": "string"
+          },
+          "activation_token": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-environment-server",
+          "description": "Creates a server resource within a specified environment, potentially triggering provisioning on a cloud provider.",
+          "operationId": "addEnvironmentServer",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "environment_id",
+              "in": "path",
+              "value": "$inputs.environment_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "hostname": "$inputs.hostname",
+              "provision_input": "$inputs.provision_input"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "server_id": "$response.body#id"
+          }
+        },
+        {
+          "stepId": "get-server-commands",
+          "description": "Retrieves the connection command needed to link the provisioned server to Devopness.",
+          "operationId": "getServerCommands",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "server_id",
+              "in": "path",
+              "value": "$steps.add-environment-server.outputs.server_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "connect_command": "$response.body#connect_command"
+          }
+        },
+        {
+          "stepId": "connect-server",
+          "description": "Simulates the server connecting back to Devopness using its activation token (obtained implicitly via connect_command execution).",
+          "operationId": "connectServer",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "activation_token",
+              "in": "path",
+              "value": "$inputs.activation_token"
+            },
+            {
+              "name": "server_id",
+              "in": "path",
+              "value": "$steps.add-environment-server.outputs.server_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "connection_message": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-server-status",
+          "description": "Checks the status of the server, potentially verifying connection and provisioning.",
+          "operationId": "getStatusServer",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "server_id",
+              "in": "path",
+              "value": "$steps.add-environment-server.outputs.server_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_id": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "server_id": "$steps.add-environment-server.outputs.server_id",
+        "action_id": "$steps.get-server-status.outputs.action_id",
+        "connect_command": "$steps.get-server-commands.outputs.connect_command",
+        "connection_message": "$steps.connect-server.outputs.connection_message"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "deploy-application-and-monitor-progress",
+      "summary": "Creates an application, triggers a deployment, retrieves the deployment action details, and checks the logs of a specific step.",
+      "description": "Creates an application, triggers a deployment, retrieves the deployment action details, and checks the logs of a specific step.",
+      "dependsOn" : ["user-authentication-and-profile-retrieval"],
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Accept": {
+            "type": "string"
+          },
+          "Authorization": {
+            "type": "string"
+          },
+          "Content-Type": {
+            "type": "string"
+          },
+          "environment_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "engine_version": {
+            "type": "string"
+          },
+          "framework": {
+            "type": "string"
+          },
+          "programming_language": {
+            "type": "string"
+          },
+          "repository": {
+            "type": "string"
+          },
+          "credential_id": {
+            "type": "string"
+          },
+          "default_branch": {
+            "type": "string"
+          },
+          "application_id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "action_id": {
+            "type": "string"
+          },
+          "action_step_order": {
+            "type": "string"
+          },
+          "action_target_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-environment-application",
+          "description": "Create a new application within a specified environment.",
+          "operationId": "addEnvironmentApplication",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "environment_id",
+              "in": "path",
+              "value": "$inputs.environment_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name",
+              "engine_version": "$inputs.engine_version",
+              "framework": "$inputs.framework",
+              "programming_language": "$inputs.programming_language",
+              "repository": "$inputs.repository",
+              "credential_id": "$inputs.credential_id",
+              "default_branch": "$inputs.default_branch"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "application_id": "$response.body#id",
+            "project_id": "$response.body#project_id",
+            "environment_id": "$response.body#environment_id",
+            "name": "$response.body#name",
+            "repository": "$response.body#repository",
+            "default_branch": "$response.body#default_branch",
+            "programming_language": "$response.body#programming_language",
+            "engine_version": "$response.body#engine_version",
+            "framework": "$response.body#framework",
+            "root_directory": "$response.body#root_directory",
+            "deployments_keep": "$response.body#deployments_keep"
+          }
+        },
+        {
+          "stepId": "add-application-deployment",
+          "description": "Trigger a new deployment for the created application.",
+          "operationId": "addApplicationDeployment",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "application_id",
+              "in": "path",
+              "value": "$steps.add-environment-application.outputs.application_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "application_id": "$steps.add-environment-application.outputs.application_id",
+              "type": "$inputs.type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-action",
+          "description": "Retrieve the details of the deployment action triggered.",
+          "operationId": "getAction",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "action_id",
+              "in": "path",
+              "value": "$steps.add-application-deployment.outputs.action_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_details": "$response.body#action_details",
+            "action_status": "$response.body#action_status",
+            "targets": "$response.body#targets"
+          }
+        },
+        {
+          "stepId": "get-action-log",
+          "description": "Get the log output for a specific step within the deployment action.",
+          "operationId": "getActionLog",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "action_id",
+              "in": "path",
+              "value": "$steps.get-action.outputs.action_details.id"
+            },
+            {
+              "name": "action_step_order",
+              "in": "path",
+              "value": "$steps.get-action.outputs.action_details.targets[0].steps[0].order"
+            },
+            {
+              "name": "action_target_id",
+              "in": "path",
+              "value": "$steps.get-action.outputs.action_details.targets[0].resource_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "log_output": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "application_id": "$steps.add-environment-application.outputs.application_id",
+        "project_id": "$steps.add-environment-application.outputs.project_id",
+        "environment_id": "$steps.add-environment-application.outputs.environment_id",
+        "name": "$steps.add-environment-application.outputs.name",
+        "repository": "$steps.add-environment-application.outputs.repository",
+        "default_branch": "$steps.add-environment-application.outputs.default_branch",
+        "programming_language": "$steps.add-environment-application.outputs.programming_language",
+        "engine_version": "$steps.add-environment-application.outputs.engine_version",
+        "framework": "$steps.add-environment-application.outputs.framework",
+        "root_directory": "$steps.add-environment-application.outputs.root_directory",
+        "deployments_keep": "$steps.add-environment-application.outputs.deployments_keep",
+        "action_id": "$steps.add-application-deployment.outputs.action_id",
+        "action_details": "$steps.get-action.outputs.action_details",
+        "action_status": "$steps.get-action.outputs.action_status",
+        "targets": "$steps.get-action.outputs.targets",
+        "log_output": "$steps.get-action-log.outputs.log_output"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "automate-deployment-with-incoming-hook",
+      "summary": "Creates a pipeline for an application deployment, adds an incoming hook to trigger it, and then triggers the hook.",
+      "description": "Creates a pipeline for an application deployment, adds an incoming hook to trigger it, and then triggers the hook.",
+      "dependsOn" : ["user-authentication-and-profile-retrieval"],
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Accept": {
+            "type": "string"
+          },
+          "Authorization": {
+            "type": "string"
+          },
+          "Content-Type": {
+            "type": "string"
+          },
+          "resource_id": {
+            "type": "string"
+          },
+          "resource_type": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "operation": {
+            "type": "string"
+          },
+          "hook_type": {
+            "type": "string"
+          },
+          "pipeline_id": {
+            "type": "string"
+          },
+          "hook_id": {
+            "type": "string"
+          },
+          "action_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-pipeline",
+          "description": "Create a deployment pipeline for a specific application.",
+          "operationId": "addPipeline",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "resource_id",
+              "in": "path",
+              "value": "$inputs.resource_id"
+            },
+            {
+              "name": "resource_type",
+              "in": "path",
+              "value": "$inputs.resource_type"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name",
+              "operation": "$inputs.operation"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pipeline_id": "$response.body#id",
+            "name": "$response.body#name",
+            "operation": "$response.body#operation"
+          }
+        },
+        {
+          "stepId": "add-pipeline-hook",
+          "description": "Add an incoming hook to the created pipeline.",
+          "operationId": "addPipelineHook",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "hook_type",
+              "in": "path",
+              "value": "$inputs.hook_type"
+            },
+            {
+              "name": "pipeline_id",
+              "in": "path",
+              "value": "$steps.add-pipeline.outputs.pipeline_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "pipeline_id": "$steps.add-pipeline.outputs.pipeline_id",
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "hook_id": "$response.body#id",
+            "name": "$response.body#name",
+            "type": "$response.body#type",
+            "url": "$response.body#url",
+            "secret": "$response.body#secret"
+          }
+        },
+        {
+          "stepId": "trigger-hook",
+          "description": "Trigger the incoming hook, initiating the pipeline execution.",
+          "operationId": "triggerHook",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "hook_id",
+              "in": "path",
+              "value": "$steps.add-pipeline-hook.outputs.hook_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "message": "$response.body#message"
+          }
+        },
+        {
+          "stepId": "get-triggered-action",
+          "description": "Retrieve the details of the action triggered by the hook.",
+          "operationId": "getAction",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "action_id",
+              "in": "path",
+              "value": "$steps.trigger-hook.outputs.action_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_details": "$response.body#details",
+            "action_status": "$response.body#status"
+          }
+        }
+      ],
+      "outputs": {
+        "pipeline_id": "$steps.add-pipeline.outputs.pipeline_id",
+        "name": "$steps.add-pipeline-hook.outputs.name",
+        "operation": "$steps.add-pipeline.outputs.operation",
+        "hook_id": "$steps.add-pipeline-hook.outputs.hook_id",
+        "type": "$steps.add-pipeline-hook.outputs.type",
+        "url": "$steps.add-pipeline-hook.outputs.url",
+        "secret": "$steps.add-pipeline-hook.outputs.secret",
+        "message": "$steps.trigger-hook.outputs.message",
+        "action_id": "$steps.trigger-hook.outputs.action_id",
+        "action_details": "$steps.get-triggered-action.outputs.action_details",
+        "action_status": "$steps.get-triggered-action.outputs.action_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "initial-project-and-environment-setup",
+      "summary": "Creates a new project and then adds a specific environment (e.g., staging) to that project.",
+      "description": "Creates a new project and then adds a specific environment (e.g., staging) to that project.",
+      "dependsOn" : ["user-authentication-and-profile-retrieval"],
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Accept": {
+            "type": "string"
+          },
+          "Authorization": {
+            "type": "string"
+          },
+          "Content-Type": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-project",
+          "description": "Create a new project for a user or organization.",
+          "operationId": "addProject",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "project_id": "$response.body#id",
+            "user_id": "$response.body#user_id",
+            "name": "$response.body#name",
+            "logo_url": "$response.body#logo_url",
+            "resource_summary": "$response.body#resource_summary",
+            "os_users": "$response.body#os_users",
+            "created_by_user": "$response.body#created_by_user",
+            "created_at": "$response.body#created_at",
+            "updated_at": "$response.body#updated_at"
+          }
+        },
+        {
+          "stepId": "add-project-environment",
+          "description": "Create a new environment within the newly created project.",
+          "operationId": "addProjectEnvironment",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "project_id",
+              "in": "path",
+              "value": "$steps.add-project.outputs.project_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "project_id": "$steps.add-project.outputs.project_id",
+              "type": "$inputs.type",
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "environment_id": "$response.body#id",
+            "type": "$response.body#type",
+            "type_human_readable": "$response.body#type_human_readable",
+            "name": "$response.body#name",
+            "description": "$response.body#description",
+            "is_archived": "$response.body#is_archived",
+            "resource_summary": "$response.body#resource_summary",
+            "teams": "$response.body#teams",
+            "created_by_user": "$response.body#created_by_user",
+            "current_user_permissions": "$response.body#current_user_permissions",
+            "created_at": "$response.body#created_at",
+            "updated_at": "$response.body#updated_at"
+          }
+        }
+      ],
+      "outputs": {
+        "project_id": "$steps.add-project.outputs.project_id",
+        "user_id": "$steps.add-project.outputs.user_id",
+        "name": "$steps.add-project-environment.outputs.name",
+        "logo_url": "$steps.add-project.outputs.logo_url",
+        "resource_summary": "$steps.add-project-environment.outputs.resource_summary",
+        "os_users": "$steps.add-project.outputs.os_users",
+        "created_by_user": "$steps.add-project-environment.outputs.created_by_user",
+        "created_at": "$steps.add-project-environment.outputs.created_at",
+        "updated_at": "$steps.add-project-environment.outputs.updated_at",
+        "environment_id": "$steps.add-project-environment.outputs.environment_id",
+        "type": "$steps.add-project-environment.outputs.type",
+        "type_human_readable": "$steps.add-project-environment.outputs.type_human_readable",
+        "description": "$steps.add-project-environment.outputs.description",
+        "is_archived": "$steps.add-project-environment.outputs.is_archived",
+        "teams": "$steps.add-project-environment.outputs.teams",
+        "current_user_permissions": "$steps.add-project-environment.outputs.current_user_permissions"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "configure-and-secure-application-with-ssl",
+      "summary": "Creates a virtual host for an application, then adds an SSL certificate (e.g., Let's Encrypt or custom) to secure it.",
+      "description": "Creates a virtual host for an application, then adds an SSL certificate (e.g., Let's Encrypt or custom) to secure it.",
+      "dependsOn" : ["user-authentication-and-profile-retrieval"],
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Accept": {
+            "type": "string"
+          },
+          "Authorization": {
+            "type": "string"
+          },
+          "Content-Type": {
+            "type": "string"
+          },
+          "environment_id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "issuer": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-environment-virtual-host",
+          "description": "Create a new virtual host, linking a domain/IP to an application.",
+          "operationId": "addEnvironmentVirtualHost",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "environment_id",
+              "in": "path",
+              "value": "$inputs.environment_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "type": "$inputs.type",
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "virtual_host_id": "$response.body#id",
+            "type": "$response.body#type",
+            "name": "$response.body#name",
+            "root_directory": "$response.body#root_directory",
+            "application_listen_address": "$response.body#application_listen_address"
+          }
+        },
+        {
+          "stepId": "add-environment-ssl-certificate",
+          "description": "Add an SSL certificate to the environment, associating it with the created virtual host.",
+          "operationId": "addEnvironmentSslCertificate",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "environment_id",
+              "in": "path",
+              "value": "$inputs.environment_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "virtual_host_id": "$steps.add-environment-virtual-host.outputs.virtual_host_id",
+              "issuer": "$inputs.issuer"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ssl_certificate_id": "$response.body#id",
+            "name": "$response.body#name",
+            "type": "$response.body#type",
+            "issuer": "$response.body#issuer",
+            "validation_level": "$response.body#validation_level",
+            "active": "$response.body#active"
+          }
+        }
+      ],
+      "outputs": {
+        "virtual_host_id": "$steps.add-environment-virtual-host.outputs.virtual_host_id",
+        "type": "$steps.add-environment-ssl-certificate.outputs.type",
+        "name": "$steps.add-environment-ssl-certificate.outputs.name",
+        "root_directory": "$steps.add-environment-virtual-host.outputs.root_directory",
+        "application_listen_address": "$steps.add-environment-virtual-host.outputs.application_listen_address",
+        "ssl_certificate_id": "$steps.add-environment-ssl-certificate.outputs.ssl_certificate_id",
+        "issuer": "$steps.add-environment-ssl-certificate.outputs.issuer",
+        "validation_level": "$steps.add-environment-ssl-certificate.outputs.validation_level",
+        "active": "$steps.add-environment-ssl-certificate.outputs.active"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "configure-application-variables",
+      "summary": "Adds environment variables or configuration files to an existing application.",
+      "description": "Adds environment variables or configuration files to an existing application.",
+      "dependsOn" : ["user-authentication-and-profile-retrieval"],
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Accept": {
+            "type": "string"
+          },
+          "Authorization": {
+            "type": "string"
+          },
+          "Content-Type": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "per_page": {
+            "type": "string"
+          },
+          "application_id": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "hidden": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-application-variables",
+          "description": "List existing variables for an application.",
+          "operationId": "listApplicationVariables",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "per_page",
+              "in": "query",
+              "value": "$inputs.per_page"
+            },
+            {
+              "name": "application_id",
+              "in": "path",
+              "value": "$inputs.application_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "variables_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-application-variable",
+          "description": "Add a new variable (environment variable or file) to the application.",
+          "operationId": "addApplicationVariable",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "application_id",
+              "in": "path",
+              "value": "$inputs.application_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "key": "$inputs.key",
+              "value": "$inputs.value",
+              "target": "$inputs.target",
+              "type": "$inputs.type",
+              "hidden": "$inputs.hidden"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "variable_id": "$response.body#id",
+            "key": "$response.body#key",
+            "value": "$response.body#value",
+            "target": "$response.body#target",
+            "type": "$response.body#type",
+            "hidden": "$response.body#hidden"
+          }
+        }
+      ],
+      "outputs": {
+        "variables_list": "$steps.list-application-variables.outputs.variables_list",
+        "variable_id": "$steps.add-application-variable.outputs.variable_id",
+        "key": "$steps.add-application-variable.outputs.key",
+        "value": "$steps.add-application-variable.outputs.value",
+        "target": "$steps.add-application-variable.outputs.target",
+        "type": "$steps.add-application-variable.outputs.type",
+        "hidden": "$steps.add-application-variable.outputs.hidden"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-ssh-key-access",
+      "summary": "Adds an SSH public key to an environment, allowing access to servers within that environment using the corresponding private key.",
+      "description": "Adds an SSH public key to an environment, allowing access to servers within that environment using the corresponding private key.",
+      "dependsOn" : ["user-authentication-and-profile-retrieval"],
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Accept": {
+            "type": "string"
+          },
+          "Authorization": {
+            "type": "string"
+          },
+          "Content-Type": {
+            "type": "string"
+          },
+          "environment_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "public_key": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "per_page": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-environment-ssh-key",
+          "description": "Add a new SSH public key to the specified environment.",
+          "operationId": "addEnvironmentSshKey",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "environment_id",
+              "in": "path",
+              "value": "$inputs.environment_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name",
+              "public_key": "$inputs.public_key"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ssh_key_id": "$response.body#id",
+            "name": "$response.body#name",
+            "fingerprint": "$response.body#fingerprint"
+          }
+        },
+        {
+          "stepId": "list-environment-ssh-keys",
+          "description": "List all SSH keys associated with the environment to verify the addition.",
+          "operationId": "listEnvironmentSshKeys",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "per_page",
+              "in": "query",
+              "value": "$inputs.per_page"
+            },
+            {
+              "name": "environment_id",
+              "in": "path",
+              "value": "$inputs.environment_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ssh_keys_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "ssh_key_id": "$steps.add-environment-ssh-key.outputs.ssh_key_id",
+        "name": "$steps.add-environment-ssh-key.outputs.name",
+        "fingerprint": "$steps.add-environment-ssh-key.outputs.fingerprint",
+        "ssh_keys_list": "$steps.list-environment-ssh-keys.outputs.ssh_keys_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-team-access-to-environments",
+      "summary": "Creates a team within a project, defines a role with specific permissions, and then links the team to an environment with that role.",
+      "description": "Creates a team within a project, defines a role with specific permissions, and then links the team to an environment with that role.",
+      "dependsOn" : ["user-authentication-and-profile-retrieval"],
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Accept": {
+            "type": "string"
+          },
+          "Authorization": {
+            "type": "string"
+          },
+          "Content-Type": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "permissions": {
+            "type": "string"
+          },
+          "environment_id": {
+            "type": "string"
+          },
+          "team_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-project-team",
+          "description": "Create a new team within a specific project.",
+          "operationId": "addProjectTeam",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "project_id",
+              "in": "path",
+              "value": "$inputs.project_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "team_id": "$response.body#id",
+            "name": "$response.body#name",
+            "photo_url": "$response.body#photo_url"
+          }
+        },
+        {
+          "stepId": "add-project-role",
+          "description": "Create a custom role with specific permissions within the project.",
+          "operationId": "addProjectRole",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "project_id",
+              "in": "path",
+              "value": "$inputs.project_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name",
+              "permissions": "$inputs.permissions"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "role_id": "$response.body#id",
+            "name": "$response.body#name",
+            "description": "$response.body#description",
+            "permissions": "$response.body#permissions"
+          }
+        },
+        {
+          "stepId": "link-team-to-environment",
+          "description": "Grant the created team access to a specific environment using the defined role.",
+          "operationId": "linkTeamToEnvironment",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "environment_id",
+              "in": "path",
+              "value": "$inputs.environment_id"
+            },
+            {
+              "name": "team_id",
+              "in": "path",
+              "value": "$steps.add-project-team.outputs.team_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "team_id": "$steps.add-project-team.outputs.team_id",
+              "role_id": "$steps.add-project-role.outputs.role_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "environment_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "team_id": "$steps.add-project-team.outputs.team_id",
+        "name": "$steps.add-project-role.outputs.name",
+        "photo_url": "$steps.add-project-team.outputs.photo_url",
+        "role_id": "$steps.add-project-role.outputs.role_id",
+        "description": "$steps.add-project-role.outputs.description",
+        "permissions": "$steps.add-project-role.outputs.permissions",
+        "environment_data": "$steps.link-team-to-environment.outputs.environment_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-cloud-provider-credentials-and-repositories",
+      "summary": "Adds cloud provider credentials to an environment, checks their status, and lists accessible repositories if it's a source provider credential.",
+      "description": "Adds cloud provider credentials to an environment, checks their status, and lists accessible repositories if it's a source provider credential.",
+      "dependsOn" : ["user-authentication-and-profile-retrieval"],
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Accept": {
+            "type": "string"
+          },
+          "Authorization": {
+            "type": "string"
+          },
+          "Content-Type": {
+            "type": "string"
+          },
+          "environment_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "provider_code": {
+            "type": "string"
+          },
+          "provider_type": {
+            "type": "string"
+          },
+          "active": {
+            "type": "string"
+          },
+          "settings": {
+            "type": "string"
+          },
+          "credential_id": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "per_page": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-environment-credential",
+          "description": "Add new cloud or source provider credentials to an environment.",
+          "operationId": "addEnvironmentCredential",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "environment_id",
+              "in": "path",
+              "value": "$inputs.environment_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name",
+              "provider_code": "$inputs.provider_code",
+              "provider_type": "$inputs.provider_type",
+              "active": "$inputs.active",
+              "settings": "$inputs.settings"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "credential_id": "$response.body#id",
+            "name": "$response.body#name",
+            "provider": "$response.body#provider",
+            "provider_type": "$response.body#provider_type",
+            "active": "$response.body#active"
+          }
+        },
+        {
+          "stepId": "get-status-credential",
+          "description": "Check the status of the added credential with the provider.",
+          "operationId": "getStatusCredential",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "credential_id",
+              "in": "path",
+              "value": "$steps.add-environment-credential.outputs.credential_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_id": "$response.body#id"
+          }
+        },
+        {
+          "stepId": "list-credential-repositories",
+          "description": "If the credential is for a source provider, list the repositories accessible via this credential.",
+          "operationId": "listCredentialRepositories",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "per_page",
+              "in": "query",
+              "value": "$inputs.per_page"
+            },
+            {
+              "name": "credential_id",
+              "in": "path",
+              "value": "$steps.add-environment-credential.outputs.credential_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "repositories_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "credential_id": "$steps.add-environment-credential.outputs.credential_id",
+        "name": "$steps.add-environment-credential.outputs.name",
+        "provider": "$steps.add-environment-credential.outputs.provider",
+        "provider_type": "$steps.add-environment-credential.outputs.provider_type",
+        "active": "$steps.add-environment-credential.outputs.active",
+        "action_id": "$steps.get-status-credential.outputs.action_id",
+        "repositories_list": "$steps.list-credential-repositories.outputs.repositories_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "setup-network-firewall-rules",
+      "summary": "Adds a network rule (e.g., allow inbound traffic on a specific port) to an environment.",
+      "description": "Adds a network rule (e.g., allow inbound traffic on a specific port) to an environment.",
+      "dependsOn" : ["user-authentication-and-profile-retrieval"],
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Accept": {
+            "type": "string"
+          },
+          "Authorization": {
+            "type": "string"
+          },
+          "Content-Type": {
+            "type": "string"
+          },
+          "environment_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "direction": {
+            "type": "string"
+          },
+          "protocol": {
+            "type": "string"
+          },
+          "cidr_block": {
+            "type": "string"
+          },
+          "port": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "per_page": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-environment-network-rule",
+          "description": "Add a new network firewall rule to the specified environment.",
+          "operationId": "addEnvironmentNetworkRule",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "environment_id",
+              "in": "path",
+              "value": "$inputs.environment_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name",
+              "direction": "$inputs.direction",
+              "protocol": "$inputs.protocol",
+              "cidr_block": "$inputs.cidr_block",
+              "port": "$inputs.port"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "network_rule_id": "$response.body#id",
+            "name": "$response.body#name",
+            "direction": "$response.body#direction",
+            "protocol": "$response.body#protocol",
+            "port": "$response.body#port",
+            "cidr_block": "$response.body#cidr_block"
+          }
+        },
+        {
+          "stepId": "list-environment-network-rules",
+          "description": "List all network rules for the environment to verify the addition.",
+          "operationId": "listEnvironmentNetworkRules",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "per_page",
+              "in": "query",
+              "value": "$inputs.per_page"
+            },
+            {
+              "name": "environment_id",
+              "in": "path",
+              "value": "$inputs.environment_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "network_rules_list": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "network_rule_id": "$steps.add-environment-network-rule.outputs.network_rule_id",
+        "name": "$steps.add-environment-network-rule.outputs.name",
+        "direction": "$steps.add-environment-network-rule.outputs.direction",
+        "protocol": "$steps.add-environment-network-rule.outputs.protocol",
+        "port": "$steps.add-environment-network-rule.outputs.port",
+        "cidr_block": "$steps.add-environment-network-rule.outputs.cidr_block",
+        "network_rules_list": "$steps.list-environment-network-rules.outputs.network_rules_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-background-processes-daemons",
+      "summary": "Adds a daemon process to an environment, starts it, checks its status, and potentially restarts or stops it.",
+      "description": "Adds a daemon process to an environment, starts it, checks its status, and potentially restarts or stops it.",
+      "dependsOn" : ["user-authentication-and-profile-retrieval"],
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Accept": {
+            "type": "string"
+          },
+          "Authorization": {
+            "type": "string"
+          },
+          "Content-Type": {
+            "type": "string"
+          },
+          "environment_id": {
+            "type": "string"
+          },
+          "command": {
+            "type": "string"
+          },
+          "process_count": {
+            "type": "string"
+          },
+          "working_directory": {
+            "type": "string"
+          },
+          "run_as_user": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "daemon_id": {
+            "type": "string"
+          },
+          "servers": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-environment-daemon",
+          "description": "Define a new daemon process within an environment.",
+          "operationId": "addEnvironmentDaemon",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "environment_id",
+              "in": "path",
+              "value": "$inputs.environment_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "command": "$inputs.command",
+              "process_count": "$inputs.process_count",
+              "working_directory": "$inputs.working_directory",
+              "run_as_user": "$inputs.run_as_user",
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "daemon_id": "$response.body#/id",
+            "name": "$response.body#/name",
+            "command": "$response.body#/command",
+            "run_as_user": "$response.body#/run_as_user",
+            "process_count": "$response.body#/process_count"
+          }
+        },
+        {
+          "stepId": "start-daemon",
+          "description": "Start the newly defined daemon process on associated servers.",
+          "operationId": "startDaemon",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "daemon_id",
+              "in": "path",
+              "value": "$steps.add-environment-daemon.outputs.daemon_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "daemon_id": "$steps.add-environment-daemon.outputs.daemon_id",
+              "servers": "$inputs.servers"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_id": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-status-daemon",
+          "description": "Check the current running status of the daemon.",
+          "operationId": "getStatusDaemon",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "daemon_id",
+              "in": "path",
+              "value": "$steps.add-environment-daemon.outputs.daemon_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "daemon_id": "$steps.add-environment-daemon.outputs.daemon_id",
+              "servers": "$inputs.servers"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_id": "$response.body#id"
+          }
+        }
+      ],
+      "outputs": {
+        "daemon_id": "$steps.add-environment-daemon.outputs.daemon_id",
+        "name": "$steps.add-environment-daemon.outputs.name",
+        "command": "$steps.add-environment-daemon.outputs.command",
+        "run_as_user": "$steps.add-environment-daemon.outputs.run_as_user",
+        "process_count": "$steps.add-environment-daemon.outputs.process_count",
+        "action_id": "$steps.get-status-daemon.outputs.action_id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-scheduled-tasks-cron-jobs",
+      "summary": "Adds a cron job to an environment, potentially updates its schedule or command later.",
+      "description": "Adds a cron job to an environment, potentially updates its schedule or command later.",
+      "dependsOn" : ["user-authentication-and-profile-retrieval"],
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Accept": {
+            "type": "string"
+          },
+          "Authorization": {
+            "type": "string"
+          },
+          "Content-Type": {
+            "type": "string"
+          },
+          "environment_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "command": {
+            "type": "string"
+          },
+          "pattern": {
+            "type": "string"
+          },
+          "run_as_user": {
+            "type": "string"
+          },
+          "cron_job_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-environment-cron-job",
+          "description": "Define a new scheduled task (cron job) within an environment.",
+          "operationId": "addEnvironmentCronJob",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "environment_id",
+              "in": "path",
+              "value": "$inputs.environment_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name",
+              "command": "$inputs.command",
+              "pattern": "$inputs.pattern",
+              "run_as_user": "$inputs.run_as_user"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "cron_job_id": "$response.body#id",
+            "name": "$response.body#name",
+            "command": "$response.body#command",
+            "pattern": "$response.body#pattern",
+            "run_as_user": "$response.body#run_as_user"
+          }
+        },
+        {
+          "stepId": "update-cron-job",
+          "description": "Update the configuration of an existing cron job.",
+          "operationId": "updateCronJob",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "cron_job_id",
+              "in": "path",
+              "value": "$steps.add-environment-cron-job.outputs.cron_job_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "cron_job_id": "$steps.add-environment-cron-job.outputs.cron_job_id",
+              "pattern": "$inputs.pattern",
+              "name": "$inputs.name",
+              "command": "$inputs.command",
+              "run_as_user": "$inputs.run_as_user"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "job_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "cron_job_id": "$steps.add-environment-cron-job.outputs.cron_job_id",
+        "name": "$steps.add-environment-cron-job.outputs.name",
+        "command": "$steps.add-environment-cron-job.outputs.command",
+        "pattern": "$steps.add-environment-cron-job.outputs.pattern",
+        "run_as_user": "$steps.add-environment-cron-job.outputs.run_as_user",
+        "job_data": "$steps.update-cron-job.outputs.job_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "invite-user-to-team",
+      "summary": "Invites a user via email to join an existing team, and the user accepts the invitation.",
+      "description": "Invites a user via email to join an existing team, and the user accepts the invitation.",
+      "dependsOn" : ["user-authentication-and-profile-retrieval"],
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Accept": {
+            "type": "string"
+          },
+          "Authorization": {
+            "type": "string"
+          },
+          "Content-Type": {
+            "type": "string"
+          },
+          "team_id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "per_page": {
+            "type": "string"
+          },
+          "team_invitation_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-team-invitation",
+          "description": "Send an email invitation to a user to join a specific team.",
+          "operationId": "addTeamInvitation",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "team_id",
+              "in": "path",
+              "value": "$inputs.team_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "email": "$inputs.email"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "invitation_id": "$response.body#id",
+            "email": "$response.body#email",
+            "status": "$response.body#status",
+            "expires_at": "$response.body#expires_at"
+          }
+        },
+        {
+          "stepId": "list-user-team-invitations",
+          "description": "The invited user lists their pending invitations.",
+          "operationId": "listUserTeamInvitations",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "per_page",
+              "in": "query",
+              "value": "$inputs.per_page"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "invitations_list": "$response.body"
+          }
+        },
+        {
+          "stepId": "accept-team-invitation",
+          "description": "The invited user accepts a specific team invitation.",
+          "operationId": "acceptTeamInvitation",
+          "parameters": [
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "Bearer $workflows.user-authentication-and-profile-retrieval.outputs.access_token"
+            },
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "value": "$inputs.Content-Type"
+            },
+            {
+              "name": "team_invitation_id",
+              "in": "path",
+              "value": "$steps.list-user-team-invitations.outputs.invitations_list.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "invitation_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "invitation_id": "$steps.add-team-invitation.outputs.invitation_id",
+        "email": "$steps.add-team-invitation.outputs.email",
+        "status": "$steps.add-team-invitation.outputs.status",
+        "expires_at": "$steps.add-team-invitation.outputs.expires_at",
+        "invitations_list": "$steps.list-user-team-invitations.outputs.invitations_list",
+        "invitation_data": "$steps.accept-team-invitation.outputs.invitation_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
 }
