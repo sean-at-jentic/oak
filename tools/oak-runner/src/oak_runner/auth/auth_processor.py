@@ -8,16 +8,20 @@ import logging
 import re
 from typing import Dict, List, Optional, Any
 
+from oak_runner.models import ArazzoDoc, OpenAPIDoc
+
 from .auth_parser import (
     AuthRequirement,
     extract_auth_from_openapi,
-    extract_auth_from_arazzo,
-    extract_security_requirements,
+    extract_auth_from_arazzo
 )
 from .models import (
     AuthType,
-    EnvVarKeys
+    EnvVarKeys,
+    SecurityOption
 )
+from oak_runner.auth.models import SecurityOption, SecurityRequirement
+from oak_runner.executor.operation_finder import OperationFinder
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +108,6 @@ class AuthProcessor:
         
         # Extract auth requirements from OpenAPI specs
         auth_requirements = []
-        security_requirements = None
         
         for source_id, spec in processed_specs.items():
             try:
@@ -118,9 +121,6 @@ class AuthProcessor:
                 if spec_requirements:
                     auth_requirements.extend(spec_requirements)
                 
-                # Extract security requirements (global and operation-level)
-                if not security_requirements and isinstance(spec, dict):
-                    security_requirements = extract_security_requirements(spec)
             except Exception as e:
                 logger.warning(f"Error extracting auth requirements from spec with ID {source_id}: {str(e)}")
         
@@ -142,10 +142,6 @@ class AuthProcessor:
             "auth_workflows": auth_workflows,
         }
         
-        # Add security requirements if available
-        if security_requirements:
-            result["security_requirements"] = security_requirements.model_dump()
-            
         return result
     
     def generate_env_mappings(
@@ -323,6 +319,82 @@ class AuthProcessor:
                     })
         
         return auth_workflows
+
+    @staticmethod
+    def get_security_requirements_for_workflow(
+        workflow_id: str, 
+        arazzo_spec: ArazzoDoc, 
+        source_descriptions: dict[str, OpenAPIDoc]
+    ) -> Dict[str, List[SecurityOption]]:
+        """
+        For a given workflow_id in an Arazzo spec (already parsed as dict),
+        extract all unique SecurityOption objects for all operations in the workflow,
+        grouped and deduplicated by source description.
+        Args:
+            workflow_id: The workflowId to extract security for
+            arazzo_spec: The parsed Arazzo spec dict
+            source_descriptions: Dict of OpenAPI source descriptions
+        Returns:
+            Dict mapping source_name to list of unique SecurityOption objects (deduplicated per source)
+        """
+        workflows = arazzo_spec.get("workflows", [])
+        workflow = None
+        for wf in workflows:
+            if wf.get("workflowId") == workflow_id:
+                workflow = wf
+                break
+        if not workflow:
+            raise ValueError(f"Workflow with id '{workflow_id}' not found in Arazzo spec")
+
+        op_finder = OperationFinder(source_descriptions)
+        operations = op_finder.get_operations_for_workflow(workflow)
+
+        # Group and merge options by source, merging options where scheme name is the same (merge scopes)
+        by_source = {}
+        import copy
+        for op_info in operations:
+            source = op_info.get("source")
+            options = op_finder.extract_security_requirements(op_info)
+            if not options:
+                continue
+            if source not in by_source:
+                by_source[source] = []
+            by_source[source].extend(copy.deepcopy(opt) for opt in options)
+        # Merge SecurityOptions by scheme name (union all scopes per scheme)
+        for source, options in by_source.items():
+            scheme_to_scopes = {}
+            for option in options:
+                for req in option.requirements:
+                    if req.scheme_name not in scheme_to_scopes:
+                        scheme_to_scopes[req.scheme_name] = set()
+                    scheme_to_scopes[req.scheme_name].update(req.scopes)
+            merged_requirements = [
+                SecurityRequirement(scheme_name=scheme, scopes=sorted(scopes))
+                for scheme, scopes in scheme_to_scopes.items()
+            ]
+            by_source[source] = [SecurityOption(requirements=merged_requirements)] if merged_requirements else []
+        return by_source
+
+    @staticmethod
+    def get_security_requirements_for_openapi_operation(
+        openapi_spec: OpenAPIDoc,
+        http_method: str,
+        path: str
+    ) -> list[SecurityOption]:
+        """
+        Extract SecurityOption objects for a single operation in an OpenAPI spec.
+        Args:
+            openapi_spec: The OpenAPI spec
+            http_method: HTTP verb (e.g., 'get', 'post')
+            path: The path string (e.g., '/users')
+        Returns:
+            List of SecurityOption objects for the operation
+        """
+        op_finder = OperationFinder({"default": openapi_spec})
+        op_info = op_finder.find_by_http_path_and_method(path, http_method)
+        if not op_info:
+            raise ValueError(f"Operation {http_method.upper()} {path} not found in OpenAPI spec")
+        return op_finder.extract_security_requirements(op_info)
 
     def _convert_to_env_var(self, value: str) -> str:
         """
