@@ -98,12 +98,14 @@ jobs:
 
       - name: Unzip Generated Files and Adjust Structure
         run: |
+          set -x # Enable debugging output
+
           ZIP_FILE="${{ steps.call_repotools.outputs.zip_file }}"
-          EXTRACT_TEMP_DIR="apis/openapi_temp_extract" # Temporary place to unzip
-          FINAL_TARGET_DIR="apis/openapi"             # Final destination
+          EXTRACT_TEMP_DIR="openapi_temp_extract" # Temporary place to unzip at root
+          FINAL_OAK_TARGET_BASE="apis/openapi"     # Base for OAK vendor/API dirs in the repo
 
           echo "Ensuring temporary extraction directory $EXTRACT_TEMP_DIR exists and is empty..."
-          rm -rf "$EXTRACT_TEMP_DIR" # Clean up from potential previous runs
+          rm -rf "$EXTRACT_TEMP_DIR"
           mkdir -p "$EXTRACT_TEMP_DIR"
 
           echo "Unzipping $ZIP_FILE into $EXTRACT_TEMP_DIR..."
@@ -113,47 +115,89 @@ jobs:
             exit 1
           fi
           echo "Successfully unzipped files into temporary directory $EXTRACT_TEMP_DIR."
+          echo "Contents of $EXTRACT_TEMP_DIR:"
+          ls -lA "$EXTRACT_TEMP_DIR"
 
-          # Find the single top-level directory created by the unzip (expected to be like 'issue-XX')
-          # Using 'find' is safer for potentially complex names or hidden files.
-          # '-quit' makes find stop after the first match.
-          TOP_LEVEL_DIR_PATH=$(find "$EXTRACT_TEMP_DIR" -mindepth 1 -maxdepth 1 -type d -print -quit)
+          # This label is what was passed to repotools. It's 'vendor_name' or 'vendor_name/api_name'
+          VENDOR_OR_VENDOR_API_FROM_ISSUE="${{ steps.extract_info.outputs.repotools_label }}"
 
-          if [ -z "$TOP_LEVEL_DIR_PATH" ]; then
-              echo "::error::Could not find the expected single top-level directory inside $EXTRACT_TEMP_DIR after unzipping."
-              ls -lA "$EXTRACT_TEMP_DIR" # Show what's actually there
+          # Determine the actual path to content (meta.json, version dirs) both in the extracted zip and in OAK
+          # Repotools output structure: if label='vendor', zip has 'vendor/main/...'. If label='vendor/api', zip has 'vendor/api/...'.
+          if [[ "$VENDOR_OR_VENDOR_API_FROM_ISSUE" == */* ]]; then
+            # Label was "vendor/api", e.g., "google/maps"
+            ACTUAL_CONTENT_SUBPATH_IN_ZIP="$VENDOR_OR_VENDOR_API_FROM_ISSUE"
+          else
+            # Label was just "vendor", e.g., "twitter". Content is in "vendor/main"
+            ACTUAL_CONTENT_SUBPATH_IN_ZIP="$VENDOR_OR_VENDOR_API_FROM_ISSUE/main"
+          fi
+
+          # Full path to the source content (meta.json, version dirs) within the unzipped temporary directory
+          SOURCE_API_CONTENT_PATH="$EXTRACT_TEMP_DIR/$ACTUAL_CONTENT_SUBPATH_IN_ZIP"
+          # Corresponding target path in the OAK repository
+          OAK_API_CONTENT_PATH="$FINAL_OAK_TARGET_BASE/$ACTUAL_CONTENT_SUBPATH_IN_ZIP"
+
+          echo "Determined actual content subpath in zip: $ACTUAL_CONTENT_SUBPATH_IN_ZIP"
+          echo "Full source API content path (in temp extract): $SOURCE_API_CONTENT_PATH"
+          echo "Full OAK API content path (target in repo): $OAK_API_CONTENT_PATH"
+
+          if [ ! -d "$SOURCE_API_CONTENT_PATH" ]; then
+              echo "::error::Source API content path '$SOURCE_API_CONTENT_PATH' does not exist after unzipping. Check zip structure and label logic."
+              echo "Contents of $EXTRACT_TEMP_DIR:"
+              ls -lA "$EXTRACT_TEMP_DIR"
+              # If label was 'vendor', show 'vendor' dir contents for debugging
+              if [[ "$VENDOR_OR_VENDOR_API_FROM_ISSUE" != */* ]]; then
+                   FIRST_PART_OF_LABEL=$(echo "$VENDOR_OR_VENDOR_API_FROM_ISSUE" | cut -d'/' -f1)
+                   echo "Contents of $EXTRACT_TEMP_DIR/$FIRST_PART_OF_LABEL:"
+                   ls -lA "$EXTRACT_TEMP_DIR/$FIRST_PART_OF_LABEL"
+              fi
               exit 1
           fi
-          echo "Found top-level directory from zip: $TOP_LEVEL_DIR_PATH"
 
-          # Ensure the final target directory exists
-          echo "Ensuring final target directory $FINAL_TARGET_DIR exists..."
-          mkdir -p "$FINAL_TARGET_DIR"
+          echo "Ensuring target OAK API directory '$OAK_API_CONTENT_PATH' exists..."
+          mkdir -p "$OAK_API_CONTENT_PATH"
 
-          echo "Moving directory '$TOP_LEVEL_DIR_PATH' into '$FINAL_TARGET_DIR/'..."
-          # Move the ENTIRE found top-level directory into the final target dir
-          mv "$TOP_LEVEL_DIR_PATH" "$FINAL_TARGET_DIR/"
+          # Copy version directories from source to OAK target
+          echo "Copying version directories from '$SOURCE_API_CONTENT_PATH' to '$OAK_API_CONTENT_PATH'..."
+          # Find all directories (version directories like '1.0.0') directly under SOURCE_API_CONTENT_PATH
+          find "$SOURCE_API_CONTENT_PATH" -mindepth 1 -maxdepth 1 -type d -print0 | while IFS= read -r -d $'\0' source_version_dir_path; do
+            version_dir_name=$(basename "$source_version_dir_path")
+            echo "Copying version directory: '$version_dir_name'"
+            # Use rsync for robust copy, creating the target version directory if it doesn't exist
+            # and syncing contents. Using -a to preserve attributes, checksum to be sure.
+            rsync -a --checksum "$source_version_dir_path/" "$OAK_API_CONTENT_PATH/$version_dir_name/"
+            if [ $? -ne 0 ]; then
+              echo "::error::Failed to copy version directory '$version_dir_name' using rsync."
+              exit 1
+            fi
+          done
+          echo "Version directories copied successfully."
 
-          if [ $? -ne 0 ]; then
-            echo "::error::Failed to move directory '$TOP_LEVEL_DIR_PATH' into '$FINAL_TARGET_DIR'."
-            # Show contents of both dirs for debugging before exiting
-            echo "Contents of source parent ($EXTRACT_TEMP_DIR):"
-            ls -lA "$EXTRACT_TEMP_DIR"
-            echo "Contents of target ($FINAL_TARGET_DIR):"
-            ls -lA "$FINAL_TARGET_DIR"
-            exit 1
+          # Handle meta.json
+          SOURCE_META_JSON="$SOURCE_API_CONTENT_PATH/meta.json"
+          OAK_META_JSON="$OAK_API_CONTENT_PATH/meta.json"
+
+          echo "Handling meta.json..."
+          echo "Source meta.json: $SOURCE_META_JSON"
+          echo "OAK target meta.json: $OAK_META_JSON"
+
+          if [ ! -f "$OAK_META_JSON" ]; then
+            echo "$OAK_META_JSON does not exist in OAK. Copying from source..."
+            if [ -f "$SOURCE_META_JSON" ]; then
+              cp "$SOURCE_META_JSON" "$OAK_META_JSON"
+              echo "Copied new meta.json to $OAK_META_JSON."
+            else
+              echo "::warning::meta.json not found in source at $SOURCE_META_JSON. Cannot copy."
+            fi
+          else
+            echo "Existing meta.json found at $OAK_META_JSON. Not overwriting."
           fi
 
-          # Get the name of the moved directory for logging
-          MOVED_DIR_NAME=$(basename "$TOP_LEVEL_DIR_PATH")
-          echo "Successfully moved directory '$MOVED_DIR_NAME' into $FINAL_TARGET_DIR."
-          echo "Final contents of $FINAL_TARGET_DIR/$MOVED_DIR_NAME:"
-          ls -lA "$FINAL_TARGET_DIR/$MOVED_DIR_NAME"
-
+          # Cleanup temporary files
           echo "Cleaning up temporary extraction directory $EXTRACT_TEMP_DIR..."
           rm -rf "$EXTRACT_TEMP_DIR"
-          echo "Cleaning up ZIP file..."
+          echo "Cleaning up ZIP file $ZIP_FILE..."
           rm "$ZIP_FILE"
+          echo "Cleanup complete."
 
       - name: Check Git Status Before PR Action
         run: |
