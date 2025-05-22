@@ -1,0 +1,917 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/chain49.com/main/2.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "prepare-and-broadcast-transaction",
+      "summary": "Estimates the transaction fee for a desired confirmation target, allows the user to construct and sign the transaction offline, then broadcasts it to the network and retrieves its details.",
+      "description": "Estimates the transaction fee for a desired confirmation target, allows the user to construct and sign the transaction offline, then broadcasts it to the network and retrieves its details.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "blockchain": {
+            "type": "string"
+          },
+          "confirmationTarget": {
+            "type": "string"
+          },
+          "conservative": {
+            "type": "string"
+          },
+          "broadcast-signed-transaction_body": {
+            "type": "object"
+          },
+          "txId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "estimate-transaction-fee",
+          "description": "Estimate transaction fee for a specific confirmation target.",
+          "operationId": "getEstimateFeeV2",
+          "parameters": [
+            {
+              "name": "blockchain",
+              "in": "path",
+              "value": "$inputs.blockchain"
+            },
+            {
+              "name": "confirmationTarget",
+              "in": "path",
+              "value": "$inputs.confirmationTarget"
+            },
+            {
+              "name": "conservative",
+              "in": "query",
+              "value": "$inputs.conservative"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "result": "$response.body#/result"
+          }
+        },
+        {
+          "stepId": "broadcast-signed-transaction",
+          "description": "Broadcasts a signed transaction hex to the network. The 'hex' input is the transaction data provided in the request body.",
+          "operationId": "postSendTxV2",
+          "parameters": [
+            {
+              "name": "blockchain",
+              "in": "path",
+              "value": "$inputs.blockchain"
+            }
+          ],
+          "requestBody": {
+            "contentType": "text/plain",
+            "payload": "$inputs.broadcast-signed-transaction_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "result": "$response.body#/result"
+          }
+        },
+        {
+          "stepId": "get-broadcasted-transaction-details",
+          "description": "Retrieve details of the broadcasted transaction.",
+          "operationId": "getTransactionV2",
+          "parameters": [
+            {
+              "name": "blockchain",
+              "in": "path",
+              "value": "$inputs.blockchain"
+            },
+            {
+              "name": "txId",
+              "in": "path",
+              "value": "$inputs.txId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "txid": "$response.body#/vin/0/txid",
+            "vin": "$response.body#/vin",
+            "vout": "$response.body#/vout",
+            "blockHeight": "$response.body#/blockHeight",
+            "confirmations": "$response.body#/confirmations",
+            "fees": "$response.body#/fees"
+          }
+        }
+      ],
+      "outputs": {
+        "result": "$steps.broadcast-signed-transaction.outputs.result",
+        "txid": "$steps.get-broadcasted-transaction-details.outputs.txid",
+        "vin": "$steps.get-broadcasted-transaction-details.outputs.vin",
+        "vout": "$steps.get-broadcasted-transaction-details.outputs.vout",
+        "blockHeight": "$steps.get-broadcasted-transaction-details.outputs.blockHeight",
+        "confirmations": "$steps.get-broadcasted-transaction-details.outputs.confirmations",
+        "fees": "$steps.get-broadcasted-transaction-details.outputs.fees"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "comprehensive-address-analysis-with-transaction-drilldown",
+      "summary": "Provides a full overview of a specific crypto address, including its balance and transaction history (as IDs), and then allows fetching detailed information for a selected transaction.",
+      "description": "Provides a full overview of a specific crypto address, including its balance and transaction history (as IDs), and then allows fetching detailed information for a selected transaction.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "blockchain": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "pageSize": {
+            "type": "string"
+          },
+          "fromBlock": {
+            "type": "string"
+          },
+          "toBlock": {
+            "type": "string"
+          },
+          "details": {
+            "type": "string"
+          },
+          "contract": {
+            "type": "string"
+          },
+          "secondary": {
+            "type": "string"
+          },
+          "txId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-address-overview-txids",
+          "description": "Get address balance, transaction count, and list of transaction IDs. Use query parameter 'details=txids'.",
+          "operationId": "getAddressV2",
+          "parameters": [
+            {
+              "name": "blockchain",
+              "in": "path",
+              "value": "$inputs.blockchain"
+            },
+            {
+              "name": "address",
+              "in": "path",
+              "value": "$inputs.address"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            },
+            {
+              "name": "fromBlock",
+              "in": "query",
+              "value": "$inputs.fromBlock"
+            },
+            {
+              "name": "toBlock",
+              "in": "query",
+              "value": "$inputs.toBlock"
+            },
+            {
+              "name": "details",
+              "in": "query",
+              "value": "$inputs.details"
+            },
+            {
+              "name": "contract",
+              "in": "query",
+              "value": "$inputs.contract"
+            },
+            {
+              "name": "secondary",
+              "in": "query",
+              "value": "$inputs.secondary"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "address": "$response.body#/address",
+            "balance": "$response.body#/balance",
+            "totalReceived": "$response.body#/totalReceived",
+            "totalSent": "$response.body#/totalSent",
+            "txs": "$response.body#/txs",
+            "txids": "$response.body#/txids"
+          }
+        },
+        {
+          "stepId": "get-specific-transaction-details",
+          "description": "Retrieve detailed information for a specific transaction ID obtained from the address overview.",
+          "operationId": "getTransactionV2",
+          "parameters": [
+            {
+              "name": "blockchain",
+              "in": "path",
+              "value": "$inputs.blockchain"
+            },
+            {
+              "name": "txId",
+              "in": "path",
+              "value": "$inputs.txId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "txid": "$response.body#/vin/0/txid",
+            "vin": "$response.body#/vin",
+            "vout": "$response.body#/vout",
+            "blockHash": "$response.body#/blockHash",
+            "blockHeight": "$response.body#/blockHeight",
+            "confirmations": "$response.body#/confirmations",
+            "blockTime": "$response.body#/blockTime",
+            "value": "$response.body#/value",
+            "fees": "$response.body#/fees"
+          }
+        }
+      ],
+      "outputs": {
+        "address": "$steps.get-address-overview-txids.outputs.address",
+        "balance": "$steps.get-address-overview-txids.outputs.balance",
+        "totalReceived": "$steps.get-address-overview-txids.outputs.totalReceived",
+        "totalSent": "$steps.get-address-overview-txids.outputs.totalSent",
+        "txs": "$steps.get-address-overview-txids.outputs.txs",
+        "txids": "$steps.get-address-overview-txids.outputs.txids",
+        "txid": "$steps.get-specific-transaction-details.outputs.txid",
+        "vin": "$steps.get-specific-transaction-details.outputs.vin",
+        "vout": "$steps.get-specific-transaction-details.outputs.vout",
+        "blockHash": "$steps.get-specific-transaction-details.outputs.blockHash",
+        "blockHeight": "$steps.get-specific-transaction-details.outputs.blockHeight",
+        "confirmations": "$steps.get-specific-transaction-details.outputs.confirmations",
+        "blockTime": "$steps.get-specific-transaction-details.outputs.blockTime",
+        "value": "$steps.get-specific-transaction-details.outputs.value",
+        "fees": "$steps.get-specific-transaction-details.outputs.fees"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "track-transaction-confirmation-and-containing-block",
+      "summary": "For a given transaction ID, this workflow retrieves its details, including confirmation status. If confirmed, it then fetches details of the block that includes the transaction.",
+      "description": "For a given transaction ID, this workflow retrieves its details, including confirmation status. If confirmed, it then fetches details of the block that includes the transaction.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "blockchain": {
+            "type": "string"
+          },
+          "txId": {
+            "type": "string"
+          },
+          "blockHashOrHeight": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "pageSize": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "fetch-transaction-status",
+          "description": "Get normalized data about a transaction, including its confirmation status and block information if confirmed.",
+          "operationId": "getTransactionV2",
+          "parameters": [
+            {
+              "name": "blockchain",
+              "in": "path",
+              "value": "$inputs.blockchain"
+            },
+            {
+              "name": "txId",
+              "in": "path",
+              "value": "$inputs.txId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "txid": "$response.body#/vin/0/txid",
+            "blockHash": "$response.body#/blockHash",
+            "blockHeight": "$response.body#/blockHeight",
+            "confirmations": "$response.body#/confirmations",
+            "blockTime": "$response.body#/blockTime"
+          }
+        },
+        {
+          "stepId": "fetch-confirmation-block-info",
+          "description": "Get information about the block in which the transaction was confirmed. This step is typically conditional on the transaction having confirmations.",
+          "operationId": "getBlockV2",
+          "parameters": [
+            {
+              "name": "blockchain",
+              "in": "path",
+              "value": "$inputs.blockchain"
+            },
+            {
+              "name": "blockHashOrHeight",
+              "in": "path",
+              "value": "$inputs.blockHashOrHeight"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "hash": "$response.body#/hash",
+            "height": "$response.body#/height",
+            "confirmations": "$response.body#/txs/0/confirmations",
+            "time": "$response.body#/time",
+            "txCount": "$response.body#/txCount",
+            "txs": "$response.body#/txs"
+          }
+        }
+      ],
+      "outputs": {
+        "txid": "$steps.fetch-transaction-status.outputs.txid",
+        "blockHash": "$steps.fetch-transaction-status.outputs.blockHash",
+        "blockHeight": "$steps.fetch-transaction-status.outputs.blockHeight",
+        "confirmations": "$steps.fetch-confirmation-block-info.outputs.confirmations",
+        "blockTime": "$steps.fetch-transaction-status.outputs.blockTime",
+        "hash": "$steps.fetch-confirmation-block-info.outputs.hash",
+        "height": "$steps.fetch-confirmation-block-info.outputs.height",
+        "time": "$steps.fetch-confirmation-block-info.outputs.time",
+        "txCount": "$steps.fetch-confirmation-block-info.outputs.txCount",
+        "txs": "$steps.fetch-confirmation-block-info.outputs.txs"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "discover-blockchain-check-status-and-view-latest-block",
+      "summary": "Allows a user to discover available blockchains, select one to view its current status (like best height), and then inspect details of its most recent block.",
+      "description": "Allows a user to discover available blockchains, select one to view its current status (like best height), and then inspect details of its most recent block.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "blockchain": {
+            "type": "string"
+          },
+          "blockHashOrHeight": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "pageSize": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-available-blockchains",
+          "description": "Get a list of available blockchains.",
+          "operationId": "getAvailableBlockchains",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "api.chain49.com/": "$response.body#/api.chain49.com/",
+            "rpc.chain49.com/": "$response.body#/rpc.chain49.com/"
+          }
+        },
+        {
+          "stepId": "get-selected-blockchain-status",
+          "description": "Get basic summary of info for the selected blockchain.",
+          "operationId": "getBlockchain",
+          "parameters": [
+            {
+              "name": "blockchain",
+              "in": "path",
+              "value": "$inputs.blockchain"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "blockbook": "$response.body#/blockbook",
+            "backend": "$response.body#/backend"
+          }
+        },
+        {
+          "stepId": "get-latest-block-details",
+          "description": "Get details of the latest block on the selected blockchain, using its height.",
+          "operationId": "getBlockV2",
+          "parameters": [
+            {
+              "name": "blockchain",
+              "in": "path",
+              "value": "$inputs.blockchain"
+            },
+            {
+              "name": "blockHashOrHeight",
+              "in": "path",
+              "value": "$inputs.blockHashOrHeight"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "hash": "$response.body#/hash",
+            "height": "$response.body#/height",
+            "txCount": "$response.body#/txCount",
+            "txs": "$response.body#/txs",
+            "page": "$response.body#/page",
+            "totalPages": "$response.body#/totalPages"
+          }
+        }
+      ],
+      "outputs": {
+        "api.chain49.com/": "$steps.list-available-blockchains.outputs.api.chain49.com/",
+        "rpc.chain49.com/": "$steps.list-available-blockchains.outputs.rpc.chain49.com/",
+        "blockbook": "$steps.get-selected-blockchain-status.outputs.blockbook",
+        "backend": "$steps.get-selected-blockchain-status.outputs.backend",
+        "hash": "$steps.get-latest-block-details.outputs.hash",
+        "height": "$steps.get-latest-block-details.outputs.height",
+        "txCount": "$steps.get-latest-block-details.outputs.txCount",
+        "txs": "$steps.get-latest-block-details.outputs.txs",
+        "page": "$steps.get-latest-block-details.outputs.page",
+        "totalPages": "$steps.get-latest-block-details.outputs.totalPages"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "bitcoin-like-xpub-wallet-monitoring-and-utxo-check",
+      "summary": "For users managing Bitcoin-like wallets using XPUBs, this workflow allows them to check the overall balance, transaction history, and current unspent transaction outputs (UTXOs).",
+      "description": "For users managing Bitcoin-like wallets using XPUBs, this workflow allows them to check the overall balance, transaction history, and current unspent transaction outputs (UTXOs).",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "blockchain": {
+            "type": "string"
+          },
+          "xpub": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "pageSize": {
+            "type": "string"
+          },
+          "fromBlock": {
+            "type": "string"
+          },
+          "toBlock": {
+            "type": "string"
+          },
+          "details": {
+            "type": "string"
+          },
+          "tokens": {
+            "type": "string"
+          },
+          "secondary": {
+            "type": "string"
+          },
+          "addressOrXpub": {
+            "type": "string"
+          },
+          "confirmed": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-xpub-wallet-details",
+          "description": "Get balances, transaction history, and derived addresses for an xpub. Use 'details' (e.g. 'txids') and 'tokens' (e.g. 'used') query parameters.",
+          "operationId": "getXpubV2",
+          "parameters": [
+            {
+              "name": "blockchain",
+              "in": "path",
+              "value": "$inputs.blockchain"
+            },
+            {
+              "name": "xpub",
+              "in": "path",
+              "value": "$inputs.xpub"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            },
+            {
+              "name": "fromBlock",
+              "in": "query",
+              "value": "$inputs.fromBlock"
+            },
+            {
+              "name": "toBlock",
+              "in": "query",
+              "value": "$inputs.toBlock"
+            },
+            {
+              "name": "details",
+              "in": "query",
+              "value": "$inputs.details"
+            },
+            {
+              "name": "tokens",
+              "in": "query",
+              "value": "$inputs.tokens"
+            },
+            {
+              "name": "secondary",
+              "in": "query",
+              "value": "$inputs.secondary"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "address": "$response.body#/address",
+            "balance": "$response.body#/tokens/0/balance",
+            "totalReceived": "$response.body#/tokens/0/totalReceived",
+            "totalSent": "$response.body#/tokens/0/totalSent",
+            "txs": "$response.body#/txs",
+            "txids": "$response.body#/txids",
+            "usedTokens": "$response.body#/usedTokens",
+            "tokens": "$response.body#/tokens"
+          }
+        },
+        {
+          "stepId": "get-xpub-unspent-outputs",
+          "description": "Get Unspent Transaction Outputs (UTXOs) for the given xpub.",
+          "operationId": "getUTXOV2",
+          "parameters": [
+            {
+              "name": "blockchain",
+              "in": "path",
+              "value": "$inputs.blockchain"
+            },
+            {
+              "name": "addressOrXpub",
+              "in": "path",
+              "value": "$inputs.addressOrXpub"
+            },
+            {
+              "name": "confirmed",
+              "in": "query",
+              "value": "$inputs.confirmed"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "txid": "$response.body#/0/txid",
+            "vout": "$response.body#/0/vout",
+            "value": "$response.body#/0/value",
+            "height": "$response.body#/0/height",
+            "confirmations": "$response.body#/0/confirmations"
+          }
+        }
+      ],
+      "outputs": {
+        "address": "$steps.get-xpub-wallet-details.outputs.address",
+        "balance": "$steps.get-xpub-wallet-details.outputs.balance",
+        "totalReceived": "$steps.get-xpub-wallet-details.outputs.totalReceived",
+        "totalSent": "$steps.get-xpub-wallet-details.outputs.totalSent",
+        "txs": "$steps.get-xpub-wallet-details.outputs.txs",
+        "txids": "$steps.get-xpub-wallet-details.outputs.txids",
+        "usedTokens": "$steps.get-xpub-wallet-details.outputs.usedTokens",
+        "tokens": "$steps.get-xpub-wallet-details.outputs.tokens",
+        "txid": "$steps.get-xpub-unspent-outputs.outputs.txid",
+        "vout": "$steps.get-xpub-unspent-outputs.outputs.vout",
+        "value": "$steps.get-xpub-unspent-outputs.outputs.value",
+        "height": "$steps.get-xpub-unspent-outputs.outputs.height",
+        "confirmations": "$steps.get-xpub-unspent-outputs.outputs.confirmations"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "inspect-block-by-height",
+      "summary": "For a given block height, retrieve its hash and then fetch detailed block information including transactions.",
+      "description": "For a given block height, retrieve its hash and then fetch detailed block information including transactions.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "blockchain": {
+            "type": "string"
+          },
+          "blockHeight": {
+            "type": "string"
+          },
+          "blockHashOrHeight": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "pageSize": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-block-hash-from-height",
+          "description": "Get the hash of a block at a specific height.",
+          "operationId": "getBlockHashV2",
+          "parameters": [
+            {
+              "name": "blockchain",
+              "in": "path",
+              "value": "$inputs.blockchain"
+            },
+            {
+              "name": "blockHeight",
+              "in": "path",
+              "value": "$inputs.blockHeight"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "blockHash": "$response.body#/blockHash"
+          }
+        },
+        {
+          "stepId": "get-block-details-by-hash",
+          "description": "Get detailed information about a block using its hash.",
+          "operationId": "getBlockV2",
+          "parameters": [
+            {
+              "name": "blockchain",
+              "in": "path",
+              "value": "$inputs.blockchain"
+            },
+            {
+              "name": "blockHashOrHeight",
+              "in": "path",
+              "value": "$inputs.blockHashOrHeight"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "hash": "$response.body#/hash",
+            "height": "$response.body#/height",
+            "confirmations": "$response.body#/txs/0/confirmations",
+            "time": "$response.body#/time",
+            "txCount": "$response.body#/txCount",
+            "txs": "$response.body#/txs"
+          }
+        }
+      ],
+      "outputs": {
+        "blockHash": "$steps.get-block-hash-from-height.outputs.blockHash",
+        "hash": "$steps.get-block-details-by-hash.outputs.hash",
+        "height": "$steps.get-block-details-by-hash.outputs.height",
+        "confirmations": "$steps.get-block-details-by-hash.outputs.confirmations",
+        "time": "$steps.get-block-details-by-hash.outputs.time",
+        "txCount": "$steps.get-block-details-by-hash.outputs.txCount",
+        "txs": "$steps.get-block-details-by-hash.outputs.txs"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
