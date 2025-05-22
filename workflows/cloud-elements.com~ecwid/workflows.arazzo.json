@@ -1,0 +1,929 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/cloud-elements.com/ecwid/api-v2/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "bulk-data-export-for-analytics",
+      "summary": "Initiates an asynchronous bulk download of a specified object type (e.g., 'customers', 'orders', 'products'), monitors its status, and retrieves the completed data. This is valuable for large-scale data analysis or migration.",
+      "description": "Initiates an asynchronous bulk download of a specified object type (e.g., 'customers', 'orders', 'products'), monitors its status, and retrieves the completed data. This is valuable for large-scale data analysis or migration.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Authorization": {
+            "type": "string"
+          },
+          "objectName": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "initiate-bulk-download",
+          "description": "Starts an asynchronous job to download data for a given object type.",
+          "operationId": "createBulkDownload",
+          "parameters": [
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$inputs.Authorization"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "objectName": "$inputs.objectName",
+              "format": "$inputs.format"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "status": "$response.body#/status"
+          }
+        },
+        {
+          "stepId": "monitor-bulk-job-status",
+          "description": "Checks the current status of the bulk download job.",
+          "operationId": "getBulkStatus",
+          "parameters": [
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$inputs.Authorization"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.initiate-bulk-download.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status",
+            "numOfRowsFailed": "$response.body#/numOfRowsFailed",
+            "completion_time": "$response.body#/completion_time"
+          }
+        },
+        {
+          "stepId": "retrieve-bulk-download-results",
+          "description": "Retrieves the results of a completed bulk download job.",
+          "operationId": "getBulkByObjectName",
+          "parameters": [
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$inputs.Authorization"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.initiate-bulk-download.outputs.id"
+            },
+            {
+              "name": "objectName",
+              "in": "path",
+              "value": "$inputs.objectName"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "downloaded_data": "$response.body#/downloaded_data"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.initiate-bulk-download.outputs.id",
+        "status": "$steps.monitor-bulk-job-status.outputs.status",
+        "numOfRowsFailed": "$steps.monitor-bulk-job-status.outputs.numOfRowsFailed",
+        "completion_time": "$steps.monitor-bulk-job-status.outputs.completion_time",
+        "downloaded_data": "$steps.retrieve-bulk-download-results.outputs.downloaded_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "bulk-data-importupdate",
+      "summary": "Initiates an asynchronous bulk upload of data for a specified object type, monitors its status, and retrieves any errors encountered during the process. Useful for mass updates or creation of records.",
+      "description": "Initiates an asynchronous bulk upload of data for a specified object type, monitors its status, and retrieves any errors encountered during the process. Useful for mass updates or creation of records.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Authorization": {
+            "type": "string"
+          },
+          "Elements-Async-Callback-Url": {
+            "type": "string"
+          },
+          "objectName": {
+            "type": "string"
+          },
+          "initiate-bulk-upload_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          },
+          "pageSize": {
+            "type": "string"
+          },
+          "nextPage": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "initiate-bulk-upload",
+          "description": "Uploads a file containing objects to be bulk uploaded to the provider.",
+          "operationId": "createBulkByObjectName",
+          "parameters": [
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$inputs.Authorization"
+            },
+            {
+              "name": "Elements-Async-Callback-Url",
+              "in": "header",
+              "value": "$inputs.Elements-Async-Callback-Url"
+            },
+            {
+              "name": "objectName",
+              "in": "path",
+              "value": "$inputs.objectName"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/octet-stream",
+            "payload": "$inputs.initiate-bulk-upload_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "status": "$response.body#/status"
+          }
+        },
+        {
+          "stepId": "monitor-bulk-job-status",
+          "description": "Checks the current status of the bulk upload job.",
+          "operationId": "getBulkStatus",
+          "parameters": [
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$inputs.Authorization"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.initiate-bulk-upload.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status",
+            "numOfRowsFailed": "$response.body#/numOfRowsFailed",
+            "completion_time": "$response.body#/completion_time"
+          }
+        },
+        {
+          "stepId": "retrieve-bulk-upload-errors",
+          "description": "Retrieves the errors encountered during a bulk upload job.",
+          "operationId": "getBulkErrors",
+          "parameters": [
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$inputs.Authorization"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.initiate-bulk-upload.outputs.id"
+            },
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            },
+            {
+              "name": "nextPage",
+              "in": "query",
+              "value": "$inputs.nextPage"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "errors": "$response.body#/0/errors"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.initiate-bulk-upload.outputs.id",
+        "status": "$steps.monitor-bulk-job-status.outputs.status",
+        "numOfRowsFailed": "$steps.monitor-bulk-job-status.outputs.numOfRowsFailed",
+        "completion_time": "$steps.monitor-bulk-job-status.outputs.completion_time",
+        "errors": "$steps.retrieve-bulk-upload-errors.outputs.errors"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "customer-order-history-lookup",
+      "summary": "Allows an administrator or support agent to find a customer by email or ID and then retrieve all orders associated with that customer.",
+      "description": "Allows an administrator or support agent to find a customer by email or ID and then retrieve all orders associated with that customer.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Authorization": {
+            "type": "string"
+          },
+          "where": {
+            "type": "string"
+          },
+          "pageSize": {
+            "type": "string"
+          },
+          "nextPage": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-customer",
+          "description": "Searches for a customer using a CEQL expression (e.g., by email or ID).",
+          "operationId": "getCustomers",
+          "parameters": [
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$inputs.Authorization"
+            },
+            {
+              "name": "where",
+              "in": "query",
+              "value": "$inputs.where"
+            },
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            },
+            {
+              "name": "nextPage",
+              "in": "query",
+              "value": "$inputs.nextPage"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "customer_id": "$response.body#/0/id",
+            "customer_email": "$response.body#/0/customer_email"
+          }
+        },
+        {
+          "stepId": "get-customer-orders",
+          "description": "Retrieves all orders for a specific customer ID.",
+          "operationId": "getCustomersOrders",
+          "parameters": [
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$inputs.Authorization"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.find-customer.outputs.customer_id"
+            },
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            },
+            {
+              "name": "nextPage",
+              "in": "query",
+              "value": "$inputs.nextPage"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "orders_list": "$response.body#/0/orders_list"
+          }
+        }
+      ],
+      "outputs": {
+        "customer_id": "$steps.find-customer.outputs.customer_id",
+        "customer_email": "$steps.find-customer.outputs.customer_email",
+        "orders_list": "$steps.get-customer-orders.outputs.orders_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "order-fulfillment-process",
+      "summary": "Facilitates the process of finding orders awaiting processing, updating their fulfillment status, and then verifying their payment details.",
+      "description": "Facilitates the process of finding orders awaiting processing, updating their fulfillment status, and then verifying their payment details.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Authorization": {
+            "type": "string"
+          },
+          "where": {
+            "type": "string"
+          },
+          "pageSize": {
+            "type": "string"
+          },
+          "nextPage": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "fulfillmentStatus": {
+            "type": "string"
+          },
+          "orderId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-orders-awaiting-processing",
+          "description": "Retrieves orders that are awaiting processing.",
+          "operationId": "getOrders",
+          "parameters": [
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$inputs.Authorization"
+            },
+            {
+              "name": "where",
+              "in": "query",
+              "value": "$inputs.where"
+            },
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            },
+            {
+              "name": "nextPage",
+              "in": "query",
+              "value": "$inputs.nextPage"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "order_id": "$response.body#/0/order_id",
+            "customer_id": "$response.body#/0/customerId",
+            "current_fulfillment_status": "$response.body#/0/current_fulfillment_status"
+          }
+        },
+        {
+          "stepId": "update-order-fulfillment-status",
+          "description": "Updates the fulfillment status of a specific order.",
+          "operationId": "updateOrderById",
+          "parameters": [
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$inputs.Authorization"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-orders-awaiting-processing.outputs.order_id"
+            },
+            {
+              "name": "action",
+              "in": "query",
+              "value": "$inputs.action"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.get-orders-awaiting-processing.outputs.order_id",
+              "fulfillmentStatus": "$inputs.fulfillmentStatus"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_order_id": "$response.body#/updated_order_id",
+            "new_fulfillment_status": "$response.body#/fulfillmentStatus"
+          }
+        },
+        {
+          "stepId": "get-order-payments",
+          "description": "Retrieves payment information for a specific order.",
+          "operationId": "getOrdersPayments",
+          "parameters": [
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$inputs.Authorization"
+            },
+            {
+              "name": "orderId",
+              "in": "path",
+              "value": "$steps.get-orders-awaiting-processing.outputs.order_id"
+            },
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            },
+            {
+              "name": "nextPage",
+              "in": "query",
+              "value": "$inputs.nextPage"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "payments_list": "$response.body#/0/payments_list"
+          }
+        }
+      ],
+      "outputs": {
+        "order_id": "$steps.get-orders-awaiting-processing.outputs.order_id",
+        "customer_id": "$steps.get-orders-awaiting-processing.outputs.customer_id",
+        "current_fulfillment_status": "$steps.get-orders-awaiting-processing.outputs.current_fulfillment_status",
+        "updated_order_id": "$steps.update-order-fulfillment-status.outputs.updated_order_id",
+        "new_fulfillment_status": "$steps.update-order-fulfillment-status.outputs.new_fulfillment_status",
+        "payments_list": "$steps.get-order-payments.outputs.payments_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "product-inventory-adjustment",
+      "summary": "Allows for retrieving a product's current inventory and then updating its stock quantity. Useful for managing inventory levels.",
+      "description": "Allows for retrieving a product's current inventory and then updating its stock quantity. Useful for managing inventory levels.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Authorization": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-product-details",
+          "description": "Retrieves the details of a specific product, including its current quantity.",
+          "operationId": "getProductById",
+          "parameters": [
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$inputs.Authorization"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "product_id": "$response.body#/id",
+            "current_quantity": "$response.body#/current_quantity",
+            "product_sku": "$response.body#/product_sku"
+          }
+        },
+        {
+          "stepId": "update-product-quantity",
+          "description": "Updates the stock quantity of a product.",
+          "operationId": "updateProductById",
+          "parameters": [
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$inputs.Authorization"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-product-details.outputs.product_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.get-product-details.outputs.product_id",
+              "quantity": "$inputs.quantity"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_product_id": "$response.body#/id",
+            "new_quantity": "$response.body#/new_quantity"
+          }
+        }
+      ],
+      "outputs": {
+        "product_id": "$steps.get-product-details.outputs.product_id",
+        "current_quantity": "$steps.get-product-details.outputs.current_quantity",
+        "product_sku": "$steps.get-product-details.outputs.product_sku",
+        "updated_product_id": "$steps.update-product-quantity.outputs.updated_product_id",
+        "new_quantity": "$steps.update-product-quantity.outputs.new_quantity"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "dynamic-object-data-management",
+      "summary": "Enables discovery of available data objects, retrieval of their metadata (fields), and then querying instances of a specific object type. This is valuable for building flexible integrations or reporting tools that adapt to different data models.",
+      "description": "Enables discovery of available data objects, retrieval of their metadata (fields), and then querying instances of a specific object type. This is valuable for building flexible integrations or reporting tools that adapt to different data models.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Authorization": {
+            "type": "string"
+          },
+          "Elements-Version": {
+            "type": "string"
+          },
+          "objectName": {
+            "type": "string"
+          },
+          "where": {
+            "type": "string"
+          },
+          "pageSize": {
+            "type": "string"
+          },
+          "nextPage": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-available-objects",
+          "description": "Retrieves a list of all available object names in the system.",
+          "operationId": "getObjects",
+          "parameters": [
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$inputs.Authorization"
+            },
+            {
+              "name": "Elements-Version",
+              "in": "header",
+              "value": "$inputs.Elements-Version"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "available_object_names": "$response.body#/0/available_object_names"
+          }
+        },
+        {
+          "stepId": "get-object-metadata",
+          "description": "Retrieves the metadata (fields and their properties) for a specified object.",
+          "operationId": "getObjectsObjectNameMetadata",
+          "parameters": [
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$inputs.Authorization"
+            },
+            {
+              "name": "objectName",
+              "in": "path",
+              "value": "$steps.list-available-objects.outputs.available_object_names"
+            },
+            {
+              "name": "Elements-Version",
+              "in": "header",
+              "value": "$inputs.Elements-Version"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "object_metadata_fields": "$response.body#/object_metadata_fields"
+          }
+        },
+        {
+          "stepId": "query-object-data",
+          "description": "Queries data for a specific object type, optionally applying a CEQL filter.",
+          "operationId": "getByObjectName",
+          "parameters": [
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$inputs.Authorization"
+            },
+            {
+              "name": "objectName",
+              "in": "path",
+              "value": "$steps.list-available-objects.outputs.available_object_names"
+            },
+            {
+              "name": "where",
+              "in": "query",
+              "value": "$inputs.where"
+            },
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            },
+            {
+              "name": "nextPage",
+              "in": "query",
+              "value": "$inputs.nextPage"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "queried_object_records": "$response.body#/0/queried_object_records"
+          }
+        }
+      ],
+      "outputs": {
+        "available_object_names": "$steps.list-available-objects.outputs.available_object_names",
+        "object_metadata_fields": "$steps.get-object-metadata.outputs.object_metadata_fields",
+        "queried_object_records": "$steps.query-object-data.outputs.queried_object_records"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
