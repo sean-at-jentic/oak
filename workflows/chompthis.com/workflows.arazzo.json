@@ -1,0 +1,171 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/chompthis.com/main/1.0.0-oas3/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "branded-product-ingredient-deep-dive",
+      "summary": "After identifying a branded product (e.g., by name), this workflow allows a user to select one of its listed ingredients and retrieve detailed nutritional information for that specific generic ingredient. This provides a granular view of the product's composition. Note: The involved endpoints are typically available for Standard and Premium API subscribers.",
+      "description": "After identifying a branded product (e.g., by name), this workflow allows a user to select one of its listed ingredients and retrieve detailed nutritional information for that specific generic ingredient. This provides a granular view of the product's composition. Note: The involved endpoints are typically available for Standard and Premium API subscribers.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "find": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-branded-product-for-ingredient-lookup",
+          "description": "Retrieves a branded food item's details by name, including its list of ingredients. A specific ingredient would be chosen from this list for the next step.",
+          "operationPath": "openapi_source#/paths/~1food~1branded~1name.php/get",
+          "parameters": [
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "items": "$response.body#/items"
+          }
+        },
+        {
+          "stepId": "get-generic-ingredient-nutrition-details",
+          "description": "Fetches detailed nutritional information for a specific generic ingredient, identified from the branded product's ingredient list in the previous step.",
+          "operationPath": "openapi_source#/paths/~1food~1ingredient~1search.php/get",
+          "parameters": [
+            {
+              "name": "find",
+              "in": "query",
+              "value": "$inputs.find"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "items": "$response.body#/items"
+          }
+        }
+      ],
+      "outputs": {
+        "items": "$steps.get-generic-ingredient-nutrition-details.outputs.items"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
