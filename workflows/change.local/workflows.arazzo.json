@@ -1,0 +1,654 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/change.local/main/v1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "discover-and-donate-to-a-nonprofit",
+      "summary": "Allows a user to search for a nonprofit, optionally view its details, make a donation to it, and then verify the donation by retrieving its details. This is a core user journey for general donations.",
+      "description": "Allows a user to search for a nonprofit, optionally view its details, make a donation to it, and then verify the donation by retrieving its details. This is a core user journey for general donations.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "nonprofit_id": {
+            "type": "string"
+          },
+          "funding_source": {
+            "type": "string"
+          },
+          "zip_code": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-nonprofits",
+          "description": "Search for nonprofits by name. The user would typically provide a search term.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1nonprofits~1list/get",
+          "parameters": [
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "nonprofits": "$response.body#/nonprofits",
+            "page": "$response.body#/page"
+          }
+        },
+        {
+          "stepId": "get-nonprofit-details",
+          "description": "Retrieve details for a specific nonprofit chosen from the search results.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1nonprofits~1show/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "query",
+              "value": "$steps.search-nonprofits.outputs.nonprofits.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "name": "$response.body#/name",
+            "mission": "$response.body#/mission",
+            "icon_url": "$response.body#/icon_url",
+            "ein": "$response.body#/ein",
+            "address_line": "$response.body#/address_line",
+            "city": "$response.body#/city",
+            "state": "$response.body#/state",
+            "website": "$response.body#/website",
+            "zip_code": "$response.body#/zip_code"
+          }
+        },
+        {
+          "stepId": "create-donation",
+          "description": "Create a donation to the selected nonprofit. User provides amount, funding source, and optionally zip code.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1donations~1create/post",
+          "parameters": [
+            {
+              "name": "amount",
+              "in": "query",
+              "value": "$inputs.amount"
+            },
+            {
+              "name": "nonprofit_id",
+              "in": "query",
+              "value": "$steps.get-nonprofit-details.outputs.id"
+            },
+            {
+              "name": "funding_source",
+              "in": "query",
+              "value": "$inputs.funding_source"
+            },
+            {
+              "name": "zip_code",
+              "in": "query",
+              "value": "$inputs.zip_code"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "amount": "$response.body#/amount",
+            "live_mode": "$response.body#/live_mode",
+            "merchant_id": "$response.body#/merchant_id",
+            "nonprofit_id": "$response.body#/nonprofit_id",
+            "order_value": "$response.body#/order_value",
+            "zip_code": "$response.body#/zip_code",
+            "external_id": "$response.body#/external_id"
+          }
+        },
+        {
+          "stepId": "verify-donation",
+          "description": "Retrieve and verify the details of the newly created donation.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1donations~1show/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "query",
+              "value": "$steps.create-donation.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "amount": "$response.body#/amount",
+            "live_mode": "$response.body#/live_mode",
+            "merchant_id": "$response.body#/merchant_id",
+            "nonprofit_id": "$response.body#/nonprofit_id",
+            "order_value": "$response.body#/order_value",
+            "zip_code": "$response.body#/zip_code",
+            "external_id": "$response.body#/external_id"
+          }
+        }
+      ],
+      "outputs": {
+        "nonprofits": "$steps.search-nonprofits.outputs.nonprofits",
+        "page": "$steps.search-nonprofits.outputs.page",
+        "id": "$steps.verify-donation.outputs.id",
+        "name": "$steps.get-nonprofit-details.outputs.name",
+        "mission": "$steps.get-nonprofit-details.outputs.mission",
+        "icon_url": "$steps.get-nonprofit-details.outputs.icon_url",
+        "ein": "$steps.get-nonprofit-details.outputs.ein",
+        "address_line": "$steps.get-nonprofit-details.outputs.address_line",
+        "city": "$steps.get-nonprofit-details.outputs.city",
+        "state": "$steps.get-nonprofit-details.outputs.state",
+        "website": "$steps.get-nonprofit-details.outputs.website",
+        "zip_code": "$steps.verify-donation.outputs.zip_code",
+        "amount": "$steps.verify-donation.outputs.amount",
+        "live_mode": "$steps.verify-donation.outputs.live_mode",
+        "merchant_id": "$steps.verify-donation.outputs.merchant_id",
+        "nonprofit_id": "$steps.verify-donation.outputs.nonprofit_id",
+        "order_value": "$steps.verify-donation.outputs.order_value",
+        "external_id": "$steps.verify-donation.outputs.external_id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "offset-shipment-carbon-footprint-and-track-impact",
+      "summary": "Calculates the carbon offset donation needed for a physical shipment, makes the donation to CarbonFund (the nonprofit for carbon offsets), and then retrieves the specific impact statistics for that donation.",
+      "description": "Calculates the carbon offset donation needed for a physical shipment, makes the donation to CarbonFund (the nonprofit for carbon offsets), and then retrieves the specific impact statistics for that donation.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "origin_address": {
+            "type": "string"
+          },
+          "destination_address": {
+            "type": "string"
+          },
+          "distance_mi": {
+            "type": "string"
+          },
+          "weight_lb": {
+            "type": "string"
+          },
+          "transportation_method": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "nonprofit_id": {
+            "type": "string"
+          },
+          "funding_source": {
+            "type": "string"
+          },
+          "zip_code": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "calculate-shipping-carbon-offset",
+          "description": "Calculate the donation amount and CarbonFund nonprofit ID to offset a shipment's carbon footprint. User provides shipment details like weight, distance/addresses, and transportation method.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1donations~1carbon_calculate/get",
+          "parameters": [
+            {
+              "name": "origin_address",
+              "in": "query",
+              "value": "$inputs.origin_address"
+            },
+            {
+              "name": "destination_address",
+              "in": "query",
+              "value": "$inputs.destination_address"
+            },
+            {
+              "name": "distance_mi",
+              "in": "query",
+              "value": "$inputs.distance_mi"
+            },
+            {
+              "name": "weight_lb",
+              "in": "query",
+              "value": "$inputs.weight_lb"
+            },
+            {
+              "name": "transportation_method",
+              "in": "query",
+              "value": "$inputs.transportation_method"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "amount": "$response.body#/amount",
+            "nonprofit_id": "$response.body#/nonprofit_id"
+          }
+        },
+        {
+          "stepId": "make-carbonfund-donation-shipping",
+          "description": "Create a donation to CarbonFund using the calculated amount and nonprofit ID from the previous step. User provides funding source and optionally zip code.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1donations~1create/post",
+          "parameters": [
+            {
+              "name": "amount",
+              "in": "query",
+              "value": "$steps.calculate-shipping-carbon-offset.outputs.amount"
+            },
+            {
+              "name": "nonprofit_id",
+              "in": "query",
+              "value": "$steps.calculate-shipping-carbon-offset.outputs.nonprofit_id"
+            },
+            {
+              "name": "funding_source",
+              "in": "query",
+              "value": "$inputs.funding_source"
+            },
+            {
+              "name": "zip_code",
+              "in": "query",
+              "value": "$inputs.zip_code"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "amount": "$response.body#/amount",
+            "nonprofit_id": "$response.body#/nonprofit_id"
+          }
+        },
+        {
+          "stepId": "get-specific-carbon-offset-stats-shipping",
+          "description": "Retrieve carbon offset impact statistics (e.g., trees planted, CO2 offset) for the specific CarbonFund donation made for the shipment.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1donations~1carbon_stats/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "query",
+              "value": "$steps.make-carbonfund-donation-shipping.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "amount": "$response.body#/amount",
+            "trees": "$response.body#/trees",
+            "co2_tonnes_offset": "$response.body#/co2_tonnes_offset"
+          }
+        }
+      ],
+      "outputs": {
+        "amount": "$steps.get-specific-carbon-offset-stats-shipping.outputs.amount",
+        "nonprofit_id": "$steps.make-carbonfund-donation-shipping.outputs.nonprofit_id",
+        "id": "$steps.make-carbonfund-donation-shipping.outputs.id",
+        "trees": "$steps.get-specific-carbon-offset-stats-shipping.outputs.trees",
+        "co2_tonnes_offset": "$steps.get-specific-carbon-offset-stats-shipping.outputs.co2_tonnes_offset"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "offset-crypto-transaction-carbon-footprint-and-track-impact",
+      "summary": "Calculates the carbon offset donation needed for cryptocurrency transactions, makes the donation to CarbonFund, and then retrieves the specific impact statistics for that donation.",
+      "description": "Calculates the carbon offset donation needed for cryptocurrency transactions, makes the donation to CarbonFund, and then retrieves the specific impact statistics for that donation.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "nonprofit_id": {
+            "type": "string"
+          },
+          "funding_source": {
+            "type": "string"
+          },
+          "zip_code": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "calculate-crypto-carbon-offset",
+          "description": "Calculate the donation amount and CarbonFund nonprofit ID to offset carbon footprint of crypto transactions. User provides currency type and transaction count.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1donations~1crypto_calculate/get",
+          "parameters": [
+            {
+              "name": "count",
+              "in": "query",
+              "value": "$inputs.count"
+            },
+            {
+              "name": "currency",
+              "in": "query",
+              "value": "$inputs.currency"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "amount": "$response.body#/amount",
+            "nonprofit_id": "$response.body#/nonprofit_id"
+          }
+        },
+        {
+          "stepId": "make-carbonfund-donation-crypto",
+          "description": "Create a donation to CarbonFund using the calculated amount and nonprofit ID from the previous step. User provides funding source and optionally zip code.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1donations~1create/post",
+          "parameters": [
+            {
+              "name": "amount",
+              "in": "query",
+              "value": "$steps.calculate-crypto-carbon-offset.outputs.amount"
+            },
+            {
+              "name": "nonprofit_id",
+              "in": "query",
+              "value": "$steps.calculate-crypto-carbon-offset.outputs.nonprofit_id"
+            },
+            {
+              "name": "funding_source",
+              "in": "query",
+              "value": "$inputs.funding_source"
+            },
+            {
+              "name": "zip_code",
+              "in": "query",
+              "value": "$inputs.zip_code"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "amount": "$response.body#/amount",
+            "nonprofit_id": "$response.body#/nonprofit_id"
+          }
+        },
+        {
+          "stepId": "get-specific-carbon-offset-stats-crypto",
+          "description": "Retrieve carbon offset impact statistics for the specific CarbonFund donation made for the crypto transaction.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1donations~1carbon_stats/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "query",
+              "value": "$steps.make-carbonfund-donation-crypto.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "amount": "$response.body#/amount",
+            "trees": "$response.body#/trees",
+            "co2_tonnes_offset": "$response.body#/co2_tonnes_offset"
+          }
+        }
+      ],
+      "outputs": {
+        "amount": "$steps.get-specific-carbon-offset-stats-crypto.outputs.amount",
+        "nonprofit_id": "$steps.make-carbonfund-donation-crypto.outputs.nonprofit_id",
+        "id": "$steps.make-carbonfund-donation-crypto.outputs.id",
+        "trees": "$steps.get-specific-carbon-offset-stats-crypto.outputs.trees",
+        "co2_tonnes_offset": "$steps.get-specific-carbon-offset-stats-crypto.outputs.co2_tonnes_offset"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "review-donation-history-and-view-specific-donation",
+      "summary": "Allows a user to list their past donations and then select one to view its detailed information. This is useful for record-keeping and reviewing past contributions.",
+      "description": "Allows a user to list their past donations and then select one to view its detailed information. This is useful for record-keeping and reviewing past contributions.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-all-donations",
+          "description": "Retrieve a paginated list of all previously made donations. User can specify a page number.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1donations~1index/get",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "donations": "$response.body#/donations",
+            "page": "$response.body#/page"
+          }
+        },
+        {
+          "stepId": "get-donation-details",
+          "description": "Retrieve detailed information for a specific donation selected from the list, using its public ID.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1donations~1show/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "query",
+              "value": "$steps.list-all-donations.outputs.donations.public_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "amount": "$response.body#/amount",
+            "nonprofit_id": "$response.body#/nonprofit_id",
+            "order_value": "$response.body#/order_value",
+            "zip_code": "$response.body#/zip_code"
+          }
+        }
+      ],
+      "outputs": {
+        "donations": "$steps.list-all-donations.outputs.donations",
+        "page": "$steps.list-all-donations.outputs.page",
+        "id": "$steps.get-donation-details.outputs.id",
+        "amount": "$steps.get-donation-details.outputs.amount",
+        "nonprofit_id": "$steps.get-donation-details.outputs.nonprofit_id",
+        "order_value": "$steps.get-donation-details.outputs.order_value",
+        "zip_code": "$steps.get-donation-details.outputs.zip_code"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
