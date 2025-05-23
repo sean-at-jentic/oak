@@ -1,0 +1,1462 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/bungie.net/main/2.20.1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "user-profile--friend-management",
+      "summary": "Allows a user to search for other players by their Bungie Name, view their basic Bungie.net profile, and manage friend relationships (send, accept, decline, remove requests). This workflow facilitates social connections within the Bungie community.",
+      "description": "Allows a user to search for other players by their Bungie Name, view their basic Bungie.net profile, and manage friend relationships (send, accept, decline, remove requests). This workflow facilitates social connections within the Bungie community.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "membershipId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-bungie-user",
+          "description": "Searches for a user by their global display name and display name code. The display name and code are provided in the request body.",
+          "operationId": "User.SearchByGlobalNamePost",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "path",
+              "value": "$inputs.page"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "searchResults": "$response.body#/searchResults"
+          }
+        },
+        {
+          "stepId": "get-user-profile",
+          "description": "Retrieves detailed Bungie.net user information for a specific membership ID.",
+          "operationId": "User.GetBungieNetUserById",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.search-bungie-user.outputs.searchResults.bungieNetMembershipId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "generalUser": "$response.body#/generalUser"
+          }
+        },
+        {
+          "stepId": "send-friend-request",
+          "description": "Sends a friend request to the identified user. Requires authentication.",
+          "operationId": "Social.IssueFriendRequest",
+          "parameters": [
+            {
+              "name": "membershipId",
+              "in": "path",
+              "value": "$steps.get-user-profile.outputs.generalUser.membershipId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "success": "$response.body#/success"
+          }
+        },
+        {
+          "stepId": "get-friend-requests",
+          "description": "Retrieves the current user's incoming and outgoing friend requests. Requires authentication.",
+          "operationId": "Social.GetFriendRequestList",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "incomingRequests": "$response.body#/incomingRequests",
+            "outgoingRequests": "$response.body#/outgoingRequests"
+          }
+        },
+        {
+          "stepId": "accept-friend-request",
+          "description": "Accepts an incoming friend request from a specific user. Requires authentication.",
+          "operationId": "Social.AcceptFriendRequest",
+          "parameters": [
+            {
+              "name": "membershipId",
+              "in": "path",
+              "value": "$steps.get-friend-requests.outputs.incomingRequests.membershipId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "success": "$response.body#/success"
+          }
+        }
+      ],
+      "outputs": {
+        "searchResults": "$steps.search-bungie-user.outputs.searchResults",
+        "generalUser": "$steps.get-user-profile.outputs.generalUser",
+        "success": "$steps.accept-friend-request.outputs.success",
+        "incomingRequests": "$steps.get-friend-requests.outputs.incomingRequests",
+        "outgoingRequests": "$steps.get-friend-requests.outputs.outgoingRequests"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "destiny-2-character-item-management",
+      "summary": "Enables a user to view their Destiny 2 character's inventory and perform item transfers between their character and the vault. This is crucial for players managing their gear efficiently.",
+      "description": "Enables a user to view their Destiny 2 character's inventory and perform item transfers between their character and the vault. This is crucial for players managing their gear efficiently.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "components": {
+            "type": "string"
+          },
+          "destinyMembershipId": {
+            "type": "string"
+          },
+          "membershipType": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-current-user-memberships",
+          "description": "Retrieves the current authenticated user's Bungie.net and linked Destiny memberships, which are necessary for accessing game data.",
+          "operationId": "User.GetMembershipDataForCurrentUser",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "destinyMemberships": "$response.body#/destinyMemberships"
+          }
+        },
+        {
+          "stepId": "get-destiny-profile",
+          "description": "Fetches the full Destiny profile for a user, including their character inventories and vault contents, by specifying relevant components.",
+          "operationId": "Destiny2.GetProfile",
+          "parameters": [
+            {
+              "name": "components",
+              "in": "query",
+              "value": "$inputs.components"
+            },
+            {
+              "name": "destinyMembershipId",
+              "in": "path",
+              "value": "$steps.get-current-user-memberships.outputs.destinyMemberships.membershipId"
+            },
+            {
+              "name": "membershipType",
+              "in": "path",
+              "value": "$steps.get-current-user-memberships.outputs.destinyMemberships.membershipType"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "characterInventories": "$response.body#/characterInventories",
+            "profileInventory": "$response.body#/profileInventory"
+          }
+        },
+        {
+          "stepId": "transfer-item",
+          "description": "Transfers a specified item between a character's inventory and the vault. This operation requires the item's reference hash, instance ID, and the target character/vault information.",
+          "operationId": "Destiny2.TransferItem",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "transferStatus": "$response.body#/transferStatus"
+          }
+        }
+      ],
+      "outputs": {
+        "destinyMemberships": "$steps.get-current-user-memberships.outputs.destinyMemberships",
+        "characterInventories": "$steps.get-destiny-profile.outputs.characterInventories",
+        "profileInventory": "$steps.get-destiny-profile.outputs.profileInventory",
+        "transferStatus": "$steps.transfer-item.outputs.transferStatus"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "destiny-2-player-stats-and-activity-history",
+      "summary": "Provides a comprehensive view of a Destiny 2 player's performance by retrieving their historical statistics and recent activity history for a specific character. This is valuable for stat-tracking applications and player analysis.",
+      "description": "Provides a comprehensive view of a Destiny 2 player's performance by retrieving their historical statistics and recent activity history for a specific character. This is valuable for stat-tracking applications and player analysis.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "membershipType": {
+            "type": "string"
+          },
+          "getAllMemberships": {
+            "type": "string"
+          },
+          "membershipId": {
+            "type": "string"
+          },
+          "components": {
+            "type": "string"
+          },
+          "destinyMembershipId": {
+            "type": "string"
+          },
+          "characterId": {
+            "type": "string"
+          },
+          "dayend": {
+            "type": "string"
+          },
+          "daystart": {
+            "type": "string"
+          },
+          "groups": {
+            "type": "string"
+          },
+          "modes": {
+            "type": "string"
+          },
+          "periodType": {
+            "type": "string"
+          },
+          "count": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-destiny-player",
+          "description": "Searches for a Destiny player using their Bungie Name and a specified membership type. The display name and code are expected in the request body.",
+          "operationId": "Destiny2.SearchDestinyPlayerByBungieName",
+          "parameters": [
+            {
+              "name": "membershipType",
+              "in": "path",
+              "value": "$inputs.membershipType"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "userInfoCards": "$response.body#/userInfoCards"
+          }
+        },
+        {
+          "stepId": "get-linked-profiles",
+          "description": "Retrieves all linked Destiny profiles associated with the found user's Bungie.net membership, which is necessary to identify their game characters.",
+          "operationId": "Destiny2.GetLinkedProfiles",
+          "parameters": [
+            {
+              "name": "getAllMemberships",
+              "in": "query",
+              "value": "$inputs.getAllMemberships"
+            },
+            {
+              "name": "membershipId",
+              "in": "path",
+              "value": "$steps.search-destiny-player.outputs.userInfoCards.membershipId"
+            },
+            {
+              "name": "membershipType",
+              "in": "path",
+              "value": "$steps.search-destiny-player.outputs.userInfoCards.membershipType"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "profiles": "$response.body#/profiles"
+          }
+        },
+        {
+          "stepId": "get-destiny-profile-for-characters",
+          "description": "Fetches the full Destiny profile for a user, specifically requesting character details to obtain character IDs for subsequent stat queries.",
+          "operationId": "Destiny2.GetProfile",
+          "parameters": [
+            {
+              "name": "components",
+              "in": "query",
+              "value": "$inputs.components"
+            },
+            {
+              "name": "destinyMembershipId",
+              "in": "path",
+              "value": "$steps.get-linked-profiles.outputs.profiles.membershipId"
+            },
+            {
+              "name": "membershipType",
+              "in": "path",
+              "value": "$steps.get-linked-profiles.outputs.profiles.membershipType"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "characters": "$response.body#/characters"
+          }
+        },
+        {
+          "stepId": "get-character-historical-stats",
+          "description": "Retrieves aggregated historical statistics for a chosen character, allowing filtering by game modes and time periods.",
+          "operationId": "Destiny2.GetHistoricalStats",
+          "parameters": [
+            {
+              "name": "characterId",
+              "in": "path",
+              "value": "$steps.get-destiny-profile-for-characters.outputs.characters.keys[0]"
+            },
+            {
+              "name": "dayend",
+              "in": "query",
+              "value": "$inputs.dayend"
+            },
+            {
+              "name": "daystart",
+              "in": "query",
+              "value": "$inputs.daystart"
+            },
+            {
+              "name": "destinyMembershipId",
+              "in": "path",
+              "value": "$steps.get-linked-profiles.outputs.profiles.membershipId"
+            },
+            {
+              "name": "groups",
+              "in": "query",
+              "value": "$inputs.groups"
+            },
+            {
+              "name": "membershipType",
+              "in": "path",
+              "value": "$steps.get-linked-profiles.outputs.profiles.membershipType"
+            },
+            {
+              "name": "modes",
+              "in": "query",
+              "value": "$inputs.modes"
+            },
+            {
+              "name": "periodType",
+              "in": "query",
+              "value": "$inputs.periodType"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "historicalStats": "$response.body#/historicalStats"
+          }
+        },
+        {
+          "stepId": "get-character-activity-history",
+          "description": "Fetches a list of recent activities played by the specified character, providing details like activity type and completion status.",
+          "operationId": "Destiny2.GetActivityHistory",
+          "parameters": [
+            {
+              "name": "characterId",
+              "in": "path",
+              "value": "$steps.get-destiny-profile-for-characters.outputs.characters.keys[0]"
+            },
+            {
+              "name": "count",
+              "in": "query",
+              "value": "$inputs.count"
+            },
+            {
+              "name": "destinyMembershipId",
+              "in": "path",
+              "value": "$steps.get-linked-profiles.outputs.profiles.membershipId"
+            },
+            {
+              "name": "membershipType",
+              "in": "path",
+              "value": "$steps.get-linked-profiles.outputs.profiles.membershipType"
+            },
+            {
+              "name": "mode",
+              "in": "query",
+              "value": "$inputs.mode"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "activityHistory": "$response.body#/activityHistory"
+          }
+        }
+      ],
+      "outputs": {
+        "userInfoCards": "$steps.search-destiny-player.outputs.userInfoCards",
+        "profiles": "$steps.get-linked-profiles.outputs.profiles",
+        "characters": "$steps.get-destiny-profile-for-characters.outputs.characters",
+        "historicalStats": "$steps.get-character-historical-stats.outputs.historicalStats",
+        "activityHistory": "$steps.get-character-activity-history.outputs.activityHistory"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "fireteam-finder---host-and-manage-lobby",
+      "summary": "Enables a user to create a new Fireteam lobby for a specific activity, manage incoming applications from other players, and activate the lobby to start the Fireteam activity. This is essential for players looking to organize and lead groups.",
+      "description": "Enables a user to create a new Fireteam lobby for a specific activity, manage incoming applications from other players, and activate the lobby to start the Fireteam activity. This is essential for players looking to organize and lead groups.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "components": {
+            "type": "string"
+          },
+          "destinyMembershipId": {
+            "type": "string"
+          },
+          "membershipType": {
+            "type": "string"
+          },
+          "destinyCharacterId": {
+            "type": "string"
+          },
+          "destinyMembershipType": {
+            "type": "string"
+          },
+          "flags": {
+            "type": "string"
+          },
+          "listingId": {
+            "type": "string"
+          },
+          "nextPageToken": {
+            "type": "string"
+          },
+          "pageSize": {
+            "type": "string"
+          },
+          "applicationId": {
+            "type": "string"
+          },
+          "forceActivation": {
+            "type": "string"
+          },
+          "lobbyId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-current-user-memberships",
+          "description": "Retrieves the current authenticated user's Bungie.net and linked Destiny memberships, which are required to host a Fireteam lobby.",
+          "operationId": "User.GetMembershipDataForCurrentUser",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "destinyMemberships": "$response.body#/destinyMemberships"
+          }
+        },
+        {
+          "stepId": "get-destiny-profile-for-character-id",
+          "description": "Fetches the full Destiny profile for a user, specifically requesting character details to obtain a character ID for hosting the lobby.",
+          "operationId": "Destiny2.GetProfile",
+          "parameters": [
+            {
+              "name": "components",
+              "in": "query",
+              "value": "$inputs.components"
+            },
+            {
+              "name": "destinyMembershipId",
+              "in": "path",
+              "value": "$steps.get-current-user-memberships.outputs.destinyMemberships.membershipId"
+            },
+            {
+              "name": "membershipType",
+              "in": "path",
+              "value": "$steps.get-current-user-memberships.outputs.destinyMemberships.membershipType"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "characters": "$response.body#/characters"
+          }
+        },
+        {
+          "stepId": "host-fireteam-lobby",
+          "description": "Creates a new Fireteam lobby and a corresponding Fireteam Finder listing with specified activity details and privacy settings.",
+          "operationId": "FireteamFinder.HostLobby",
+          "parameters": [
+            {
+              "name": "destinyCharacterId",
+              "in": "path",
+              "value": "$steps.get-destiny-profile-for-character-id.outputs.characters.keys[0]"
+            },
+            {
+              "name": "destinyMembershipId",
+              "in": "path",
+              "value": "$steps.get-destiny-profile-for-character-id.outputs.characters.values[0].membershipId"
+            },
+            {
+              "name": "destinyMembershipType",
+              "in": "path",
+              "value": "$steps.get-destiny-profile-for-character-id.outputs.characters.values[0].membershipType"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "lobbyId": "$response.body#/lobbyId",
+            "listingId": "$response.body#/listingId"
+          }
+        },
+        {
+          "stepId": "get-listing-applications",
+          "description": "Retrieves all pending applications submitted by other players to the hosted Fireteam listing.",
+          "operationId": "FireteamFinder.GetListingApplications",
+          "parameters": [
+            {
+              "name": "destinyCharacterId",
+              "in": "path",
+              "value": "$steps.get-destiny-profile-for-character-id.outputs.characters.keys[0]"
+            },
+            {
+              "name": "destinyMembershipId",
+              "in": "path",
+              "value": "$steps.get-destiny-profile-for-character-id.outputs.characters.values[0].membershipId"
+            },
+            {
+              "name": "destinyMembershipType",
+              "in": "path",
+              "value": "$steps.get-destiny-profile-for-character-id.outputs.characters.values[0].membershipType"
+            },
+            {
+              "name": "flags",
+              "in": "query",
+              "value": "$inputs.flags"
+            },
+            {
+              "name": "listingId",
+              "in": "path",
+              "value": "$steps.host-fireteam-lobby.outputs.listingId"
+            },
+            {
+              "name": "nextPageToken",
+              "in": "query",
+              "value": "$inputs.nextPageToken"
+            },
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "applications": "$response.body#/applications"
+          }
+        },
+        {
+          "stepId": "respond-to-application",
+          "description": "Responds to a specific Fireteam application, either accepting or rejecting it.",
+          "operationId": "FireteamFinder.RespondToApplication",
+          "parameters": [
+            {
+              "name": "applicationId",
+              "in": "path",
+              "value": "$steps.get-listing-applications.outputs.applications.applicationId"
+            },
+            {
+              "name": "destinyCharacterId",
+              "in": "path",
+              "value": "$steps.get-destiny-profile-for-character-id.outputs.characters.keys[0]"
+            },
+            {
+              "name": "destinyMembershipId",
+              "in": "path",
+              "value": "$steps.get-destiny-profile-for-character-id.outputs.characters.values[0].membershipId"
+            },
+            {
+              "name": "destinyMembershipType",
+              "in": "path",
+              "value": "$steps.get-destiny-profile-for-character-id.outputs.characters.values[0].membershipType"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "applicationId": "$response.body#/applicationId",
+            "applicationRevision": "$response.body#/applicationRevision"
+          }
+        },
+        {
+          "stepId": "activate-lobby",
+          "description": "Activates the hosted lobby, transitioning it into an active Fireteam ready for gameplay.",
+          "operationId": "FireteamFinder.ActivateLobby",
+          "parameters": [
+            {
+              "name": "destinyCharacterId",
+              "in": "path",
+              "value": "$steps.get-destiny-profile-for-character-id.outputs.characters.keys[0]"
+            },
+            {
+              "name": "destinyMembershipId",
+              "in": "path",
+              "value": "$steps.get-destiny-profile-for-character-id.outputs.characters.values[0].membershipId"
+            },
+            {
+              "name": "destinyMembershipType",
+              "in": "path",
+              "value": "$steps.get-destiny-profile-for-character-id.outputs.characters.values[0].membershipType"
+            },
+            {
+              "name": "forceActivation",
+              "in": "query",
+              "value": "$inputs.forceActivation"
+            },
+            {
+              "name": "lobbyId",
+              "in": "path",
+              "value": "$steps.host-fireteam-lobby.outputs.lobbyId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "success": "$response.body#/success"
+          }
+        }
+      ],
+      "outputs": {
+        "destinyMemberships": "$steps.get-current-user-memberships.outputs.destinyMemberships",
+        "characters": "$steps.get-destiny-profile-for-character-id.outputs.characters",
+        "lobbyId": "$steps.host-fireteam-lobby.outputs.lobbyId",
+        "listingId": "$steps.host-fireteam-lobby.outputs.listingId",
+        "applications": "$steps.get-listing-applications.outputs.applications",
+        "applicationId": "$steps.respond-to-application.outputs.applicationId",
+        "applicationRevision": "$steps.respond-to-application.outputs.applicationRevision",
+        "success": "$steps.activate-lobby.outputs.success"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "fireteam-finder---search-and-join-lobby",
+      "summary": "Allows a user to search for available Fireteam lobbies based on specified filters, apply to join a suitable listing, and then join the lobby once their application is accepted and an offer is received.",
+      "description": "Allows a user to search for available Fireteam lobbies based on specified filters, apply to join a suitable listing, and then join the lobby once their application is accepted and an offer is received.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "components": {
+            "type": "string"
+          },
+          "destinyMembershipId": {
+            "type": "string"
+          },
+          "membershipType": {
+            "type": "string"
+          },
+          "destinyCharacterId": {
+            "type": "string"
+          },
+          "destinyMembershipType": {
+            "type": "string"
+          },
+          "overrideOfflineFilter": {
+            "type": "string"
+          },
+          "applicationType": {
+            "type": "string"
+          },
+          "listingId": {
+            "type": "string"
+          },
+          "nextPageToken": {
+            "type": "string"
+          },
+          "pageSize": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-current-user-memberships",
+          "description": "Retrieves the current authenticated user's Bungie.net and linked Destiny memberships, which are necessary for Fireteam Finder operations.",
+          "operationId": "User.GetMembershipDataForCurrentUser",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "destinyMemberships": "$response.body#/destinyMemberships"
+          }
+        },
+        {
+          "stepId": "get-destiny-profile-for-character-id",
+          "description": "Fetches the full Destiny profile for a user, specifically requesting character details to obtain a character ID for Fireteam Finder operations.",
+          "operationId": "Destiny2.GetProfile",
+          "parameters": [
+            {
+              "name": "components",
+              "in": "query",
+              "value": "$inputs.components"
+            },
+            {
+              "name": "destinyMembershipId",
+              "in": "path",
+              "value": "$steps.get-current-user-memberships.outputs.destinyMemberships.membershipId"
+            },
+            {
+              "name": "membershipType",
+              "in": "path",
+              "value": "$steps.get-current-user-memberships.outputs.destinyMemberships.membershipType"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "characters": "$response.body#/characters"
+          }
+        },
+        {
+          "stepId": "search-fireteam-listings",
+          "description": "Searches for available Fireteam listings based on various filters, such as activity type or player count.",
+          "operationId": "FireteamFinder.SearchListingsByFilters",
+          "parameters": [
+            {
+              "name": "destinyCharacterId",
+              "in": "path",
+              "value": "$steps.get-destiny-profile-for-character-id.outputs.characters.keys[0]"
+            },
+            {
+              "name": "destinyMembershipId",
+              "in": "path",
+              "value": "$steps.get-destiny-profile-for-character-id.outputs.characters.values[0].membershipId"
+            },
+            {
+              "name": "destinyMembershipType",
+              "in": "path",
+              "value": "$steps.get-destiny-profile-for-character-id.outputs.characters.values[0].membershipType"
+            },
+            {
+              "name": "overrideOfflineFilter",
+              "in": "query",
+              "value": "$inputs.overrideOfflineFilter"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "listings": "$response.body#/listings"
+          }
+        },
+        {
+          "stepId": "apply-to-listing",
+          "description": "Submits an application to join a specific Fireteam listing.",
+          "operationId": "FireteamFinder.ApplyToListing",
+          "parameters": [
+            {
+              "name": "applicationType",
+              "in": "path",
+              "value": "$inputs.applicationType"
+            },
+            {
+              "name": "destinyCharacterId",
+              "in": "path",
+              "value": "$steps.get-destiny-profile-for-character-id.outputs.characters.keys[0]"
+            },
+            {
+              "name": "destinyMembershipId",
+              "in": "path",
+              "value": "$steps.get-destiny-profile-for-character-id.outputs.characters.values[0].membershipId"
+            },
+            {
+              "name": "destinyMembershipType",
+              "in": "path",
+              "value": "$steps.get-destiny-profile-for-character-id.outputs.characters.values[0].membershipType"
+            },
+            {
+              "name": "listingId",
+              "in": "path",
+              "value": "$steps.search-fireteam-listings.outputs.listings.listingId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "isApplied": "$response.body#/isApplied",
+            "application": "$response.body#/application"
+          }
+        },
+        {
+          "stepId": "get-player-offers",
+          "description": "Retrieves all Fireteam offers that the player has received, including those related to accepted applications.",
+          "operationId": "FireteamFinder.GetPlayerOffers",
+          "parameters": [
+            {
+              "name": "destinyCharacterId",
+              "in": "path",
+              "value": "$steps.get-destiny-profile-for-character-id.outputs.characters.keys[0]"
+            },
+            {
+              "name": "destinyMembershipId",
+              "in": "path",
+              "value": "$steps.get-destiny-profile-for-character-id.outputs.characters.values[0].membershipId"
+            },
+            {
+              "name": "destinyMembershipType",
+              "in": "path",
+              "value": "$steps.get-destiny-profile-for-character-id.outputs.characters.values[0].membershipType"
+            },
+            {
+              "name": "nextPageToken",
+              "in": "query",
+              "value": "$inputs.nextPageToken"
+            },
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "offers": "$response.body#/offers"
+          }
+        },
+        {
+          "stepId": "join-lobby",
+          "description": "Sends a request to join an available Fireteam lobby using the lobby ID and offer ID obtained from an accepted offer.",
+          "operationId": "FireteamFinder.JoinLobby",
+          "parameters": [
+            {
+              "name": "destinyCharacterId",
+              "in": "path",
+              "value": "$steps.get-destiny-profile-for-character-id.outputs.characters.keys[0]"
+            },
+            {
+              "name": "destinyMembershipId",
+              "in": "path",
+              "value": "$steps.get-destiny-profile-for-character-id.outputs.characters.values[0].membershipId"
+            },
+            {
+              "name": "destinyMembershipType",
+              "in": "path",
+              "value": "$steps.get-destiny-profile-for-character-id.outputs.characters.values[0].membershipType"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "lobbyResponse": "$response.body#/lobbyResponse"
+          }
+        }
+      ],
+      "outputs": {
+        "destinyMemberships": "$steps.get-current-user-memberships.outputs.destinyMemberships",
+        "characters": "$steps.get-destiny-profile-for-character-id.outputs.characters",
+        "listings": "$steps.search-fireteam-listings.outputs.listings",
+        "isApplied": "$steps.apply-to-listing.outputs.isApplied",
+        "application": "$steps.apply-to-listing.outputs.application",
+        "offers": "$steps.get-player-offers.outputs.offers",
+        "lobbyResponse": "$steps.join-lobby.outputs.lobbyResponse"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "clan-member-administration",
+      "summary": "Provides a workflow for clan administrators to manage their clan's membership, including viewing pending applications, approving new members, and kicking or banning existing members.",
+      "description": "Provides a workflow for clan administrators to manage their clan's membership, including viewing pending applications, approving new members, and kicking or banning existing members.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "filter": {
+            "type": "string"
+          },
+          "groupType": {
+            "type": "string"
+          },
+          "membershipId": {
+            "type": "string"
+          },
+          "membershipType": {
+            "type": "string"
+          },
+          "currentpage": {
+            "type": "string"
+          },
+          "groupId": {
+            "type": "string"
+          },
+          "memberType": {
+            "type": "string"
+          },
+          "nameSearch": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-current-user-memberships",
+          "description": "Retrieves the current authenticated user's Bungie.net and linked Destiny memberships, necessary to identify their clan affiliations and administrative roles.",
+          "operationId": "User.GetMembershipDataForCurrentUser",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "destinyMemberships": "$response.body#/destinyMemberships"
+          }
+        },
+        {
+          "stepId": "get-groups-for-member",
+          "description": "Retrieves a list of groups (clans) that the specified member has joined, filtered to identify groups where they have administrative privileges.",
+          "operationId": "GroupV2.GetGroupsForMember",
+          "parameters": [
+            {
+              "name": "filter",
+              "in": "path",
+              "value": "$inputs.filter"
+            },
+            {
+              "name": "groupType",
+              "in": "path",
+              "value": "$inputs.groupType"
+            },
+            {
+              "name": "membershipId",
+              "in": "path",
+              "value": "$steps.get-current-user-memberships.outputs.destinyMemberships.membershipId"
+            },
+            {
+              "name": "membershipType",
+              "in": "path",
+              "value": "$steps.get-current-user-memberships.outputs.destinyMemberships.membershipType"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "groupMemberships": "$response.body#/groupMemberships"
+          }
+        },
+        {
+          "stepId": "get-pending-memberships",
+          "description": "Fetches a list of all users who have applied to join a specific group and are awaiting approval.",
+          "operationId": "GroupV2.GetPendingMemberships",
+          "parameters": [
+            {
+              "name": "currentpage",
+              "in": "path",
+              "value": "$inputs.currentpage"
+            },
+            {
+              "name": "groupId",
+              "in": "path",
+              "value": "$steps.get-groups-for-member.outputs.groupMemberships.group.groupId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pendingApplications": "$response.body#/pendingApplications"
+          }
+        },
+        {
+          "stepId": "approve-pending-member",
+          "description": "Approves a specific pending application, allowing the user to join the group.",
+          "operationId": "GroupV2.ApprovePending",
+          "parameters": [
+            {
+              "name": "groupId",
+              "in": "path",
+              "value": "$steps.get-groups-for-member.outputs.groupMemberships.group.groupId"
+            },
+            {
+              "name": "membershipId",
+              "in": "path",
+              "value": "$steps.get-pending-memberships.outputs.pendingApplications.bungieNetUserInfo.membershipId"
+            },
+            {
+              "name": "membershipType",
+              "in": "path",
+              "value": "$steps.get-pending-memberships.outputs.pendingApplications.bungieNetUserInfo.membershipType"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "success": "$response.body#/success"
+          }
+        },
+        {
+          "stepId": "get-members-of-group",
+          "description": "Retrieves a paginated list of all current members within a specified group.",
+          "operationId": "GroupV2.GetMembersOfGroup",
+          "parameters": [
+            {
+              "name": "currentpage",
+              "in": "path",
+              "value": "$inputs.currentpage"
+            },
+            {
+              "name": "groupId",
+              "in": "path",
+              "value": "$steps.get-groups-for-member.outputs.groupMemberships.group.groupId"
+            },
+            {
+              "name": "memberType",
+              "in": "query",
+              "value": "$inputs.memberType"
+            },
+            {
+              "name": "nameSearch",
+              "in": "query",
+              "value": "$inputs.nameSearch"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "groupMembers": "$response.body#/groupMembers"
+          }
+        },
+        {
+          "stepId": "kick-member",
+          "description": "Removes a member from the group, requiring them to reapply if they wish to rejoin.",
+          "operationId": "GroupV2.KickMember",
+          "parameters": [
+            {
+              "name": "groupId",
+              "in": "path",
+              "value": "$steps.get-groups-for-member.outputs.groupMemberships.group.groupId"
+            },
+            {
+              "name": "membershipId",
+              "in": "path",
+              "value": "$steps.get-members-of-group.outputs.groupMembers.bungieNetUserInfo.membershipId"
+            },
+            {
+              "name": "membershipType",
+              "in": "path",
+              "value": "$steps.get-members-of-group.outputs.groupMembers.bungieNetUserInfo.membershipType"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "groupDeleted": "$response.body#/groupDeleted"
+          }
+        }
+      ],
+      "outputs": {
+        "destinyMemberships": "$steps.get-current-user-memberships.outputs.destinyMemberships",
+        "groupMemberships": "$steps.get-groups-for-member.outputs.groupMemberships",
+        "pendingApplications": "$steps.get-pending-memberships.outputs.pendingApplications",
+        "success": "$steps.approve-pending-member.outputs.success",
+        "groupMembers": "$steps.get-members-of-group.outputs.groupMembers",
+        "groupDeleted": "$steps.kick-member.outputs.groupDeleted"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "browse-bungienet-content-and-news",
+      "summary": "Allows users to discover and explore official news articles and trending community-generated content on the Bungie.net platform. This workflow keeps users informed and engaged with the community.",
+      "description": "Allows users to discover and explore official news articles and trending community-generated content on the Bungie.net platform. This workflow keeps users informed and engaged with the community.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "categoryfilter": {
+            "type": "string"
+          },
+          "includebody": {
+            "type": "string"
+          },
+          "pageToken": {
+            "type": "string"
+          },
+          "categoryId": {
+            "type": "string"
+          },
+          "pageNumber": {
+            "type": "string"
+          },
+          "identifier": {
+            "type": "string"
+          },
+          "trendingEntryType": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-news-articles",
+          "description": "Retrieves the latest news articles from Bungie.net's RSS feed, with optional category filtering and full content inclusion.",
+          "operationId": "Content.RssNewsArticles",
+          "parameters": [
+            {
+              "name": "categoryfilter",
+              "in": "query",
+              "value": "$inputs.categoryfilter"
+            },
+            {
+              "name": "includebody",
+              "in": "query",
+              "value": "$inputs.includebody"
+            },
+            {
+              "name": "pageToken",
+              "in": "path",
+              "value": "$inputs.pageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "newsArticles": "$response.body#/newsArticles"
+          }
+        },
+        {
+          "stepId": "get-trending-categories",
+          "description": "Fetches a list of all available trending content categories on Bungie.net.",
+          "operationId": "Trending.GetTrendingCategories",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "trendingCategories": "$response.body#/trendingCategories"
+          }
+        },
+        {
+          "stepId": "get-trending-category-items",
+          "description": "Retrieves paginated lists of trending items for a specific content category.",
+          "operationId": "Trending.GetTrendingCategory",
+          "parameters": [
+            {
+              "name": "categoryId",
+              "in": "path",
+              "value": "$steps.get-trending-categories.outputs.trendingCategories.categoryId"
+            },
+            {
+              "name": "pageNumber",
+              "in": "path",
+              "value": "$inputs.pageNumber"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "trendingEntries": "$response.body#/trendingEntries"
+          }
+        },
+        {
+          "stepId": "get-trending-entry-detail",
+          "description": "Retrieves detailed information for a specific trending entry, identified by its type and unique identifier.",
+          "operationId": "Trending.GetTrendingEntryDetail",
+          "parameters": [
+            {
+              "name": "identifier",
+              "in": "path",
+              "value": "$steps.get-trending-category-items.outputs.trendingEntries.identifier"
+            },
+            {
+              "name": "trendingEntryType",
+              "in": "path",
+              "value": "$steps.get-trending-category-items.outputs.trendingEntries.entityType"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "trendingDetail": "$response.body#/trendingDetail"
+          }
+        }
+      ],
+      "outputs": {
+        "newsArticles": "$steps.get-news-articles.outputs.newsArticles",
+        "trendingCategories": "$steps.get-trending-categories.outputs.trendingCategories",
+        "trendingEntries": "$steps.get-trending-category-items.outputs.trendingEntries",
+        "trendingDetail": "$steps.get-trending-entry-detail.outputs.trendingDetail"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
