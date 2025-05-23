@@ -1,0 +1,791 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/bufferapp.com/main/1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "user-and-profile-discovery",
+      "summary": "Allows an application to retrieve details about the authenticated user and their connected social media profiles. This is crucial for displaying user-specific information and enabling profile-specific actions.",
+      "description": "Allows an application to retrieve details about the authenticated user and their connected social media profiles. This is crucial for displaying user-specific information and enabling profile-specific actions.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "mediaTypeExtension": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-user-details",
+          "description": "Retrieve details of the current authenticated user.",
+          "operationPath": "openapi_source#/paths/~1user{mediaTypeExtension}/get",
+          "parameters": [
+            {
+              "name": "mediaTypeExtension",
+              "in": "path",
+              "value": "$inputs.mediaTypeExtension"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "timezone": "$response.body#/timezone",
+            "plan": "$response.body#/plan"
+          }
+        },
+        {
+          "stepId": "get-connected-profiles",
+          "description": "Retrieve all social media profiles connected to the user's account.",
+          "operationPath": "openapi_source#/paths/~1profiles{mediaTypeExtension}/get",
+          "parameters": [
+            {
+              "name": "mediaTypeExtension",
+              "in": "path",
+              "value": "$inputs.mediaTypeExtension"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "profiles": "$response.body#/0/profiles"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.get-user-details.outputs.id",
+        "timezone": "$steps.get-user-details.outputs.timezone",
+        "plan": "$steps.get-user-details.outputs.plan",
+        "profiles": "$steps.get-connected-profiles.outputs.profiles"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "social-media-content-scheduling",
+      "summary": "Enables users to create new social media updates and manage their position within the Buffer queue for a specific profile, including reordering or shuffling posts.",
+      "description": "Enables users to create new social media updates and manage their position within the Buffer queue for a specific profile, including reordering or shuffling posts.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "mediaTypeExtension": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-all-profiles",
+          "description": "Retrieve all social media profiles connected to the user's account to select target profiles for updates.",
+          "operationPath": "openapi_source#/paths/~1profiles{mediaTypeExtension}/get",
+          "parameters": [
+            {
+              "name": "mediaTypeExtension",
+              "in": "path",
+              "value": "$inputs.mediaTypeExtension"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "profiles": "$response.body#/0/profiles"
+          }
+        },
+        {
+          "stepId": "create-new-update",
+          "description": "Create one or more new status updates for selected social media profiles.",
+          "operationPath": "openapi_source#/paths/~1updates~1create{mediaTypeExtension}/post",
+          "parameters": [
+            {
+              "name": "mediaTypeExtension",
+              "in": "path",
+              "value": "$inputs.mediaTypeExtension"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updates": "$response.body#/updates"
+          }
+        },
+        {
+          "stepId": "move-update-to-top",
+          "description": "Move a specific pending update to the top of its profile's queue, recalculating times for other updates.",
+          "operationPath": "openapi_source#/paths/~1updates~1{id}~1move_to_top{mediaTypeExtension}/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-new-update.outputs.updates.id"
+            },
+            {
+              "name": "mediaTypeExtension",
+              "in": "path",
+              "value": "$inputs.mediaTypeExtension"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "update": "$response.body#/update"
+          }
+        },
+        {
+          "stepId": "reorder-profile-updates",
+          "description": "Edit the order of pending updates for a specific social media profile.",
+          "operationPath": "openapi_source#/paths/~1profiles~1{id}~1updates~1reorder{mediaTypeExtension}/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-all-profiles.outputs.profiles.id"
+            },
+            {
+              "name": "mediaTypeExtension",
+              "in": "path",
+              "value": "$inputs.mediaTypeExtension"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updates": "$response.body#/updates"
+          }
+        },
+        {
+          "stepId": "shuffle-profile-updates",
+          "description": "Randomize the order of pending updates for a specific social media profile.",
+          "operationPath": "openapi_source#/paths/~1profiles~1{id}~1updates~1shuffle{mediaTypeExtension}/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-all-profiles.outputs.profiles.id"
+            },
+            {
+              "name": "mediaTypeExtension",
+              "in": "path",
+              "value": "$inputs.mediaTypeExtension"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updates": "$response.body#/updates"
+          }
+        }
+      ],
+      "outputs": {
+        "profiles": "$steps.get-all-profiles.outputs.profiles",
+        "updates": "$steps.shuffle-profile-updates.outputs.updates",
+        "update": "$steps.move-update-to-top.outputs.update"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "social-media-content-monitoring-and-analytics",
+      "summary": "Provides functionality to retrieve sent social media updates and analyze their engagement metrics, including link shares and interactions (likes, retweets).",
+      "description": "Provides functionality to retrieve sent social media updates and analyze their engagement metrics, including link shares and interactions (likes, retweets).",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "mediaTypeExtension": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "count": {
+            "type": "string"
+          },
+          "since": {
+            "type": "string"
+          },
+          "utc": {
+            "type": "string"
+          },
+          "event": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-all-profiles",
+          "description": "Retrieve all social media profiles connected to the user's account to select a profile for monitoring.",
+          "operationPath": "openapi_source#/paths/~1profiles{mediaTypeExtension}/get",
+          "parameters": [
+            {
+              "name": "mediaTypeExtension",
+              "in": "path",
+              "value": "$inputs.mediaTypeExtension"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "profiles": "$response.body#/0/profiles"
+          }
+        },
+        {
+          "stepId": "get-sent-updates",
+          "description": "Retrieve updates that have already been sent from a specific social media profile.",
+          "operationPath": "openapi_source#/paths/~1profiles~1{id}~1updates~1sent{mediaTypeExtension}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-all-profiles.outputs.profiles.id"
+            },
+            {
+              "name": "mediaTypeExtension",
+              "in": "path",
+              "value": "$inputs.mediaTypeExtension"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "count",
+              "in": "query",
+              "value": "$inputs.count"
+            },
+            {
+              "name": "since",
+              "in": "query",
+              "value": "$inputs.since"
+            },
+            {
+              "name": "utc",
+              "in": "query",
+              "value": "$inputs.utc"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updates": "$response.body#/updates"
+          }
+        },
+        {
+          "stepId": "get-update-interactions",
+          "description": "Get detailed interaction data (e.g., likes, retweets) for a specific social media update.",
+          "operationPath": "openapi_source#/paths/~1updates~1{id}~1interactions{mediaTypeExtension}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-sent-updates.outputs.updates.id"
+            },
+            {
+              "name": "mediaTypeExtension",
+              "in": "path",
+              "value": "$inputs.mediaTypeExtension"
+            },
+            {
+              "name": "event",
+              "in": "query",
+              "value": "$inputs.event"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "count",
+              "in": "query",
+              "value": "$inputs.count"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "interactions": "$response.body#/interactions",
+            "total": "$response.body#/total"
+          }
+        },
+        {
+          "stepId": "get-link-shares",
+          "description": "Retrieve the number of shares a specific URL has received through Buffer.",
+          "operationPath": "openapi_source#/paths/~1links~1shares{mediaTypeExtension}/get",
+          "parameters": [
+            {
+              "name": "mediaTypeExtension",
+              "in": "path",
+              "value": "$inputs.mediaTypeExtension"
+            },
+            {
+              "name": "url",
+              "in": "query",
+              "value": "$inputs.url"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "shares": "$response.body#/shares"
+          }
+        }
+      ],
+      "outputs": {
+        "profiles": "$steps.get-all-profiles.outputs.profiles",
+        "updates": "$steps.get-sent-updates.outputs.updates",
+        "interactions": "$steps.get-update-interactions.outputs.interactions",
+        "total": "$steps.get-update-interactions.outputs.total",
+        "shares": "$steps.get-link-shares.outputs.shares"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-pending-social-media-posts",
+      "summary": "Provides a way to view, edit, delete, or immediately share social media updates that are currently in the Buffer queue for a specific profile.",
+      "description": "Provides a way to view, edit, delete, or immediately share social media updates that are currently in the Buffer queue for a specific profile.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "mediaTypeExtension": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "count": {
+            "type": "string"
+          },
+          "since": {
+            "type": "string"
+          },
+          "utc": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-all-profiles",
+          "description": "Retrieve all social media profiles connected to the user's account to select a profile for managing pending posts.",
+          "operationPath": "openapi_source#/paths/~1profiles{mediaTypeExtension}/get",
+          "parameters": [
+            {
+              "name": "mediaTypeExtension",
+              "in": "path",
+              "value": "$inputs.mediaTypeExtension"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "profiles": "$response.body#/0/profiles"
+          }
+        },
+        {
+          "stepId": "get-pending-updates",
+          "description": "Retrieve updates that are currently in the buffer for an individual social media profile.",
+          "operationPath": "openapi_source#/paths/~1profiles~1{id}~1updates~1pending{mediaTypeExtension}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-all-profiles.outputs.profiles.id"
+            },
+            {
+              "name": "mediaTypeExtension",
+              "in": "path",
+              "value": "$inputs.mediaTypeExtension"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "count",
+              "in": "query",
+              "value": "$inputs.count"
+            },
+            {
+              "name": "since",
+              "in": "query",
+              "value": "$inputs.since"
+            },
+            {
+              "name": "utc",
+              "in": "query",
+              "value": "$inputs.utc"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updates": "$response.body#/updates"
+          }
+        },
+        {
+          "stepId": "edit-pending-update",
+          "description": "Edit the content or scheduling of an existing pending status update.",
+          "operationPath": "openapi_source#/paths/~1updates~1{id}~1update{mediaTypeExtension}/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-pending-updates.outputs.updates.id"
+            },
+            {
+              "name": "mediaTypeExtension",
+              "in": "path",
+              "value": "$inputs.mediaTypeExtension"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "update": "$response.body#/update"
+          }
+        },
+        {
+          "stepId": "delete-pending-update",
+          "description": "Permanently delete an existing status update from the queue.",
+          "operationPath": "openapi_source#/paths/~1updates~1{id}~1destroy{mediaTypeExtension}/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-pending-updates.outputs.updates.id"
+            },
+            {
+              "name": "mediaTypeExtension",
+              "in": "path",
+              "value": "$inputs.mediaTypeExtension"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "success": "$response.body#/success"
+          }
+        },
+        {
+          "stepId": "immediately-share-update",
+          "description": "Immediately share a single pending update, bypassing the scheduled time.",
+          "operationPath": "openapi_source#/paths/~1updates~1{id}~1share{mediaTypeExtension}/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-pending-updates.outputs.updates.id"
+            },
+            {
+              "name": "mediaTypeExtension",
+              "in": "path",
+              "value": "$inputs.mediaTypeExtension"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "success": "$response.body#/success"
+          }
+        }
+      ],
+      "outputs": {
+        "profiles": "$steps.get-all-profiles.outputs.profiles",
+        "updates": "$steps.get-pending-updates.outputs.updates",
+        "update": "$steps.edit-pending-update.outputs.update",
+        "success": "$steps.immediately-share-update.outputs.success"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "profile-schedule-management",
+      "summary": "Allows users to view and modify the default posting schedule for their connected social media profiles.",
+      "description": "Allows users to view and modify the default posting schedule for their connected social media profiles.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "mediaTypeExtension": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-all-profiles",
+          "description": "Retrieve all social media profiles connected to the user's account to select a profile for schedule management.",
+          "operationPath": "openapi_source#/paths/~1profiles{mediaTypeExtension}/get",
+          "parameters": [
+            {
+              "name": "mediaTypeExtension",
+              "in": "path",
+              "value": "$inputs.mediaTypeExtension"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "profiles": "$response.body#/0/profiles"
+          }
+        },
+        {
+          "stepId": "get-profile-schedule",
+          "description": "Get the current posting schedule details for a specific social media profile.",
+          "operationPath": "openapi_source#/paths/~1profiles~1{id}~1schedules{mediaTypeExtension}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-all-profiles.outputs.profiles.id"
+            },
+            {
+              "name": "mediaTypeExtension",
+              "in": "path",
+              "value": "$inputs.mediaTypeExtension"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "days": "$response.body#/days",
+            "times": "$response.body#/times"
+          }
+        },
+        {
+          "stepId": "update-profile-schedule",
+          "description": "Set new posting schedules (days and times) for the specified social media profile.",
+          "operationPath": "openapi_source#/paths/~1profiles~1{id}~1schedules~1update{mediaTypeExtension}/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-all-profiles.outputs.profiles.id"
+            },
+            {
+              "name": "mediaTypeExtension",
+              "in": "path",
+              "value": "$inputs.mediaTypeExtension"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "success": "$response.body#/success"
+          }
+        }
+      ],
+      "outputs": {
+        "profiles": "$steps.get-all-profiles.outputs.profiles",
+        "days": "$steps.get-profile-schedule.outputs.days",
+        "times": "$steps.get-profile-schedule.outputs.times",
+        "success": "$steps.update-profile-schedule.outputs.success"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
