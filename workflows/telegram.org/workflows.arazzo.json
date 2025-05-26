@@ -1,0 +1,1156 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/telegram.org/main/5.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "bot-initialization-and-update-configuration",
+      "summary": "This workflow allows a bot developer to set up their bot, verify its identity, and configure how it receives updates from Telegram users and chats, either via webhooks for real-time push notifications or by long polling for manual update retrieval.",
+      "description": "This workflow allows a bot developer to set up their bot, verify its identity, and configure how it receives updates from Telegram users and chats, either via webhooks for real-time push notifications or by long polling for manual update retrieval.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "drop_pending_updates": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "timeout": {
+            "type": "string"
+          },
+          "allowed_updates": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-bot-info",
+          "description": "Retrieves basic information about the bot itself, useful for verifying the authentication token and bot's capabilities.",
+          "operationPath": "openapi_source#/paths/~1getMe/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "bot_id": "$response.body#/bot_id",
+            "bot_username": "$response.body#/bot_username"
+          }
+        },
+        {
+          "stepId": "set-webhook-for-updates",
+          "description": "Configures a webhook URL where Telegram will send incoming updates to the bot. This is the recommended way to receive updates.",
+          "operationPath": "openapi_source#/paths/~1setWebhook/post",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "url": "$inputs.url"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "webhook_set_status": "$response.body#/webhook_set_status"
+          }
+        },
+        {
+          "stepId": "get-webhook-status",
+          "description": "Retrieves the current status of the bot's webhook, including the URL, pending update count, and any recent errors.",
+          "operationPath": "openapi_source#/paths/~1getWebhookInfo/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "webhook_url": "$response.body#/webhook_url",
+            "pending_update_count": "$response.body#/pending_update_count"
+          }
+        },
+        {
+          "stepId": "delete-webhook-integration",
+          "description": "Removes the currently configured webhook, switching the bot back to long polling for updates.",
+          "operationPath": "openapi_source#/paths/~1deleteWebhook/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "drop_pending_updates": "$inputs.drop_pending_updates"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "webhook_deleted_status": "$response.body#/webhook_deleted_status"
+          }
+        },
+        {
+          "stepId": "get-updates-long-polling",
+          "description": "Retrieves incoming updates using long polling. This method is an alternative to webhooks and is typically used when a webhook is not set.",
+          "operationPath": "openapi_source#/paths/~1getUpdates/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "offset": "$inputs.offset",
+              "limit": "$inputs.limit",
+              "timeout": "$inputs.timeout",
+              "allowed_updates": "$inputs.allowed_updates"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updates": "$response.body#/updates"
+          }
+        }
+      ],
+      "outputs": {
+        "bot_id": "$steps.get-bot-info.outputs.bot_id",
+        "bot_username": "$steps.get-bot-info.outputs.bot_username",
+        "webhook_set_status": "$steps.set-webhook-for-updates.outputs.webhook_set_status",
+        "webhook_url": "$steps.get-webhook-status.outputs.webhook_url",
+        "pending_update_count": "$steps.get-webhook-status.outputs.pending_update_count",
+        "webhook_deleted_status": "$steps.delete-webhook-integration.outputs.webhook_deleted_status",
+        "updates": "$steps.get-updates-long-polling.outputs.updates"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "payment-processing-workflow",
+      "summary": "This workflow outlines the steps for a bot to initiate a payment process by sending an invoice, and then handling subsequent shipping and pre-checkout queries from the user.",
+      "description": "This workflow outlines the steps for a bot to initiate a payment process by sending an invoice, and then handling subsequent shipping and pre-checkout queries from the user.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "chat_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "payload": {
+            "type": "string"
+          },
+          "provider_token": {
+            "type": "string"
+          },
+          "start_parameter": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "prices": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "allowed_updates": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "send-invoice-to-user",
+          "description": "Sends an invoice to a private chat, initiating a payment process.",
+          "operationPath": "openapi_source#/paths/~1sendInvoice/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "chat_id": "$inputs.chat_id",
+              "title": "$inputs.title",
+              "description": "$inputs.description",
+              "payload": "$inputs.payload",
+              "provider_token": "$inputs.provider_token",
+              "start_parameter": "$inputs.start_parameter",
+              "currency": "$inputs.currency",
+              "prices": "$inputs.prices"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "message_id": "$response.body#/message_id",
+            "invoice_payload": "$response.body#/invoice_payload"
+          }
+        },
+        {
+          "stepId": "receive-shipping-query",
+          "description": "Receives incoming updates, specifically looking for 'shipping_query' types when the invoice is flexible and requires a shipping address.",
+          "operationPath": "openapi_source#/paths/~1getUpdates/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "offset": "$inputs.offset",
+              "limit": "$inputs.limit",
+              "allowed_updates": "$inputs.allowed_updates"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "shipping_query_id": "$response.body#/shipping_query_id",
+            "shipping_address": "$response.body#/shipping_address"
+          }
+        },
+        {
+          "stepId": "answer-shipping-query",
+          "description": "Replies to a shipping query, indicating whether delivery to the specified address is possible and providing shipping options.",
+          "operationPath": "openapi_source#/paths/~1answerShippingQuery/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "shipping_query_id": "$steps.receive-shipping-query.outputs.shipping_query_id",
+              "ok": "$inputs.ok"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "shipping_answer_status": "$response.body#/shipping_answer_status"
+          }
+        },
+        {
+          "stepId": "receive-pre-checkout-query",
+          "description": "Receives incoming updates, specifically looking for 'pre_checkout_query' types after the user confirms payment and shipping details.",
+          "operationPath": "openapi_source#/paths/~1getUpdates/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "offset": "$inputs.offset",
+              "limit": "$inputs.limit",
+              "allowed_updates": "$inputs.allowed_updates"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pre_checkout_query_id": "$response.body#/pre_checkout_query_id",
+            "invoice_payload": "$response.body#/invoice_payload"
+          }
+        },
+        {
+          "stepId": "answer-pre-checkout-query",
+          "description": "Responds to a pre-checkout query, confirming if the bot is ready to proceed with the order or if there are issues.",
+          "operationPath": "openapi_source#/paths/~1answerPreCheckoutQuery/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "pre_checkout_query_id": "$steps.receive-pre-checkout-query.outputs.pre_checkout_query_id",
+              "ok": "$inputs.ok"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pre_checkout_answer_status": "$response.body#/pre_checkout_answer_status"
+          }
+        }
+      ],
+      "outputs": {
+        "message_id": "$steps.send-invoice-to-user.outputs.message_id",
+        "invoice_payload": "$steps.receive-pre-checkout-query.outputs.invoice_payload",
+        "shipping_query_id": "$steps.receive-shipping-query.outputs.shipping_query_id",
+        "shipping_address": "$steps.receive-shipping-query.outputs.shipping_address",
+        "shipping_answer_status": "$steps.answer-shipping-query.outputs.shipping_answer_status",
+        "pre_checkout_query_id": "$steps.receive-pre-checkout-query.outputs.pre_checkout_query_id",
+        "pre_checkout_answer_status": "$steps.answer-pre-checkout-query.outputs.pre_checkout_answer_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "basic-message-sending-and-editing",
+      "summary": "This workflow enables the bot to send various types of messages to a chat and subsequently modify or delete those messages, providing dynamic interaction capabilities.",
+      "description": "This workflow enables the bot to send various types of messages to a chat and subsequently modify or delete those messages, providing dynamic interaction capabilities.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "chat_id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "photo": {
+            "type": "string"
+          },
+          "caption": {
+            "type": "string"
+          },
+          "parse_mode": {
+            "type": "string"
+          },
+          "reply_markup": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "send-text-message",
+          "description": "Sends a simple text message to a specified chat.",
+          "operationPath": "openapi_source#/paths/~1sendMessage/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "chat_id": "$inputs.chat_id",
+              "text": "$inputs.text"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "message_id": "$response.body#/message_id",
+            "chat_id": "$response.body#/chat_id"
+          }
+        },
+        {
+          "stepId": "send-photo-message",
+          "description": "Sends a photo to a specified chat, with an optional caption.",
+          "operationPath": "openapi_source#/paths/~1sendPhoto/post",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "chat_id": "$inputs.chat_id",
+              "photo": "$inputs.photo"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "message_id": "$response.body#/message_id",
+            "chat_id": "$response.body#/chat_id"
+          }
+        },
+        {
+          "stepId": "edit-message-text",
+          "description": "Edits the text of a previously sent message.",
+          "operationPath": "openapi_source#/paths/~1editMessageText/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "chat_id": "$steps.send-text-message.outputs.chat_id",
+              "message_id": "$steps.send-text-message.outputs.message_id",
+              "text": "$inputs.text"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "edit_status": "$response.body#/edit_status"
+          }
+        },
+        {
+          "stepId": "edit-message-caption",
+          "description": "Edits the caption of a previously sent media message (photo, video, etc.).",
+          "operationPath": "openapi_source#/paths/~1editMessageCaption/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "chat_id": "$steps.send-photo-message.outputs.chat_id",
+              "message_id": "$steps.send-photo-message.outputs.message_id",
+              "caption": "$inputs.caption",
+              "parse_mode": "$inputs.parse_mode",
+              "reply_markup": "$inputs.reply_markup"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "edit_status": "$response.body#/edit_status"
+          }
+        },
+        {
+          "stepId": "delete-sent-message",
+          "description": "Deletes a message previously sent by the bot or another user (if bot has permissions).",
+          "operationPath": "openapi_source#/paths/~1deleteMessage/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "chat_id": "$steps.send-text-message.outputs.chat_id",
+              "message_id": "$steps.send-text-message.outputs.message_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "deletion_status": "$response.body#/deletion_status"
+          }
+        }
+      ],
+      "outputs": {
+        "message_id": "$steps.send-photo-message.outputs.message_id",
+        "chat_id": "$steps.send-photo-message.outputs.chat_id",
+        "edit_status": "$steps.edit-message-caption.outputs.edit_status",
+        "deletion_status": "$steps.delete-sent-message.outputs.deletion_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "chat-administration-and-management",
+      "summary": "This workflow allows a bot with administrative privileges to manage various aspects of a group, supergroup, or channel, including member permissions, chat information, and pinned messages.",
+      "description": "This workflow allows a bot with administrative privileges to manage various aspects of a group, supergroup, or channel, including member permissions, chat information, and pinned messages.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "chat_id": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "message_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-chat-details",
+          "description": "Retrieves up-to-date information about a specific chat.",
+          "operationPath": "openapi_source#/paths/~1getChat/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "chat_id": "$inputs.chat_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "chat_info": "$response.body#/chat_info",
+            "chat_type": "$response.body#/chat_type",
+            "chat_title": "$response.body#/chat_title"
+          }
+        },
+        {
+          "stepId": "get-chat-administrators",
+          "description": "Retrieves a list of administrators in a chat.",
+          "operationPath": "openapi_source#/paths/~1getChatAdministrators/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "chat_id": "$steps.get-chat-details.outputs.chat_info.id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "administrators": "$response.body#/administrators"
+          }
+        },
+        {
+          "stepId": "kick-chat-member",
+          "description": "Removes a user from a group, supergroup, or channel.",
+          "operationPath": "openapi_source#/paths/~1kickChatMember/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "chat_id": "$steps.get-chat-details.outputs.chat_info.id",
+              "user_id": "$inputs.user_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "kick_status": "$response.body#/kick_status"
+          }
+        },
+        {
+          "stepId": "unban-chat-member",
+          "description": "Unbans a previously kicked user from a supergroup or channel, allowing them to rejoin.",
+          "operationPath": "openapi_source#/paths/~1unbanChatMember/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "chat_id": "$steps.get-chat-details.outputs.chat_info.id",
+              "user_id": "$inputs.user_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "unban_status": "$response.body#/unban_status"
+          }
+        },
+        {
+          "stepId": "set-chat-title",
+          "description": "Changes the title of a group, supergroup, or channel.",
+          "operationPath": "openapi_source#/paths/~1setChatTitle/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "chat_id": "$steps.get-chat-details.outputs.chat_info.id",
+              "title": "$inputs.title"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "title_set_status": "$response.body#/title_set_status"
+          }
+        },
+        {
+          "stepId": "pin-message-in-chat",
+          "description": "Adds a message to the list of pinned messages in a chat.",
+          "operationPath": "openapi_source#/paths/~1pinChatMessage/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "chat_id": "$steps.get-chat-details.outputs.chat_info.id",
+              "message_id": "$inputs.message_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pin_status": "$response.body#/pin_status"
+          }
+        },
+        {
+          "stepId": "export-chat-invite-link",
+          "description": "Generates a new invite link for a chat, revoking any previously generated link.",
+          "operationPath": "openapi_source#/paths/~1exportChatInviteLink/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "chat_id": "$steps.get-chat-details.outputs.chat_info.id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "invite_link": "$response.body#/invite_link"
+          }
+        }
+      ],
+      "outputs": {
+        "chat_info": "$steps.get-chat-details.outputs.chat_info",
+        "chat_type": "$steps.get-chat-details.outputs.chat_type",
+        "chat_title": "$steps.get-chat-details.outputs.chat_title",
+        "administrators": "$steps.get-chat-administrators.outputs.administrators",
+        "kick_status": "$steps.kick-chat-member.outputs.kick_status",
+        "unban_status": "$steps.unban-chat-member.outputs.unban_status",
+        "title_set_status": "$steps.set-chat-title.outputs.title_set_status",
+        "pin_status": "$steps.pin-message-in-chat.outputs.pin_status",
+        "invite_link": "$steps.export-chat-invite-link.outputs.invite_link"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "sticker-set-creation-and-management",
+      "summary": "This workflow provides the necessary steps for a bot to create, populate, and manage custom sticker sets, allowing for personalized and branded sticker experiences.",
+      "description": "This workflow provides the necessary steps for a bot to create, populate, and manage custom sticker sets, allowing for personalized and branded sticker experiences.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string"
+          },
+          "png_sticker": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "emojis": {
+            "type": "string"
+          },
+          "sticker": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "upload-sticker-file",
+          "description": "Uploads a PNG or TGS file to Telegram servers for later use as a sticker.",
+          "operationPath": "openapi_source#/paths/~1uploadStickerFile/post",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "user_id": "$inputs.user_id",
+              "png_sticker": "$inputs.png_sticker"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "file_id": "$response.body#/file_id",
+            "file_unique_id": "$response.body#/file_unique_id"
+          }
+        },
+        {
+          "stepId": "create-new-sticker-set",
+          "description": "Creates a new sticker set owned by a user, which the bot can then manage.",
+          "operationPath": "openapi_source#/paths/~1createNewStickerSet/post",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "png_sticker": "$steps.upload-sticker-file.outputs.file_id",
+              "user_id": "$inputs.user_id",
+              "name": "$inputs.name",
+              "title": "$inputs.title",
+              "emojis": "$inputs.emojis"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "creation_status": "$response.body#/creation_status"
+          }
+        },
+        {
+          "stepId": "add-sticker-to-set",
+          "description": "Adds a new sticker to an existing sticker set created by the bot.",
+          "operationPath": "openapi_source#/paths/~1addStickerToSet/post",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "png_sticker": "$steps.upload-sticker-file.outputs.file_id",
+              "user_id": "$inputs.user_id",
+              "name": "$inputs.name",
+              "emojis": "$inputs.emojis"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "add_status": "$response.body#/add_status"
+          }
+        },
+        {
+          "stepId": "get-sticker-set-details",
+          "description": "Retrieves detailed information about a specific sticker set.",
+          "operationPath": "openapi_source#/paths/~1getStickerSet/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sticker_set_info": "$response.body#/sticker_set_info"
+          }
+        },
+        {
+          "stepId": "delete-sticker-from-set",
+          "description": "Deletes a sticker from a sticker set created by the bot.",
+          "operationPath": "openapi_source#/paths/~1deleteStickerFromSet/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "sticker": "$inputs.sticker"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "delete_status": "$response.body#/delete_status"
+          }
+        }
+      ],
+      "outputs": {
+        "file_id": "$steps.upload-sticker-file.outputs.file_id",
+        "file_unique_id": "$steps.upload-sticker-file.outputs.file_unique_id",
+        "creation_status": "$steps.create-new-sticker-set.outputs.creation_status",
+        "add_status": "$steps.add-sticker-to-set.outputs.add_status",
+        "sticker_set_info": "$steps.get-sticker-set-details.outputs.sticker_set_info",
+        "delete_status": "$steps.delete-sticker-from-set.outputs.delete_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "interactive-inline-query-response",
+      "summary": "This workflow allows a bot to respond to inline queries from users, providing a list of results that users can select to send directly into any chat.",
+      "description": "This workflow allows a bot to respond to inline queries from users, providing a list of results that users can select to send directly into any chat.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "offset": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "allowed_updates": {
+            "type": "string"
+          },
+          "results": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "receive-inline-query",
+          "description": "Receives incoming updates, specifically looking for 'inline_query' types from users.",
+          "operationPath": "openapi_source#/paths/~1getUpdates/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "offset": "$inputs.offset",
+              "limit": "$inputs.limit",
+              "allowed_updates": "$inputs.allowed_updates"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "inline_query_id": "$response.body#/inline_query_id",
+            "query_text": "$response.body#/query_text"
+          }
+        },
+        {
+          "stepId": "answer-inline-query",
+          "description": "Sends answers to an inline query, presenting a list of results to the user.",
+          "operationPath": "openapi_source#/paths/~1answerInlineQuery/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "inline_query_id": "$steps.receive-inline-query.outputs.inline_query_id",
+              "results": "$inputs.results"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "answer_status": "$response.body#/answer_status"
+          }
+        }
+      ],
+      "outputs": {
+        "inline_query_id": "$steps.receive-inline-query.outputs.inline_query_id",
+        "query_text": "$steps.receive-inline-query.outputs.query_text",
+        "answer_status": "$steps.answer-inline-query.outputs.answer_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "bot-command-management",
+      "summary": "This workflow allows a bot developer to define and retrieve the list of commands that users can send to the bot, improving user experience and discoverability of bot features.",
+      "description": "This workflow allows a bot developer to define and retrieve the list of commands that users can send to the bot, improving user experience and discoverability of bot features.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "commands": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "set-bot-commands",
+          "description": "Sets the list of commands that will be displayed to users in the bot's command menu.",
+          "operationPath": "openapi_source#/paths/~1setMyCommands/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "commands": "$inputs.commands"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "set_commands_status": "$response.body#/set_commands_status"
+          }
+        },
+        {
+          "stepId": "get-bot-commands",
+          "description": "Retrieves the current list of commands configured for the bot.",
+          "operationPath": "openapi_source#/paths/~1getMyCommands/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "bot_commands": "$response.body#/bot_commands"
+          }
+        }
+      ],
+      "outputs": {
+        "set_commands_status": "$steps.set-bot-commands.outputs.set_commands_status",
+        "bot_commands": "$steps.get-bot-commands.outputs.bot_commands"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "game-score-management",
+      "summary": "This workflow allows a bot to manage game scores for users, including setting new scores and retrieving high score tables for a specific game.",
+      "description": "This workflow allows a bot to manage game scores for users, including setting new scores and retrieving high score tables for a specific game.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "chat_id": {
+            "type": "string"
+          },
+          "game_short_name": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "score": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "send-game-message",
+          "description": "Sends a game to a specified chat.",
+          "operationPath": "openapi_source#/paths/~1sendGame/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "chat_id": "$inputs.chat_id",
+              "game_short_name": "$inputs.game_short_name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "message_id": "$response.body#/message_id",
+            "chat_id": "$response.body#/chat_id"
+          }
+        },
+        {
+          "stepId": "set-game-score",
+          "description": "Sets the score of a specified user in a game.",
+          "operationPath": "openapi_source#/paths/~1setGameScore/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "chat_id": "$steps.send-game-message.outputs.chat_id",
+              "message_id": "$steps.send-game-message.outputs.message_id",
+              "user_id": "$inputs.user_id",
+              "score": "$inputs.score"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "set_score_status": "$response.body#/set_score_status"
+          }
+        },
+        {
+          "stepId": "get-game-high-scores",
+          "description": "Retrieves data for the high score table of a game, including the specified user's score and their neighbors.",
+          "operationPath": "openapi_source#/paths/~1getGameHighScores/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "chat_id": "$steps.send-game-message.outputs.chat_id",
+              "message_id": "$steps.send-game-message.outputs.message_id",
+              "user_id": "$inputs.user_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "high_scores": "$response.body#/high_scores"
+          }
+        }
+      ],
+      "outputs": {
+        "message_id": "$steps.send-game-message.outputs.message_id",
+        "chat_id": "$steps.send-game-message.outputs.chat_id",
+        "set_score_status": "$steps.set-game-score.outputs.set_score_status",
+        "high_scores": "$steps.get-game-high-scores.outputs.high_scores"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
