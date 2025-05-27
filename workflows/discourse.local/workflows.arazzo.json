@@ -1,0 +1,1363 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/discourse.local/main/latest/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "admin-user-account-status-management",
+      "summary": "Allows administrators to manage a user's account status, including retrieving user details, activating, deactivating, suspending, or silencing their account. This is crucial for moderation and user lifecycle management.",
+      "description": "Allows administrators to manage a user's account status, including retrieving user details, activating, deactivating, suspending, or silencing their account. This is crucial for moderation and user lifecycle management.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "suspend_until": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "silenced_till": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-user-details-admin",
+          "description": "Retrieves detailed information about a specific user by their ID, including their current status.",
+          "operationId": "adminGetUser",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/groups/0/id",
+            "username": "$response.body#/username",
+            "active": "$response.body#/active",
+            "suspended_by": "$response.body#/suspended_by",
+            "silenced_by": "$response.body#/silenced_by"
+          }
+        },
+        {
+          "stepId": "activate-user",
+          "description": "Activates a user account.",
+          "operationId": "activateUser",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-user-details-admin.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "success": "$response.body#/success"
+          }
+        },
+        {
+          "stepId": "deactivate-user",
+          "description": "Deactivates a user account.",
+          "operationId": "deactivateUser",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-user-details-admin.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "success": "$response.body#/success"
+          }
+        },
+        {
+          "stepId": "suspend-user",
+          "description": "Suspends a user account for a specified period with a reason.",
+          "operationId": "suspendUser",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-user-details-admin.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.get-user-details-admin.outputs.id",
+              "suspend_until": "$inputs.suspend_until",
+              "reason": "$inputs.reason"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "suspension.suspend_reason": "$response.body#/suspension.suspend_reason",
+            "suspension.suspended_till": "$response.body#/suspension.suspended_till"
+          }
+        },
+        {
+          "stepId": "silence-user",
+          "description": "Silences a user account for a specified period with a reason, preventing them from posting.",
+          "operationId": "silenceUser",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-user-details-admin.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.get-user-details-admin.outputs.id",
+              "silenced_till": "$inputs.silenced_till",
+              "reason": "$inputs.reason"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "silence.silenced": "$response.body#/silence.silenced",
+            "silence.silenced_till": "$response.body#/silence.silenced_till"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.get-user-details-admin.outputs.id",
+        "username": "$steps.get-user-details-admin.outputs.username",
+        "active": "$steps.get-user-details-admin.outputs.active",
+        "suspended_by": "$steps.get-user-details-admin.outputs.suspended_by",
+        "silenced_by": "$steps.get-user-details-admin.outputs.silenced_by",
+        "success": "$steps.deactivate-user.outputs.success",
+        "suspension.suspend_reason": "$steps.suspend-user.outputs.suspension.suspend_reason",
+        "suspension.suspended_till": "$steps.suspend-user.outputs.suspension.suspended_till",
+        "silence.silenced": "$steps.silence-user.outputs.silence.silenced",
+        "silence.silenced_till": "$steps.silence-user.outputs.silence.silenced_till"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "user-onboarding-and-group-assignment",
+      "summary": "Automate the process of creating a new user account and then assigning them to one or more existing groups for role-based access or community segmentation. This streamlines user setup for administrators.",
+      "description": "Automate the process of creating a new user account and then assigning them to one or more existing groups for role-based access or community segmentation. This streamlines user setup for administrators.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Api-Key": {
+            "type": "string"
+          },
+          "Api-Username": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-user-account",
+          "description": "Creates a new user account with specified details.",
+          "operationId": "createUser",
+          "parameters": [
+            {
+              "name": "Api-Key",
+              "in": "header",
+              "value": "$inputs.Api-Key"
+            },
+            {
+              "name": "Api-Username",
+              "in": "header",
+              "value": "$inputs.Api-Username"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name",
+              "email": "$inputs.email",
+              "password": "$inputs.password",
+              "username": "$inputs.username"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_id": "$response.body#/user_id",
+            "username": "$response.body#/username",
+            "success": "$response.body#/success",
+            "active": "$response.body#/active"
+          }
+        },
+        {
+          "stepId": "add-user-to-group",
+          "description": "Adds the newly created user to a specified group.",
+          "operationId": "addGroupMembers",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "usernames": "$steps.create-user-account.outputs.username"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "success": "$response.body#/success",
+            "usernames": "$response.body#/usernames",
+            "emails": "$response.body#/emails"
+          }
+        }
+      ],
+      "outputs": {
+        "user_id": "$steps.create-user-account.outputs.user_id",
+        "username": "$steps.create-user-account.outputs.username",
+        "success": "$steps.add-user-to-group.outputs.success",
+        "active": "$steps.create-user-account.outputs.active",
+        "usernames": "$steps.add-user-to-group.outputs.usernames",
+        "emails": "$steps.add-user-to-group.outputs.emails"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-group-membership-lifecycle",
+      "summary": "Provides a comprehensive workflow for creating a new user group, adding members, listing current members, and subsequently removing members, enabling dynamic community organization.",
+      "description": "Provides a comprehensive workflow for creating a new user group, adding members, listing current members, and subsequently removing members, enabling dynamic community organization.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-new-group_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          },
+          "usernames": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-new-group",
+          "description": "Creates a new user group with specified properties.",
+          "operationId": "createGroup",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-new-group_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "basic_group.id": "$response.body#/basic_group",
+            "basic_group.name": "$response.body#/basic_group.name"
+          }
+        },
+        {
+          "stepId": "add-members-to-group",
+          "description": "Adds specified users to the newly created group.",
+          "operationId": "addGroupMembers",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "usernames": "$inputs.usernames"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "success": "$response.body#/success",
+            "usernames": "$response.body#/usernames",
+            "emails": "$response.body#/emails"
+          }
+        },
+        {
+          "stepId": "list-group-members",
+          "description": "Lists all members and owners of the group.",
+          "operationId": "listGroupMembers",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "members": "$response.body#/members",
+            "owners": "$response.body#/owners",
+            "meta.total": "$response.body#/meta.total"
+          }
+        },
+        {
+          "stepId": "remove-members-from-group",
+          "description": "Removes specified users from the group.",
+          "operationId": "removeGroupMembers",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "usernames": "$inputs.usernames"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "success": "$response.body#/success",
+            "usernames": "$response.body#/usernames",
+            "skipped_usernames": "$response.body#/skipped_usernames"
+          }
+        }
+      ],
+      "outputs": {
+        "basic_group.id": "$steps.create-new-group.outputs.basic_group.id",
+        "basic_group.name": "$steps.create-new-group.outputs.basic_group.name",
+        "success": "$steps.remove-members-from-group.outputs.success",
+        "usernames": "$steps.remove-members-from-group.outputs.usernames",
+        "emails": "$steps.add-members-to-group.outputs.emails",
+        "members": "$steps.list-group-members.outputs.members",
+        "owners": "$steps.list-group-members.outputs.owners",
+        "meta.total": "$steps.list-group-members.outputs.meta.total",
+        "skipped_usernames": "$steps.remove-members-from-group.outputs.skipped_usernames"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-and-manage-discussion-topic",
+      "summary": "Facilitates the creation of a new discussion topic within a specific category and subsequent management of its visibility and status (e.g., pinning, closing, archiving).",
+      "description": "Facilitates the creation of a new discussion topic within a specific category and subsequent management of its visibility and status (e.g., pinning, closing, archiving).",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "include_subcategories": {
+            "type": "string"
+          },
+          "raw": {
+            "type": "string"
+          },
+          "Api-Key": {
+            "type": "string"
+          },
+          "Api-Username": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-categories",
+          "description": "Retrieves a list of available categories to choose from for the new topic.",
+          "operationId": "listCategories",
+          "parameters": [
+            {
+              "name": "include_subcategories",
+              "in": "query",
+              "value": "$inputs.include_subcategories"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "category_list.categories": "$response.body#/category_list.categories"
+          }
+        },
+        {
+          "stepId": "create-topic",
+          "description": "Creates a new topic with an initial post in the chosen category.",
+          "operationId": "createTopicPostPM",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "raw": "$inputs.raw"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "topic_id": "$response.body#/topic_id",
+            "topic_slug": "$response.body#/topic_slug",
+            "id": "$response.body#/actions_summary/0/id"
+          }
+        },
+        {
+          "stepId": "update-topic-status",
+          "description": "Updates the status of the newly created topic (e.g., closed, pinned, archived).",
+          "operationId": "updateTopicStatus",
+          "parameters": [
+            {
+              "name": "Api-Key",
+              "in": "header",
+              "value": "$inputs.Api-Key"
+            },
+            {
+              "name": "Api-Username",
+              "in": "header",
+              "value": "$inputs.Api-Username"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "status": "$inputs.status",
+              "enabled": "$inputs.enabled"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "success": "$response.body#/success",
+            "topic_status_update": "$response.body#/topic_status_update"
+          }
+        }
+      ],
+      "outputs": {
+        "category_list.categories": "$steps.list-categories.outputs.category_list.categories",
+        "topic_id": "$steps.create-topic.outputs.topic_id",
+        "topic_slug": "$steps.create-topic.outputs.topic_slug",
+        "id": "$steps.create-topic.outputs.id",
+        "success": "$steps.update-topic-status.outputs.success",
+        "topic_status_update": "$steps.update-topic-status.outputs.topic_status_update"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "user-profile-update",
+      "summary": "Enables a user or administrator to retrieve a user's profile information and then update various aspects such as their name, email, username, or avatar, providing comprehensive profile management.",
+      "description": "Enables a user or administrator to retrieve a user's profile information and then update various aspects such as their name, email, username, or avatar, providing comprehensive profile management.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Api-Key": {
+            "type": "string"
+          },
+          "Api-Username": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "external_ids": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "new_username": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "upload_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-user-profile",
+          "description": "Retrieves the current profile details for a specified user.",
+          "operationId": "getUser",
+          "parameters": [
+            {
+              "name": "Api-Key",
+              "in": "header",
+              "value": "$inputs.Api-Key"
+            },
+            {
+              "name": "Api-Username",
+              "in": "header",
+              "value": "$inputs.Api-Username"
+            },
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user.id": "$response.body#/user/user_option/user_id",
+            "user.username": "$response.body#/user.username",
+            "user.name": "$response.body#/user/username",
+            "user.avatar_template": "$response.body#/user/system_avatar_template"
+          }
+        },
+        {
+          "stepId": "update-user-details",
+          "description": "Updates general user details like their display name.",
+          "operationId": "updateUser",
+          "parameters": [
+            {
+              "name": "Api-Key",
+              "in": "header",
+              "value": "$inputs.Api-Key"
+            },
+            {
+              "name": "Api-Username",
+              "in": "header",
+              "value": "$inputs.Api-Username"
+            },
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name",
+              "external_ids": "$inputs.external_ids"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "success": "$response.body#/success",
+            "user": "$response.body#/user"
+          }
+        },
+        {
+          "stepId": "update-user-email",
+          "description": "Updates the user's email address.",
+          "operationId": "updateEmail",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "email": "$inputs.email"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "success": "$response.body#/success"
+          }
+        },
+        {
+          "stepId": "update-user-username",
+          "description": "Changes the user's username.",
+          "operationId": "updateUsername",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "new_username": "$inputs.new_username"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "success": "$response.body#/success"
+          }
+        },
+        {
+          "stepId": "create-user-avatar-upload",
+          "description": "Uploads a new file to be used as the user's avatar.",
+          "operationId": "createUpload",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "type": "$inputs.type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "url": "$response.body#/url",
+            "original_filename": "$response.body#/original_filename"
+          }
+        },
+        {
+          "stepId": "update-user-avatar",
+          "description": "Sets the uploaded file as the user's new avatar.",
+          "operationId": "updateAvatar",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "upload_id": "$inputs.upload_id",
+              "type": "$inputs.type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "success": "$response.body#/success"
+          }
+        }
+      ],
+      "outputs": {
+        "user.id": "$steps.get-user-profile.outputs.user.id",
+        "user.username": "$steps.get-user-profile.outputs.user.username",
+        "user.name": "$steps.get-user-profile.outputs.user.name",
+        "user.avatar_template": "$steps.get-user-profile.outputs.user.avatar_template",
+        "success": "$steps.update-user-avatar.outputs.success",
+        "user": "$steps.update-user-details.outputs.user",
+        "id": "$steps.create-user-avatar-upload.outputs.id",
+        "url": "$steps.create-user-avatar-upload.outputs.url",
+        "original_filename": "$steps.create-user-avatar-upload.outputs.original_filename"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "direct-external-file-upload-single-part",
+      "summary": "Orchestrates a direct file upload to an external storage provider (e.g., AWS S3) for a single file. This workflow involves generating a presigned URL for the upload and then completing the upload process within Discourse after the file transfer is done externally.",
+      "description": "Orchestrates a direct file upload to an external storage provider (e.g., AWS S3) for a single file. This workflow involves generating a presigned URL for the upload and then completing the upload process within Discourse after the file transfer is done externally.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "file_name": {
+            "type": "string"
+          },
+          "file_size": {
+            "type": "string"
+          },
+          "unique_identifier": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "generate-presigned-url",
+          "description": "Generates a presigned URL for directly uploading a file to an external storage service.",
+          "operationId": "generatePresignedPut",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "type": "$inputs.type",
+              "file_name": "$inputs.file_name",
+              "file_size": "$inputs.file_size"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "key": "$response.body#/key",
+            "url": "$response.body#/url",
+            "signed_headers": "$response.body#/signed_headers",
+            "unique_identifier": "$response.body#/unique_identifier"
+          }
+        },
+        {
+          "stepId": "complete-external-upload",
+          "description": "Completes the external upload process, registering the file in Discourse after it has been uploaded to the external service.",
+          "operationId": "completeExternalUpload",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "unique_identifier": "$inputs.unique_identifier"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "url": "$response.body#/url",
+            "original_filename": "$response.body#/original_filename",
+            "filesize": "$response.body#/filesize"
+          }
+        }
+      ],
+      "outputs": {
+        "key": "$steps.generate-presigned-url.outputs.key",
+        "url": "$steps.complete-external-upload.outputs.url",
+        "signed_headers": "$steps.generate-presigned-url.outputs.signed_headers",
+        "unique_identifier": "$steps.generate-presigned-url.outputs.unique_identifier",
+        "id": "$steps.complete-external-upload.outputs.id",
+        "original_filename": "$steps.complete-external-upload.outputs.original_filename",
+        "filesize": "$steps.complete-external-upload.outputs.filesize"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "private-message-communication",
+      "summary": "Enables users to send private messages to other individuals or groups and then retrieve lists of their received and sent private messages, facilitating direct communication within the platform.",
+      "description": "Enables users to send private messages to other individuals or groups and then retrieve lists of their received and sent private messages, facilitating direct communication within the platform.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "raw": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "send-private-message",
+          "description": "Creates a new private message to specified recipients.",
+          "operationId": "createTopicPostPM",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "raw": "$inputs.raw"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/actions_summary/0/id",
+            "topic_id": "$response.body#/topic_id",
+            "topic_slug": "$response.body#/topic_slug"
+          }
+        },
+        {
+          "stepId": "list-received-private-messages",
+          "description": "Retrieves a list of private messages received by a user.",
+          "operationId": "listUserPrivateMessages",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "topic_list.topics": "$response.body#/topic_list.topics"
+          }
+        },
+        {
+          "stepId": "list-sent-private-messages",
+          "description": "Retrieves a list of private messages sent by a user.",
+          "operationId": "getUserSentPrivateMessages",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "value": "$inputs.username"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "topic_list.topics": "$response.body#/topic_list.topics"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.send-private-message.outputs.id",
+        "topic_id": "$steps.send-private-message.outputs.topic_id",
+        "topic_slug": "$steps.send-private-message.outputs.topic_slug",
+        "topic_list.topics": "$steps.list-sent-private-messages.outputs.topic_list.topics"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "site-backup-management",
+      "summary": "Allows administrators to initiate a new site backup and retrieve a list of existing backups, providing essential tools for data recovery and maintenance.",
+      "description": "Allows administrators to initiate a new site backup and retrieve a list of existing backups, providing essential tools for data recovery and maintenance.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "with_uploads": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-site-backup",
+          "description": "Initiates the creation of a new site backup.",
+          "operationId": "createBackup",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "with_uploads": "$inputs.with_uploads"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "success": "$response.body#/success"
+          }
+        },
+        {
+          "stepId": "list-site-backups",
+          "description": "Retrieves a list of all available site backups.",
+          "operationId": "getBackups",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "backups": "$response.body#/0/backups"
+          }
+        }
+      ],
+      "outputs": {
+        "success": "$steps.create-site-backup.outputs.success",
+        "backups": "$steps.list-site-backups.outputs.backups"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "search-and-content-retrieval",
+      "summary": "Allows users to search for content (posts, topics, users, categories, tags, groups) using various query parameters and then retrieve the full details of a specific post or topic found in the search results.",
+      "description": "Allows users to search for content (posts, topics, users, categories, tags, groups) using various query parameters and then retrieve the full details of a specific post or topic found in the search results.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "Api-Key": {
+            "type": "string"
+          },
+          "Api-Username": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "perform-search",
+          "description": "Executes a search query across the forum content.",
+          "operationId": "search",
+          "parameters": [
+            {
+              "name": "q",
+              "in": "query",
+              "value": "$inputs.q"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "grouped_search_result.post_ids": "$response.body#/grouped_search_result.post_ids",
+            "grouped_search_result.user_ids": "$response.body#/grouped_search_result.user_ids",
+            "grouped_search_result.category_ids": "$response.body#/grouped_search_result.category_ids",
+            "grouped_search_result.tag_ids": "$response.body#/grouped_search_result",
+            "grouped_search_result.group_ids": "$response.body#/grouped_search_result.group_ids"
+          }
+        },
+        {
+          "stepId": "get-post-details",
+          "description": "Retrieves the full content and details of a specific post identified from the search results.",
+          "operationId": "getPost",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/actions_summary/0/id",
+            "cooked": "$response.body#/cooked",
+            "topic_id": "$response.body#/topic_id",
+            "post_url": "$response.body#/post_url"
+          }
+        },
+        {
+          "stepId": "get-topic-details",
+          "description": "Retrieves the full content and details of a specific topic identified from the search results or a post's topic ID.",
+          "operationId": "getTopic",
+          "parameters": [
+            {
+              "name": "Api-Key",
+              "in": "header",
+              "value": "$inputs.Api-Key"
+            },
+            {
+              "name": "Api-Username",
+              "in": "header",
+              "value": "$inputs.Api-Username"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/details/last_poster/id",
+            "title": "$response.body#/title",
+            "posts_count": "$response.body#/posts_count",
+            "post_stream.posts": "$response.body#/post_stream.posts"
+          }
+        }
+      ],
+      "outputs": {
+        "grouped_search_result.post_ids": "$steps.perform-search.outputs.grouped_search_result.post_ids",
+        "grouped_search_result.user_ids": "$steps.perform-search.outputs.grouped_search_result.user_ids",
+        "grouped_search_result.category_ids": "$steps.perform-search.outputs.grouped_search_result.category_ids",
+        "grouped_search_result.tag_ids": "$steps.perform-search.outputs.grouped_search_result.tag_ids",
+        "grouped_search_result.group_ids": "$steps.perform-search.outputs.grouped_search_result.group_ids",
+        "id": "$steps.get-topic-details.outputs.id",
+        "cooked": "$steps.get-post-details.outputs.cooked",
+        "topic_id": "$steps.get-post-details.outputs.topic_id",
+        "post_url": "$steps.get-post-details.outputs.post_url",
+        "title": "$steps.get-topic-details.outputs.title",
+        "posts_count": "$steps.get-topic-details.outputs.posts_count",
+        "post_stream.posts": "$steps.get-topic-details.outputs.post_stream.posts"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "badge-creation-and-update",
+      "summary": "Enables administrators to create new badges and subsequently modify their properties, supporting the gamification and recognition system of the forum.",
+      "description": "Enables administrators to create new badges and subsequently modify their properties, supporting the gamification and recognition system of the forum.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "badge_type_id": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-new-badge",
+          "description": "Creates a new badge with a specified name and type.",
+          "operationId": "createBadge",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name",
+              "badge_type_id": "$inputs.badge_type_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "badge.id": "$response.body#/badge.id",
+            "badge.name": "$response.body#/badge.name"
+          }
+        },
+        {
+          "stepId": "update-existing-badge",
+          "description": "Updates the name or type of an existing badge.",
+          "operationId": "updateBadge",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name",
+              "badge_type_id": "$inputs.badge_type_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "badge.id": "$response.body#/badge.id",
+            "badge.name": "$response.body#/badge.name"
+          }
+        }
+      ],
+      "outputs": {
+        "badge.id": "$steps.update-existing-badge.outputs.badge.id",
+        "badge.name": "$steps.update-existing-badge.outputs.badge.name"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
