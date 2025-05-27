@@ -1,0 +1,1906 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/callfire.com/main/V2/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "create-and-launch-voice-broadcast-campaign",
+      "summary": "This workflow enables a user to create a new voice broadcast campaign, define its message using text-to-speech, add recipients, and then initiate the campaign.",
+      "description": "This workflow enables a user to create a new voice broadcast campaign, define its message using text-to-speech, add recipients, and then initiate the campaign.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "voice": {
+            "type": "string"
+          },
+          "contactIds": {
+            "type": "string"
+          },
+          "contactNumbers": {
+            "type": "string"
+          },
+          "contacts": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string"
+          },
+          "strictValidation": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "scrubDuplicates": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-tts-sound",
+          "description": "Converts provided text into an audio file for use in campaigns. This sound will be used as the live and machine message.",
+          "operationId": "postTTSCampaignSound",
+          "parameters": [
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "message": "$inputs.message",
+              "voice": "$inputs.voice"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "create-contact-list",
+          "description": "Creates a new contact list from a list of contacts or numbers to be used as campaign recipients.",
+          "operationId": "createContactList",
+          "parameters": [
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "contactIds": "$inputs.contactIds",
+              "contactNumbers": "$inputs.contactNumbers",
+              "contacts": "$inputs.contacts",
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "create-call-broadcast",
+          "description": "Defines the core properties of the voice broadcast campaign, including the sounds to be played.",
+          "operationId": "createCallBroadcast",
+          "parameters": [
+            {
+              "name": "start",
+              "in": "query",
+              "value": "$inputs.start"
+            },
+            {
+              "name": "strictValidation",
+              "in": "query",
+              "value": "$inputs.strictValidation"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "add-call-broadcast-batch",
+          "description": "Associates the created contact list as a batch to the voice broadcast campaign.",
+          "operationId": "addCallBroadcastBatch",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-call-broadcast.outputs.id"
+            },
+            {
+              "name": "strictValidation",
+              "in": "query",
+              "value": "$inputs.strictValidation"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.create-call-broadcast.outputs.id",
+              "contactListId": "$steps.create-contact-list.outputs.id",
+              "name": "$inputs.name",
+              "scrubDuplicates": "$inputs.scrubDuplicates"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "start-voice-broadcast",
+          "description": "Activates the voice broadcast campaign to begin dialing recipients.",
+          "operationId": "startVoiceBroadcast",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-call-broadcast.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        }
+      ],
+      "outputs": {
+        "id": "$steps.add-call-broadcast-batch.outputs.id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "purchase-and-configure-local-number-with-ivr",
+      "summary": "This workflow allows a user to search for available local phone numbers, purchase one, and then set up an IVR (Interactive Voice Response) configuration for inbound calls to that number.",
+      "description": "This workflow allows a user to search for available local phone numbers, purchase one, and then set up an IVR (Interactive Voice Response) configuration for inbound calls to that number.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "string"
+          },
+          "prefix": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "zipcode": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "string"
+          },
+          "authorizePaymentOnly": {
+            "type": "string"
+          },
+          "localCount": {
+            "type": "string"
+          },
+          "promo": {
+            "type": "string"
+          },
+          "tollFreeCount": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "number": {
+            "type": "string"
+          },
+          "configType": {
+            "type": "string"
+          },
+          "ivrInboundConfig": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-local-numbers",
+          "description": "Finds local phone numbers available for purchase based on specified region criteria.",
+          "operationId": "findNumbersLocal",
+          "parameters": [
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "prefix",
+              "in": "query",
+              "value": "$inputs.prefix"
+            },
+            {
+              "name": "city",
+              "in": "query",
+              "value": "$inputs.city"
+            },
+            {
+              "name": "state",
+              "in": "query",
+              "value": "$inputs.state"
+            },
+            {
+              "name": "zipcode",
+              "in": "query",
+              "value": "$inputs.zipcode"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "items": "$response.body#/items"
+          }
+        },
+        {
+          "stepId": "order-numbers",
+          "description": "Purchases one or more selected phone numbers using CallFire credits.",
+          "operationId": "orderNumbers",
+          "parameters": [
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "numbers": "$steps.find-local-numbers.outputs.items[0].number",
+              "authorizePaymentOnly": "$inputs.authorizePaymentOnly",
+              "city": "$inputs.city",
+              "localCount": "$inputs.localCount",
+              "prefix": "$inputs.prefix",
+              "promo": "$inputs.promo",
+              "state": "$inputs.state",
+              "tollFreeCount": "$inputs.tollFreeCount",
+              "zipcode": "$inputs.zipcode"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "get-order-status",
+          "description": "Retrieves the details and status of the number purchase order to confirm fulfillment.",
+          "operationId": "getOrder",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.order-numbers.outputs.id"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status",
+            "localNumbers": "$response.body#/localNumbers"
+          }
+        },
+        {
+          "stepId": "update-number-lease-config-ivr",
+          "description": "Applies an IVR configuration to the newly purchased phone number.",
+          "operationId": "updateNumberLeaseConfig",
+          "parameters": [
+            {
+              "name": "number",
+              "in": "path",
+              "value": "$steps.get-order-status.outputs.localNumbers.fulfilled[0]"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "number": "$steps.get-order-status.outputs.localNumbers.fulfilled[0]",
+              "configType": "$inputs.configType",
+              "ivrInboundConfig": "$inputs.ivrInboundConfig"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        }
+      ],
+      "outputs": {
+        "items": "$steps.find-local-numbers.outputs.items",
+        "id": "$steps.order-numbers.outputs.id",
+        "status": "$steps.get-order-status.outputs.status",
+        "localNumbers": "$steps.get-order-status.outputs.localNumbers"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-and-list-api-credentials",
+      "summary": "This workflow allows an account holder to generate new API credentials and then retrieve a list of all existing API credentials for their account.",
+      "description": "This workflow allows an account holder to generate new API credentials and then retrieve a list of all existing API credentials for their account.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-api-credential",
+          "description": "Generates a new API username and password for account access.",
+          "operationId": "createApiCredential",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "username": "$response.body#/username",
+            "password": "$response.body#/password"
+          }
+        },
+        {
+          "stepId": "find-api-credentials",
+          "description": "Retrieves a paginated list of all API credentials associated with the account.",
+          "operationId": "findApiCredentials",
+          "parameters": [
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "items": "$response.body#/items"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-api-credential.outputs.id",
+        "username": "$steps.create-api-credential.outputs.username",
+        "password": "$steps.create-api-credential.outputs.password",
+        "items": "$steps.find-api-credentials.outputs.items"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "send-individual-texts-and-monitor-delivery",
+      "summary": "This workflow enables sending direct text messages to one or more recipients and subsequently retrieving detailed delivery reports for these messages.",
+      "description": "This workflow enables sending direct text messages to one or more recipients and subsequently retrieving detailed delivery reports for these messages.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "string"
+          },
+          "campaignId": {
+            "type": "string"
+          },
+          "defaultMessage": {
+            "type": "string"
+          },
+          "strictValidation": {
+            "type": "string"
+          },
+          "send-texts_body": {
+            "type": "object"
+          },
+          "startDate": {
+            "type": "string"
+          },
+          "endDate": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "fromNumber": {
+            "type": "string"
+          },
+          "toNumber": {
+            "type": "string"
+          },
+          "deliveryCategory": {
+            "type": "string"
+          },
+          "deliveryState": {
+            "type": "string"
+          },
+          "carrier": {
+            "type": "string"
+          },
+          "messageText": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "send-texts",
+          "description": "Sends individual text messages to specified recipients.",
+          "operationId": "sendTexts",
+          "parameters": [
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            },
+            {
+              "name": "campaignId",
+              "in": "query",
+              "value": "$inputs.campaignId"
+            },
+            {
+              "name": "defaultMessage",
+              "in": "query",
+              "value": "$inputs.defaultMessage"
+            },
+            {
+              "name": "strictValidation",
+              "in": "query",
+              "value": "$inputs.strictValidation"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.send-texts_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "items": "$response.body#/items"
+          }
+        },
+        {
+          "stepId": "get-delivery-reports",
+          "description": "Fetches delivery status and details for the sent text messages, filtering by campaign ID.",
+          "operationId": "getDeliveryReports",
+          "parameters": [
+            {
+              "name": "startDate",
+              "in": "query",
+              "value": "$inputs.startDate"
+            },
+            {
+              "name": "endDate",
+              "in": "query",
+              "value": "$inputs.endDate"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "campaignId",
+              "in": "query",
+              "value": "$steps.send-texts.outputs.items.campaignId"
+            },
+            {
+              "name": "fromNumber",
+              "in": "query",
+              "value": "$inputs.fromNumber"
+            },
+            {
+              "name": "toNumber",
+              "in": "query",
+              "value": "$inputs.toNumber"
+            },
+            {
+              "name": "deliveryCategory",
+              "in": "query",
+              "value": "$inputs.deliveryCategory"
+            },
+            {
+              "name": "deliveryState",
+              "in": "query",
+              "value": "$inputs.deliveryState"
+            },
+            {
+              "name": "carrier",
+              "in": "query",
+              "value": "$inputs.carrier"
+            },
+            {
+              "name": "messageText",
+              "in": "query",
+              "value": "$inputs.messageText"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "items": "$response.body#/items"
+          }
+        }
+      ],
+      "outputs": {
+        "items": "$steps.get-delivery-reports.outputs.items"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "verify-caller-id",
+      "summary": "This workflow guides a user through the process of verifying a phone number to be used as a caller ID for outbound calls, ensuring compliance and proper identification.",
+      "description": "This workflow guides a user through the process of verifying a phone number to be used as a caller ID for outbound calls, ensuring compliance and proper identification.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "callerid": {
+            "type": "string"
+          },
+          "verificationCode": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "send-verification-code",
+          "description": "Initiates the caller ID verification process by sending a code to the specified phone number via a call.",
+          "operationId": "sendVerificationCodeToCallerId",
+          "parameters": [
+            {
+              "name": "callerid",
+              "in": "path",
+              "value": "$inputs.callerid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "verify-caller-id",
+          "description": "Completes the caller ID verification by submitting the received code.",
+          "operationId": "verifyCallerId",
+          "parameters": [
+            {
+              "name": "callerid",
+              "in": "path",
+              "value": "$steps.send-verification-code.outputs.callerid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "callerid": "$steps.send-verification-code.outputs.callerid",
+              "verificationCode": "$inputs.verificationCode"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "verified": "$response.body#/verified"
+          }
+        }
+      ],
+      "outputs": {
+        "verified": "$steps.verify-caller-id.outputs.verified"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "monitor-voice-broadcast-campaign-performance",
+      "summary": "This workflow allows a user to retrieve detailed statistics for a specific voice broadcast campaign, including call counts, costs, and results.",
+      "description": "This workflow allows a user to retrieve detailed statistics for a specific voice broadcast campaign, including call counts, costs, and results.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "running": {
+            "type": "string"
+          },
+          "scheduled": {
+            "type": "string"
+          },
+          "intervalBegin": {
+            "type": "string"
+          },
+          "intervalEnd": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "begin": {
+            "type": "string"
+          },
+          "end": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-call-broadcasts",
+          "description": "Searches for voice broadcast campaigns to identify the target campaign by name or label.",
+          "operationId": "findCallBroadcasts",
+          "parameters": [
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "label",
+              "in": "query",
+              "value": "$inputs.label"
+            },
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "running",
+              "in": "query",
+              "value": "$inputs.running"
+            },
+            {
+              "name": "scheduled",
+              "in": "query",
+              "value": "$inputs.scheduled"
+            },
+            {
+              "name": "intervalBegin",
+              "in": "query",
+              "value": "$inputs.intervalBegin"
+            },
+            {
+              "name": "intervalEnd",
+              "in": "query",
+              "value": "$inputs.intervalEnd"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "items": "$response.body#/items"
+          }
+        },
+        {
+          "stepId": "get-call-broadcast-stats",
+          "description": "Retrieves comprehensive performance statistics for the selected voice broadcast campaign.",
+          "operationId": "getCallBroadcastStats",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.find-call-broadcasts.outputs.items.id"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            },
+            {
+              "name": "begin",
+              "in": "query",
+              "value": "$inputs.begin"
+            },
+            {
+              "name": "end",
+              "in": "query",
+              "value": "$inputs.end"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "billedAmount": "$response.body#/billedAmount",
+            "callsAttempted": "$response.body#/callsAttempted",
+            "callsLiveAnswer": "$response.body#/callsLiveAnswer",
+            "errorCount": "$response.body#/errorCount"
+          }
+        }
+      ],
+      "outputs": {
+        "items": "$steps.find-call-broadcasts.outputs.items",
+        "billedAmount": "$steps.get-call-broadcast-stats.outputs.billedAmount",
+        "callsAttempted": "$steps.get-call-broadcast-stats.outputs.callsAttempted",
+        "callsLiveAnswer": "$steps.get-call-broadcast-stats.outputs.callsLiveAnswer",
+        "errorCount": "$steps.get-call-broadcast-stats.outputs.errorCount"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-contacts-in-existing-list",
+      "summary": "This workflow enables a user to add new contacts to an existing contact list and subsequently remove specific contacts from that list.",
+      "description": "This workflow enables a user to add new contacts to an existing contact list and subsequently remove specific contacts from that list.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "exactMatch": {
+            "type": "string"
+          },
+          "contactCount": {
+            "type": "string"
+          },
+          "orderBy": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "contactIds": {
+            "type": "string"
+          },
+          "contactNumbers": {
+            "type": "string"
+          },
+          "contacts": {
+            "type": "string"
+          },
+          "useCustomFields": {
+            "type": "string"
+          },
+          "contactId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-contact-lists",
+          "description": "Searches for a contact list to identify the target list for modification.",
+          "operationId": "findContactLists",
+          "parameters": [
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "exactMatch",
+              "in": "query",
+              "value": "$inputs.exactMatch"
+            },
+            {
+              "name": "contactCount",
+              "in": "query",
+              "value": "$inputs.contactCount"
+            },
+            {
+              "name": "orderBy",
+              "in": "query",
+              "value": "$inputs.orderBy"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "items": "$response.body#/items"
+          }
+        },
+        {
+          "stepId": "add-contact-list-items",
+          "description": "Adds new contacts (by ID, number, or object) to the specified contact list.",
+          "operationId": "addContactListItems",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.find-contact-lists.outputs.items.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.find-contact-lists.outputs.items[0].id",
+              "contactIds": "$inputs.contactIds",
+              "contactNumbers": "$inputs.contactNumbers",
+              "contacts": "$inputs.contacts",
+              "useCustomFields": "$inputs.useCustomFields"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "get-contact-list-items",
+          "description": "Retrieves contacts within the specified contact list to identify those for potential removal.",
+          "operationId": "getContactListItems",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.find-contact-lists.outputs.items.id"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "items": "$response.body#/items"
+          }
+        },
+        {
+          "stepId": "remove-contact-list-items",
+          "description": "Deletes specified contacts from the contact list.",
+          "operationId": "removeContactListItems",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.find-contact-lists.outputs.items.id"
+            },
+            {
+              "name": "contactId",
+              "in": "query",
+              "value": "$steps.get-contact-list-items.outputs.items.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        }
+      ],
+      "outputs": {
+        "items": "$steps.get-contact-list-items.outputs.items"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-account-billing-and-credit-usage",
+      "summary": "This workflow provides a comprehensive overview of the user's CallFire account, including current billing plan usage and detailed credit consumption over time.",
+      "description": "This workflow provides a comprehensive overview of the user's CallFire account, including current billing plan usage and detailed credit consumption over time.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "intervalBegin": {
+            "type": "string"
+          },
+          "intervalEnd": {
+            "type": "string"
+          },
+          "rollupBinType": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-billing-plan-usage",
+          "description": "Retrieves details about the current billing plan and remaining credits.",
+          "operationId": "getBillingPlanUsage",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "remainingPlanCredits": "$response.body#/remainingPlanCredits",
+            "remainingPayAsYouGoCredits": "$response.body#/remainingPayAsYouGoCredits",
+            "totalRemainingCredits": "$response.body#/totalRemainingCredits"
+          }
+        },
+        {
+          "stepId": "get-credit-usage-total",
+          "description": "Fetches the total credit usage for a specified period or all time.",
+          "operationId": "getCreditUsageTotal",
+          "parameters": [
+            {
+              "name": "intervalBegin",
+              "in": "query",
+              "value": "$inputs.intervalBegin"
+            },
+            {
+              "name": "intervalEnd",
+              "in": "query",
+              "value": "$inputs.intervalEnd"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "creditsUsed": "$response.body#/creditsUsed",
+            "callsDurationMinutes": "$response.body#/callsDurationMinutes",
+            "textsSent": "$response.body#/textsSent"
+          }
+        },
+        {
+          "stepId": "get-credit-usage-grouped",
+          "description": "Provides a breakdown of credit usage grouped by a specified time interval (e.g., daily, weekly).",
+          "operationId": "getCreditUsageGrouped",
+          "parameters": [
+            {
+              "name": "rollupBinType",
+              "in": "path",
+              "value": "$inputs.rollupBinType"
+            },
+            {
+              "name": "intervalBegin",
+              "in": "query",
+              "value": "$inputs.intervalBegin"
+            },
+            {
+              "name": "intervalEnd",
+              "in": "query",
+              "value": "$inputs.intervalEnd"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "items": "$response.body#/0/items"
+          }
+        }
+      ],
+      "outputs": {
+        "remainingPlanCredits": "$steps.get-billing-plan-usage.outputs.remainingPlanCredits",
+        "remainingPayAsYouGoCredits": "$steps.get-billing-plan-usage.outputs.remainingPayAsYouGoCredits",
+        "totalRemainingCredits": "$steps.get-billing-plan-usage.outputs.totalRemainingCredits",
+        "creditsUsed": "$steps.get-credit-usage-total.outputs.creditsUsed",
+        "callsDurationMinutes": "$steps.get-credit-usage-total.outputs.callsDurationMinutes",
+        "textsSent": "$steps.get-credit-usage-total.outputs.textsSent",
+        "items": "$steps.get-credit-usage-grouped.outputs.items"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-and-list-webhooks",
+      "summary": "This workflow allows a user to create a new webhook to receive notifications for CallFire events and then retrieve a list of all configured webhooks.",
+      "description": "This workflow allows a user to create a new webhook to receive notifications for CallFire events and then retrieve a list of all configured webhooks.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "resource": {
+            "type": "string"
+          },
+          "event": {
+            "type": "string"
+          },
+          "callback": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-webhook-resources",
+          "description": "Discovers available webhook resources and the events that can trigger notifications.",
+          "operationId": "findWebhookResources",
+          "parameters": [
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "items": "$response.body#/items"
+          }
+        },
+        {
+          "stepId": "create-webhook",
+          "description": "Configures a new webhook to listen for specific events on a resource and send notifications to a callback URL.",
+          "operationId": "createWebhook",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "find-webhooks",
+          "description": "Retrieves a paginated list of all webhooks configured for the account.",
+          "operationId": "findWebhooks",
+          "parameters": [
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "resource",
+              "in": "query",
+              "value": "$inputs.resource"
+            },
+            {
+              "name": "event",
+              "in": "query",
+              "value": "$inputs.event"
+            },
+            {
+              "name": "callback",
+              "in": "query",
+              "value": "$inputs.callback"
+            },
+            {
+              "name": "enabled",
+              "in": "query",
+              "value": "$inputs.enabled"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "items": "$response.body#/items"
+          }
+        }
+      ],
+      "outputs": {
+        "items": "$steps.find-webhooks.outputs.items",
+        "id": "$steps.create-webhook.outputs.id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-api-credential-status",
+      "summary": "This workflow allows an account holder to enable or disable specific API credentials, controlling access to the CallFire API.",
+      "description": "This workflow allows an account holder to enable or disable specific API credentials, controlling access to the CallFire API.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-api-credentials-for-status-change",
+          "description": "Searches for an API credential by name to obtain its ID for status modification.",
+          "operationId": "findApiCredentials",
+          "parameters": [
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "items": "$response.body#/items"
+          }
+        },
+        {
+          "stepId": "disable-api-credential",
+          "description": "Deactivates an API credential, revoking its access.",
+          "operationId": "disableApiCredentials",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.find-api-credentials-for-status-change.outputs.items.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "enable-api-credential",
+          "description": "Reactivates a previously disabled API credential.",
+          "operationId": "enableApiCredentials",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.find-api-credentials-for-status-change.outputs.items.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        }
+      ],
+      "outputs": {
+        "items": "$steps.find-api-credentials-for-status-change.outputs.items"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "add-and-verify-do-not-contact-numbers",
+      "summary": "This workflow allows a user to add phone numbers to their account's Do Not Contact (DNC) list, preventing future calls or texts to these numbers, and then verify if a specific number is indeed on the DNC list.",
+      "description": "This workflow allows a user to add phone numbers to their account's Do Not Contact (DNC) list, preventing future calls or texts to these numbers, and then verify if a specific number is indeed on the DNC list.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "call": {
+            "type": "string"
+          },
+          "inboundCall": {
+            "type": "string"
+          },
+          "inboundText": {
+            "type": "string"
+          },
+          "numbers": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "number": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-do-not-contacts",
+          "description": "Adds a list of phone numbers to the account's DNC list for calls and/or texts.",
+          "operationId": "addDoNotContacts",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "call": "$inputs.call",
+              "inboundCall": "$inputs.inboundCall",
+              "inboundText": "$inputs.inboundText",
+              "numbers": "$inputs.numbers",
+              "source": "$inputs.source",
+              "text": "$inputs.text"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "get-do-not-contact",
+          "description": "Retrieves the DNC status for a specific phone number.",
+          "operationId": "getDoNotContact",
+          "parameters": [
+            {
+              "name": "number",
+              "in": "path",
+              "value": "$steps.add-do-not-contacts.outputs.numbers[0]"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "call": "$response.body#/call",
+            "text": "$response.body#/text",
+            "inboundCall": "$response.body#/inboundCall",
+            "inboundText": "$response.body#/inboundText"
+          }
+        }
+      ],
+      "outputs": {
+        "call": "$steps.get-do-not-contact.outputs.call",
+        "text": "$steps.get-do-not-contact.outputs.text",
+        "inboundCall": "$steps.get-do-not-contact.outputs.inboundCall",
+        "inboundText": "$steps.get-do-not-contact.outputs.inboundText"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "upload-and-download-media-file",
+      "summary": "This workflow enables users to upload media files (e.g., images for MMS) to their account and then retrieve or download these files.",
+      "description": "This workflow enables users to upload media files (e.g., images for MMS) to their account and then retrieve or download these files.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "string"
+          },
+          "extension": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-media",
+          "description": "Uploads a media file (e.g., image, audio) to the CallFire account.",
+          "operationId": "createMedia",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "get-media",
+          "description": "Retrieves metadata for a specific media file by its ID.",
+          "operationId": "getMedia",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-media.outputs.id"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "name": "$response.body#/name",
+            "mediaType": "$response.body#/mediaType"
+          }
+        },
+        {
+          "stepId": "download-media-data",
+          "description": "Downloads the actual media file content. The extension needs to be derived from the mediaType.",
+          "operationId": "getMediaData",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-media.outputs.id"
+            },
+            {
+              "name": "extension",
+              "in": "path",
+              "value": "$inputs.extension"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "file_content": "$response.body#/file_content"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.get-media.outputs.id",
+        "name": "$steps.get-media.outputs.name",
+        "mediaType": "$steps.get-media.outputs.mediaType",
+        "file_content": "$steps.download-media-data.outputs.file_content"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-and-retrieve-campaign-sounds",
+      "summary": "This workflow allows users to create new audio content for their campaigns using text-to-speech, and then retrieve and download these sounds.",
+      "description": "This workflow allows users to create new audio content for their campaigns using text-to-speech, and then retrieve and download these sounds.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "voice": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "post-tts-campaign-sound",
+          "description": "Converts provided text into an audio file for use in campaigns.",
+          "operationId": "postTTSCampaignSound",
+          "parameters": [
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "message": "$inputs.message",
+              "voice": "$inputs.voice"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "name": "$response.body#/name"
+          }
+        },
+        {
+          "stepId": "get-campaign-sound",
+          "description": "Retrieves metadata for a specific campaign sound by its ID.",
+          "operationId": "getCampaignSound",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.post-tts-campaign-sound.outputs.id"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "name": "$response.body#/name",
+            "status": "$response.body#/status"
+          }
+        },
+        {
+          "stepId": "get-campaign-sound-data-mp3",
+          "description": "Downloads the actual audio content of a campaign sound in MP3 format.",
+          "operationId": "getCampaignSoundDataMp3",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.post-tts-campaign-sound.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "file_content": "$response.body#/file_content"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.get-campaign-sound.outputs.id",
+        "name": "$steps.get-campaign-sound.outputs.name",
+        "status": "$steps.get-campaign-sound.outputs.status",
+        "file_content": "$steps.get-campaign-sound-data-mp3.outputs.file_content"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
