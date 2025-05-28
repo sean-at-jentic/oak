@@ -1,0 +1,1151 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/gettyimages.com/main/3/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "ai-image-generation-and-download",
+      "summary": "Generate a new image from a text prompt, monitor its generation status, retrieve available download sizes, and then initiate and get the download URL for the final image. This workflow demonstrates the full lifecycle of creating and acquiring an AI-generated image.",
+      "description": "Generate a new image from a text prompt, monitor its generation status, retrieve available download sizes, and then initiate and get the download URL for the final image. This workflow demonstrates the full lifecycle of creating and acquiring an AI-generated image.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string"
+          },
+          "aspect_ratio": {
+            "type": "string"
+          },
+          "media_type": {
+            "type": "string"
+          },
+          "mood": {
+            "type": "string"
+          },
+          "lens_type": {
+            "type": "string"
+          },
+          "depth_of_field": {
+            "type": "string"
+          },
+          "product_id": {
+            "type": "string"
+          },
+          "project_code": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "generationRequestId": {
+            "type": "string"
+          },
+          "index": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "generate-image",
+          "description": "Initiates the generation of an image based on a text prompt and other optional parameters. This call may return a pending request ID (HTTP 202) if generation takes time, or immediate results (HTTP 200).",
+          "operationPath": "openapi_source#/paths/~1v3~1ai~1image-generations/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "prompt": "$inputs.prompt",
+              "aspect_ratio": "$inputs.aspect_ratio",
+              "media_type": "$inputs.media_type",
+              "mood": "$inputs.mood",
+              "lens_type": "$inputs.lens_type",
+              "depth_of_field": "$inputs.depth_of_field",
+              "product_id": "$inputs.product_id",
+              "project_code": "$inputs.project_code",
+              "notes": "$inputs.notes"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "generation_request_id": "$response.body#/generation_request_id"
+          }
+        },
+        {
+          "stepId": "get-generated-image-status",
+          "description": "Polls this endpoint using the generation request ID obtained from the previous step until the image generation is complete (indicated by an HTTP 200 OK response) and the generated image results are available.",
+          "operationPath": "openapi_source#/paths/~1v3~1ai~1image-generations~1{generationRequestId}/get",
+          "parameters": [
+            {
+              "name": "generationRequestId",
+              "in": "path",
+              "value": "$steps.generate-image.outputs.generation_request_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "generation_request_id": "$response.body#/generation_request_id",
+            "results": "$response.body#/results"
+          }
+        },
+        {
+          "stepId": "get-generated-image-download-sizes",
+          "description": "Retrieves the available download sizes (e.g., 1k, 4k) for a specific generated image, identified by its generation request ID and index within the results.",
+          "operationPath": "openapi_source#/paths/~1v3~1ai~1image-generations~1{generationRequestId}~1images~1{index}~1download-sizes/get",
+          "parameters": [
+            {
+              "name": "generationRequestId",
+              "in": "path",
+              "value": "$steps.get-generated-image-status.outputs.generation_request_id"
+            },
+            {
+              "name": "index",
+              "in": "path",
+              "value": "$steps.get-generated-image-status.outputs.results.index"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "download_sizes": "$response.body#/download_sizes"
+          }
+        },
+        {
+          "stepId": "initiate-generated-image-download",
+          "description": "Begins the process of preparing a generated image for download at a specified size. This may return a pending status (HTTP 202) or an immediate download URL (HTTP 200).",
+          "operationPath": "openapi_source#/paths/~1v3~1ai~1image-generations~1{generationRequestId}~1images~1{index}~1download/put",
+          "parameters": [
+            {
+              "name": "generationRequestId",
+              "in": "path",
+              "value": "$inputs.generationRequestId"
+            },
+            {
+              "name": "index",
+              "in": "path",
+              "value": "$inputs.index"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "size_name": "$steps.get-generated-image-download-sizes.outputs.download_sizes[0].size_name",
+              "notes": "$inputs.notes",
+              "project_code": "$inputs.project_code",
+              "product_id": "$inputs.product_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "url": "$response.body#/url",
+            "generated_asset_id": "$response.body#/generated_asset_id"
+          }
+        },
+        {
+          "stepId": "get-generated-image-download-url",
+          "description": "Polls this endpoint until the direct download URL for the generated image is available (indicated by an HTTP 200 OK response).",
+          "operationPath": "openapi_source#/paths/~1v3~1ai~1image-generations~1{generationRequestId}~1images~1{index}~1download/get",
+          "parameters": [
+            {
+              "name": "generationRequestId",
+              "in": "path",
+              "value": "$inputs.generationRequestId"
+            },
+            {
+              "name": "index",
+              "in": "path",
+              "value": "$inputs.index"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "url": "$response.body#/url"
+          }
+        }
+      ],
+      "outputs": {
+        "generation_request_id": "$steps.get-generated-image-status.outputs.generation_request_id",
+        "results": "$steps.get-generated-image-status.outputs.results",
+        "download_sizes": "$steps.get-generated-image-download-sizes.outputs.download_sizes",
+        "url": "$steps.get-generated-image-download-url.outputs.url",
+        "generated_asset_id": "$steps.initiate-generated-image-download.outputs.generated_asset_id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "ai-image-refinement-and-download",
+      "summary": "This workflow allows users to upload a mask image, use it to refine an existing Getty or AI-generated image with a text prompt, monitor the refinement process, and then download the newly refined image.",
+      "description": "This workflow allows users to upload a mask image, use it to refine an existing Getty or AI-generated image with a text prompt, monitor the refinement process, and then download the newly refined image.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "file-name": {
+            "type": "string"
+          },
+          "upload-mask-image_body": {
+            "type": "object"
+          },
+          "generationRequestId": {
+            "type": "string"
+          },
+          "index": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "project_code": {
+            "type": "string"
+          },
+          "product_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "upload-mask-image",
+          "description": "Uploads a mask image file (JPEG) to Getty Images' temporary storage. The full URL of this uploaded file will be used in the subsequent refinement step.",
+          "operationPath": "openapi_source#/paths/~1v3~1search~1by-image~1uploads~1{file-name}/put",
+          "parameters": [
+            {
+              "name": "file-name",
+              "in": "path",
+              "value": "$inputs.file-name"
+            }
+          ],
+          "requestBody": {
+            "contentType": "image/jpeg",
+            "payload": "$inputs.upload-mask-image_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "mask_url": "$response.body#/mask_url"
+          }
+        },
+        {
+          "stepId": "refine-image",
+          "description": "Initiates the refinement of a specified image (either a Getty asset ID or a previously generated image reference) using the uploaded mask and a text prompt. This call may return a pending request ID (HTTP 202) or immediate results (HTTP 200).",
+          "operationPath": "openapi_source#/paths/~1v3~1ai~1image-generations~1refine/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "mask_url": "$steps.upload-mask-image.outputs.mask_url"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "generation_request_id": "$response.body#/generation_request_id"
+          }
+        },
+        {
+          "stepId": "get-refined-image-status",
+          "description": "Polls this endpoint using the generation request ID until the image refinement is complete (indicated by an HTTP 200 OK response) and the refined image results are available.",
+          "operationPath": "openapi_source#/paths/~1v3~1ai~1image-generations~1{generationRequestId}/get",
+          "parameters": [
+            {
+              "name": "generationRequestId",
+              "in": "path",
+              "value": "$steps.refine-image.outputs.generation_request_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "generation_request_id": "$response.body#/generation_request_id",
+            "results": "$response.body#/results"
+          }
+        },
+        {
+          "stepId": "get-refined-image-download-sizes",
+          "description": "Retrieves the available download sizes for a specific refined image, identified by its generation request ID and index within the results.",
+          "operationPath": "openapi_source#/paths/~1v3~1ai~1image-generations~1{generationRequestId}~1images~1{index}~1download-sizes/get",
+          "parameters": [
+            {
+              "name": "generationRequestId",
+              "in": "path",
+              "value": "$steps.get-refined-image-status.outputs.generation_request_id"
+            },
+            {
+              "name": "index",
+              "in": "path",
+              "value": "$steps.get-refined-image-status.outputs.results.index"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "download_sizes": "$response.body#/download_sizes"
+          }
+        },
+        {
+          "stepId": "initiate-refined-image-download",
+          "description": "Begins the download process for the refined image at a specified size. This may return a pending status (HTTP 202) or an immediate download URL (HTTP 200).",
+          "operationPath": "openapi_source#/paths/~1v3~1ai~1image-generations~1{generationRequestId}~1images~1{index}~1download/put",
+          "parameters": [
+            {
+              "name": "generationRequestId",
+              "in": "path",
+              "value": "$inputs.generationRequestId"
+            },
+            {
+              "name": "index",
+              "in": "path",
+              "value": "$inputs.index"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "size_name": "$steps.get-refined-image-download-sizes.outputs.download_sizes[0].size_name",
+              "notes": "$inputs.notes",
+              "project_code": "$inputs.project_code",
+              "product_id": "$inputs.product_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "url": "$response.body#/url",
+            "generated_asset_id": "$response.body#/generated_asset_id"
+          }
+        },
+        {
+          "stepId": "get-refined-image-download-url",
+          "description": "Polls this endpoint until the direct download URL for the refined image is available (indicated by an HTTP 200 OK response).",
+          "operationPath": "openapi_source#/paths/~1v3~1ai~1image-generations~1{generationRequestId}~1images~1{index}~1download/get",
+          "parameters": [
+            {
+              "name": "generationRequestId",
+              "in": "path",
+              "value": "$inputs.generationRequestId"
+            },
+            {
+              "name": "index",
+              "in": "path",
+              "value": "$inputs.index"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "url": "$response.body#/url"
+          }
+        }
+      ],
+      "outputs": {
+        "mask_url": "$steps.upload-mask-image.outputs.mask_url",
+        "generation_request_id": "$steps.get-refined-image-status.outputs.generation_request_id",
+        "results": "$steps.get-refined-image-status.outputs.results",
+        "download_sizes": "$steps.get-refined-image-download-sizes.outputs.download_sizes",
+        "url": "$steps.get-refined-image-download-url.outputs.url",
+        "generated_asset_id": "$steps.initiate-refined-image-download.outputs.generated_asset_id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "search-detail-and-download-creative-image",
+      "summary": "This workflow enables users to search for creative images using a text phrase and various filters, retrieve detailed metadata for a selected image including its available download options, and then proceed to download the image.",
+      "description": "This workflow enables users to search for creative images using a text phrase and various filters, retrieve detailed metadata for a selected image including its available download options, and then proceed to download the image.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Accept-Language": {
+            "type": "string"
+          },
+          "GI-Country-Code": {
+            "type": "string"
+          },
+          "age_of_people": {
+            "type": "string"
+          },
+          "artists": {
+            "type": "string"
+          },
+          "collection_codes": {
+            "type": "string"
+          },
+          "collections_filter_type": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "compositions": {
+            "type": "string"
+          },
+          "download_product": {
+            "type": "string"
+          },
+          "embed_content_only": {
+            "type": "string"
+          },
+          "enhanced_search": {
+            "type": "string"
+          },
+          "ethnicity": {
+            "type": "string"
+          },
+          "exclude_editorial_use_only": {
+            "type": "string"
+          },
+          "exclude_keyword_ids": {
+            "type": "string"
+          },
+          "exclude_nudity": {
+            "type": "string"
+          },
+          "facet_fields": {
+            "type": "string"
+          },
+          "facet_max_count": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "string"
+          },
+          "file_types": {
+            "type": "string"
+          },
+          "graphical_styles": {
+            "type": "string"
+          },
+          "graphical_styles_filter_type": {
+            "type": "string"
+          },
+          "include_facets": {
+            "type": "string"
+          },
+          "include_related_searches": {
+            "type": "string"
+          },
+          "keyword_ids": {
+            "type": "string"
+          },
+          "minimum_size": {
+            "type": "string"
+          },
+          "moods": {
+            "type": "string"
+          },
+          "number_of_people": {
+            "type": "string"
+          },
+          "orientations": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "page_size": {
+            "type": "string"
+          },
+          "phrase": {
+            "type": "string"
+          },
+          "safe_search": {
+            "type": "string"
+          },
+          "sort_order": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "auto_download": {
+            "type": "string"
+          },
+          "file_type": {
+            "type": "string"
+          },
+          "height": {
+            "type": "string"
+          },
+          "product_id": {
+            "type": "string"
+          },
+          "product_type": {
+            "type": "string"
+          },
+          "use_team_credits": {
+            "type": "string"
+          },
+          "download_notes": {
+            "type": "string"
+          },
+          "project_code": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-creative-images",
+          "description": "Searches the Getty Images creative collection for images matching a given phrase and various filtering criteria (e.g., age of people, color, composition).",
+          "operationPath": "openapi_source#/paths/~1v3~1search~1images~1creative/get",
+          "parameters": [
+            {
+              "name": "Accept-Language",
+              "in": "header",
+              "value": "$inputs.Accept-Language"
+            },
+            {
+              "name": "GI-Country-Code",
+              "in": "header",
+              "value": "$inputs.GI-Country-Code"
+            },
+            {
+              "name": "age_of_people",
+              "in": "query",
+              "value": "$inputs.age_of_people"
+            },
+            {
+              "name": "artists",
+              "in": "query",
+              "value": "$inputs.artists"
+            },
+            {
+              "name": "collection_codes",
+              "in": "query",
+              "value": "$inputs.collection_codes"
+            },
+            {
+              "name": "collections_filter_type",
+              "in": "query",
+              "value": "$inputs.collections_filter_type"
+            },
+            {
+              "name": "color",
+              "in": "query",
+              "value": "$inputs.color"
+            },
+            {
+              "name": "compositions",
+              "in": "query",
+              "value": "$inputs.compositions"
+            },
+            {
+              "name": "download_product",
+              "in": "query",
+              "value": "$inputs.download_product"
+            },
+            {
+              "name": "embed_content_only",
+              "in": "query",
+              "value": "$inputs.embed_content_only"
+            },
+            {
+              "name": "enhanced_search",
+              "in": "query",
+              "value": "$inputs.enhanced_search"
+            },
+            {
+              "name": "ethnicity",
+              "in": "query",
+              "value": "$inputs.ethnicity"
+            },
+            {
+              "name": "exclude_editorial_use_only",
+              "in": "query",
+              "value": "$inputs.exclude_editorial_use_only"
+            },
+            {
+              "name": "exclude_keyword_ids",
+              "in": "query",
+              "value": "$inputs.exclude_keyword_ids"
+            },
+            {
+              "name": "exclude_nudity",
+              "in": "query",
+              "value": "$inputs.exclude_nudity"
+            },
+            {
+              "name": "facet_fields",
+              "in": "query",
+              "value": "$inputs.facet_fields"
+            },
+            {
+              "name": "facet_max_count",
+              "in": "query",
+              "value": "$inputs.facet_max_count"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            },
+            {
+              "name": "file_types",
+              "in": "query",
+              "value": "$inputs.file_types"
+            },
+            {
+              "name": "graphical_styles",
+              "in": "query",
+              "value": "$inputs.graphical_styles"
+            },
+            {
+              "name": "graphical_styles_filter_type",
+              "in": "query",
+              "value": "$inputs.graphical_styles_filter_type"
+            },
+            {
+              "name": "include_facets",
+              "in": "query",
+              "value": "$inputs.include_facets"
+            },
+            {
+              "name": "include_related_searches",
+              "in": "query",
+              "value": "$inputs.include_related_searches"
+            },
+            {
+              "name": "keyword_ids",
+              "in": "query",
+              "value": "$inputs.keyword_ids"
+            },
+            {
+              "name": "minimum_size",
+              "in": "query",
+              "value": "$inputs.minimum_size"
+            },
+            {
+              "name": "moods",
+              "in": "query",
+              "value": "$inputs.moods"
+            },
+            {
+              "name": "number_of_people",
+              "in": "query",
+              "value": "$inputs.number_of_people"
+            },
+            {
+              "name": "orientations",
+              "in": "query",
+              "value": "$inputs.orientations"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "page_size",
+              "in": "query",
+              "value": "$inputs.page_size"
+            },
+            {
+              "name": "phrase",
+              "in": "query",
+              "value": "$inputs.phrase"
+            },
+            {
+              "name": "safe_search",
+              "in": "query",
+              "value": "$inputs.safe_search"
+            },
+            {
+              "name": "sort_order",
+              "in": "query",
+              "value": "$inputs.sort_order"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "images": "$response.body#/images",
+            "result_count": "$response.body#/result_count"
+          }
+        },
+        {
+          "stepId": "get-image-details",
+          "description": "Retrieves comprehensive metadata for a specific image, including its available download sizes, using the image ID obtained from the search results.",
+          "operationPath": "openapi_source#/paths/~1v3~1images~1{id}/get",
+          "parameters": [
+            {
+              "name": "Accept-Language",
+              "in": "header",
+              "value": "$inputs.Accept-Language"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.search-creative-images.outputs.images.id"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "images": "$response.body#/images"
+          }
+        },
+        {
+          "stepId": "download-image",
+          "description": "Initiates the download process for the selected image, providing a direct download URL. The specific size can be chosen from the previously retrieved download sizes.",
+          "operationPath": "openapi_source#/paths/~1v3~1downloads~1images~1{id}/post",
+          "parameters": [
+            {
+              "name": "Accept-Language",
+              "in": "header",
+              "value": "$inputs.Accept-Language"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-image-details.outputs.images.id"
+            },
+            {
+              "name": "auto_download",
+              "in": "query",
+              "value": "$inputs.auto_download"
+            },
+            {
+              "name": "file_type",
+              "in": "query",
+              "value": "$inputs.file_type"
+            },
+            {
+              "name": "height",
+              "in": "query",
+              "value": "$steps.get-image-details.outputs.images.download_sizes[0].height"
+            },
+            {
+              "name": "product_id",
+              "in": "query",
+              "value": "$inputs.product_id"
+            },
+            {
+              "name": "product_type",
+              "in": "query",
+              "value": "$inputs.product_type"
+            },
+            {
+              "name": "use_team_credits",
+              "in": "query",
+              "value": "$inputs.use_team_credits"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.get-image-details.outputs.images[0].id",
+              "height": "$steps.get-image-details.outputs.images[0].download_sizes[0].height",
+              "download_notes": "$inputs.download_notes",
+              "project_code": "$inputs.project_code"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "uri": "$response.body#/uri"
+          }
+        }
+      ],
+      "outputs": {
+        "images": "$steps.get-image-details.outputs.images",
+        "result_count": "$steps.search-creative-images.outputs.result_count",
+        "uri": "$steps.download-image.outputs.uri"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "board-creation-and-asset-management",
+      "summary": "This workflow allows a user to create a new personal or collaborative board, add selected assets (images or videos) to it, and then retrieve the board's details to confirm the additions and view its contents.",
+      "description": "This workflow allows a user to create a new personal or collaborative board, add selected assets (images or videos) to it, and then retrieve the board's details to confirm the additions and view its contents.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Accept-Language": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "board_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-board",
+          "description": "Creates a new user board with a specified name and optional description, returning the unique ID of the newly created board.",
+          "operationPath": "openapi_source#/paths/~1v3~1boards/post",
+          "parameters": [
+            {
+              "name": "Accept-Language",
+              "in": "header",
+              "value": "$inputs.Accept-Language"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "add-assets-to-board",
+          "description": "Adds one or more assets (identified by their asset IDs) to the board created in the previous step. This operation can add multiple assets in a single request.",
+          "operationPath": "openapi_source#/paths/~1v3~1boards~1{board_id}~1assets/put",
+          "parameters": [
+            {
+              "name": "Accept-Language",
+              "in": "header",
+              "value": "$inputs.Accept-Language"
+            },
+            {
+              "name": "board_id",
+              "in": "path",
+              "value": "$steps.create-board.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "board_id": "$steps.create-board.outputs.id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "assets_added": "$response.body#/assets_added",
+            "assets_not_added": "$response.body#/assets_not_added"
+          }
+        },
+        {
+          "stepId": "get-board-details",
+          "description": "Retrieves the full details of the board, including its metadata, permissions, and a list of all assets that have been added to it.",
+          "operationPath": "openapi_source#/paths/~1v3~1boards~1{board_id}/get",
+          "parameters": [
+            {
+              "name": "Accept-Language",
+              "in": "header",
+              "value": "$inputs.Accept-Language"
+            },
+            {
+              "name": "board_id",
+              "in": "path",
+              "value": "$inputs.board_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "asset_count": "$response.body#/asset_count",
+            "assets": "$response.body#/assets",
+            "date_created": "$response.body#/date_created",
+            "date_last_updated": "$response.body#/date_last_updated",
+            "description": "$response.body#/description",
+            "name": "$response.body#/name",
+            "comment_count": "$response.body#/comment_count",
+            "permissions": "$response.body#/permissions",
+            "links": "$response.body#/links"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.get-board-details.outputs.id",
+        "assets_added": "$steps.add-assets-to-board.outputs.assets_added",
+        "assets_not_added": "$steps.add-assets-to-board.outputs.assets_not_added",
+        "asset_count": "$steps.get-board-details.outputs.asset_count",
+        "assets": "$steps.get-board-details.outputs.assets",
+        "date_created": "$steps.get-board-details.outputs.date_created",
+        "date_last_updated": "$steps.get-board-details.outputs.date_last_updated",
+        "description": "$steps.get-board-details.outputs.description",
+        "name": "$steps.get-board-details.outputs.name",
+        "comment_count": "$steps.get-board-details.outputs.comment_count",
+        "permissions": "$steps.get-board-details.outputs.permissions",
+        "links": "$steps.get-board-details.outputs.links"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "partner-asset-change-notification-processing",
+      "summary": "For Getty Images partners, this workflow allows retrieving notifications about asset changes (new, updated, or deleted) from a specific channel and confirming their receipt to maintain an up-to-date asset catalog for their integration.",
+      "description": "For Getty Images partners, this workflow allows retrieving notifications about asset changes (new, updated, or deleted) from a specific channel and confirming their receipt to maintain an up-to-date asset catalog for their integration.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "channel_id": {
+            "type": "string"
+          },
+          "batch_size": {
+            "type": "string"
+          },
+          "change-set-id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-asset-change-channels",
+          "description": "Retrieves a list of available asset change notification channels that the partner has access to, providing channel IDs and types.",
+          "operationPath": "openapi_source#/paths/~1v3~1asset-changes~1channels/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "channels": "$response.body#/0/ChannelId"
+          }
+        },
+        {
+          "stepId": "retrieve-asset-change-notifications",
+          "description": "Retrieves a batch of asset change notifications (new, updated, or deleted assets) from a specified channel. This operation returns a 'change_set_id' which must be confirmed.",
+          "operationPath": "openapi_source#/paths/~1v3~1asset-changes~1change-sets/put",
+          "parameters": [
+            {
+              "name": "channel_id",
+              "in": "query",
+              "value": "$steps.get-asset-change-channels.outputs.channels.ChannelId"
+            },
+            {
+              "name": "batch_size",
+              "in": "query",
+              "value": "$inputs.batch_size"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "change_set_id": "$response.body#/change_set_id",
+            "changed_assets": "$response.body#/changed_assets"
+          }
+        },
+        {
+          "stepId": "confirm-asset-change-notifications",
+          "description": "Confirms the successful receipt and processing of a specific batch of asset change notifications using its 'change_set_id'. This action allows the system to release the batch and make the next one available.",
+          "operationPath": "openapi_source#/paths/~1v3~1asset-changes~1change-sets~1{change-set-id}/delete",
+          "parameters": [
+            {
+              "name": "change-set-id",
+              "in": "path",
+              "value": "$steps.retrieve-asset-change-notifications.outputs.change_set_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "notifications_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "channels": "$steps.get-asset-change-channels.outputs.channels",
+        "change_set_id": "$steps.retrieve-asset-change-notifications.outputs.change_set_id",
+        "changed_assets": "$steps.retrieve-asset-change-notifications.outputs.changed_assets",
+        "notifications_data": "$steps.confirm-asset-change-notifications.outputs.notifications_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
