@@ -1,0 +1,882 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/drchrono.com/main/v4%20-%20Hunt%20Valley/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "appointment-scheduling-and-status-update",
+      "summary": "This workflow illustrates the process of scheduling a new patient appointment and subsequently updating its status. This reflects the typical patient journey through a medical clinic, from booking to completion.",
+      "description": "This workflow illustrates the process of scheduling a new patient appointment and subsequently updating its status. This reflects the typical patient journey through a medical clinic, from booking to completion.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "doctor": {
+            "type": "string"
+          },
+          "exam_room": {
+            "type": "string"
+          },
+          "office": {
+            "type": "string"
+          },
+          "patient": {
+            "type": "string"
+          },
+          "scheduled_time": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-appointment-profile",
+          "description": "Creates a reusable profile for common appointment types, allowing for standardized duration and calendar coloring.",
+          "operationId": "appointment_profiles_create",
+          "parameters": [
+            {
+              "name": "doctor",
+              "in": "query",
+              "value": "$inputs.doctor"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "create-appointment",
+          "description": "Schedules a new appointment for a patient on a doctor's calendar, utilizing a previously defined appointment profile.",
+          "operationId": "appointments_create",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "profile": "$steps.create-appointment-profile.outputs.id",
+              "doctor": "$inputs.doctor",
+              "exam_room": "$inputs.exam_room",
+              "office": "$inputs.office",
+              "patient": "$inputs.patient",
+              "scheduled_time": "$inputs.scheduled_time"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/reminders/0/id"
+          }
+        },
+        {
+          "stepId": "update-appointment-status",
+          "description": "Updates the status of a scheduled appointment (e.g., from 'Confirmed' to 'Arrived' or 'Complete') as the patient progresses through their visit.",
+          "operationId": "appointments_partial_update",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-appointment.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.create-appointment.outputs.id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-appointment.outputs.id",
+        "status_data": "$steps.update-appointment-status.outputs.status_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "practice-financial-reporting-overview",
+      "summary": "This workflow provides a comprehensive financial overview for a medical practice by retrieving daily charges, patient payments, credits/adjustments, and overall totals for a specified date range. It's crucial for financial reconciliation and business analysis.",
+      "description": "This workflow provides a comprehensive financial overview for a medical practice by retrieving daily charges, patient payments, credits/adjustments, and overall totals for a specified date range. It's crucial for financial reconciliation and business analysis.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "start_date": {
+            "type": "string"
+          },
+          "end_date": {
+            "type": "string"
+          },
+          "charges_date_type": {
+            "type": "string"
+          },
+          "report_type": {
+            "type": "string"
+          },
+          "claim_type": {
+            "type": "string"
+          },
+          "patient_id": {
+            "type": "string"
+          },
+          "office_id": {
+            "type": "string"
+          },
+          "examroom_id": {
+            "type": "string"
+          },
+          "pg_mode": {
+            "type": "string"
+          },
+          "office": {
+            "type": "string"
+          },
+          "legacy": {
+            "type": "string"
+          },
+          "credits_date_type": {
+            "type": "string"
+          },
+          "group_by": {
+            "type": "string"
+          },
+          "sub_group_by": {
+            "type": "string"
+          },
+          "tertiary_group_by": {
+            "type": "string"
+          },
+          "cash_view_type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-day-sheet-charges",
+          "description": "Retrieves a report detailing all charges incurred by patients within a specified date range.",
+          "operationId": "daysheet_charges_list",
+          "parameters": [
+            {
+              "name": "start_date",
+              "in": "query",
+              "value": "$inputs.start_date"
+            },
+            {
+              "name": "end_date",
+              "in": "query",
+              "value": "$inputs.end_date"
+            },
+            {
+              "name": "charges_date_type",
+              "in": "query",
+              "value": "$inputs.charges_date_type"
+            },
+            {
+              "name": "report_type",
+              "in": "query",
+              "value": "$inputs.report_type"
+            },
+            {
+              "name": "claim_type",
+              "in": "query",
+              "value": "$inputs.claim_type"
+            },
+            {
+              "name": "patient_id",
+              "in": "query",
+              "value": "$inputs.patient_id"
+            },
+            {
+              "name": "office_id",
+              "in": "query",
+              "value": "$inputs.office_id"
+            },
+            {
+              "name": "examroom_id",
+              "in": "query",
+              "value": "$inputs.examroom_id"
+            },
+            {
+              "name": "pg_mode",
+              "in": "query",
+              "value": "$inputs.pg_mode"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "get-day-sheet-patient-payments",
+          "description": "Retrieves a report of all patient payments received within the specified date range.",
+          "operationId": "day_sheet_patient_payments_list",
+          "parameters": [
+            {
+              "name": "start_date",
+              "in": "query",
+              "value": "$inputs.start_date"
+            },
+            {
+              "name": "end_date",
+              "in": "query",
+              "value": "$inputs.end_date"
+            },
+            {
+              "name": "charges_date_type",
+              "in": "query",
+              "value": "$inputs.charges_date_type"
+            },
+            {
+              "name": "report_type",
+              "in": "query",
+              "value": "$inputs.report_type"
+            },
+            {
+              "name": "claim_type",
+              "in": "query",
+              "value": "$inputs.claim_type"
+            },
+            {
+              "name": "patient_id",
+              "in": "query",
+              "value": "$inputs.patient_id"
+            },
+            {
+              "name": "office",
+              "in": "query",
+              "value": "$inputs.office"
+            },
+            {
+              "name": "examroom_id",
+              "in": "query",
+              "value": "$inputs.examroom_id"
+            },
+            {
+              "name": "legacy",
+              "in": "query",
+              "value": "$inputs.legacy"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "get-day-sheet-credits-adjustments",
+          "description": "Retrieves a report of all financial credits and adjustments applied within the specified date range.",
+          "operationId": "daysheet_credits_list",
+          "parameters": [
+            {
+              "name": "start_date",
+              "in": "query",
+              "value": "$inputs.start_date"
+            },
+            {
+              "name": "end_date",
+              "in": "query",
+              "value": "$inputs.end_date"
+            },
+            {
+              "name": "credits_date_type",
+              "in": "query",
+              "value": "$inputs.credits_date_type"
+            },
+            {
+              "name": "report_type",
+              "in": "query",
+              "value": "$inputs.report_type"
+            },
+            {
+              "name": "claim_type",
+              "in": "query",
+              "value": "$inputs.claim_type"
+            },
+            {
+              "name": "patient_id",
+              "in": "query",
+              "value": "$inputs.patient_id"
+            },
+            {
+              "name": "office_id",
+              "in": "query",
+              "value": "$inputs.office_id"
+            },
+            {
+              "name": "examroom_id",
+              "in": "query",
+              "value": "$inputs.examroom_id"
+            },
+            {
+              "name": "pg_mode",
+              "in": "query",
+              "value": "$inputs.pg_mode"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "get-day-sheet-totals",
+          "description": "Retrieves a summary report consolidating all financial totals (charges, payments, credits) for the specified date range.",
+          "operationId": "daysheet_totals_list",
+          "parameters": [
+            {
+              "name": "start_date",
+              "in": "query",
+              "value": "$inputs.start_date"
+            },
+            {
+              "name": "end_date",
+              "in": "query",
+              "value": "$inputs.end_date"
+            },
+            {
+              "name": "charges_date_type",
+              "in": "query",
+              "value": "$inputs.charges_date_type"
+            },
+            {
+              "name": "report_type",
+              "in": "query",
+              "value": "$inputs.report_type"
+            },
+            {
+              "name": "credits_date_type",
+              "in": "query",
+              "value": "$inputs.credits_date_type"
+            },
+            {
+              "name": "group_by",
+              "in": "query",
+              "value": "$inputs.group_by"
+            },
+            {
+              "name": "sub_group_by",
+              "in": "query",
+              "value": "$inputs.sub_group_by"
+            },
+            {
+              "name": "tertiary_group_by",
+              "in": "query",
+              "value": "$inputs.tertiary_group_by"
+            },
+            {
+              "name": "cash_view_type",
+              "in": "query",
+              "value": "$inputs.cash_view_type"
+            },
+            {
+              "name": "patient_id",
+              "in": "query",
+              "value": "$inputs.patient_id"
+            },
+            {
+              "name": "office_id",
+              "in": "query",
+              "value": "$inputs.office_id"
+            },
+            {
+              "name": "examroom_id",
+              "in": "query",
+              "value": "$inputs.examroom_id"
+            },
+            {
+              "name": "pg_mode",
+              "in": "query",
+              "value": "$inputs.pg_mode"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        }
+      ],
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "batch-patient-data-retrieval",
+      "summary": "This workflow enables the efficient retrieval of a large volume of patient records through an asynchronous batch process. It is particularly useful for applications requiring bulk data synchronization, analytics, or data warehousing.",
+      "description": "This workflow enables the efficient retrieval of a large volume of patient records through an asynchronous batch process. It is particularly useful for applications requiring bulk data synchronization, analytics, or data warehousing.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "order_by": {
+            "type": "string"
+          },
+          "page_size": {
+            "type": "string"
+          },
+          "first_name": {
+            "type": "string"
+          },
+          "last_name": {
+            "type": "string"
+          },
+          "preferred_language": {
+            "type": "string"
+          },
+          "gender": {
+            "type": "string"
+          },
+          "since": {
+            "type": "string"
+          },
+          "date_of_birth": {
+            "type": "string"
+          },
+          "race": {
+            "type": "string"
+          },
+          "chart_id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "ethnicity": {
+            "type": "string"
+          },
+          "verbose": {
+            "type": "string"
+          },
+          "uuid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "submit-patient-list-request",
+          "description": "Initiates an asynchronous request to compile a list of patients based on specified filtering criteria. This returns a UUID to track the batch process.",
+          "operationId": "patients_list_create",
+          "parameters": [
+            {
+              "name": "order_by",
+              "in": "query",
+              "value": "$inputs.order_by"
+            },
+            {
+              "name": "page_size",
+              "in": "query",
+              "value": "$inputs.page_size"
+            },
+            {
+              "name": "first_name",
+              "in": "query",
+              "value": "$inputs.first_name"
+            },
+            {
+              "name": "last_name",
+              "in": "query",
+              "value": "$inputs.last_name"
+            },
+            {
+              "name": "preferred_language",
+              "in": "query",
+              "value": "$inputs.preferred_language"
+            },
+            {
+              "name": "gender",
+              "in": "query",
+              "value": "$inputs.gender"
+            },
+            {
+              "name": "since",
+              "in": "query",
+              "value": "$inputs.since"
+            },
+            {
+              "name": "date_of_birth",
+              "in": "query",
+              "value": "$inputs.date_of_birth"
+            },
+            {
+              "name": "race",
+              "in": "query",
+              "value": "$inputs.race"
+            },
+            {
+              "name": "chart_id",
+              "in": "query",
+              "value": "$inputs.chart_id"
+            },
+            {
+              "name": "email",
+              "in": "query",
+              "value": "$inputs.email"
+            },
+            {
+              "name": "ethnicity",
+              "in": "query",
+              "value": "$inputs.ethnicity"
+            },
+            {
+              "name": "verbose",
+              "in": "query",
+              "value": "$inputs.verbose"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "uuid": "$response.body#/uuid"
+          }
+        },
+        {
+          "stepId": "retrieve-patient-list-status-and-results",
+          "description": "Retrieves the processing status and the actual patient data from a previously submitted batch request using its unique UUID. The results are paginated.",
+          "operationId": "patients_list_list",
+          "parameters": [
+            {
+              "name": "uuid",
+              "in": "query",
+              "value": "$steps.submit-patient-list-request.outputs.uuid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status",
+            "results": "$response.body#/results"
+          }
+        }
+      ],
+      "outputs": {
+        "uuid": "$steps.submit-patient-list-request.outputs.uuid",
+        "status": "$steps.retrieve-patient-list-status-and-results.outputs.status",
+        "results": "$steps.retrieve-patient-list-status-and-results.outputs.results"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "patient-record-creation-and-basic-clinical-data",
+      "summary": "This workflow demonstrates how to create a new patient record and then associate essential clinical information such as allergies and interventions. This is a foundational process for managing patient data within an Electronic Health Record (EHR) system.",
+      "description": "This workflow demonstrates how to create a new patient record and then associate essential clinical information such as allergies and interventions. This is a foundational process for managing patient data within an Electronic Health Record (EHR) system.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "first_name": {
+            "type": "string"
+          },
+          "last_name": {
+            "type": "string"
+          },
+          "preferred_language": {
+            "type": "string"
+          },
+          "doctor": {
+            "type": "string"
+          },
+          "gender": {
+            "type": "string"
+          },
+          "since": {
+            "type": "string"
+          },
+          "date_of_birth": {
+            "type": "string"
+          },
+          "race": {
+            "type": "string"
+          },
+          "chart_id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "ethnicity": {
+            "type": "string"
+          },
+          "allow_duplicates": {
+            "type": "string"
+          },
+          "patient": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-patient",
+          "description": "Creates a new patient record in the system. Required fields like gender and doctor are passed as query parameters.",
+          "operationId": "patients_create",
+          "parameters": [
+            {
+              "name": "first_name",
+              "in": "query",
+              "value": "$inputs.first_name"
+            },
+            {
+              "name": "last_name",
+              "in": "query",
+              "value": "$inputs.last_name"
+            },
+            {
+              "name": "preferred_language",
+              "in": "query",
+              "value": "$inputs.preferred_language"
+            },
+            {
+              "name": "doctor",
+              "in": "query",
+              "value": "$inputs.doctor"
+            },
+            {
+              "name": "gender",
+              "in": "query",
+              "value": "$inputs.gender"
+            },
+            {
+              "name": "since",
+              "in": "query",
+              "value": "$inputs.since"
+            },
+            {
+              "name": "date_of_birth",
+              "in": "query",
+              "value": "$inputs.date_of_birth"
+            },
+            {
+              "name": "race",
+              "in": "query",
+              "value": "$inputs.race"
+            },
+            {
+              "name": "chart_id",
+              "in": "query",
+              "value": "$inputs.chart_id"
+            },
+            {
+              "name": "email",
+              "in": "query",
+              "value": "$inputs.email"
+            },
+            {
+              "name": "ethnicity",
+              "in": "query",
+              "value": "$inputs.ethnicity"
+            },
+            {
+              "name": "allow_duplicates",
+              "in": "query",
+              "value": "$inputs.allow_duplicates"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/patient_flags/0/id"
+          }
+        },
+        {
+          "stepId": "add-patient-allergy",
+          "description": "Records a new allergy for the newly created patient, linking it to their record.",
+          "operationId": "allergies_create",
+          "parameters": [
+            {
+              "name": "patient",
+              "in": "query",
+              "value": "$steps.create-patient.outputs.id"
+            },
+            {
+              "name": "doctor",
+              "in": "query",
+              "value": "$inputs.doctor"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "add-patient-intervention",
+          "description": "Adds a clinical intervention record for the patient, which can be used for tracking clinical quality measures (CQM).",
+          "operationId": "patient_interventions_create",
+          "parameters": [
+            {
+              "name": "patient",
+              "in": "query",
+              "value": "$steps.create-patient.outputs.id"
+            },
+            {
+              "name": "doctor",
+              "in": "query",
+              "value": "$inputs.doctor"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.add-patient-intervention.outputs.id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
