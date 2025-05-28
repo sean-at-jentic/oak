@@ -1,0 +1,990 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/envoice.in/main/v1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "invoice-lifecycle-management",
+      "summary": "This workflow covers the end-to-end process of creating a new invoice, retrieving its full details, sending it to the client, generating its PDF link, and finally updating its status. This is crucial for managing billing and payment collection.",
+      "description": "This workflow covers the end-to-end process of creating a new invoice, retrieving its full details, sending it to the client, generating its PDF link, and finally updating its status. This is crucial for managing billing and payment collection.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "x-auth-key": {
+            "type": "string"
+          },
+          "x-auth-secret": {
+            "type": "string"
+          },
+          "create-invoice_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          },
+          "signedVersion": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-invoice",
+          "description": "Creates a new invoice with specified client, items, currency, and other details.",
+          "operationId": "InvoiceApi_New",
+          "parameters": [
+            {
+              "name": "x-auth-key",
+              "in": "header",
+              "value": "$inputs.x-auth-key"
+            },
+            {
+              "name": "x-auth-secret",
+              "in": "header",
+              "value": "$inputs.x-auth-secret"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-invoice_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "invoiceId": "$response.body#/invoiceId",
+            "invoiceNumber": "$response.body#/invoiceNumber"
+          }
+        },
+        {
+          "stepId": "get-invoice-details",
+          "description": "Retrieves the complete details of the newly created invoice, including activities and items.",
+          "operationId": "InvoiceApi_Details",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "query",
+              "value": "$steps.create-invoice.outputs.invoiceId"
+            },
+            {
+              "name": "x-auth-key",
+              "in": "header",
+              "value": "$inputs.x-auth-key"
+            },
+            {
+              "name": "x-auth-secret",
+              "in": "header",
+              "value": "$inputs.x-auth-secret"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "invoiceDetails": "$response.body#/invoiceDetails"
+          }
+        },
+        {
+          "stepId": "send-invoice-to-client",
+          "description": "Sends the invoice to the client via email with a custom message and subject.",
+          "operationId": "InvoiceApi_SendToClient",
+          "parameters": [
+            {
+              "name": "x-auth-key",
+              "in": "header",
+              "value": "$inputs.x-auth-key"
+            },
+            {
+              "name": "x-auth-secret",
+              "in": "header",
+              "value": "$inputs.x-auth-secret"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "invoiceId": "$steps.create-invoice.outputs.invoiceId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sendConfirmationId": "$response.body#/sendConfirmationId"
+          }
+        },
+        {
+          "stepId": "get-invoice-pdf-uri",
+          "description": "Retrieves the unique URL to the PDF version of the invoice.",
+          "operationId": "InvoiceApi_Pdf",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "query",
+              "value": "$steps.create-invoice.outputs.invoiceId"
+            },
+            {
+              "name": "signedVersion",
+              "in": "query",
+              "value": "$inputs.signedVersion"
+            },
+            {
+              "name": "x-auth-key",
+              "in": "header",
+              "value": "$inputs.x-auth-key"
+            },
+            {
+              "name": "x-auth-secret",
+              "in": "header",
+              "value": "$inputs.x-auth-secret"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pdfLink": "$response.body#/pdfLink"
+          }
+        },
+        {
+          "stepId": "change-invoice-status",
+          "description": "Updates the status of the invoice (e.g., to 'Paid' after receiving payment).",
+          "operationId": "InvoiceApi_ChangeStatus",
+          "parameters": [
+            {
+              "name": "x-auth-key",
+              "in": "header",
+              "value": "$inputs.x-auth-key"
+            },
+            {
+              "name": "x-auth-secret",
+              "in": "header",
+              "value": "$inputs.x-auth-secret"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.create-invoice.outputs.invoiceId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "statusChangeSuccess": "$response.body#/statusChangeSuccess"
+          }
+        }
+      ],
+      "outputs": {
+        "invoiceId": "$steps.create-invoice.outputs.invoiceId",
+        "invoiceNumber": "$steps.create-invoice.outputs.invoiceNumber",
+        "invoiceDetails": "$steps.get-invoice-details.outputs.invoiceDetails",
+        "sendConfirmationId": "$steps.send-invoice-to-client.outputs.sendConfirmationId",
+        "pdfLink": "$steps.get-invoice-pdf-uri.outputs.pdfLink",
+        "statusChangeSuccess": "$steps.change-invoice-status.outputs.statusChangeSuccess"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "estimation-to-invoice-conversion",
+      "summary": "This workflow allows users to create an estimation, send it to a client for approval, and then seamlessly convert the accepted estimation into a formal invoice, streamlining the sales and billing process.",
+      "description": "This workflow allows users to create an estimation, send it to a client for approval, and then seamlessly convert the accepted estimation into a formal invoice, streamlining the sales and billing process.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "x-auth-key": {
+            "type": "string"
+          },
+          "x-auth-secret": {
+            "type": "string"
+          },
+          "create-estimation_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-estimation",
+          "description": "Creates a new estimation for a client with specified items and details.",
+          "operationId": "EstimationApi_New",
+          "parameters": [
+            {
+              "name": "x-auth-key",
+              "in": "header",
+              "value": "$inputs.x-auth-key"
+            },
+            {
+              "name": "x-auth-secret",
+              "in": "header",
+              "value": "$inputs.x-auth-secret"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-estimation_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "estimationId": "$response.body#/estimationId",
+            "estimationNumber": "$response.body#/estimationNumber"
+          }
+        },
+        {
+          "stepId": "send-estimation-to-client",
+          "description": "Sends the created estimation to the client for review and acceptance.",
+          "operationId": "EstimationApi_SendToClient",
+          "parameters": [
+            {
+              "name": "x-auth-key",
+              "in": "header",
+              "value": "$inputs.x-auth-key"
+            },
+            {
+              "name": "x-auth-secret",
+              "in": "header",
+              "value": "$inputs.x-auth-secret"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "estimationId": "$steps.create-estimation.outputs.estimationId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sendConfirmationId": "$response.body#/sendConfirmationId"
+          }
+        },
+        {
+          "stepId": "change-estimation-status-to-accepted",
+          "description": "Updates the estimation status to 'Accepted' after client approval.",
+          "operationId": "EstimationApi_ChangeStatus",
+          "parameters": [
+            {
+              "name": "x-auth-key",
+              "in": "header",
+              "value": "$inputs.x-auth-key"
+            },
+            {
+              "name": "x-auth-secret",
+              "in": "header",
+              "value": "$inputs.x-auth-secret"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.create-estimation.outputs.estimationId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "statusChangeSuccess": "$response.body#/statusChangeSuccess"
+          }
+        },
+        {
+          "stepId": "convert-estimation-to-invoice",
+          "description": "Converts the accepted estimation into a new invoice.",
+          "operationId": "EstimationApi_Convert",
+          "parameters": [
+            {
+              "name": "x-auth-key",
+              "in": "header",
+              "value": "$inputs.x-auth-key"
+            },
+            {
+              "name": "x-auth-secret",
+              "in": "header",
+              "value": "$inputs.x-auth-secret"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "estimationId": "$steps.create-estimation.outputs.estimationId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "newInvoiceId": "$response.body#/newInvoiceId",
+            "newInvoiceNumber": "$response.body#/newInvoiceNumber",
+            "newInvoiceDetails": "$response.body#/newInvoiceDetails"
+          }
+        }
+      ],
+      "outputs": {
+        "estimationId": "$steps.create-estimation.outputs.estimationId",
+        "estimationNumber": "$steps.create-estimation.outputs.estimationNumber",
+        "sendConfirmationId": "$steps.send-estimation-to-client.outputs.sendConfirmationId",
+        "statusChangeSuccess": "$steps.change-estimation-status-to-accepted.outputs.statusChangeSuccess",
+        "newInvoiceId": "$steps.convert-estimation-to-invoice.outputs.newInvoiceId",
+        "newInvoiceNumber": "$steps.convert-estimation-to-invoice.outputs.newInvoiceNumber",
+        "newInvoiceDetails": "$steps.convert-estimation-to-invoice.outputs.newInvoiceDetails"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "product-and-order-fulfillment",
+      "summary": "This workflow facilitates the creation of a new product, followed by the creation of an order for that product, and subsequent updates to its shipping details and status, managing the order lifecycle from sale to delivery.",
+      "description": "This workflow facilitates the creation of a new product, followed by the creation of an order for that product, and subsequent updates to its shipping details and status, managing the order lifecycle from sale to delivery.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "x-auth-key": {
+            "type": "string"
+          },
+          "x-auth-secret": {
+            "type": "string"
+          },
+          "create-product_body": {
+            "type": "object"
+          },
+          "create-order_body": {
+            "type": "object"
+          },
+          "orderId": {
+            "type": "string"
+          },
+          "change-order-shipping-details_body": {
+            "type": "object"
+          },
+          "change-order-status_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-product",
+          "description": "Adds a new product to the inventory with its pricing, description, and other attributes.",
+          "operationId": "ProductApi_New",
+          "parameters": [
+            {
+              "name": "x-auth-key",
+              "in": "header",
+              "value": "$inputs.x-auth-key"
+            },
+            {
+              "name": "x-auth-secret",
+              "in": "header",
+              "value": "$inputs.x-auth-secret"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-product_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "productId": "$response.body#/productId"
+          }
+        },
+        {
+          "stepId": "create-order",
+          "description": "Creates a new customer order, linking it to a product and including billing and shipping information.",
+          "operationId": "OrderApi_New",
+          "parameters": [
+            {
+              "name": "x-auth-key",
+              "in": "header",
+              "value": "$inputs.x-auth-key"
+            },
+            {
+              "name": "x-auth-secret",
+              "in": "header",
+              "value": "$inputs.x-auth-secret"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-order_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "orderId": "$response.body#/orderId"
+          }
+        },
+        {
+          "stepId": "change-order-shipping-details",
+          "description": "Updates the shipping address and contact details for an existing order.",
+          "operationId": "OrderApi_ChangeShippingDetails",
+          "parameters": [
+            {
+              "name": "orderId",
+              "in": "query",
+              "value": "$inputs.orderId"
+            },
+            {
+              "name": "x-auth-key",
+              "in": "header",
+              "value": "$inputs.x-auth-key"
+            },
+            {
+              "name": "x-auth-secret",
+              "in": "header",
+              "value": "$inputs.x-auth-secret"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.change-order-shipping-details_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "shippingUpdateSuccess": "$response.body#/shippingUpdateSuccess"
+          }
+        },
+        {
+          "stepId": "change-order-status",
+          "description": "Modifies the status of an order (e.g., from 'Processing' to 'Shipped' or 'Completed').",
+          "operationId": "OrderApi_ChangeStatus",
+          "parameters": [
+            {
+              "name": "x-auth-key",
+              "in": "header",
+              "value": "$inputs.x-auth-key"
+            },
+            {
+              "name": "x-auth-secret",
+              "in": "header",
+              "value": "$inputs.x-auth-secret"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.change-order-status_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "statusChangeSuccess": "$response.body#/statusChangeSuccess"
+          }
+        }
+      ],
+      "outputs": {
+        "productId": "$steps.create-product.outputs.productId",
+        "orderId": "$steps.create-order.outputs.orderId",
+        "shippingUpdateSuccess": "$steps.change-order-shipping-details.outputs.shippingUpdateSuccess",
+        "statusChangeSuccess": "$steps.change-order-status.outputs.statusChangeSuccess"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "client-profile-management",
+      "summary": "This workflow enables the creation of a new client profile and subsequent retrieval and update of their details, ensuring accurate and up-to-date client information within the system.",
+      "description": "This workflow enables the creation of a new client profile and subsequent retrieval and update of their details, ensuring accurate and up-to-date client information within the system.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "x-auth-key": {
+            "type": "string"
+          },
+          "x-auth-secret": {
+            "type": "string"
+          },
+          "create-client_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          },
+          "update-client-details_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-client",
+          "description": "Registers a new client in the system with their contact and billing information.",
+          "operationId": "ClientApi_New",
+          "parameters": [
+            {
+              "name": "x-auth-key",
+              "in": "header",
+              "value": "$inputs.x-auth-key"
+            },
+            {
+              "name": "x-auth-secret",
+              "in": "header",
+              "value": "$inputs.x-auth-secret"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-client_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "clientId": "$response.body#/clientId"
+          }
+        },
+        {
+          "stepId": "get-client-details",
+          "description": "Fetches the comprehensive details of a specific client, including associated activities and invoices.",
+          "operationId": "ClientApi_Details",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "query",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "x-auth-key",
+              "in": "header",
+              "value": "$inputs.x-auth-key"
+            },
+            {
+              "name": "x-auth-secret",
+              "in": "header",
+              "value": "$inputs.x-auth-secret"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "clientDetails": "$response.body#/clientDetails"
+          }
+        },
+        {
+          "stepId": "update-client-details",
+          "description": "Modifies existing client information such as address, contact details, or default payment terms.",
+          "operationId": "ClientApi_Update",
+          "parameters": [
+            {
+              "name": "x-auth-key",
+              "in": "header",
+              "value": "$inputs.x-auth-key"
+            },
+            {
+              "name": "x-auth-secret",
+              "in": "header",
+              "value": "$inputs.x-auth-secret"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.update-client-details_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updateSuccess": "$response.body#/updateSuccess"
+          }
+        }
+      ],
+      "outputs": {
+        "clientId": "$steps.create-client.outputs.clientId",
+        "clientDetails": "$steps.get-client-details.outputs.clientDetails",
+        "updateSuccess": "$steps.update-client-details.outputs.updateSuccess"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "payment-link-generation-and-sharing",
+      "summary": "This workflow enables the creation of a custom payment link for specific services or products and retrieves its unique URL, allowing for easy sharing with clients for direct payments.",
+      "description": "This workflow enables the creation of a custom payment link for specific services or products and retrieves its unique URL, allowing for easy sharing with clients for direct payments.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "x-auth-key": {
+            "type": "string"
+          },
+          "x-auth-secret": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-payment-link",
+          "description": "Generates a new payment link with specified client, currency, and line items.",
+          "operationId": "PaymentLinkApi_New",
+          "parameters": [
+            {
+              "name": "x-auth-key",
+              "in": "header",
+              "value": "$inputs.x-auth-key"
+            },
+            {
+              "name": "x-auth-secret",
+              "in": "header",
+              "value": "$inputs.x-auth-secret"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "paymentLinkId": "$response.body#/paymentLinkId"
+          }
+        },
+        {
+          "stepId": "get-payment-link-uri",
+          "description": "Retrieves the unique public URL for the created payment link.",
+          "operationId": "PaymentLinkApi_Uri",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "query",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "x-auth-key",
+              "in": "header",
+              "value": "$inputs.x-auth-key"
+            },
+            {
+              "name": "x-auth-secret",
+              "in": "header",
+              "value": "$inputs.x-auth-secret"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "paymentLinkUri": "$response.body#/paymentLinkUri"
+          }
+        }
+      ],
+      "outputs": {
+        "paymentLinkId": "$steps.create-payment-link.outputs.paymentLinkId",
+        "paymentLinkUri": "$steps.get-payment-link-uri.outputs.paymentLinkUri"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "system-configuration-retrieval",
+      "summary": "This workflow provides a comprehensive way to retrieve all essential system configuration data, including supported countries, currencies, date formats, and UI languages. This is useful for initial setup or populating dropdowns in a client application.",
+      "description": "This workflow provides a comprehensive way to retrieve all essential system configuration data, including supported countries, currencies, date formats, and UI languages. This is useful for initial setup or populating dropdowns in a client application.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "x-auth-key": {
+            "type": "string"
+          },
+          "x-auth-secret": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-supported-countries",
+          "description": "Fetches a list of all countries supported by the platform.",
+          "operationId": "GeneralApi_Countries",
+          "parameters": [
+            {
+              "name": "x-auth-key",
+              "in": "header",
+              "value": "$inputs.x-auth-key"
+            },
+            {
+              "name": "x-auth-secret",
+              "in": "header",
+              "value": "$inputs.x-auth-secret"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "countries": "$response.body#/0/countries"
+          }
+        },
+        {
+          "stepId": "get-supported-currencies",
+          "description": "Retrieves a list of all currencies supported for transactions.",
+          "operationId": "GeneralApi_Currencies",
+          "parameters": [
+            {
+              "name": "x-auth-key",
+              "in": "header",
+              "value": "$inputs.x-auth-key"
+            },
+            {
+              "name": "x-auth-secret",
+              "in": "header",
+              "value": "$inputs.x-auth-secret"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "currencies": "$response.body#/0/currencies"
+          }
+        },
+        {
+          "stepId": "get-supported-date-formats",
+          "description": "Obtains a list of all available date formats for display.",
+          "operationId": "GeneralApi_DateFormats",
+          "parameters": [
+            {
+              "name": "x-auth-key",
+              "in": "header",
+              "value": "$inputs.x-auth-key"
+            },
+            {
+              "name": "x-auth-secret",
+              "in": "header",
+              "value": "$inputs.x-auth-secret"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "dateFormats": "$response.body#/0/dateFormats"
+          }
+        },
+        {
+          "stepId": "get-supported-ui-languages",
+          "description": "Gets a list of all supported user interface languages.",
+          "operationId": "GeneralApi_UiLanguages",
+          "parameters": [
+            {
+              "name": "x-auth-key",
+              "in": "header",
+              "value": "$inputs.x-auth-key"
+            },
+            {
+              "name": "x-auth-secret",
+              "in": "header",
+              "value": "$inputs.x-auth-secret"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "uiLanguages": "$response.body#/0/uiLanguages"
+          }
+        }
+      ],
+      "outputs": {
+        "countries": "$steps.get-supported-countries.outputs.countries",
+        "currencies": "$steps.get-supported-currencies.outputs.currencies",
+        "dateFormats": "$steps.get-supported-date-formats.outputs.dateFormats",
+        "uiLanguages": "$steps.get-supported-ui-languages.outputs.uiLanguages"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
