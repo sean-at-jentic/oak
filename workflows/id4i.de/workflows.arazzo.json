@@ -1,0 +1,1263 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/id4i.de/main/1.0.2/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "guid-creation-and-initial-data-assignment",
+      "summary": "Creates new Global Unique Identifiers (GUIDs) and immediately assigns custom properties and aliases to them.",
+      "description": "Creates new Global Unique Identifiers (GUIDs) and immediately assigns custom properties and aliases to them.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "string"
+          },
+          "length": {
+            "type": "string"
+          },
+          "organizationId": {
+            "type": "string"
+          },
+          "id4n": {
+            "type": "string"
+          },
+          "aliasType": {
+            "type": "string"
+          },
+          "alias": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-guid",
+          "description": "Generates one or more new GUIDs for a specified organization.",
+          "operationId": "createGuid",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "count": "$inputs.count",
+              "length": "$inputs.length",
+              "organizationId": "$inputs.organizationId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id4ns": "$response.body#/id4ns"
+          }
+        },
+        {
+          "stepId": "patch-guid-properties",
+          "description": "Adds or updates custom properties for a specific GUID.",
+          "operationId": "patchProperties",
+          "parameters": [
+            {
+              "name": "id4n",
+              "in": "path",
+              "value": "$steps.create-guid.outputs.id4ns"
+            },
+            {
+              "name": "organizationId",
+              "in": "query",
+              "value": "$inputs.organizationId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id4n": "$steps.create-guid.outputs.id4ns[0]"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_message": "$response.body#/status_message"
+          }
+        },
+        {
+          "stepId": "add-guid-alias",
+          "description": "Assigns an alias of a specific type to the GUID.",
+          "operationId": "addGuidAlias",
+          "parameters": [
+            {
+              "name": "id4n",
+              "in": "path",
+              "value": "$steps.create-guid.outputs.id4ns"
+            },
+            {
+              "name": "aliasType",
+              "in": "path",
+              "value": "$inputs.aliasType"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id4n": "$steps.create-guid.outputs.id4ns[0]",
+              "alias": "$inputs.alias"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_message": "$response.body#/status_message"
+          }
+        }
+      ],
+      "outputs": {
+        "id4ns": "$steps.create-guid.outputs.id4ns",
+        "status_message": "$steps.add-guid-alias.outputs.status_message"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "id4n-document-management",
+      "summary": "Manages documents associated with an ID4n, including uploading, listing, retrieving content, and updating metadata.",
+      "description": "Manages documents associated with an ID4n, including uploading, listing, retrieving content, and updating metadata.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "organizationId": {
+            "type": "string"
+          },
+          "id4n": {
+            "type": "string"
+          },
+          "upload-document_body": {
+            "type": "object"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "fileName": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "visibility": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "upload-document",
+          "description": "Uploads a new document and associates it with a specific ID4n and organization.",
+          "operationId": "createDocument",
+          "parameters": [
+            {
+              "name": "organizationId",
+              "in": "path",
+              "value": "$inputs.organizationId"
+            },
+            {
+              "name": "id4n",
+              "in": "path",
+              "value": "$inputs.id4n"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/octet-stream",
+            "payload": "$inputs.upload-document_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "filename": "$response.body#/filename",
+            "mimeType": "$response.body#/mimeType",
+            "ownerOrganizationId": "$response.body#/ownerOrganizationId",
+            "visibility": "$response.body#/visibility"
+          }
+        },
+        {
+          "stepId": "list-id4n-documents",
+          "description": "Retrieves a paginated list of all documents associated with the ID4n.",
+          "operationId": "listAllDocuments",
+          "parameters": [
+            {
+              "name": "id4n",
+              "in": "path",
+              "value": "$inputs.id4n"
+            },
+            {
+              "name": "owner",
+              "in": "query",
+              "value": "$inputs.owner"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "elements": "$response.body#/elements",
+            "limit": "$response.body#/limit",
+            "offset": "$response.body#/offset",
+            "total": "$response.body#/total"
+          }
+        },
+        {
+          "stepId": "read-document-content",
+          "description": "Downloads the binary content of a specific document associated with the ID4n.",
+          "operationId": "readDocument",
+          "parameters": [
+            {
+              "name": "organizationId",
+              "in": "path",
+              "value": "$steps.list-id4n-documents.outputs.elements.ownerOrganizationId"
+            },
+            {
+              "name": "id4n",
+              "in": "path",
+              "value": "$steps.list-id4n-documents.outputs.elements.id4n"
+            },
+            {
+              "name": "fileName",
+              "in": "path",
+              "value": "$steps.list-id4n-documents.outputs.elements.filename"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "document_content": "$response.body#/document_content"
+          }
+        },
+        {
+          "stepId": "update-document-metadata",
+          "description": "Updates the metadata (e.g., filename, mimeType, visibility) of an existing document.",
+          "operationId": "updateDocumentMetadata",
+          "parameters": [
+            {
+              "name": "organizationId",
+              "in": "path",
+              "value": "$steps.list-id4n-documents.outputs.elements.ownerOrganizationId"
+            },
+            {
+              "name": "id4n",
+              "in": "path",
+              "value": "$steps.list-id4n-documents.outputs.elements.id4n"
+            },
+            {
+              "name": "fileName",
+              "in": "path",
+              "value": "$steps.list-id4n-documents.outputs.elements.filename"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id4n": "$steps.list-id4n-documents.outputs.elements[0].id4n",
+              "organizationId": "$steps.list-id4n-documents.outputs.elements[0].ownerOrganizationId",
+              "fileName": "$steps.list-id4n-documents.outputs.elements[0].filename",
+              "filename": "$inputs.filename",
+              "mimeType": "$inputs.mimeType",
+              "visibility": "$inputs.visibility"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "filename": "$response.body#/filename",
+            "mimeType": "$response.body#/mimeType",
+            "ownerOrganizationId": "$response.body#/ownerOrganizationId",
+            "visibility": "$response.body#/visibility"
+          }
+        }
+      ],
+      "outputs": {
+        "filename": "$steps.update-document-metadata.outputs.filename",
+        "mimeType": "$steps.update-document-metadata.outputs.mimeType",
+        "ownerOrganizationId": "$steps.update-document-metadata.outputs.ownerOrganizationId",
+        "visibility": "$steps.update-document-metadata.outputs.visibility",
+        "elements": "$steps.list-id4n-documents.outputs.elements",
+        "limit": "$steps.list-id4n-documents.outputs.limit",
+        "offset": "$steps.list-id4n-documents.outputs.offset",
+        "total": "$steps.list-id4n-documents.outputs.total",
+        "document_content": "$steps.read-document-content.outputs.document_content"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "user-account-registration-and-verification",
+      "summary": "Allows a new user to register for the ID4i platform and verify their email address to activate the account.",
+      "description": "Allows a new user to register for the ID4i platform and verify their email address to activate the account.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "register-user",
+          "description": "Registers a new user account with provided email, username, and password.",
+          "operationId": "registerUser",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "email": "$inputs.email",
+              "password": "$inputs.password",
+              "username": "$inputs.username"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "email": "$response.body#/email",
+            "username": "$response.body#/username",
+            "message": "$response.body#/message"
+          }
+        },
+        {
+          "stepId": "verify-registration",
+          "description": "Verifies the new user registration using a token, typically sent to the user's email after registration.",
+          "operationId": "verifyUserRegistration",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "token": "$inputs.token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_message": "$response.body#/status_message"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.register-user.outputs.id",
+        "email": "$steps.register-user.outputs.email",
+        "username": "$steps.register-user.outputs.username",
+        "message": "$steps.register-user.outputs.message",
+        "status_message": "$steps.verify-registration.outputs.status_message"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "api-key-creation-and-privilege-assignment",
+      "summary": "Allows an organization administrator to create a new API key and immediately assign specific privileges to it for controlled access.",
+      "description": "Allows an organization administrator to create a new API key and immediately assign specific privileges to it for controlled access.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "organizationId": {
+            "type": "string"
+          },
+          "secret": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "privilege": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-api-key",
+          "description": "Generates a new API key with a specified label and organization ID.",
+          "operationId": "createNewApiKey",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "label": "$inputs.label",
+              "organizationId": "$inputs.organizationId",
+              "secret": "$inputs.secret"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "key": "$response.body#/key",
+            "label": "$response.body#/label",
+            "organizationId": "$response.body#/organizationId",
+            "active": "$response.body#/active"
+          }
+        },
+        {
+          "stepId": "add-api-key-privilege",
+          "description": "Assigns a specific privilege to the newly created API key.",
+          "operationId": "addApiKeyPrivilege",
+          "parameters": [
+            {
+              "name": "key",
+              "in": "path",
+              "value": "$steps.create-api-key.outputs.key"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "key": "$steps.create-api-key.outputs.key",
+              "privilege": "$inputs.privilege"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_message": "$response.body#/status_message"
+          }
+        },
+        {
+          "stepId": "list-api-key-privileges",
+          "description": "Retrieves the list of privileges currently assigned to the API key to verify the assignment.",
+          "operationId": "listApiKeyPrivileges",
+          "parameters": [
+            {
+              "name": "key",
+              "in": "path",
+              "value": "$steps.create-api-key.outputs.key"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "elements": "$response.body#/elements",
+            "limit": "$response.body#/limit",
+            "offset": "$response.body#/offset",
+            "total": "$response.body#/total"
+          }
+        }
+      ],
+      "outputs": {
+        "key": "$steps.create-api-key.outputs.key",
+        "label": "$steps.create-api-key.outputs.label",
+        "organizationId": "$steps.create-api-key.outputs.organizationId",
+        "active": "$steps.create-api-key.outputs.active",
+        "status_message": "$steps.add-api-key-privilege.outputs.status_message",
+        "elements": "$steps.list-api-key-privileges.outputs.elements",
+        "limit": "$steps.list-api-key-privileges.outputs.limit",
+        "offset": "$steps.list-api-key-privileges.outputs.offset",
+        "total": "$steps.list-api-key-privileges.outputs.total"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "id4n-history-tracking-and-audit",
+      "summary": "Records significant events in the lifecycle of an ID4n and allows for auditing and controlling the visibility of these history items.",
+      "description": "Records significant events in the lifecycle of an ID4n and allows for auditing and controlling the visibility of these history items.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id4n": {
+            "type": "string"
+          },
+          "organizationId": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "includePrivate": {
+            "type": "string"
+          },
+          "organization": {
+            "type": "string"
+          },
+          "qualifier": {
+            "type": "string"
+          },
+          "fromDate": {
+            "type": "string"
+          },
+          "toDate": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "sequenceId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-id4n-history-item",
+          "description": "Publishes a new event or status update for an ID4n.",
+          "operationId": "addItem",
+          "parameters": [
+            {
+              "name": "id4n",
+              "in": "path",
+              "value": "$inputs.id4n"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "organizationId": "$inputs.organizationId",
+              "type": "$inputs.type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_message": "$response.body#/status_message"
+          }
+        },
+        {
+          "stepId": "list-id4n-history",
+          "description": "Retrieves the history of an ID4n, with options to filter by organization, type, or date range.",
+          "operationId": "filteredList",
+          "parameters": [
+            {
+              "name": "id4n",
+              "in": "path",
+              "value": "$inputs.id4n"
+            },
+            {
+              "name": "includePrivate",
+              "in": "query",
+              "value": "$inputs.includePrivate"
+            },
+            {
+              "name": "organization",
+              "in": "query",
+              "value": "$inputs.organization"
+            },
+            {
+              "name": "type",
+              "in": "query",
+              "value": "$inputs.type"
+            },
+            {
+              "name": "qualifier",
+              "in": "query",
+              "value": "$inputs.qualifier"
+            },
+            {
+              "name": "fromDate",
+              "in": "query",
+              "value": "$inputs.fromDate"
+            },
+            {
+              "name": "toDate",
+              "in": "query",
+              "value": "$inputs.toDate"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "elements": "$response.body#/elements",
+            "limit": "$response.body#/limit",
+            "offset": "$response.body#/offset",
+            "total": "$response.body#/total"
+          }
+        },
+        {
+          "stepId": "update-history-item-visibility",
+          "description": "Changes the public or shared visibility settings of a specific history item.",
+          "operationId": "updateItemVisibility",
+          "parameters": [
+            {
+              "name": "id4n",
+              "in": "path",
+              "value": "$steps.list-id4n-history.outputs.elements.id4n"
+            },
+            {
+              "name": "organizationId",
+              "in": "path",
+              "value": "$steps.list-id4n-history.outputs.elements.organizationId"
+            },
+            {
+              "name": "sequenceId",
+              "in": "path",
+              "value": "$steps.list-id4n-history.outputs.elements.sequenceId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id4n": "$steps.list-id4n-history.outputs.elements[0].id4n",
+              "organizationId": "$steps.list-id4n-history.outputs.elements[0].organizationId",
+              "sequenceId": "$steps.list-id4n-history.outputs.elements[0].sequenceId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "organizationId": "$response.body#/organizationId",
+            "type": "$response.body#/type",
+            "sequenceId": "$response.body#/sequenceId",
+            "visibility": "$response.body#/visibility"
+          }
+        }
+      ],
+      "outputs": {
+        "status_message": "$steps.add-id4n-history-item.outputs.status_message",
+        "elements": "$steps.list-id4n-history.outputs.elements",
+        "limit": "$steps.list-id4n-history.outputs.limit",
+        "offset": "$steps.list-id4n-history.outputs.offset",
+        "total": "$steps.list-id4n-history.outputs.total",
+        "organizationId": "$steps.update-history-item-visibility.outputs.organizationId",
+        "type": "$steps.update-history-item-visibility.outputs.type",
+        "sequenceId": "$steps.update-history-item-visibility.outputs.sequenceId",
+        "visibility": "$steps.update-history-item-visibility.outputs.visibility"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "id4n-ownership-and-holding-transfer",
+      "summary": "Facilitates the secure transfer of an ID4n's ownership or holding status between organizations, involving preparation by the sender and reception by the recipient.",
+      "description": "Facilitates the secure transfer of an ID4n's ownership or holding status between organizations, involving preparation by the sender and reception by the recipient.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id4n": {
+            "type": "string"
+          },
+          "keepOwnership": {
+            "type": "string"
+          },
+          "openForClaims": {
+            "type": "string"
+          },
+          "recipientOrganizationIds": {
+            "type": "string"
+          },
+          "organizationId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "prepare-id4n-for-transfer",
+          "description": "The current owner/holder prepares an ID4n for transfer, specifying recipients and ownership rules.",
+          "operationId": "prepare",
+          "parameters": [
+            {
+              "name": "id4n",
+              "in": "path",
+              "value": "$inputs.id4n"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "keepOwnership": "$inputs.keepOwnership",
+              "openForClaims": "$inputs.openForClaims",
+              "recipientOrganizationIds": "$inputs.recipientOrganizationIds"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_message": "$response.body#/status_message"
+          }
+        },
+        {
+          "stepId": "get-id4n-transfer-info",
+          "description": "Retrieves the transfer preparation details for an ID4n, visible to both sender and potential recipients.",
+          "operationId": "getSendInfo",
+          "parameters": [
+            {
+              "name": "id4n",
+              "in": "path",
+              "value": "$inputs.id4n"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "holderOrganizationId": "$response.body#/holderOrganizationId",
+            "keepOwnership": "$response.body#/keepOwnership",
+            "openForClaims": "$response.body#/openForClaims",
+            "ownerOrganizationId": "$response.body#/ownerOrganizationId",
+            "recipientOrganizationIds": "$response.body#/recipientOrganizationIds"
+          }
+        },
+        {
+          "stepId": "receive-id4n-transfer",
+          "description": "The designated recipient claims the ID4n, becoming its new holder or owner based on transfer rules.",
+          "operationId": "receive",
+          "parameters": [
+            {
+              "name": "id4n",
+              "in": "path",
+              "value": "$inputs.id4n"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "organizationId": "$inputs.organizationId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_message": "$response.body#/status_message"
+          }
+        }
+      ],
+      "outputs": {
+        "status_message": "$steps.receive-id4n-transfer.outputs.status_message",
+        "holderOrganizationId": "$steps.get-id4n-transfer-info.outputs.holderOrganizationId",
+        "keepOwnership": "$steps.get-id4n-transfer-info.outputs.keepOwnership",
+        "openForClaims": "$steps.get-id4n-transfer-info.outputs.openForClaims",
+        "ownerOrganizationId": "$steps.get-id4n-transfer-info.outputs.ownerOrganizationId",
+        "recipientOrganizationIds": "$steps.get-id4n-transfer-info.outputs.recipientOrganizationIds"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "public-id4n-information-discovery",
+      "summary": "Allows external parties or public services to retrieve publicly available information about an ID4n, including its owner, public history, and associated public documents.",
+      "description": "Allows external parties or public services to retrieve publicly available information about an ID4n, including its owner, public history, and associated public documents.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id4n": {
+            "type": "string"
+          },
+          "organizationId": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "fileName": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "resolve-id4n-owner",
+          "description": "Determines the owner and basic public information (like aliases and address) of an ID4n.",
+          "operationId": "resolveWhoIsEntry",
+          "parameters": [
+            {
+              "name": "id4n",
+              "in": "path",
+              "value": "$inputs.id4n"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "aliases": "$response.body#/aliases",
+            "organization": "$response.body#/organization",
+            "organizationAddress": "$response.body#/organizationAddress"
+          }
+        },
+        {
+          "stepId": "get-public-organization-info",
+          "description": "Retrieves public information about an organization, typically the owner found via the 'WhoIs' lookup.",
+          "operationId": "readOrganizationInfo",
+          "parameters": [
+            {
+              "name": "organizationId",
+              "in": "path",
+              "value": "$steps.resolve-id4n-owner.outputs.organization.namespace"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "logoURL": "$response.body#/logoURL",
+            "name": "$response.body#/name",
+            "namespace": "$response.body#/namespace"
+          }
+        },
+        {
+          "stepId": "list-public-id4n-history",
+          "description": "Retrieves only the publicly visible history events associated with an ID4n.",
+          "operationId": "listPublicHistory",
+          "parameters": [
+            {
+              "name": "id4n",
+              "in": "path",
+              "value": "$inputs.id4n"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "elements": "$response.body#/elements",
+            "limit": "$response.body#/limit",
+            "offset": "$response.body#/offset",
+            "total": "$response.body#/total"
+          }
+        },
+        {
+          "stepId": "list-public-id4n-documents",
+          "description": "Lists publicly visible documents linked to an ID4n.",
+          "operationId": "listAllPublicDocuments",
+          "parameters": [
+            {
+              "name": "organizationId",
+              "in": "query",
+              "value": "$inputs.organizationId"
+            },
+            {
+              "name": "id4n",
+              "in": "path",
+              "value": "$inputs.id4n"
+            },
+            {
+              "name": "owner",
+              "in": "query",
+              "value": "$inputs.owner"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "elements": "$response.body#/elements",
+            "limit": "$response.body#/limit",
+            "offset": "$response.body#/offset",
+            "total": "$response.body#/total"
+          }
+        },
+        {
+          "stepId": "read-public-document-content",
+          "description": "Downloads the content of a specific public document associated with the ID4n.",
+          "operationId": "readPublicDocument",
+          "parameters": [
+            {
+              "name": "organizationId",
+              "in": "path",
+              "value": "$steps.list-public-id4n-documents.outputs.elements.ownerOrganizationId"
+            },
+            {
+              "name": "id4n",
+              "in": "path",
+              "value": "$steps.list-public-id4n-documents.outputs.elements.id4n"
+            },
+            {
+              "name": "fileName",
+              "in": "path",
+              "value": "$steps.list-public-id4n-documents.outputs.elements.filename"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "document_content": "$response.body#/document_content"
+          }
+        }
+      ],
+      "outputs": {
+        "aliases": "$steps.resolve-id4n-owner.outputs.aliases",
+        "organization": "$steps.resolve-id4n-owner.outputs.organization",
+        "organizationAddress": "$steps.resolve-id4n-owner.outputs.organizationAddress",
+        "id": "$steps.get-public-organization-info.outputs.id",
+        "logoURL": "$steps.get-public-organization-info.outputs.logoURL",
+        "name": "$steps.get-public-organization-info.outputs.name",
+        "namespace": "$steps.get-public-organization-info.outputs.namespace",
+        "elements": "$steps.list-public-id4n-documents.outputs.elements",
+        "limit": "$steps.list-public-id4n-documents.outputs.limit",
+        "offset": "$steps.list-public-id4n-documents.outputs.offset",
+        "total": "$steps.list-public-id4n-documents.outputs.total",
+        "document_content": "$steps.read-public-document-content.outputs.document_content"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "user-password-reset-process",
+      "summary": "Enables a user to reset their forgotten password by requesting a reset token and then using it to set a new password.",
+      "description": "Enables a user to reset their forgotten password by requesting a reset token and then using it to set a new password.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "request-password-reset",
+          "description": "Initiates the password reset process for a given username, typically sending a reset token.",
+          "operationId": "requestPasswordReset",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "username": "$inputs.username"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "message": "$response.body#/message"
+          }
+        },
+        {
+          "stepId": "verify-password-reset",
+          "description": "Sets a new password using the verification token received from the password reset request.",
+          "operationId": "verifyPasswordReset",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "password": "$inputs.password",
+              "token": "$inputs.token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_message": "$response.body#/status_message"
+          }
+        }
+      ],
+      "outputs": {
+        "message": "$steps.request-password-reset.outputs.message",
+        "status_message": "$steps.verify-password-reset.outputs.status_message"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
