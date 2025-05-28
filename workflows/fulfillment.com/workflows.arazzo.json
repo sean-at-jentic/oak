@@ -1,0 +1,593 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/fulfillment.com/main/2.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "api-authentication-and-user-profile-retrieval",
+      "summary": "Obtain an access token using user credentials or a refresh token, and then retrieve the authenticated user's profile information to confirm token validity or identify the associated merchant.",
+      "description": "Obtain an access token using user credentials or a refresh token, and then retrieve the authenticated user's profile information to confirm token validity or identify the associated merchant.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "generate-access-token_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "generate-access-token",
+          "description": "Authenticate user credentials or refresh an existing token to receive a new access token.",
+          "operationId": "post-oauth-access_token",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.generate-access-token_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "access_token": "$response.body#/access_token",
+            "refresh_token": "$response.body#/refresh_token",
+            "expires_in": "$response.body#/expires_in"
+          }
+        },
+        {
+          "stepId": "get-my-user-profile",
+          "description": "Retrieve the profile information of the user associated with the provided access token.",
+          "operationId": "get-users-me",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/merchant/id",
+            "username": "$response.body#/username",
+            "name": "$response.body#/name",
+            "merchant.id": "$response.body#/merchant"
+          }
+        }
+      ],
+      "outputs": {
+        "access_token": "$steps.generate-access-token.outputs.access_token",
+        "refresh_token": "$steps.generate-access-token.outputs.refresh_token",
+        "expires_in": "$steps.generate-access-token.outputs.expires_in",
+        "id": "$steps.get-my-user-profile.outputs.id",
+        "username": "$steps.get-my-user-profile.outputs.username",
+        "name": "$steps.get-my-user-profile.outputs.name",
+        "merchant.id": "$steps.get-my-user-profile.outputs.merchant.id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "new-order-submission-and-tracking",
+      "summary": "Submit a new customer order to Fulfillment.com for processing and then continuously monitor its fulfillment and shipping progress, including detailed carrier tracking events.",
+      "description": "Submit a new customer order to Fulfillment.com for processing and then continuously monitor its fulfillment and shipping progress, including detailed carrier tracking events.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "merchantOrderId": {
+            "type": "string"
+          },
+          "shippingMethod": {
+            "type": "string"
+          },
+          "recipient": {
+            "type": "string"
+          },
+          "items": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "merchantId": {
+            "type": "string"
+          },
+          "hydrate": {
+            "type": "string"
+          },
+          "trackingNumber": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "submit-new-order",
+          "description": "Create a new order in the Fulfillment.com system with recipient, items, and shipping method details.",
+          "operationId": "post-orders",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "merchantOrderId": "$inputs.merchantOrderId",
+              "shippingMethod": "$inputs.shippingMethod",
+              "recipient": "$inputs.recipient",
+              "items": "$inputs.items"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/parentOrder/id",
+            "merchantOrderId": "$response.body#/merchantOrderId",
+            "trackingNumbers": "$response.body#/trackingNumbers"
+          }
+        },
+        {
+          "stepId": "get-order-details",
+          "description": "Retrieve comprehensive details for a specific order using its FDC ID or merchant order ID, including current status and tracking numbers.",
+          "operationId": "getOrder",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.submit-new-order.outputs.id"
+            },
+            {
+              "name": "merchantId",
+              "in": "query",
+              "value": "$inputs.merchantId"
+            },
+            {
+              "name": "hydrate",
+              "in": "query",
+              "value": "$inputs.hydrate"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "merchantOrderId": "$response.body#/merchantOrderId",
+            "trackingNumbers": "$response.body#/trackingNumbers",
+            "currentStatus.status.code": "$response.body#/currentStatus.status.code",
+            "dispatchDate": "$response.body#/dispatchDate",
+            "departDate": "$response.body#/departDate"
+          }
+        },
+        {
+          "stepId": "get-carrier-tracking",
+          "description": "Obtain carrier-independent tracking events and status for a specific package using its tracking number.",
+          "operationId": "get-track",
+          "parameters": [
+            {
+              "name": "trackingNumber",
+              "in": "query",
+              "value": "$steps.get-order-details.outputs.trackingNumbers.value"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "trackedEvents": "$response.body#/trackedEvents",
+            "fdcOrderId": "$response.body#/fdcOrderId",
+            "status": "$response.body#/status"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.get-order-details.outputs.id",
+        "merchantOrderId": "$steps.get-order-details.outputs.merchantOrderId",
+        "trackingNumbers": "$steps.get-order-details.outputs.trackingNumbers",
+        "currentStatus.status.code": "$steps.get-order-details.outputs.currentStatus.status.code",
+        "dispatchDate": "$steps.get-order-details.outputs.dispatchDate",
+        "departDate": "$steps.get-order-details.outputs.departDate",
+        "trackedEvents": "$steps.get-carrier-tracking.outputs.trackedEvents",
+        "fdcOrderId": "$steps.get-carrier-tracking.outputs.fdcOrderId",
+        "status": "$steps.get-carrier-tracking.outputs.status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "order-cancellation",
+      "summary": "Retrieve the current status of an order and then request its cancellation to prevent shipment, if it has not yet been dispatched.",
+      "description": "Retrieve the current status of an order and then request its cancellation to prevent shipment, if it has not yet been dispatched.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "merchantId": {
+            "type": "string"
+          },
+          "hydrate": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-order-to-cancel",
+          "description": "Fetch the details of an order to verify its existence and current fulfillment status before attempting cancellation.",
+          "operationId": "getOrder",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "merchantId",
+              "in": "query",
+              "value": "$inputs.merchantId"
+            },
+            {
+              "name": "hydrate",
+              "in": "query",
+              "value": "$inputs.hydrate"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "merchantOrderId": "$response.body#/merchantOrderId",
+            "currentStatus.status.code": "$response.body#/currentStatus.status.code",
+            "dispatchDate": "$response.body#/dispatchDate"
+          }
+        },
+        {
+          "stepId": "cancel-order",
+          "description": "Request the cancellation of a specific order using its FDC ID.",
+          "operationId": "delete-orders-id",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-order-to-cancel.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "currentStatus.status.code": "$response.body#/currentStatus.status.code"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.cancel-order.outputs.id",
+        "merchantOrderId": "$steps.get-order-to-cancel.outputs.merchantOrderId",
+        "currentStatus.status.code": "$steps.cancel-order.outputs.currentStatus.status.code",
+        "dispatchDate": "$steps.get-order-to-cancel.outputs.dispatchDate"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "shipping-partner-order-updates",
+      "summary": "For shipping partners, this workflow allows updating an order's internal fulfillment status and recording the final shipment details including the tracking number, marking the order as shipped.",
+      "description": "For shipping partners, this workflow allows updating an order's internal fulfillment status and recording the final shipment details including the tracking number, marking the order as shipped.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "trackingNumber": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "update-order-status-by-partner",
+          "description": "Update the internal status of an order, typically used by shipping partners to reflect progress in the fulfillment process.",
+          "operationId": "put-orders-id-status",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "reason": "$inputs.reason",
+              "status": "$inputs.status"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "currentStatus.status.code": "$response.body#/currentStatus.status.code"
+          }
+        },
+        {
+          "stepId": "record-order-shipment-by-partner",
+          "description": "Record the final shipment details for an order, including the tracking number, indicating it has been dispatched.",
+          "operationId": "put-orders-id-ship",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.update-order-status-by-partner.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.update-order-status-by-partner.outputs.id",
+              "trackingNumber": "$inputs.trackingNumber"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "trackingNumbers": "$response.body#/trackingNumbers"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.record-order-shipment-by-partner.outputs.id",
+        "currentStatus.status.code": "$steps.update-order-status-by-partner.outputs.currentStatus.status.code",
+        "trackingNumbers": "$steps.record-order-shipment-by-partner.outputs.trackingNumbers"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "returns-processing-and-monitoring",
+      "summary": "Inform Fulfillment.com about an expected customer return (RMA) and then retrieve a list of return activities to track their status and manage the returns process.",
+      "description": "Inform Fulfillment.com about an expected customer return (RMA) and then retrieve a list of return activities to track their status and manage the returns process.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "string"
+          },
+          "recipient": {
+            "type": "string"
+          },
+          "rmaNumber": {
+            "type": "string"
+          },
+          "fromDate": {
+            "type": "string"
+          },
+          "toDate": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "inform-expected-return",
+          "description": "Notify Fulfillment.com of an anticipated return, providing details about the items and recipient.",
+          "operationId": "put-returns",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "items": "$inputs.items",
+              "recipient": "$inputs.recipient",
+              "rmaNumber": "$inputs.rmaNumber"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "rmaNumber": "$response.body#/rmaNumber",
+            "merchantOrderId": "$response.body#/merchantOrderId"
+          }
+        },
+        {
+          "stepId": "list-return-activity",
+          "description": "Retrieve a summary of return activities within a specified time frame.",
+          "operationId": "get-returns",
+          "parameters": [
+            {
+              "name": "fromDate",
+              "in": "query",
+              "value": "$inputs.fromDate"
+            },
+            {
+              "name": "toDate",
+              "in": "query",
+              "value": "$inputs.toDate"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "data": "$response.body#/data"
+          }
+        }
+      ],
+      "outputs": {
+        "rmaNumber": "$steps.inform-expected-return.outputs.rmaNumber",
+        "merchantOrderId": "$steps.inform-expected-return.outputs.merchantOrderId",
+        "data": "$steps.list-return-activity.outputs.data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
