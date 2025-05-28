@@ -1,0 +1,271 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/exoapi.dev/main/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "geocode-and-moderate-address-text",
+      "summary": "First, convert GPS coordinates into a full human-readable address, then analyze the generated address text for any unwanted content, ensuring compliance or safety for displayed addresses.",
+      "description": "First, convert GPS coordinates into a full human-readable address, then analyze the generated address text for any unwanted content, ensuring compliance or safety for displayed addresses.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "lat": {
+            "type": "string"
+          },
+          "lon": {
+            "type": "string"
+          },
+          "locale": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "reverse-geocode-address",
+          "description": "Converts latitude and longitude coordinates into a detailed address string.",
+          "operationId": "reverse-geocoding-get",
+          "parameters": [
+            {
+              "name": "lat",
+              "in": "query",
+              "value": "$inputs.lat"
+            },
+            {
+              "name": "lon",
+              "in": "query",
+              "value": "$inputs.lon"
+            },
+            {
+              "name": "locale",
+              "in": "query",
+              "value": "$inputs.locale"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "address": "$response.body#/address"
+          }
+        },
+        {
+          "stepId": "moderate-geocoded-text",
+          "description": "Analyzes the geocoded address text for potential hate speech, dangerous content, or other moderation concerns.",
+          "operationId": "content-moderation-get",
+          "parameters": [
+            {
+              "name": "text",
+              "in": "query",
+              "value": "$inputs.text"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "safetyScore": "$response.body#/safetyScore",
+            "reason": "$response.body#/reason",
+            "hateSpeechScore": "$response.body#/hateSpeechScore",
+            "dangerousContentScore": "$response.body#/dangerousContentScore",
+            "harassmentScore": "$response.body#/harassmentScore",
+            "sexuallyExplicitScore": "$response.body#/sexuallyExplicitScore",
+            "spamScore": "$response.body#/spamScore"
+          }
+        }
+      ],
+      "outputs": {
+        "address": "$steps.reverse-geocode-address.outputs.address",
+        "safetyScore": "$steps.moderate-geocoded-text.outputs.safetyScore",
+        "reason": "$steps.moderate-geocoded-text.outputs.reason",
+        "hateSpeechScore": "$steps.moderate-geocoded-text.outputs.hateSpeechScore",
+        "dangerousContentScore": "$steps.moderate-geocoded-text.outputs.dangerousContentScore",
+        "harassmentScore": "$steps.moderate-geocoded-text.outputs.harassmentScore",
+        "sexuallyExplicitScore": "$steps.moderate-geocoded-text.outputs.sexuallyExplicitScore",
+        "spamScore": "$steps.moderate-geocoded-text.outputs.spamScore"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "convert-unit-and-barcode-result",
+      "summary": "Convert a numerical value between specified units, then generate a barcode image encoding the converted result, useful for inventory management or labeling converted quantities.",
+      "description": "Convert a numerical value between specified units, then generate a barcode image encoding the converted result, useful for inventory management or labeling converted quantities.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "convert-value",
+          "description": "Converts a numerical value from a source unit to a target unit.",
+          "operationId": "unit-converter-get",
+          "parameters": [
+            {
+              "name": "from",
+              "in": "query",
+              "value": "$inputs.from"
+            },
+            {
+              "name": "to",
+              "in": "query",
+              "value": "$inputs.to"
+            },
+            {
+              "name": "value",
+              "in": "query",
+              "value": "$inputs.value"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "result": "$response.body#/result"
+          }
+        },
+        {
+          "stepId": "barcode-converted-value",
+          "description": "Generates a barcode image using the numerical result from the unit conversion.",
+          "operationId": "barcode-generator-post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "type": "$inputs.type",
+              "value": "$inputs.value"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "generated_barcode_image": "$response.body#/generated_barcode_image"
+          }
+        }
+      ],
+      "outputs": {
+        "result": "$steps.convert-value.outputs.result",
+        "generated_barcode_image": "$steps.barcode-converted-value.outputs.generated_barcode_image"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
