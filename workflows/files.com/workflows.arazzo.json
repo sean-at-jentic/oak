@@ -1,0 +1,1522 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/files.com/main/0.0.1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "secure-file-sharing-via-bundles",
+      "summary": "Create a secure, password-protected bundle (share link) for files, share it with specific recipients via email, and then monitor the bundle's download and registration activity.",
+      "description": "Create a secure, password-protected bundle (share link) for files, share it with specific recipients via email, and then monitor the bundle's download and registration activity.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "recipients": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "per_page": {
+            "type": "string"
+          },
+          "sort_by": {
+            "type": "string"
+          },
+          "filter": {
+            "type": "string"
+          },
+          "filter_gt": {
+            "type": "string"
+          },
+          "filter_gteq": {
+            "type": "string"
+          },
+          "filter_lt": {
+            "type": "string"
+          },
+          "filter_lteq": {
+            "type": "string"
+          },
+          "bundle_id": {
+            "type": "string"
+          },
+          "bundle_registration_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-bundle",
+          "description": "Create a new file bundle with specified paths, password protection, and expiration.",
+          "operationId": "PostBundles",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "url": "$response.body#/url",
+            "code": "$response.body#/code"
+          }
+        },
+        {
+          "stepId": "share-bundle-with-recipients",
+          "description": "Send email invitations with the bundle link to a list of recipients.",
+          "operationId": "PostBundlesIdShare",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-bundle.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "id": "$steps.create-bundle.outputs.id",
+              "note": "$inputs.note",
+              "recipients": "$inputs.recipients"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "recipients_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-bundle-downloads",
+          "description": "Retrieve a list of all download events for the created bundle.",
+          "operationId": "GetBundleDownloads",
+          "parameters": [
+            {
+              "name": "cursor",
+              "in": "query",
+              "value": "$inputs.cursor"
+            },
+            {
+              "name": "per_page",
+              "in": "query",
+              "value": "$inputs.per_page"
+            },
+            {
+              "name": "sort_by",
+              "in": "query",
+              "value": "$inputs.sort_by"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            },
+            {
+              "name": "filter_gt",
+              "in": "query",
+              "value": "$inputs.filter_gt"
+            },
+            {
+              "name": "filter_gteq",
+              "in": "query",
+              "value": "$inputs.filter_gteq"
+            },
+            {
+              "name": "filter_lt",
+              "in": "query",
+              "value": "$inputs.filter_lt"
+            },
+            {
+              "name": "filter_lteq",
+              "in": "query",
+              "value": "$inputs.filter_lteq"
+            },
+            {
+              "name": "bundle_id",
+              "in": "query",
+              "value": "$steps.create-bundle.outputs.id"
+            },
+            {
+              "name": "bundle_registration_id",
+              "in": "query",
+              "value": "$inputs.bundle_registration_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "bundle_downloads": "$response.body#/0/bundle_downloads"
+          }
+        },
+        {
+          "stepId": "list-bundle-registrations",
+          "description": "Retrieve a list of all registration events for the created bundle (if registration was required).",
+          "operationId": "GetBundleRegistrations",
+          "parameters": [
+            {
+              "name": "cursor",
+              "in": "query",
+              "value": "$inputs.cursor"
+            },
+            {
+              "name": "per_page",
+              "in": "query",
+              "value": "$inputs.per_page"
+            },
+            {
+              "name": "sort_by",
+              "in": "query",
+              "value": "$inputs.sort_by"
+            },
+            {
+              "name": "bundle_id",
+              "in": "query",
+              "value": "$steps.create-bundle.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "bundle_registrations": "$response.body#/0/bundle_registrations"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-bundle.outputs.id",
+        "url": "$steps.create-bundle.outputs.url",
+        "code": "$steps.create-bundle.outputs.code",
+        "recipients_data": "$steps.share-bundle-with-recipients.outputs.recipients_data",
+        "bundle_downloads": "$steps.list-bundle-downloads.outputs.bundle_downloads",
+        "bundle_registrations": "$steps.list-bundle-registrations.outputs.bundle_registrations"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "user-account-and-permission-management",
+      "summary": "Create a new user, assign them to a group, set folder permissions for that group, and then retrieve the user's specific action history.",
+      "description": "Create a new user, assign them to a group, set folder permissions for that group, and then retrieve the user's specific action history.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "start_at": {
+            "type": "string"
+          },
+          "end_at": {
+            "type": "string"
+          },
+          "display": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "per_page": {
+            "type": "string"
+          },
+          "sort_by": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-user",
+          "description": "Create a new user account on the site.",
+          "operationId": "PostUsers",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "username": "$response.body#/username"
+          }
+        },
+        {
+          "stepId": "create-group",
+          "description": "Create a new user group to organize permissions.",
+          "operationId": "PostGroups",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "add-user-to-group",
+          "description": "Add the newly created user to the new group.",
+          "operationId": "PostGroupUsers",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "group_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "set-folder-permissions-for-group",
+          "description": "Grant specific folder access permissions to the newly created group.",
+          "operationId": "PostPermissions",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "group_id": "$steps.create-group.outputs.id",
+              "path": "$inputs.path"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "list-user-specific-history",
+          "description": "Retrieve the action history for the newly created user to audit their activities.",
+          "operationId": "HistoryListForUser",
+          "parameters": [
+            {
+              "name": "start_at",
+              "in": "query",
+              "value": "$inputs.start_at"
+            },
+            {
+              "name": "end_at",
+              "in": "query",
+              "value": "$inputs.end_at"
+            },
+            {
+              "name": "display",
+              "in": "query",
+              "value": "$inputs.display"
+            },
+            {
+              "name": "cursor",
+              "in": "query",
+              "value": "$inputs.cursor"
+            },
+            {
+              "name": "per_page",
+              "in": "query",
+              "value": "$inputs.per_page"
+            },
+            {
+              "name": "sort_by",
+              "in": "query",
+              "value": "$inputs.sort_by"
+            },
+            {
+              "name": "user_id",
+              "in": "path",
+              "value": "$steps.create-user.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "actions": "$response.body#/0/action"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.set-folder-permissions-for-group.outputs.id",
+        "username": "$steps.create-user.outputs.username",
+        "group_data": "$steps.add-user-to-group.outputs.group_data",
+        "actions": "$steps.list-user-specific-history.outputs.actions"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "site-activity-and-usage-monitoring",
+      "summary": "Retrieve general site settings, current usage statistics, and recent API request logs for comprehensive auditing and monitoring of the Files.com site.",
+      "description": "Retrieve general site settings, current usage statistics, and recent API request logs for comprehensive auditing and monitoring of the Files.com site.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "type": "string"
+          },
+          "per_page": {
+            "type": "string"
+          },
+          "filter": {
+            "type": "string"
+          },
+          "filter_prefix": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-site-settings",
+          "description": "Retrieve the current site-wide configuration settings.",
+          "operationId": "GetSite",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "site_settings": "$response.body#/site_settings"
+          }
+        },
+        {
+          "stepId": "get-current-usage-snapshot",
+          "description": "Get the most recent usage snapshot, including storage and transfer data, for billing and resource monitoring.",
+          "operationId": "GetSiteUsage",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "usage_snapshot": "$response.body#/usage_snapshot"
+          }
+        },
+        {
+          "stepId": "list-api-request-logs",
+          "description": "List recent API request logs to monitor programmatic interactions with the site.",
+          "operationId": "GetApiRequestLogs",
+          "parameters": [
+            {
+              "name": "cursor",
+              "in": "query",
+              "value": "$inputs.cursor"
+            },
+            {
+              "name": "per_page",
+              "in": "query",
+              "value": "$inputs.per_page"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            },
+            {
+              "name": "filter_prefix",
+              "in": "query",
+              "value": "$inputs.filter_prefix"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "api_request_logs": "$response.body#/0/api_request_logs"
+          }
+        }
+      ],
+      "outputs": {
+        "site_settings": "$steps.get-site-settings.outputs.site_settings",
+        "usage_snapshot": "$steps.get-current-usage-snapshot.outputs.usage_snapshot",
+        "api_request_logs": "$steps.list-api-request-logs.outputs.api_request_logs"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "as2-partner-integration-and-monitoring",
+      "summary": "Configure a new AS2 station and a corresponding AS2 partner for secure B2B file exchange, then monitor the incoming and outgoing messages for that partner.",
+      "description": "Configure a new AS2 station and a corresponding AS2 partner for secure B2B file exchange, then monitor the incoming and outgoing messages for that partner.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "public_certificate": {
+            "type": "string"
+          },
+          "uri": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "per_page": {
+            "type": "string"
+          },
+          "sort_by": {
+            "type": "string"
+          },
+          "filter": {
+            "type": "string"
+          },
+          "filter_gt": {
+            "type": "string"
+          },
+          "filter_gteq": {
+            "type": "string"
+          },
+          "filter_lt": {
+            "type": "string"
+          },
+          "filter_lteq": {
+            "type": "string"
+          },
+          "as2_partner_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-as2-station",
+          "description": "Create a new AS2 station, which represents your organization's AS2 endpoint.",
+          "operationId": "PostAs2Stations",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "create-as2-partner",
+          "description": "Define a new AS2 partner with whom you will exchange files, linking it to your AS2 station.",
+          "operationId": "PostAs2Partners",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "as2_station_id": "$steps.create-as2-station.outputs.id",
+              "name": "$inputs.name",
+              "public_certificate": "$inputs.public_certificate",
+              "uri": "$inputs.uri"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "list-as2-incoming-messages",
+          "description": "Retrieve a list of all incoming AS2 messages from the configured partner.",
+          "operationId": "GetAs2IncomingMessages",
+          "parameters": [
+            {
+              "name": "cursor",
+              "in": "query",
+              "value": "$inputs.cursor"
+            },
+            {
+              "name": "per_page",
+              "in": "query",
+              "value": "$inputs.per_page"
+            },
+            {
+              "name": "sort_by",
+              "in": "query",
+              "value": "$inputs.sort_by"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            },
+            {
+              "name": "filter_gt",
+              "in": "query",
+              "value": "$inputs.filter_gt"
+            },
+            {
+              "name": "filter_gteq",
+              "in": "query",
+              "value": "$inputs.filter_gteq"
+            },
+            {
+              "name": "filter_lt",
+              "in": "query",
+              "value": "$inputs.filter_lt"
+            },
+            {
+              "name": "filter_lteq",
+              "in": "query",
+              "value": "$inputs.filter_lteq"
+            },
+            {
+              "name": "as2_partner_id",
+              "in": "query",
+              "value": "$steps.create-as2-partner.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "incoming_messages": "$response.body#/0/incoming_messages"
+          }
+        },
+        {
+          "stepId": "list-as2-outgoing-messages",
+          "description": "Retrieve a list of all outgoing AS2 messages sent to the configured partner.",
+          "operationId": "GetAs2OutgoingMessages",
+          "parameters": [
+            {
+              "name": "cursor",
+              "in": "query",
+              "value": "$inputs.cursor"
+            },
+            {
+              "name": "per_page",
+              "in": "query",
+              "value": "$inputs.per_page"
+            },
+            {
+              "name": "sort_by",
+              "in": "query",
+              "value": "$inputs.sort_by"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            },
+            {
+              "name": "filter_gt",
+              "in": "query",
+              "value": "$inputs.filter_gt"
+            },
+            {
+              "name": "filter_gteq",
+              "in": "query",
+              "value": "$inputs.filter_gteq"
+            },
+            {
+              "name": "filter_lt",
+              "in": "query",
+              "value": "$inputs.filter_lt"
+            },
+            {
+              "name": "filter_lteq",
+              "in": "query",
+              "value": "$inputs.filter_lteq"
+            },
+            {
+              "name": "as2_partner_id",
+              "in": "query",
+              "value": "$steps.create-as2-partner.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "outgoing_messages": "$response.body#/0/outgoing_messages"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-as2-partner.outputs.id",
+        "incoming_messages": "$steps.list-as2-incoming-messages.outputs.incoming_messages",
+        "outgoing_messages": "$steps.list-as2-outgoing-messages.outputs.outgoing_messages"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "automate-api-access-for-service-account",
+      "summary": "Create a dedicated service account user with restricted authentication methods, generate an API key for programmatic access, and then retrieve the API key details for verification.",
+      "description": "Create a dedicated service account user with restricted authentication methods, generate an API key for programmatic access, and then retrieve the API key details for verification.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "permission_set": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-service-user",
+          "description": "Create a new user account intended for automated processes or integrations.",
+          "operationId": "PostUsers",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "username": "$response.body#/username"
+          }
+        },
+        {
+          "stepId": "create-api-key-for-service-user",
+          "description": "Generate a new API key specifically for the service account user.",
+          "operationId": "PostUsersUserIdApiKeys",
+          "parameters": [
+            {
+              "name": "user_id",
+              "in": "path",
+              "value": "$steps.create-service-user.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "user_id": "$steps.create-service-user.outputs.id",
+              "description": "$inputs.description",
+              "expires_at": "$inputs.expires_at",
+              "name": "$inputs.name",
+              "permission_set": "$inputs.permission_set"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "key": "$response.body#/key"
+          }
+        },
+        {
+          "stepId": "get-api-key-details",
+          "description": "Retrieve the details of the newly created API key to confirm its properties and permissions.",
+          "operationId": "GetApiKeysId",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-api-key-for-service-user.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "api_key_details": "$response.body#/api_key_details"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-api-key-for-service-user.outputs.id",
+        "username": "$steps.create-service-user.outputs.username",
+        "key": "$steps.create-api-key-for-service-user.outputs.key",
+        "api_key_details": "$steps.get-api-key-details.outputs.api_key_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "file-content-access-and-metadata-retrieval",
+      "summary": "Locate a specific file by its path, retrieve its detailed metadata, generate a secure download link, and then update its custom metadata or priority color.",
+      "description": "Locate a specific file by its path, retrieve its detailed metadata, generate a secure download link, and then update its custom metadata or priority color.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "preview_size": {
+            "type": "string"
+          },
+          "with_previews": {
+            "type": "string"
+          },
+          "with_priority_color": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "custom_metadata": {
+            "type": "string"
+          },
+          "priority_color": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-file-by-path",
+          "description": "Find a specific file or folder by its path and retrieve its comprehensive metadata.",
+          "operationId": "FileActionFind",
+          "parameters": [
+            {
+              "name": "path",
+              "in": "path",
+              "value": "$inputs.path"
+            },
+            {
+              "name": "preview_size",
+              "in": "query",
+              "value": "$inputs.preview_size"
+            },
+            {
+              "name": "with_previews",
+              "in": "query",
+              "value": "$inputs.with_previews"
+            },
+            {
+              "name": "with_priority_color",
+              "in": "query",
+              "value": "$inputs.with_priority_color"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "path": "$response.body#/path",
+            "size": "$response.body#/size",
+            "mime_type": "$response.body#/mime_type",
+            "md5": "$response.body#/md5",
+            "sha1": "$response.body#/sha1",
+            "sha256": "$response.body#/sha256"
+          }
+        },
+        {
+          "stepId": "download-file",
+          "description": "Generate a secure download URI for the identified file.",
+          "operationId": "FileDownload",
+          "parameters": [
+            {
+              "name": "path",
+              "in": "path",
+              "value": "$steps.find-file-by-path.outputs.path"
+            },
+            {
+              "name": "action",
+              "in": "query",
+              "value": "$inputs.action"
+            },
+            {
+              "name": "preview_size",
+              "in": "query",
+              "value": "$inputs.preview_size"
+            },
+            {
+              "name": "with_previews",
+              "in": "query",
+              "value": "$inputs.with_previews"
+            },
+            {
+              "name": "with_priority_color",
+              "in": "query",
+              "value": "$inputs.with_priority_color"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "download_uri": "$response.body#/download_uri"
+          }
+        },
+        {
+          "stepId": "update-file-metadata",
+          "description": "Update custom metadata or assign a priority color to the file.",
+          "operationId": "PatchFilesPath",
+          "parameters": [
+            {
+              "name": "path",
+              "in": "path",
+              "value": "$steps.find-file-by-path.outputs.path"
+            }
+          ],
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "path": "$steps.find-file-by-path.outputs.path",
+              "custom_metadata": "$inputs.custom_metadata",
+              "priority_color": "$inputs.priority_color"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_file_metadata": "$response.body#/updated_file_metadata"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.find-file-by-path.outputs.id",
+        "path": "$steps.find-file-by-path.outputs.path",
+        "size": "$steps.find-file-by-path.outputs.size",
+        "mime_type": "$steps.find-file-by-path.outputs.mime_type",
+        "md5": "$steps.find-file-by-path.outputs.md5",
+        "sha1": "$steps.find-file-by-path.outputs.sha1",
+        "sha256": "$steps.find-file-by-path.outputs.sha256",
+        "download_uri": "$steps.download-file.outputs.download_uri",
+        "updated_file_metadata": "$steps.update-file-metadata.outputs.updated_file_metadata"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "monitor-site-wide-security-logs",
+      "summary": "Initiate an export of security-related logs (e.g., API requests, FTP actions, SFTP actions) for a specific time range, monitor the export status, and then retrieve the detailed results to identify potential security incidents or unusual activity.",
+      "description": "Initiate an export of security-related logs (e.g., API requests, FTP actions, SFTP actions) for a specific time range, monitor the export status, and then retrieve the detailed results to identify potential security incidents or unusual activity.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "end_at": {
+            "type": "string"
+          },
+          "query_action": {
+            "type": "string"
+          },
+          "query_interface": {
+            "type": "string"
+          },
+          "start_at": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "per_page": {
+            "type": "string"
+          },
+          "history_export_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-history-export-for-security-logs",
+          "description": "Initiate a history export filtered by security-related actions and interfaces within a specified time range.",
+          "operationId": "PostHistoryExports",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "end_at": "$inputs.end_at",
+              "query_action": "$inputs.query_action",
+              "query_interface": "$inputs.query_interface",
+              "start_at": "$inputs.start_at"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "get-history-export-status",
+          "description": "Periodically check the status of the initiated history export until it is ready for download.",
+          "operationId": "GetHistoryExportsId",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-history-export-for-security-logs.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status",
+            "results_url": "$response.body#/results_url"
+          }
+        },
+        {
+          "stepId": "list-history-export-results",
+          "description": "Retrieve the detailed log entries from the completed history export.",
+          "operationId": "GetHistoryExportResults",
+          "parameters": [
+            {
+              "name": "user_id",
+              "in": "query",
+              "value": "$inputs.user_id"
+            },
+            {
+              "name": "cursor",
+              "in": "query",
+              "value": "$inputs.cursor"
+            },
+            {
+              "name": "per_page",
+              "in": "query",
+              "value": "$inputs.per_page"
+            },
+            {
+              "name": "history_export_id",
+              "in": "query",
+              "value": "$steps.create-history-export-for-security-logs.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "export_results": "$response.body#/0/export_results"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-history-export-for-security-logs.outputs.id",
+        "status": "$steps.get-history-export-status.outputs.status",
+        "results_url": "$steps.get-history-export-status.outputs.results_url",
+        "export_results": "$steps.list-history-export-results.outputs.export_results"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "automated-file-synchronization-setup",
+      "summary": "Configure a new remote server connection and set up an automation to synchronize files from a local path to this remote server on a recurring schedule.",
+      "description": "Configure a new remote server connection and set up an automation to synchronize files from a local path to this remote server on a recurring schedule.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "type": "string"
+          },
+          "per_page": {
+            "type": "string"
+          },
+          "sort_by": {
+            "type": "string"
+          },
+          "filter": {
+            "type": "string"
+          },
+          "automation_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-remote-server",
+          "description": "Establish a connection to an external storage server (e.g., S3, FTP, SFTP).",
+          "operationId": "PostRemoteServers",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "name": "$response.body#/name"
+          }
+        },
+        {
+          "stepId": "create-sync-automation",
+          "description": "Create an automation to run a remote server sync, linking it to the newly created remote server.",
+          "operationId": "PostAutomations",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "list-automation-runs",
+          "description": "Monitor the execution history and status of the created automation.",
+          "operationId": "GetAutomationRuns",
+          "parameters": [
+            {
+              "name": "cursor",
+              "in": "query",
+              "value": "$inputs.cursor"
+            },
+            {
+              "name": "per_page",
+              "in": "query",
+              "value": "$inputs.per_page"
+            },
+            {
+              "name": "sort_by",
+              "in": "query",
+              "value": "$inputs.sort_by"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            },
+            {
+              "name": "automation_id",
+              "in": "query",
+              "value": "$steps.create-sync-automation.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "automation_runs": "$response.body#/0/automation_id"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-sync-automation.outputs.id",
+        "name": "$steps.create-remote-server.outputs.name",
+        "automation_runs": "$steps.list-automation-runs.outputs.automation_runs"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "configure-sftp-access-with-public-key",
+      "summary": "Set up secure SFTP access for an existing user by adding a new SSH public key to their profile and then verifying the key's fingerprint.",
+      "description": "Set up secure SFTP access for an existing user by adding a new SSH public key to their profile and then verifying the key's fingerprint.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-user-details",
+          "description": "Retrieve details of an existing user to confirm their existence and obtain their ID.",
+          "operationId": "GetUsersId",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "username": "$response.body#/username"
+          }
+        },
+        {
+          "stepId": "add-user-public-key",
+          "description": "Add a new SSH public key to the specified user's account for SFTP authentication.",
+          "operationId": "PostUsersUserIdPublicKeys",
+          "parameters": [
+            {
+              "name": "user_id",
+              "in": "path",
+              "value": "$steps.get-user-details.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "user_id": "$steps.get-user-details.outputs.id",
+              "title": "$inputs.title"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "fingerprint": "$response.body#/fingerprint"
+          }
+        },
+        {
+          "stepId": "get-public-key-details",
+          "description": "Retrieve the details of the newly added public key to verify its properties, including the fingerprint.",
+          "operationId": "GetPublicKeysId",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.add-user-public-key.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "public_key_details": "$response.body#/public_key_details"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.add-user-public-key.outputs.id",
+        "username": "$steps.get-user-details.outputs.username",
+        "fingerprint": "$steps.add-user-public-key.outputs.fingerprint",
+        "public_key_details": "$steps.get-public-key-details.outputs.public_key_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "custom-registration-form-setup",
+      "summary": "Create a custom form field set to collect specific information during bundle or inbox registrations, and then retrieve its details to verify the setup.",
+      "description": "Create a custom form field set to collect specific information during bundle or inbox registrations, and then retrieve its details to verify the setup.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "form_fields": {
+            "type": "string"
+          },
+          "skip_company": {
+            "type": "string"
+          },
+          "skip_email": {
+            "type": "string"
+          },
+          "skip_name": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-form-field-set",
+          "description": "Define a new custom form with various field types and validation settings.",
+          "operationId": "PostFormFieldSets",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "form_fields": "$inputs.form_fields",
+              "skip_company": "$inputs.skip_company",
+              "skip_email": "$inputs.skip_email",
+              "skip_name": "$inputs.skip_name",
+              "title": "$inputs.title"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "get-form-field-set-details",
+          "description": "Retrieve the complete details of the newly created form field set to confirm its configuration.",
+          "operationId": "GetFormFieldSetsId",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-form-field-set.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "form_field_set_details": "$response.body#/form_field_set_details"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-form-field-set.outputs.id",
+        "form_field_set_details": "$steps.get-form-field-set-details.outputs.form_field_set_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
