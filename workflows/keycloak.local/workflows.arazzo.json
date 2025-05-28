@@ -1,0 +1,1583 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/keycloak.local/main/1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "user-onboarding-and-role-assignment",
+      "summary": "Create a new user in a specific realm, set their initial password, and then assign them to specified realm-level and client-level roles. This workflow is crucial for managing user identities and their permissions within Keycloak.",
+      "description": "Create a new user in a specific realm, set their initial password, and then assign them to specified realm-level and client-level roles. This workflow is crucial for managing user identities and their permissions within Keycloak.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "realm": {
+            "type": "string"
+          },
+          "create-user_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          },
+          "client": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-user",
+          "description": "Create a new user with basic details such as username, email, first name, and last name. The user's internal ID is obtained from the response for subsequent operations.",
+          "operationPath": "openapi_source#/paths/~1{realm}~1users/post",
+          "parameters": [
+            {
+              "name": "realm",
+              "in": "path",
+              "value": "$inputs.realm"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-user_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "userId": "$response.body#/userId"
+          }
+        },
+        {
+          "stepId": "set-user-password",
+          "description": "Set the initial password for the newly created user. This is a critical step for enabling user login.",
+          "operationPath": "openapi_source#/paths/~1{realm}~1users~1{id}~1reset-password/put",
+          "parameters": [
+            {
+              "name": "realm",
+              "in": "path",
+              "value": "$inputs.realm"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-user.outputs.userId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.create-user.outputs.userId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "password_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "assign-realm-roles-to-user",
+          "description": "Assign one or more realm-level roles to the user. These roles define the user's permissions across the entire realm.",
+          "operationPath": "openapi_source#/paths/~1{realm}~1users~1{id}~1role-mappings~1realm/post",
+          "parameters": [
+            {
+              "name": "realm",
+              "in": "path",
+              "value": "$inputs.realm"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-user.outputs.userId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.create-user.outputs.userId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "assign-client-roles-to-user",
+          "description": "Assign one or more client-level roles to the user for a specific client application. These roles grant permissions within that particular client.",
+          "operationPath": "openapi_source#/paths/~1{realm}~1users~1{id}~1role-mappings~1clients~1{client}/post",
+          "parameters": [
+            {
+              "name": "realm",
+              "in": "path",
+              "value": "$inputs.realm"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-user.outputs.userId"
+            },
+            {
+              "name": "client",
+              "in": "path",
+              "value": "$inputs.client"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.create-user.outputs.userId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "userId": "$steps.create-user.outputs.userId",
+        "password_data": "$steps.set-user-password.outputs.password_data",
+        "user_data": "$steps.assign-client-roles-to-user.outputs.user_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "client-application-registration-and-secret-generation",
+      "summary": "Register a new client application within a realm and generate its client secret. This workflow is essential for integrating new applications that need to authenticate with Keycloak.",
+      "description": "Register a new client application within a realm and generate its client secret. This workflow is essential for integrating new applications that need to authenticate with Keycloak.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "realm": {
+            "type": "string"
+          },
+          "create-client_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-client",
+          "description": "Create a new client application, specifying its client ID, name, redirect URIs, and flow settings. The internal ID of the created client is retrieved for further configuration.",
+          "operationPath": "openapi_source#/paths/~1{realm}~1clients/post",
+          "parameters": [
+            {
+              "name": "realm",
+              "in": "path",
+              "value": "$inputs.realm"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-client_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "clientId": "$response.body#/clientId"
+          }
+        },
+        {
+          "stepId": "generate-client-secret",
+          "description": "Generate a new client secret for the newly created client. This secret is used for confidential client authentication.",
+          "operationPath": "openapi_source#/paths/~1{realm}~1clients~1{id}~1client-secret/post",
+          "parameters": [
+            {
+              "name": "realm",
+              "in": "path",
+              "value": "$inputs.realm"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-client.outputs.clientId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "clientSecretValue": "$response.body#/clientSecretValue"
+          }
+        }
+      ],
+      "outputs": {
+        "clientId": "$steps.create-client.outputs.clientId",
+        "clientSecretValue": "$steps.generate-client-secret.outputs.clientSecretValue"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "custom-authentication-flow-setup",
+      "summary": "Define a new custom authentication flow, add an authenticator execution to it, and then configure the specific settings for that execution. This allows for flexible and tailored authentication processes.",
+      "description": "Define a new custom authentication flow, add an authenticator execution to it, and then configure the specific settings for that execution. This allows for flexible and tailored authentication processes.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "realm": {
+            "type": "string"
+          },
+          "create-authentication-flow_body": {
+            "type": "object"
+          },
+          "flowAlias": {
+            "type": "string"
+          },
+          "executionId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-authentication-flow",
+          "description": "Create a new top-level authentication flow with a unique alias and description.",
+          "operationPath": "openapi_source#/paths/~1{realm}~1authentication~1flows/post",
+          "parameters": [
+            {
+              "name": "realm",
+              "in": "path",
+              "value": "$inputs.realm"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-authentication-flow_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "flowAlias": "$response.body#/flowAlias"
+          }
+        },
+        {
+          "stepId": "add-authentication-execution",
+          "description": "Add a new authentication execution (e.g., a specific authenticator like 'auth-cookie') to the created flow.",
+          "operationPath": "openapi_source#/paths/~1{realm}~1authentication~1flows~1{flowAlias}~1executions~1execution/post",
+          "parameters": [
+            {
+              "name": "realm",
+              "in": "path",
+              "value": "$inputs.realm"
+            },
+            {
+              "name": "flowAlias",
+              "in": "path",
+              "value": "$steps.create-authentication-flow.outputs.flowAlias"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "flowAlias": "$steps.create-authentication-flow.outputs.flowAlias"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "execution_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-authentication-executions-for-flow",
+          "description": "Retrieve the details of all executions within the flow to obtain the ID of the newly added execution for configuration.",
+          "operationPath": "openapi_source#/paths/~1{realm}~1authentication~1flows~1{flowAlias}~1executions/get",
+          "parameters": [
+            {
+              "name": "realm",
+              "in": "path",
+              "value": "$inputs.realm"
+            },
+            {
+              "name": "flowAlias",
+              "in": "path",
+              "value": "$steps.create-authentication-flow.outputs.flowAlias"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "executionId": "$response.body#/executionId"
+          }
+        },
+        {
+          "stepId": "update-authentication-execution-config",
+          "description": "Update the configuration for the specific authentication execution, defining its behavior.",
+          "operationPath": "openapi_source#/paths/~1{realm}~1authentication~1executions~1{executionId}~1config/post",
+          "parameters": [
+            {
+              "name": "realm",
+              "in": "path",
+              "value": "$inputs.realm"
+            },
+            {
+              "name": "executionId",
+              "in": "path",
+              "value": "$steps.get-authentication-executions-for-flow.outputs.executionId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "executionId": "$steps.get-authentication-executions-for-flow.outputs.executionId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "config_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "flowAlias": "$steps.create-authentication-flow.outputs.flowAlias",
+        "execution_data": "$steps.add-authentication-execution.outputs.execution_data",
+        "executionId": "$steps.get-authentication-executions-for-flow.outputs.executionId",
+        "config_data": "$steps.update-authentication-execution-config.outputs.config_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "realm-event-logging-configuration-and-monitoring",
+      "summary": "Configure the realm's event logging settings, such as enabling/disabling events and setting their expiration, and then retrieve recent administrative and user-related events for auditing and troubleshooting purposes.",
+      "description": "Configure the realm's event logging settings, such as enabling/disabling events and setting their expiration, and then retrieve recent administrative and user-related events for auditing and troubleshooting purposes.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "realm": {
+            "type": "string"
+          },
+          "authClient": {
+            "type": "string"
+          },
+          "authIpAddress": {
+            "type": "string"
+          },
+          "authRealm": {
+            "type": "string"
+          },
+          "authUser": {
+            "type": "string"
+          },
+          "dateFrom": {
+            "type": "string"
+          },
+          "dateTo": {
+            "type": "string"
+          },
+          "first": {
+            "type": "string"
+          },
+          "max": {
+            "type": "string"
+          },
+          "operationTypes": {
+            "type": "string"
+          },
+          "resourcePath": {
+            "type": "string"
+          },
+          "resourceTypes": {
+            "type": "string"
+          },
+          "client": {
+            "type": "string"
+          },
+          "ipAddress": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "user": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-realm-event-config",
+          "description": "Retrieve the current event logging configuration for the specified realm.",
+          "operationPath": "openapi_source#/paths/~1{realm}~1events~1config/get",
+          "parameters": [
+            {
+              "name": "realm",
+              "in": "path",
+              "value": "$inputs.realm"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "eventConfig": "$response.body#/eventConfig"
+          }
+        },
+        {
+          "stepId": "update-realm-event-config",
+          "description": "Update the realm's event logging settings, such as enabling/disabling event types or adjusting the event expiration period.",
+          "operationPath": "openapi_source#/paths/~1{realm}~1events~1config/put",
+          "parameters": [
+            {
+              "name": "realm",
+              "in": "path",
+              "value": "$inputs.realm"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "RealmEventsConfigRepresentation": "$steps.get-realm-event-config.outputs.eventConfig"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "config_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-admin-events",
+          "description": "Retrieve a list of administrative events, which record actions performed by administrators within the realm.",
+          "operationPath": "openapi_source#/paths/~1{realm}~1admin-events/get",
+          "parameters": [
+            {
+              "name": "realm",
+              "in": "path",
+              "value": "$inputs.realm"
+            },
+            {
+              "name": "authClient",
+              "in": "query",
+              "value": "$inputs.authClient"
+            },
+            {
+              "name": "authIpAddress",
+              "in": "query",
+              "value": "$inputs.authIpAddress"
+            },
+            {
+              "name": "authRealm",
+              "in": "query",
+              "value": "$inputs.authRealm"
+            },
+            {
+              "name": "authUser",
+              "in": "query",
+              "value": "$inputs.authUser"
+            },
+            {
+              "name": "dateFrom",
+              "in": "query",
+              "value": "$inputs.dateFrom"
+            },
+            {
+              "name": "dateTo",
+              "in": "query",
+              "value": "$inputs.dateTo"
+            },
+            {
+              "name": "first",
+              "in": "query",
+              "value": "$inputs.first"
+            },
+            {
+              "name": "max",
+              "in": "query",
+              "value": "$inputs.max"
+            },
+            {
+              "name": "operationTypes",
+              "in": "query",
+              "value": "$inputs.operationTypes"
+            },
+            {
+              "name": "resourcePath",
+              "in": "query",
+              "value": "$inputs.resourcePath"
+            },
+            {
+              "name": "resourceTypes",
+              "in": "query",
+              "value": "$inputs.resourceTypes"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "adminEvents": "$response.body#/0/adminEvents"
+          }
+        },
+        {
+          "stepId": "get-user-events",
+          "description": "Retrieve a list of user-related events, such as login attempts, password changes, or account creations.",
+          "operationPath": "openapi_source#/paths/~1{realm}~1events/get",
+          "parameters": [
+            {
+              "name": "realm",
+              "in": "path",
+              "value": "$inputs.realm"
+            },
+            {
+              "name": "client",
+              "in": "query",
+              "value": "$inputs.client"
+            },
+            {
+              "name": "dateFrom",
+              "in": "query",
+              "value": "$inputs.dateFrom"
+            },
+            {
+              "name": "dateTo",
+              "in": "query",
+              "value": "$inputs.dateTo"
+            },
+            {
+              "name": "first",
+              "in": "query",
+              "value": "$inputs.first"
+            },
+            {
+              "name": "ipAddress",
+              "in": "query",
+              "value": "$inputs.ipAddress"
+            },
+            {
+              "name": "max",
+              "in": "query",
+              "value": "$inputs.max"
+            },
+            {
+              "name": "type",
+              "in": "query",
+              "value": "$inputs.type"
+            },
+            {
+              "name": "user",
+              "in": "query",
+              "value": "$inputs.user"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "userEvents": "$response.body#/0/userEvents"
+          }
+        }
+      ],
+      "outputs": {
+        "eventConfig": "$steps.get-realm-event-config.outputs.eventConfig",
+        "config_data": "$steps.update-realm-event-config.outputs.config_data",
+        "adminEvents": "$steps.get-admin-events.outputs.adminEvents",
+        "userEvents": "$steps.get-user-events.outputs.userEvents"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "identity-provider-integration-and-mapper-configuration",
+      "summary": "Integrate a new external identity provider (e.g., a social login provider like Google or GitHub) into a realm and configure a mapper to transform user attributes from the identity provider.",
+      "description": "Integrate a new external identity provider (e.g., a social login provider like Google or GitHub) into a realm and configure a mapper to transform user attributes from the identity provider.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "realm": {
+            "type": "string"
+          },
+          "create-identity-provider_body": {
+            "type": "object"
+          },
+          "alias": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-identity-provider",
+          "description": "Create a new identity provider instance, specifying its alias, provider ID, and initial configuration.",
+          "operationPath": "openapi_source#/paths/~1{realm}~1identity-provider~1instances/post",
+          "parameters": [
+            {
+              "name": "realm",
+              "in": "path",
+              "value": "$inputs.realm"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-identity-provider_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "idpAlias": "$response.body#/idpAlias"
+          }
+        },
+        {
+          "stepId": "add-identity-provider-mapper",
+          "description": "Add a mapper to the newly created identity provider to define how user attributes are transformed or mapped during the brokering process.",
+          "operationPath": "openapi_source#/paths/~1{realm}~1identity-provider~1instances~1{alias}~1mappers/post",
+          "parameters": [
+            {
+              "name": "realm",
+              "in": "path",
+              "value": "$inputs.realm"
+            },
+            {
+              "name": "alias",
+              "in": "path",
+              "value": "$steps.create-identity-provider.outputs.idpAlias"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "alias": "$steps.create-identity-provider.outputs.idpAlias"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "mapper_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "idpAlias": "$steps.create-identity-provider.outputs.idpAlias",
+        "mapper_data": "$steps.add-identity-provider-mapper.outputs.mapper_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "group-creation-and-user-assignment",
+      "summary": "Create a new group within a realm and then add an existing user to this newly created group. This workflow helps in organizing users and managing their permissions collectively.",
+      "description": "Create a new group within a realm and then add an existing user to this newly created group. This workflow helps in organizing users and managing their permissions collectively.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "realm": {
+            "type": "string"
+          },
+          "create-group_body": {
+            "type": "object"
+          },
+          "briefRepresentation": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "first": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "max": {
+            "type": "string"
+          },
+          "search": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "groupId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-group",
+          "description": "Create a new top-level group with a specified name.",
+          "operationPath": "openapi_source#/paths/~1{realm}~1groups/post",
+          "parameters": [
+            {
+              "name": "realm",
+              "in": "path",
+              "value": "$inputs.realm"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-group_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "groupId": "$response.body#/groupId"
+          }
+        },
+        {
+          "stepId": "find-user-by-username",
+          "description": "Search for an existing user by their username to obtain their internal ID.",
+          "operationPath": "openapi_source#/paths/~1{realm}~1users/get",
+          "parameters": [
+            {
+              "name": "realm",
+              "in": "path",
+              "value": "$inputs.realm"
+            },
+            {
+              "name": "briefRepresentation",
+              "in": "query",
+              "value": "$inputs.briefRepresentation"
+            },
+            {
+              "name": "email",
+              "in": "query",
+              "value": "$inputs.email"
+            },
+            {
+              "name": "first",
+              "in": "query",
+              "value": "$inputs.first"
+            },
+            {
+              "name": "firstName",
+              "in": "query",
+              "value": "$inputs.firstName"
+            },
+            {
+              "name": "lastName",
+              "in": "query",
+              "value": "$inputs.lastName"
+            },
+            {
+              "name": "max",
+              "in": "query",
+              "value": "$inputs.max"
+            },
+            {
+              "name": "search",
+              "in": "query",
+              "value": "$inputs.search"
+            },
+            {
+              "name": "username",
+              "in": "query",
+              "value": "$inputs.username"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "userId": "$response.body#/0/userId"
+          }
+        },
+        {
+          "stepId": "add-user-to-group",
+          "description": "Add the identified user to the newly created group.",
+          "operationPath": "openapi_source#/paths/~1{realm}~1users~1{id}~1groups~1{groupId}/put",
+          "parameters": [
+            {
+              "name": "realm",
+              "in": "path",
+              "value": "$inputs.realm"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.find-user-by-username.outputs.userId"
+            },
+            {
+              "name": "groupId",
+              "in": "path",
+              "value": "$steps.create-group.outputs.groupId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "group_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "groupId": "$steps.create-group.outputs.groupId",
+        "userId": "$steps.find-user-by-username.outputs.userId",
+        "group_data": "$steps.add-user-to-group.outputs.group_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "user-session-revocation",
+      "summary": "Find a specific user and revoke all their active sessions, effectively logging them out from all applications and forcing them to re-authenticate. This is a critical security and administrative action.",
+      "description": "Find a specific user and revoke all their active sessions, effectively logging them out from all applications and forcing them to re-authenticate. This is a critical security and administrative action.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "realm": {
+            "type": "string"
+          },
+          "briefRepresentation": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "first": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "max": {
+            "type": "string"
+          },
+          "search": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-user-by-username",
+          "description": "Search for a user by their username to obtain their internal user ID.",
+          "operationPath": "openapi_source#/paths/~1{realm}~1users/get",
+          "parameters": [
+            {
+              "name": "realm",
+              "in": "path",
+              "value": "$inputs.realm"
+            },
+            {
+              "name": "briefRepresentation",
+              "in": "query",
+              "value": "$inputs.briefRepresentation"
+            },
+            {
+              "name": "email",
+              "in": "query",
+              "value": "$inputs.email"
+            },
+            {
+              "name": "first",
+              "in": "query",
+              "value": "$inputs.first"
+            },
+            {
+              "name": "firstName",
+              "in": "query",
+              "value": "$inputs.firstName"
+            },
+            {
+              "name": "lastName",
+              "in": "query",
+              "value": "$inputs.lastName"
+            },
+            {
+              "name": "max",
+              "in": "query",
+              "value": "$inputs.max"
+            },
+            {
+              "name": "search",
+              "in": "query",
+              "value": "$inputs.search"
+            },
+            {
+              "name": "username",
+              "in": "query",
+              "value": "$inputs.username"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "userId": "$response.body#/0/userId"
+          }
+        },
+        {
+          "stepId": "logout-user-sessions",
+          "description": "Remove all user sessions associated with the identified user and send notifications to clients to invalidate those sessions.",
+          "operationPath": "openapi_source#/paths/~1{realm}~1users~1{id}~1logout/post",
+          "parameters": [
+            {
+              "name": "realm",
+              "in": "path",
+              "value": "$inputs.realm"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.find-user-by-username.outputs.userId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sessions_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "userId": "$steps.find-user-by-username.outputs.userId",
+        "sessions_data": "$steps.logout-user-sessions.outputs.sessions_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "user-brute-force-lockout-management",
+      "summary": "Find a specific user by their username, check their current brute force lockout status, and then clear any existing lockouts to allow them to attempt login again.",
+      "description": "Find a specific user by their username, check their current brute force lockout status, and then clear any existing lockouts to allow them to attempt login again.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "realm": {
+            "type": "string"
+          },
+          "briefRepresentation": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "first": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "max": {
+            "type": "string"
+          },
+          "search": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-user-by-username",
+          "description": "Search for a user by their username to obtain their internal user ID, which is required for subsequent operations.",
+          "operationPath": "openapi_source#/paths/~1{realm}~1users/get",
+          "parameters": [
+            {
+              "name": "realm",
+              "in": "path",
+              "value": "$inputs.realm"
+            },
+            {
+              "name": "briefRepresentation",
+              "in": "query",
+              "value": "$inputs.briefRepresentation"
+            },
+            {
+              "name": "email",
+              "in": "query",
+              "value": "$inputs.email"
+            },
+            {
+              "name": "first",
+              "in": "query",
+              "value": "$inputs.first"
+            },
+            {
+              "name": "firstName",
+              "in": "query",
+              "value": "$inputs.firstName"
+            },
+            {
+              "name": "lastName",
+              "in": "query",
+              "value": "$inputs.lastName"
+            },
+            {
+              "name": "max",
+              "in": "query",
+              "value": "$inputs.max"
+            },
+            {
+              "name": "search",
+              "in": "query",
+              "value": "$inputs.search"
+            },
+            {
+              "name": "username",
+              "in": "query",
+              "value": "$inputs.username"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "userId": "$response.body#/0/userId"
+          }
+        },
+        {
+          "stepId": "get-user-brute-force-status",
+          "description": "Retrieve the current brute force status for the identified user, indicating if they are temporarily disabled due to too many failed login attempts.",
+          "operationPath": "openapi_source#/paths/~1{realm}~1attack-detection~1brute-force~1users~1{userId}/get",
+          "parameters": [
+            {
+              "name": "realm",
+              "in": "path",
+              "value": "$inputs.realm"
+            },
+            {
+              "name": "userId",
+              "in": "path",
+              "value": "$steps.find-user-by-username.outputs.userId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "bruteForceStatus": "$response.body#/bruteForceStatus"
+          }
+        },
+        {
+          "stepId": "clear-user-brute-force-lockout",
+          "description": "Clear any login failures and release the temporary disabled status for the user, allowing them to attempt login again.",
+          "operationPath": "openapi_source#/paths/~1{realm}~1attack-detection~1brute-force~1users~1{userId}/delete",
+          "parameters": [
+            {
+              "name": "realm",
+              "in": "path",
+              "value": "$inputs.realm"
+            },
+            {
+              "name": "userId",
+              "in": "path",
+              "value": "$steps.find-user-by-username.outputs.userId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "lockout_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "userId": "$steps.find-user-by-username.outputs.userId",
+        "bruteForceStatus": "$steps.get-user-brute-force-status.outputs.bruteForceStatus",
+        "lockout_data": "$steps.clear-user-brute-force-lockout.outputs.lockout_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "client-certificate-generation-and-download",
+      "summary": "Generate a new client certificate and download its private key in a specified keystore format. This is useful for clients that require mTLS or other certificate-based authentication.",
+      "description": "Generate a new client certificate and download its private key in a specified keystore format. This is useful for clients that require mTLS or other certificate-based authentication.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "realm": {
+            "type": "string"
+          },
+          "clientId": {
+            "type": "string"
+          },
+          "first": {
+            "type": "string"
+          },
+          "max": {
+            "type": "string"
+          },
+          "search": {
+            "type": "string"
+          },
+          "viewableOnly": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "attr": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-client-by-client-id",
+          "description": "Search for a client by its human-readable client ID to obtain its internal ID.",
+          "operationPath": "openapi_source#/paths/~1{realm}~1clients/get",
+          "parameters": [
+            {
+              "name": "realm",
+              "in": "path",
+              "value": "$inputs.realm"
+            },
+            {
+              "name": "clientId",
+              "in": "query",
+              "value": "$inputs.clientId"
+            },
+            {
+              "name": "first",
+              "in": "query",
+              "value": "$inputs.first"
+            },
+            {
+              "name": "max",
+              "in": "query",
+              "value": "$inputs.max"
+            },
+            {
+              "name": "search",
+              "in": "query",
+              "value": "$inputs.search"
+            },
+            {
+              "name": "viewableOnly",
+              "in": "query",
+              "value": "$inputs.viewableOnly"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "clientId": "$response.body#/0/clientId"
+          }
+        },
+        {
+          "stepId": "generate-and-download-client-certificate",
+          "description": "Generate a new keypair and certificate for the client, and download the private key file in a specified keystore format (e.g., PKCS12).",
+          "operationPath": "openapi_source#/paths/~1{realm}~1clients~1{id}~1certificates~1{attr}~1generate-and-download/post",
+          "parameters": [
+            {
+              "name": "realm",
+              "in": "path",
+              "value": "$inputs.realm"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.find-client-by-client-id.outputs.clientId"
+            },
+            {
+              "name": "attr",
+              "in": "path",
+              "value": "$inputs.attr"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.find-client-by-client-id.outputs.clientId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "keystoreFile": "$response.body#/keystoreFile"
+          }
+        }
+      ],
+      "outputs": {
+        "clientId": "$steps.find-client-by-client-id.outputs.clientId",
+        "keystoreFile": "$steps.generate-and-download-client-certificate.outputs.keystoreFile"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "user-storage-provider-synchronization",
+      "summary": "Trigger a synchronization of users from an external user storage provider (e.g., LDAP or Active Directory) into Keycloak. This ensures that user data in Keycloak is up-to-date with the external directory.",
+      "description": "Trigger a synchronization of users from an external user storage provider (e.g., LDAP or Active Directory) into Keycloak. This ensures that user data in Keycloak is up-to-date with the external directory.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "realm": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "parent": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-components",
+          "description": "List all components configured in the realm, filtered by type to identify user storage providers.",
+          "operationPath": "openapi_source#/paths/~1{realm}~1components/get",
+          "parameters": [
+            {
+              "name": "realm",
+              "in": "path",
+              "value": "$inputs.realm"
+            },
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "parent",
+              "in": "query",
+              "value": "$inputs.parent"
+            },
+            {
+              "name": "type",
+              "in": "query",
+              "value": "$inputs.type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "userStorageProviderId": "$response.body#/0/userStorageProviderId"
+          }
+        },
+        {
+          "stepId": "trigger-user-sync",
+          "description": "Trigger a full or changed users synchronization for the specified user storage provider, importing or updating user data in Keycloak.",
+          "operationPath": "openapi_source#/paths/~1{realm}~1user-storage~1{id}~1sync/post",
+          "parameters": [
+            {
+              "name": "realm",
+              "in": "path",
+              "value": "$inputs.realm"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.list-components.outputs.userStorageProviderId"
+            },
+            {
+              "name": "action",
+              "in": "query",
+              "value": "$inputs.action"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "syncResult": "$response.body#/syncResult"
+          }
+        }
+      ],
+      "outputs": {
+        "userStorageProviderId": "$steps.list-components.outputs.userStorageProviderId",
+        "syncResult": "$steps.trigger-user-sync.outputs.syncResult"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
