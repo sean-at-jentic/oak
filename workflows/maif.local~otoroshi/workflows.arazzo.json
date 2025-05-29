@@ -1,0 +1,890 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/maif.local/otoroshi/1.5.0-dev/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "otoroshi-configuration-backup-and-restore",
+      "summary": "This workflow allows for exporting the entire Otoroshi configuration (services, API keys, groups, etc.) for backup purposes and then importing it to restore or migrate the state. This is essential for disaster recovery, environment migration, or versioning configurations.",
+      "description": "This workflow allows for exporting the entire Otoroshi configuration (services, API keys, groups, etc.) for backup purposes and then importing it to restore or migrate the state. This is essential for disaster recovery, environment migration, or versioning configurations.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "import-full-config_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "export-full-config",
+          "description": "Exports the complete current state of the Otoroshi instance, including all configurations and entities, as a single JSON object.",
+          "operationId": "fullExport",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ImportExport": "$response.body#/ImportExport"
+          }
+        },
+        {
+          "stepId": "import-full-config",
+          "description": "Imports a previously exported Otoroshi configuration, overwriting the current state. Useful for restoring backups or deploying configurations across environments.",
+          "operationId": "fullImport",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.import-full-config_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Done": "$response.body#/done"
+          }
+        }
+      ],
+      "outputs": {
+        "ImportExport": "$steps.export-full-config.outputs.ImportExport",
+        "Done": "$steps.import-full-config.outputs.Done"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "monitor-otoroshi-health-and-service-performance",
+      "summary": "This workflow provides a way to check the overall health of the Otoroshi instance and retrieve live performance statistics for both the entire proxy and individual services. This is crucial for operational monitoring and troubleshooting.",
+      "description": "This workflow provides a way to check the overall health of the Otoroshi instance and retrieve live performance statistics for both the entire proxy and individual services. This is crucial for operational monitoring and troubleshooting.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-otoroshi-health",
+          "description": "Checks the health status of the Otoroshi instance and its underlying datastore, indicating if the system is healthy, unhealthy, or down.",
+          "operationId": "health",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "OtoroshiHealth": "$response.body#/OtoroshiHealth"
+          }
+        },
+        {
+          "stepId": "get-global-live-stats",
+          "description": "Retrieves real-time global statistics for the entire Otoroshi instance, including total calls, data transfer, and rates, providing an overview of system load.",
+          "operationId": "globalLiveStats",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Stats": "$response.body#/Stats"
+          }
+        },
+        {
+          "stepId": "get-all-services",
+          "description": "Fetches a list of all configured service descriptors in Otoroshi, which can then be used to query individual service statistics.",
+          "operationId": "allServices",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Service[]": "$response.body#/0/Service[]"
+          }
+        },
+        {
+          "stepId": "get-service-live-stats",
+          "description": "Retrieves real-time performance statistics for a specific service descriptor, allowing for granular monitoring of individual API performance.",
+          "operationId": "serviceLiveStats",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Stats": "$response.body#/Stats"
+          }
+        }
+      ],
+      "outputs": {
+        "OtoroshiHealth": "$steps.get-otoroshi-health.outputs.OtoroshiHealth",
+        "Stats": "$steps.get-service-live-stats.outputs.Stats",
+        "Service[]": "$steps.get-all-services.outputs.Service[]"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "onboard-new-service-with-targets",
+      "summary": "This workflow allows an administrator to onboard a new service descriptor to Otoroshi, starting from a template and then configuring its backend targets. This is a common setup process for a reverse proxy: define a new service and point it to its backend servers.",
+      "description": "This workflow allows an administrator to onboard a new service descriptor to Otoroshi, starting from a template and then configuring its backend targets. This is a common setup process for a reverse proxy: define a new service and point it to its backend servers.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-service_body": {
+            "type": "object"
+          },
+          "serviceId": {
+            "type": "string"
+          },
+          "add-service-target_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-service-template",
+          "description": "Retrieves a template for a new Otoroshi service descriptor. This template is not persisted and serves as a base for creating a new service.",
+          "operationId": "initiateService",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Service": "$response.body#/Service"
+          }
+        },
+        {
+          "stepId": "create-service",
+          "description": "Creates a new service descriptor in Otoroshi using the provided service configuration, typically based on a modified template.",
+          "operationId": "createService",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-service_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Service": "$response.body#/Service"
+          }
+        },
+        {
+          "stepId": "add-service-target",
+          "description": "Adds a new target (backend server) to the newly created service descriptor, allowing Otoroshi to route traffic to it.",
+          "operationId": "serviceAddTarget",
+          "parameters": [
+            {
+              "name": "serviceId",
+              "in": "path",
+              "value": "$inputs.serviceId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.add-service-target_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Target[]": "$response.body#/0/Target[]"
+          }
+        }
+      ],
+      "outputs": {
+        "Service": "$steps.create-service.outputs.Service",
+        "Target[]": "$steps.add-service-target.outputs.Target[]"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-api-key-quotas-for-a-service",
+      "summary": "This workflow enables the creation of an API key for a specific service and provides operations to inspect and reset its usage quotas. This is crucial for managing API consumption and preventing abuse.",
+      "description": "This workflow enables the creation of an API key for a specific service and provides operations to inspect and reset its usage quotas. This is crucial for managing API consumption and preventing abuse.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "serviceId": {
+            "type": "string"
+          },
+          "create-apikey-for-service_body": {
+            "type": "object"
+          },
+          "clientId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-apikey-template",
+          "description": "Retrieves a template for a new Otoroshi API Key, which can be used as a base for creating a new key.",
+          "operationId": "initiateApiKey",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ApiKey": "$response.body#/ApiKey"
+          }
+        },
+        {
+          "stepId": "create-apikey-for-service",
+          "description": "Creates a new API key associated with a specific service descriptor. A placeholder 'serviceId' is used here, which would typically come from a prior 'get-all-services' or 'create-service' step.",
+          "operationId": "createApiKey",
+          "parameters": [
+            {
+              "name": "serviceId",
+              "in": "path",
+              "value": "$inputs.serviceId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-apikey-for-service_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ApiKey": "$response.body#/ApiKey"
+          }
+        },
+        {
+          "stepId": "get-apikey-quotas",
+          "description": "Retrieves the current quota state (calls per second, day, month) for a specific API key.",
+          "operationId": "apiKeyQuotas",
+          "parameters": [
+            {
+              "name": "serviceId",
+              "in": "path",
+              "value": "$inputs.serviceId"
+            },
+            {
+              "name": "clientId",
+              "in": "path",
+              "value": "$inputs.clientId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Quotas": "$response.body#/Quotas"
+          }
+        },
+        {
+          "stepId": "reset-apikey-quotas",
+          "description": "Resets the usage quotas for a specific API key, typically used to clear daily/monthly limits for a fresh start.",
+          "operationId": "resetApiKeyQuotas",
+          "parameters": [
+            {
+              "name": "serviceId",
+              "in": "path",
+              "value": "$inputs.serviceId"
+            },
+            {
+              "name": "clientId",
+              "in": "path",
+              "value": "$inputs.clientId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Quotas": "$response.body#/Quotas"
+          }
+        }
+      ],
+      "outputs": {
+        "ApiKey": "$steps.create-apikey-for-service.outputs.ApiKey",
+        "Quotas": "$steps.reset-apikey-quotas.outputs.Quotas"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "automate-chaos-engineering-with-snow-monkey",
+      "summary": "This workflow demonstrates how to programmatically configure, start, and monitor chaos engineering experiments using Otoroshi's Snow Monkey feature. This enables automated resilience testing as part of CI/CD or scheduled operations.",
+      "description": "This workflow demonstrates how to programmatically configure, start, and monitor chaos engineering experiments using Otoroshi's Snow Monkey feature. This enables automated resilience testing as part of CI/CD or scheduled operations.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "update-snowmonkey-config_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-snowmonkey-config",
+          "description": "Retrieves the current configuration settings for the Snow Monkey chaos engineering tool.",
+          "operationId": "getSnowMonkeyConfig",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "SnowMonkeyConfig": "$response.body#/SnowMonkeyConfig"
+          }
+        },
+        {
+          "stepId": "update-snowmonkey-config",
+          "description": "Updates the Snow Monkey configuration, allowing for changes to its behavior, such as enabling/disabling or targeting specific groups for chaos experiments.",
+          "operationId": "updateSnowMonkey",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.update-snowmonkey-config_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "SnowMonkeyConfig": "$response.body#/SnowMonkeyConfig"
+          }
+        },
+        {
+          "stepId": "start-snowmonkey",
+          "description": "Initiates a chaos engineering experiment with the currently configured Snow Monkey settings.",
+          "operationId": "startSnowMonkey",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Done": "$response.body#/done"
+          }
+        },
+        {
+          "stepId": "get-snowmonkey-outages",
+          "description": "Retrieves a list of active or recent outages generated by the Snow Monkey, providing insights into the impact of chaos experiments.",
+          "operationId": "getSnowMonkeyOutages",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Outage[]": "$response.body#/0/Outage[]"
+          }
+        },
+        {
+          "stepId": "reset-snowmonkey-outages",
+          "description": "Resets the daily outage count for Snow Monkey, preparing for new experiments or clearing historical data.",
+          "operationId": "resetSnowMonkey",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Done": "$response.body#/done"
+          }
+        }
+      ],
+      "outputs": {
+        "SnowMonkeyConfig": "$steps.update-snowmonkey-config.outputs.SnowMonkeyConfig",
+        "Done": "$steps.reset-snowmonkey-outages.outputs.Done",
+        "Outage[]": "$steps.get-snowmonkey-outages.outputs.Outage[]"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-custom-request-transformer-scripts",
+      "summary": "This workflow allows administrators to create, compile, and manage custom scripts that can be used to transform requests and responses within Otoroshi. This extends Otoroshi's functionality with custom logic.",
+      "description": "This workflow allows administrators to create, compile, and manage custom scripts that can be used to transform requests and responses within Otoroshi. This extends Otoroshi's functionality with custom logic.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-script_body": {
+            "type": "object"
+          },
+          "compile-script_body": {
+            "type": "object"
+          },
+          "scriptId": {
+            "type": "string"
+          },
+          "update-script_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-script",
+          "description": "Creates a new request transformer script in Otoroshi, providing its ID, name, description, and code.",
+          "operationId": "createScript",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-script_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Script": "$response.body#/Script"
+          }
+        },
+        {
+          "stepId": "compile-script",
+          "description": "Compiles a given script to check for syntax errors and ensure it's valid before deployment, providing immediate feedback on script health.",
+          "operationId": "compileScript",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.compile-script_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ScriptCompilationResult": "$response.body#/ScriptCompilationResult"
+          }
+        },
+        {
+          "stepId": "get-script-by-id",
+          "description": "Retrieves the details and code of a specific script by its ID for review or further modification.",
+          "operationId": "findScriptById",
+          "parameters": [
+            {
+              "name": "scriptId",
+              "in": "path",
+              "value": "$inputs.scriptId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Script": "$response.body#/Script"
+          }
+        },
+        {
+          "stepId": "update-script",
+          "description": "Updates the content or metadata of an existing script, allowing for iterative development and refinement of transformation logic.",
+          "operationId": "updateScript",
+          "parameters": [
+            {
+              "name": "scriptId",
+              "in": "path",
+              "value": "$inputs.scriptId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.update-script_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Script": "$response.body#/Script"
+          }
+        }
+      ],
+      "outputs": {
+        "Script": "$steps.update-script.outputs.Script",
+        "ScriptCompilationResult": "$steps.compile-script.outputs.ScriptCompilationResult"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-global-authentication-modules",
+      "summary": "This workflow enables the creation and management of global authentication modules (e.g., OAuth2, LDAP, In-Memory), which can be referenced by multiple services for user authentication. This allows for centralized management of identity providers.",
+      "description": "This workflow enables the creation and management of global authentication modules (e.g., OAuth2, LDAP, In-Memory), which can be referenced by multiple services for user authentication. This allows for centralized management of identity providers.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-global-auth-module_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          },
+          "update-global-auth-module_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-global-auth-module",
+          "description": "Creates a new global authentication module configuration. The specific type (LdapAuthModuleConfig, InMemoryAuthModuleConfig, GenericOauth2ModuleConfig) depends on the desired authentication method.",
+          "operationId": "createGlobalAuthModule",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-global-auth-module_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "LdapAuthModuleConfig | InMemoryAuthModuleConfig | GenericOauth2ModuleConfig": "$response.body#/LdapAuthModuleConfig | InMemoryAuthModuleConfig | GenericOauth2ModuleConfig"
+          }
+        },
+        {
+          "stepId": "get-global-auth-module-by-id",
+          "description": "Retrieves the details of a specific global authentication module by its ID, allowing for inspection of its current configuration.",
+          "operationId": "findGlobalAuthModuleById",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "LdapAuthModuleConfig | InMemoryAuthModuleConfig | GenericOauth2ModuleConfig": "$response.body#/LdapAuthModuleConfig | InMemoryAuthModuleConfig | GenericOauth2ModuleConfig"
+          }
+        },
+        {
+          "stepId": "update-global-auth-module",
+          "description": "Updates the configuration of an existing global authentication module, applying changes to its settings.",
+          "operationId": "updateGlobalAuthModule",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.update-global-auth-module_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "LdapAuthModuleConfig | InMemoryAuthModuleConfig | GenericOauth2ModuleConfig": "$response.body#/LdapAuthModuleConfig | InMemoryAuthModuleConfig | GenericOauth2ModuleConfig"
+          }
+        }
+      ],
+      "outputs": {
+        "LdapAuthModuleConfig | InMemoryAuthModuleConfig | GenericOauth2ModuleConfig": "$steps.update-global-auth-module.outputs.LdapAuthModuleConfig | InMemoryAuthModuleConfig | GenericOauth2ModuleConfig"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-service-error-pages",
+      "summary": "This workflow allows for the creation and management of custom error pages (e.g., 40x, 50x, maintenance, build) for specific Otoroshi services. This enhances user experience during service outages or development phases.",
+      "description": "This workflow allows for the creation and management of custom error pages (e.g., 40x, 50x, maintenance, build) for specific Otoroshi services. This enhances user experience during service outages or development phases.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "serviceId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-all-services-for-error-template",
+          "description": "Retrieves all service descriptors to identify a service for which to manage error templates. This provides the necessary 'serviceId' for subsequent operations.",
+          "operationId": "allServices",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Service[]": "$response.body#/0/Service[]"
+          }
+        },
+        {
+          "stepId": "create-service-error-template",
+          "description": "Creates a new custom error template for a specified service, defining the HTML content for various error scenarios.",
+          "operationId": "createServiceTemplate",
+          "parameters": [
+            {
+              "name": "serviceId",
+              "in": "path",
+              "value": "$inputs.serviceId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "serviceId": "$inputs.serviceId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ErrorTemplate": "$response.body#/ErrorTemplate"
+          }
+        },
+        {
+          "stepId": "get-service-error-template",
+          "description": "Retrieves the existing error template for a specific service, allowing for review of its current configuration.",
+          "operationId": "serviceTemplate",
+          "parameters": [
+            {
+              "name": "serviceId",
+              "in": "path",
+              "value": "$inputs.serviceId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ErrorTemplate": "$response.body#/ErrorTemplate"
+          }
+        },
+        {
+          "stepId": "update-service-error-template",
+          "description": "Updates an existing custom error template for a specified service, applying changes to its HTML content or messages.",
+          "operationId": "updateServiceTemplate",
+          "parameters": [
+            {
+              "name": "serviceId",
+              "in": "path",
+              "value": "$inputs.serviceId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "serviceId": "$inputs.serviceId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ErrorTemplate": "$response.body#/ErrorTemplate"
+          }
+        }
+      ],
+      "outputs": {
+        "Service[]": "$steps.get-all-services-for-error-template.outputs.Service[]",
+        "ErrorTemplate": "$steps.update-service-error-template.outputs.ErrorTemplate"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
