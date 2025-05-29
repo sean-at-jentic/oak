@@ -239,11 +239,11 @@ The OAK Runner includes a comprehensive testing framework for workflow validatio
 - Custom mock responses for specific endpoints
 - Validation of workflow outputs and API call counts
 
-For details on testing, see [OAK Runner Testing Framework](./tests/README.md)
+For details on testing, see [OAK Runner Testing Framework](https://github.com/jentic/oak/blob/main/tools/oak-runner/tests/README.md)
 
 ## Arazzo Format
 
 The Arazzo specification is our workflow definition format that orchestrates API calls using OpenAPI specifications.
 
-- Schema: [arazzo-schema.yaml](arazzo_spec/arazzo-schema.yaml)
-- Documentation: [arazzo-spec.md](arazzo_spec/arazzo-spec.md)
+- Schema: [arazzo-schema.yaml](https://github.com/jentic/oak/blob/main/tools/oak-runner/arazzo_spec/arazzo-schema.yaml)
+- Documentation: [arazzo-spec.md](https://github.com/jentic/oak/blob/main/tools/oak-runner/arazzo_spec/arazzo-spec.md)
