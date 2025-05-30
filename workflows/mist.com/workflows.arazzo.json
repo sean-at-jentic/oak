@@ -1,0 +1,2086 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/mist.com/main/2502.1.20/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "onboarding-a-new-site-with-network-devices",
+      "summary": "This workflow details the steps to set up a new physical site within an organization, claim new network devices (APs, switches, gateways) into the organization's inventory, assign them to the new site, and perform initial device-specific configurations.",
+      "description": "This workflow details the steps to set up a new physical site within an organization, claim new network devices (APs, switches, gateways) into the organization's inventory, assign them to the new site, and perform initial device-specific configurations.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "org_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "add-org-inventory_body": {
+            "type": "object"
+          },
+          "op": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "device_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-org-site",
+          "description": "Creates a new site within an existing organization, defining its basic properties like name and address.",
+          "operationId": "createOrgSite",
+          "parameters": [
+            {
+              "name": "org_id",
+              "in": "path",
+              "value": "$inputs.org_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "name": "$response.body#/name"
+          }
+        },
+        {
+          "stepId": "add-org-inventory",
+          "description": "Adds new network devices to the organization's inventory using their claim codes.",
+          "operationId": "addOrgInventory",
+          "parameters": [
+            {
+              "name": "org_id",
+              "in": "path",
+              "value": "$inputs.org_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.add-org-inventory_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "inventory_added": "$response.body#/inventory_added"
+          }
+        },
+        {
+          "stepId": "update-org-inventory-assignment",
+          "description": "Assigns the newly claimed devices from the inventory to the specific site created earlier.",
+          "operationId": "updateOrgInventoryAssignment",
+          "parameters": [
+            {
+              "name": "org_id",
+              "in": "path",
+              "value": "$inputs.org_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "site_id": "$steps.create-org-site.outputs.id",
+              "macs": "$steps.add-org-inventory.outputs.inventory_added",
+              "op": "$inputs.op"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "success": "$response.body#/success"
+          }
+        },
+        {
+          "stepId": "update-site-device",
+          "description": "Updates specific configuration parameters for an individual device, such as its name or physical location on a map.",
+          "operationId": "updateSiteDevice",
+          "parameters": [
+            {
+              "name": "site_id",
+              "in": "path",
+              "value": "$steps.create-org-site.outputs.id"
+            },
+            {
+              "name": "device_id",
+              "in": "path",
+              "value": "$steps.update-org-inventory-assignment.outputs.success"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "site_id": "$steps.create-org-site.outputs.id",
+              "device_id": "$steps.update-org-inventory-assignment.outputs.success[0]"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "name": "$response.body#/name"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.update-site-device.outputs.id",
+        "name": "$steps.update-site-device.outputs.name",
+        "inventory_added": "$steps.add-org-inventory.outputs.inventory_added",
+        "success": "$steps.update-org-inventory-assignment.outputs.success"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "troubleshooting-a-specific-network-device",
+      "summary": "This workflow provides a sequence for network administrators to diagnose and potentially resolve issues with a specific network device (AP, switch, or gateway). It includes steps for identifying the device, gathering diagnostic data, and performing basic troubleshooting actions.",
+      "description": "This workflow provides a sequence for network administrators to diagnose and potentially resolve issues with a specific network device (AP, switch, or gateway). It includes steps for identifying the device, gathering diagnostic data, and performing basic troubleshooting actions.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "site_id": {
+            "type": "string"
+          },
+          "hostname": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "mac": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "power_constrained": {
+            "type": "string"
+          },
+          "ip_address": {
+            "type": "string"
+          },
+          "mxtunnel_status": {
+            "type": "string"
+          },
+          "mxedge_id": {
+            "type": "string"
+          },
+          "lldp_system_name": {
+            "type": "string"
+          },
+          "lldp_system_desc": {
+            "type": "string"
+          },
+          "lldp_port_id": {
+            "type": "string"
+          },
+          "lldp_mgmt_addr": {
+            "type": "string"
+          },
+          "band_24_channel": {
+            "type": "string"
+          },
+          "band_5_channel": {
+            "type": "string"
+          },
+          "band_6_channel": {
+            "type": "string"
+          },
+          "band_24_bandwidth": {
+            "type": "string"
+          },
+          "band_5_bandwidth": {
+            "type": "string"
+          },
+          "band_6_bandwidth": {
+            "type": "string"
+          },
+          "eth0_port_speed": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "string"
+          },
+          "desc_sort": {
+            "type": "string"
+          },
+          "stats": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string"
+          },
+          "end": {
+            "type": "string"
+          },
+          "duration": {
+            "type": "string"
+          },
+          "device_id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "last_by": {
+            "type": "string"
+          },
+          "info": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-site-devices",
+          "description": "Searches for a specific device within a site using criteria like MAC address or hostname to identify the problematic device.",
+          "operationId": "searchSiteDevices",
+          "parameters": [
+            {
+              "name": "site_id",
+              "in": "path",
+              "value": "$inputs.site_id"
+            },
+            {
+              "name": "hostname",
+              "in": "query",
+              "value": "$inputs.hostname"
+            },
+            {
+              "name": "type",
+              "in": "query",
+              "value": "$inputs.type"
+            },
+            {
+              "name": "model",
+              "in": "query",
+              "value": "$inputs.model"
+            },
+            {
+              "name": "mac",
+              "in": "query",
+              "value": "$inputs.mac"
+            },
+            {
+              "name": "version",
+              "in": "query",
+              "value": "$inputs.version"
+            },
+            {
+              "name": "power_constrained",
+              "in": "query",
+              "value": "$inputs.power_constrained"
+            },
+            {
+              "name": "ip_address",
+              "in": "query",
+              "value": "$inputs.ip_address"
+            },
+            {
+              "name": "mxtunnel_status",
+              "in": "query",
+              "value": "$inputs.mxtunnel_status"
+            },
+            {
+              "name": "mxedge_id",
+              "in": "query",
+              "value": "$inputs.mxedge_id"
+            },
+            {
+              "name": "lldp_system_name",
+              "in": "query",
+              "value": "$inputs.lldp_system_name"
+            },
+            {
+              "name": "lldp_system_desc",
+              "in": "query",
+              "value": "$inputs.lldp_system_desc"
+            },
+            {
+              "name": "lldp_port_id",
+              "in": "query",
+              "value": "$inputs.lldp_port_id"
+            },
+            {
+              "name": "lldp_mgmt_addr",
+              "in": "query",
+              "value": "$inputs.lldp_mgmt_addr"
+            },
+            {
+              "name": "band_24_channel",
+              "in": "query",
+              "value": "$inputs.band_24_channel"
+            },
+            {
+              "name": "band_5_channel",
+              "in": "query",
+              "value": "$inputs.band_5_channel"
+            },
+            {
+              "name": "band_6_channel",
+              "in": "query",
+              "value": "$inputs.band_6_channel"
+            },
+            {
+              "name": "band_24_bandwidth",
+              "in": "query",
+              "value": "$inputs.band_24_bandwidth"
+            },
+            {
+              "name": "band_5_bandwidth",
+              "in": "query",
+              "value": "$inputs.band_5_bandwidth"
+            },
+            {
+              "name": "band_6_bandwidth",
+              "in": "query",
+              "value": "$inputs.band_6_bandwidth"
+            },
+            {
+              "name": "eth0_port_speed",
+              "in": "query",
+              "value": "$inputs.eth0_port_speed"
+            },
+            {
+              "name": "sort",
+              "in": "query",
+              "value": "$inputs.sort"
+            },
+            {
+              "name": "desc_sort",
+              "in": "query",
+              "value": "$inputs.desc_sort"
+            },
+            {
+              "name": "stats",
+              "in": "query",
+              "value": "$inputs.stats"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "start",
+              "in": "query",
+              "value": "$inputs.start"
+            },
+            {
+              "name": "end",
+              "in": "query",
+              "value": "$inputs.end"
+            },
+            {
+              "name": "duration",
+              "in": "query",
+              "value": "$inputs.duration"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "results": "$response.body#/results"
+          }
+        },
+        {
+          "stepId": "get-site-device-stats",
+          "description": "Retrieves detailed real-time operational statistics for the identified device, such as CPU usage, memory, and port status.",
+          "operationId": "getSiteDevice",
+          "parameters": [
+            {
+              "name": "site_id",
+              "in": "path",
+              "value": "$steps.search-site-devices.outputs.results.site_id"
+            },
+            {
+              "name": "device_id",
+              "in": "path",
+              "value": "$steps.search-site-devices.outputs.results.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "mac": "$response.body#/mac",
+            "status": "$response.body#/status"
+          }
+        },
+        {
+          "stepId": "search-site-device-events",
+          "description": "Fetches historical events related to the device to understand past issues or configuration changes.",
+          "operationId": "searchSiteDeviceEvents",
+          "parameters": [
+            {
+              "name": "site_id",
+              "in": "path",
+              "value": "$steps.search-site-devices.outputs.results.site_id"
+            },
+            {
+              "name": "mac",
+              "in": "query",
+              "value": "$steps.search-site-devices.outputs.results.mac"
+            },
+            {
+              "name": "model",
+              "in": "query",
+              "value": "$inputs.model"
+            },
+            {
+              "name": "text",
+              "in": "query",
+              "value": "$inputs.text"
+            },
+            {
+              "name": "timestamp",
+              "in": "query",
+              "value": "$inputs.timestamp"
+            },
+            {
+              "name": "type",
+              "in": "query",
+              "value": "$inputs.type"
+            },
+            {
+              "name": "last_by",
+              "in": "query",
+              "value": "$inputs.last_by"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "start",
+              "in": "query",
+              "value": "$inputs.start"
+            },
+            {
+              "name": "end",
+              "in": "query",
+              "value": "$inputs.end"
+            },
+            {
+              "name": "duration",
+              "in": "query",
+              "value": "$inputs.duration"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "results": "$response.body#/results"
+          }
+        },
+        {
+          "stepId": "restart-site-device",
+          "description": "Attempts to resolve the issue by remotely restarting the device.",
+          "operationId": "restartSiteDevice",
+          "parameters": [
+            {
+              "name": "site_id",
+              "in": "path",
+              "value": "$steps.search-site-devices.outputs.results.site_id"
+            },
+            {
+              "name": "device_id",
+              "in": "path",
+              "value": "$steps.search-site-devices.outputs.results.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "site_id": "$steps.search-site-devices.outputs.results[0].site_id",
+              "device_id": "$steps.search-site-devices.outputs.results[0].id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "device_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "upload-site-device-support-file",
+          "description": "Collects diagnostic logs from the device for deeper analysis by support teams if the issue persists.",
+          "operationId": "uploadSiteDeviceSupportFile",
+          "parameters": [
+            {
+              "name": "site_id",
+              "in": "path",
+              "value": "$steps.search-site-devices.outputs.results.site_id"
+            },
+            {
+              "name": "device_id",
+              "in": "path",
+              "value": "$steps.search-site-devices.outputs.results.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "site_id": "$steps.search-site-devices.outputs.results[0].site_id",
+              "device_id": "$steps.search-site-devices.outputs.results[0].id",
+              "info": "$inputs.info"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "file_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "results": "$steps.search-site-device-events.outputs.results",
+        "mac": "$steps.get-site-device-stats.outputs.mac",
+        "status": "$steps.get-site-device-stats.outputs.status",
+        "device_data": "$steps.restart-site-device.outputs.device_data",
+        "file_data": "$steps.upload-site-device-support-file.outputs.file_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "initial-msp-and-customer-organization-setup",
+      "summary": "This workflow outlines the process for a Managed Service Provider (MSP) to establish their account, create a new customer organization under their management, and invite an administrator to manage that new organization. This is a foundational workflow for onboarding new clients.",
+      "description": "This workflow outlines the process for a Managed Service Provider (MSP) to establish their account, create a new customer organization under their management, and invite an administrator to manage that new organization. This is a foundational workflow for onboarding new clients.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "msp_id": {
+            "type": "string"
+          },
+          "org_id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "first_name": {
+            "type": "string"
+          },
+          "last_name": {
+            "type": "string"
+          },
+          "privileges": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-msp",
+          "description": "Creates a new Managed Service Provider (MSP) account.",
+          "operationId": "createMsp",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "name": "$response.body#/name"
+          }
+        },
+        {
+          "stepId": "create-msp-org",
+          "description": "Creates a new organization that will be managed by the specified MSP.",
+          "operationId": "createMspOrg",
+          "parameters": [
+            {
+              "name": "msp_id",
+              "in": "path",
+              "value": "$steps.create-msp.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "msp_id": "$steps.create-msp.outputs.id",
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "name": "$response.body#/name"
+          }
+        },
+        {
+          "stepId": "invite-org-admin",
+          "description": "Invites a new administrator to manage the newly created organization, granting them specific privileges.",
+          "operationId": "inviteOrgAdmin",
+          "parameters": [
+            {
+              "name": "org_id",
+              "in": "path",
+              "value": "$steps.create-msp-org.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "org_id": "$steps.create-msp-org.outputs.id",
+              "email": "$inputs.email",
+              "first_name": "$inputs.first_name",
+              "last_name": "$inputs.last_name",
+              "privileges": "$inputs.privileges"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "admin_id": "$response.body#/admin_id"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-msp-org.outputs.id",
+        "name": "$steps.create-msp-org.outputs.name",
+        "admin_id": "$steps.invite-org-admin.outputs.admin_id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "setting-up-and-testing-a-site-level-webhook",
+      "summary": "This workflow enables administrators to configure and verify a webhook at a specific site to receive real-time event notifications, facilitating integration with external monitoring or automation systems.",
+      "description": "This workflow enables administrators to configure and verify a webhook at a specific site to receive real-time event notifications, facilitating integration with external monitoring or automation systems.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "site_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "topics": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "webhook_id": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "status_code": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "topic": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string"
+          },
+          "end": {
+            "type": "string"
+          },
+          "duration": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-webhook-topics",
+          "description": "Retrieves a list of all available webhook topics that can be subscribed to.",
+          "operationId": "listWebhookTopics",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "topics": "$response.body#/topics"
+          }
+        },
+        {
+          "stepId": "create-site-webhook",
+          "description": "Creates a new webhook configuration for a specific site, specifying the URL and the types of events to subscribe to.",
+          "operationId": "createSiteWebhook",
+          "parameters": [
+            {
+              "name": "site_id",
+              "in": "path",
+              "value": "$inputs.site_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name",
+              "site_id": "$inputs.site_id",
+              "topics": "$inputs.topics",
+              "url": "$inputs.url"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "name": "$response.body#/name"
+          }
+        },
+        {
+          "stepId": "ping-site-webhook",
+          "description": "Sends a test 'ping' event to the configured webhook URL to verify connectivity and proper setup.",
+          "operationId": "pingSiteWebhook",
+          "parameters": [
+            {
+              "name": "site_id",
+              "in": "path",
+              "value": "$inputs.site_id"
+            },
+            {
+              "name": "webhook_id",
+              "in": "path",
+              "value": "$steps.create-site-webhook.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "webhook_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "search-site-webhooks-deliveries",
+          "description": "Retrieves logs of webhook deliveries to confirm that events are being sent and received successfully.",
+          "operationId": "searchSiteWebhooksDeliveries",
+          "parameters": [
+            {
+              "name": "site_id",
+              "in": "path",
+              "value": "$inputs.site_id"
+            },
+            {
+              "name": "webhook_id",
+              "in": "path",
+              "value": "$steps.create-site-webhook.outputs.id"
+            },
+            {
+              "name": "error",
+              "in": "query",
+              "value": "$inputs.error"
+            },
+            {
+              "name": "status_code",
+              "in": "query",
+              "value": "$inputs.status_code"
+            },
+            {
+              "name": "status",
+              "in": "query",
+              "value": "$inputs.status"
+            },
+            {
+              "name": "topic",
+              "in": "query",
+              "value": "$inputs.topic"
+            },
+            {
+              "name": "start",
+              "in": "query",
+              "value": "$inputs.start"
+            },
+            {
+              "name": "end",
+              "in": "query",
+              "value": "$inputs.end"
+            },
+            {
+              "name": "duration",
+              "in": "query",
+              "value": "$inputs.duration"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "results": "$response.body#/results"
+          }
+        }
+      ],
+      "outputs": {
+        "topics": "$steps.list-webhook-topics.outputs.topics",
+        "id": "$steps.create-site-webhook.outputs.id",
+        "name": "$steps.create-site-webhook.outputs.name",
+        "webhook_data": "$steps.ping-site-webhook.outputs.webhook_data",
+        "results": "$steps.search-site-webhooks-deliveries.outputs.results"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "managing-location-services-maps-and-zones",
+      "summary": "This workflow enables the setup and configuration of location-aware services within a site. It covers uploading floorplans, automatically placing access points, confirming their locations, and defining custom zones for occupancy and engagement analytics.",
+      "description": "This workflow enables the setup and configuration of location-aware services within a site. It covers uploading floorplans, automatically placing access points, confirming their locations, and defining custom zones for occupancy and engagement analytics.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "site_id": {
+            "type": "string"
+          },
+          "height": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "ppm": {
+            "type": "string"
+          },
+          "width": {
+            "type": "string"
+          },
+          "map_id": {
+            "type": "string"
+          },
+          "macs": {
+            "type": "string"
+          },
+          "force_collection": {
+            "type": "string"
+          },
+          "accept": {
+            "type": "string"
+          },
+          "for": {
+            "type": "string"
+          },
+          "vertices": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-site-map",
+          "description": "Uploads a new floorplan image to represent the physical layout of a site, which is essential for location services.",
+          "operationId": "createSiteMap",
+          "parameters": [
+            {
+              "name": "site_id",
+              "in": "path",
+              "value": "$inputs.site_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "height": "$inputs.height",
+              "name": "$inputs.name",
+              "ppm": "$inputs.ppm",
+              "site_id": "$inputs.site_id",
+              "width": "$inputs.width"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "name": "$response.body#/name"
+          }
+        },
+        {
+          "stepId": "bulk-assign-site-aps-to-map",
+          "description": "Assigns multiple existing Access Points (APs) to the newly uploaded map, linking physical devices to the digital floorplan.",
+          "operationId": "bulkAssignSiteApsToMap",
+          "parameters": [
+            {
+              "name": "site_id",
+              "in": "path",
+              "value": "$inputs.site_id"
+            },
+            {
+              "name": "map_id",
+              "in": "path",
+              "value": "$steps.create-site-map.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "map_id": "$steps.create-site-map.outputs.id",
+              "macs": "$inputs.macs"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "moved": "$response.body#/moved"
+          }
+        },
+        {
+          "stepId": "run-site-ap-autoplacement",
+          "description": "Initiates the automatic placement algorithm to determine and suggest optimal X/Y coordinates and orientation for APs on the map.",
+          "operationId": "runSiteApAutoplacement",
+          "parameters": [
+            {
+              "name": "site_id",
+              "in": "path",
+              "value": "$inputs.site_id"
+            },
+            {
+              "name": "map_id",
+              "in": "path",
+              "value": "$steps.create-site-map.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "map_id": "$steps.create-site-map.outputs.id",
+              "force_collection": "$inputs.force_collection",
+              "macs": "$inputs.macs"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "started": "$response.body#/started",
+            "reason": "$response.body#/reason"
+          }
+        },
+        {
+          "stepId": "confirm-site-ap-localization-data",
+          "description": "Reviews and confirms the suggested AP placements and orientations generated by the auto-placement service.",
+          "operationId": "confirmSiteApLocalizationData",
+          "parameters": [
+            {
+              "name": "site_id",
+              "in": "path",
+              "value": "$inputs.site_id"
+            },
+            {
+              "name": "map_id",
+              "in": "path",
+              "value": "$steps.create-site-map.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "map_id": "$steps.create-site-map.outputs.id",
+              "accept": "$inputs.accept",
+              "for": "$inputs.for",
+              "macs": "$inputs.macs"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "data_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-site-zone",
+          "description": "Defines a custom geographical zone on the map, enabling location-based analytics such as occupancy and dwell time.",
+          "operationId": "createSiteZone",
+          "parameters": [
+            {
+              "name": "site_id",
+              "in": "path",
+              "value": "$inputs.site_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "map_id": "$steps.create-site-map.outputs.id",
+              "name": "$inputs.name",
+              "site_id": "$inputs.site_id",
+              "vertices": "$inputs.vertices"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "name": "$response.body#/name"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-site-zone.outputs.id",
+        "name": "$steps.create-site-zone.outputs.name",
+        "moved": "$steps.bulk-assign-site-aps-to-map.outputs.moved",
+        "started": "$steps.run-site-ap-autoplacement.outputs.started",
+        "reason": "$steps.run-site-ap-autoplacement.outputs.reason",
+        "data_data": "$steps.confirm-site-ap-localization-data.outputs.data_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "centralized-wireless-network-wlan-deployment",
+      "summary": "This workflow demonstrates how to define a standardized wireless local area network (WLAN) at the organization level and then apply this configuration consistently across multiple sites using a WLAN template. This ensures uniformity and simplifies management for large deployments.",
+      "description": "This workflow demonstrates how to define a standardized wireless local area network (WLAN) at the organization level and then apply this configuration consistently across multiple sites using a WLAN template. This ensures uniformity and simplifies management for large deployments.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "org_id": {
+            "type": "string"
+          },
+          "ssid": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-org-wlan",
+          "description": "Defines a new WLAN (SSID) at the organization level, specifying its authentication, security, and other network settings.",
+          "operationId": "createOrgWlan",
+          "parameters": [
+            {
+              "name": "org_id",
+              "in": "path",
+              "value": "$inputs.org_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "ssid": "$inputs.ssid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "ssid": "$response.body#/ssid"
+          }
+        },
+        {
+          "stepId": "create-org-template",
+          "description": "Creates a new WLAN template that references the organization-level WLAN, allowing it to be applied to sites.",
+          "operationId": "createOrgTemplate",
+          "parameters": [
+            {
+              "name": "org_id",
+              "in": "path",
+              "value": "$inputs.org_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "name": "$response.body#/name"
+          }
+        },
+        {
+          "stepId": "update-site-info",
+          "description": "Applies the newly created WLAN template to a specific site, inheriting the defined wireless network configuration.",
+          "operationId": "updateSiteInfo",
+          "parameters": [
+            {
+              "name": "site_id",
+              "in": "path",
+              "value": "$inputs.site_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "template_id": "$steps.create-org-template.outputs.id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.update-site-info.outputs.id",
+        "ssid": "$steps.create-org-wlan.outputs.ssid",
+        "name": "$steps.create-org-template.outputs.name"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "managing-device-firmware-upgrades",
+      "summary": "This workflow enables administrators to manage firmware upgrades for multiple network devices across an organization or within a specific site. It includes steps for checking available versions, initiating the upgrade process, and monitoring its progress.",
+      "description": "This workflow enables administrators to manage firmware upgrades for multiple network devices across an organization or within a specific site. It includes steps for checking available versions, initiating the upgrade process, and monitoring its progress.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "org_id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "band_24_bandwidth": {
+            "type": "string"
+          },
+          "band_24_channel": {
+            "type": "string"
+          },
+          "band_24_power": {
+            "type": "string"
+          },
+          "band_5_bandwidth": {
+            "type": "string"
+          },
+          "band_5_channel": {
+            "type": "string"
+          },
+          "band_5_power": {
+            "type": "string"
+          },
+          "band_6_bandwidth": {
+            "type": "string"
+          },
+          "band_6_channel": {
+            "type": "string"
+          },
+          "band_6_power": {
+            "type": "string"
+          },
+          "cpu": {
+            "type": "string"
+          },
+          "clustered": {
+            "type": "string"
+          },
+          "eth0_port_speed": {
+            "type": "string"
+          },
+          "evpntopo_id": {
+            "type": "string"
+          },
+          "ext_ip": {
+            "type": "string"
+          },
+          "hostname": {
+            "type": "string"
+          },
+          "ip_address": {
+            "type": "string"
+          },
+          "last_config_status": {
+            "type": "string"
+          },
+          "last_hostname": {
+            "type": "string"
+          },
+          "lldp_mgmt_addr": {
+            "type": "string"
+          },
+          "lldp_port_id": {
+            "type": "string"
+          },
+          "lldp_power_allocated": {
+            "type": "string"
+          },
+          "lldp_power_draw": {
+            "type": "string"
+          },
+          "lldp_system_desc": {
+            "type": "string"
+          },
+          "lldp_system_name": {
+            "type": "string"
+          },
+          "mac": {
+            "type": "string"
+          },
+          "mxedge_id": {
+            "type": "string"
+          },
+          "mxedge_ids": {
+            "type": "string"
+          },
+          "mxtunnel_status": {
+            "type": "string"
+          },
+          "node": {
+            "type": "string"
+          },
+          "node0_mac": {
+            "type": "string"
+          },
+          "node1_mac": {
+            "type": "string"
+          },
+          "power_constrained": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "t128agent_version": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string"
+          },
+          "end": {
+            "type": "string"
+          },
+          "duration": {
+            "type": "string"
+          },
+          "device_type": {
+            "type": "string"
+          },
+          "start_datetime": {
+            "type": "string"
+          },
+          "strategy": {
+            "type": "string"
+          },
+          "upgrade_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-org-available-device-versions",
+          "description": "Retrieves a list of available firmware versions for different device models within the organization.",
+          "operationId": "listOrgAvailableDeviceVersions",
+          "parameters": [
+            {
+              "name": "org_id",
+              "in": "path",
+              "value": "$inputs.org_id"
+            },
+            {
+              "name": "type",
+              "in": "query",
+              "value": "$inputs.type"
+            },
+            {
+              "name": "model",
+              "in": "query",
+              "value": "$inputs.model"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "versions": "$response.body#/versions"
+          }
+        },
+        {
+          "stepId": "search-org-devices",
+          "description": "Searches for and identifies target devices for the firmware upgrade based on criteria like model, site, or current version.",
+          "operationId": "searchOrgDevices",
+          "parameters": [
+            {
+              "name": "org_id",
+              "in": "path",
+              "value": "$inputs.org_id"
+            },
+            {
+              "name": "band_24_bandwidth",
+              "in": "query",
+              "value": "$inputs.band_24_bandwidth"
+            },
+            {
+              "name": "band_24_channel",
+              "in": "query",
+              "value": "$inputs.band_24_channel"
+            },
+            {
+              "name": "band_24_power",
+              "in": "query",
+              "value": "$inputs.band_24_power"
+            },
+            {
+              "name": "band_5_bandwidth",
+              "in": "query",
+              "value": "$inputs.band_5_bandwidth"
+            },
+            {
+              "name": "band_5_channel",
+              "in": "query",
+              "value": "$inputs.band_5_channel"
+            },
+            {
+              "name": "band_5_power",
+              "in": "query",
+              "value": "$inputs.band_5_power"
+            },
+            {
+              "name": "band_6_bandwidth",
+              "in": "query",
+              "value": "$inputs.band_6_bandwidth"
+            },
+            {
+              "name": "band_6_channel",
+              "in": "query",
+              "value": "$inputs.band_6_channel"
+            },
+            {
+              "name": "band_6_power",
+              "in": "query",
+              "value": "$inputs.band_6_power"
+            },
+            {
+              "name": "cpu",
+              "in": "query",
+              "value": "$inputs.cpu"
+            },
+            {
+              "name": "clustered",
+              "in": "query",
+              "value": "$inputs.clustered"
+            },
+            {
+              "name": "eth0_port_speed",
+              "in": "query",
+              "value": "$inputs.eth0_port_speed"
+            },
+            {
+              "name": "evpntopo_id",
+              "in": "query",
+              "value": "$inputs.evpntopo_id"
+            },
+            {
+              "name": "ext_ip",
+              "in": "query",
+              "value": "$inputs.ext_ip"
+            },
+            {
+              "name": "hostname",
+              "in": "query",
+              "value": "$inputs.hostname"
+            },
+            {
+              "name": "ip_address",
+              "in": "query",
+              "value": "$inputs.ip_address"
+            },
+            {
+              "name": "last_config_status",
+              "in": "query",
+              "value": "$inputs.last_config_status"
+            },
+            {
+              "name": "last_hostname",
+              "in": "query",
+              "value": "$inputs.last_hostname"
+            },
+            {
+              "name": "lldp_mgmt_addr",
+              "in": "query",
+              "value": "$inputs.lldp_mgmt_addr"
+            },
+            {
+              "name": "lldp_port_id",
+              "in": "query",
+              "value": "$inputs.lldp_port_id"
+            },
+            {
+              "name": "lldp_power_allocated",
+              "in": "query",
+              "value": "$inputs.lldp_power_allocated"
+            },
+            {
+              "name": "lldp_power_draw",
+              "in": "query",
+              "value": "$inputs.lldp_power_draw"
+            },
+            {
+              "name": "lldp_system_desc",
+              "in": "query",
+              "value": "$inputs.lldp_system_desc"
+            },
+            {
+              "name": "lldp_system_name",
+              "in": "query",
+              "value": "$inputs.lldp_system_name"
+            },
+            {
+              "name": "mac",
+              "in": "query",
+              "value": "$inputs.mac"
+            },
+            {
+              "name": "model",
+              "in": "query",
+              "value": "$inputs.model"
+            },
+            {
+              "name": "mxedge_id",
+              "in": "query",
+              "value": "$inputs.mxedge_id"
+            },
+            {
+              "name": "mxedge_ids",
+              "in": "query",
+              "value": "$inputs.mxedge_ids"
+            },
+            {
+              "name": "mxtunnel_status",
+              "in": "query",
+              "value": "$inputs.mxtunnel_status"
+            },
+            {
+              "name": "node",
+              "in": "query",
+              "value": "$inputs.node"
+            },
+            {
+              "name": "node0_mac",
+              "in": "query",
+              "value": "$inputs.node0_mac"
+            },
+            {
+              "name": "node1_mac",
+              "in": "query",
+              "value": "$inputs.node1_mac"
+            },
+            {
+              "name": "power_constrained",
+              "in": "query",
+              "value": "$inputs.power_constrained"
+            },
+            {
+              "name": "site_id",
+              "in": "query",
+              "value": "$inputs.site_id"
+            },
+            {
+              "name": "t128agent_version",
+              "in": "query",
+              "value": "$inputs.t128agent_version"
+            },
+            {
+              "name": "version",
+              "in": "query",
+              "value": "$inputs.version"
+            },
+            {
+              "name": "type",
+              "in": "query",
+              "value": "$inputs.type"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "start",
+              "in": "query",
+              "value": "$inputs.start"
+            },
+            {
+              "name": "end",
+              "in": "query",
+              "value": "$inputs.end"
+            },
+            {
+              "name": "duration",
+              "in": "query",
+              "value": "$inputs.duration"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "results": "$response.body#/results"
+          }
+        },
+        {
+          "stepId": "upgrade-org-devices",
+          "description": "Initiates a firmware upgrade for multiple selected devices, specifying the target version and upgrade strategy.",
+          "operationId": "upgradeOrgDevices",
+          "parameters": [
+            {
+              "name": "org_id",
+              "in": "path",
+              "value": "$inputs.org_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "models": "$steps.search-org-devices.outputs.results[*].model",
+              "site_ids": "$steps.search-org-devices.outputs.results[*].site_id",
+              "device_type": "$inputs.device_type",
+              "start_datetime": "$inputs.start_datetime",
+              "strategy": "$inputs.strategy"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "get-org-device-upgrade",
+          "description": "Monitors the status and progress of an ongoing firmware upgrade operation.",
+          "operationId": "getOrgDeviceUpgrade",
+          "parameters": [
+            {
+              "name": "org_id",
+              "in": "path",
+              "value": "$inputs.org_id"
+            },
+            {
+              "name": "upgrade_id",
+              "in": "path",
+              "value": "$steps.upgrade-org-devices.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status",
+            "counts": "$response.body#/counts"
+          }
+        },
+        {
+          "stepId": "cancel-org-device-upgrade",
+          "description": "Cancels an ongoing firmware upgrade operation, preventing further devices from being upgraded.",
+          "operationId": "cancelOrgDeviceUpgrade",
+          "parameters": [
+            {
+              "name": "org_id",
+              "in": "path",
+              "value": "$inputs.org_id"
+            },
+            {
+              "name": "upgrade_id",
+              "in": "path",
+              "value": "$inputs.upgrade_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "upgrade_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "versions": "$steps.list-org-available-device-versions.outputs.versions",
+        "results": "$steps.search-org-devices.outputs.results",
+        "id": "$steps.upgrade-org-devices.outputs.id",
+        "status": "$steps.get-org-device-upgrade.outputs.status",
+        "counts": "$steps.get-org-device-upgrade.outputs.counts",
+        "upgrade_data": "$steps.cancel-org-device-upgrade.outputs.upgrade_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "managing-guest-wi-fi-access-via-psk-portal",
+      "summary": "This workflow provides a comprehensive solution for setting up and managing guest Wi-Fi access using a self-service PSK (Pre-Shared Key) portal. It covers portal creation, branding, PSK generation, and monitoring of guest activity.",
+      "description": "This workflow provides a comprehensive solution for setting up and managing guest Wi-Fi access using a self-service PSK (Pre-Shared Key) portal. It covers portal creation, branding, PSK generation, and monitoring of guest activity.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "org_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "ssid": {
+            "type": "string"
+          },
+          "pskportal_id": {
+            "type": "string"
+          },
+          "file": {
+            "type": "string"
+          },
+          "upsert": {
+            "type": "string"
+          },
+          "passphrase": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string"
+          },
+          "end": {
+            "type": "string"
+          },
+          "duration": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-org-psk-portal",
+          "description": "Creates a new PSK portal configuration for guest Wi-Fi access, defining its authentication method and associated SSID.",
+          "operationId": "createOrgPskPortal",
+          "parameters": [
+            {
+              "name": "org_id",
+              "in": "path",
+              "value": "$inputs.org_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name",
+              "ssid": "$inputs.ssid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "name": "$response.body#/name"
+          }
+        },
+        {
+          "stepId": "upload-org-psk-portal-image",
+          "description": "Uploads a custom background image to brand the PSK portal, enhancing the guest user experience.",
+          "operationId": "uploadOrgPskPortalImage",
+          "parameters": [
+            {
+              "name": "org_id",
+              "in": "path",
+              "value": "$inputs.org_id"
+            },
+            {
+              "name": "pskportal_id",
+              "in": "path",
+              "value": "$steps.create-org-psk-portal.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "pskportal_id": "$steps.create-org-psk-portal.outputs.id",
+              "file": "$inputs.file"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "image_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-org-psk",
+          "description": "Generates a new individual PSK for a guest, which can be distributed manually or via the portal.",
+          "operationId": "createOrgPsk",
+          "parameters": [
+            {
+              "name": "org_id",
+              "in": "path",
+              "value": "$inputs.org_id"
+            },
+            {
+              "name": "upsert",
+              "in": "query",
+              "value": "$inputs.upsert"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name",
+              "passphrase": "$inputs.passphrase",
+              "ssid": "$inputs.ssid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "name": "$response.body#/name"
+          }
+        },
+        {
+          "stepId": "list-org-psk-portal-logs",
+          "description": "Retrieves logs of activity on the PSK portal, including PSK creation and usage, for auditing and monitoring.",
+          "operationId": "listOrgPskPortalLogs",
+          "parameters": [
+            {
+              "name": "org_id",
+              "in": "path",
+              "value": "$inputs.org_id"
+            },
+            {
+              "name": "start",
+              "in": "query",
+              "value": "$inputs.start"
+            },
+            {
+              "name": "end",
+              "in": "query",
+              "value": "$inputs.end"
+            },
+            {
+              "name": "duration",
+              "in": "query",
+              "value": "$inputs.duration"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "results": "$response.body#/results"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-org-psk.outputs.id",
+        "name": "$steps.create-org-psk.outputs.name",
+        "image_data": "$steps.upload-org-psk-portal-image.outputs.image_data",
+        "results": "$steps.list-org-psk-portal-logs.outputs.results"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
