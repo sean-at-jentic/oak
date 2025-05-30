@@ -1,0 +1,498 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/motaword.com/main/1.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "submit-document-for-translation-and-track-progress",
+      "summary": "This workflow allows a user to create a new translation project by uploading documents, launch the project for translation, monitor its real-time progress, package the translated files, check the packaging status, and finally download the completed translation package.",
+      "description": "This workflow allows a user to create a new translation project by uploading documents, launch the project for translation, monitor its real-time progress, package the translated files, check the packaging status, and finally download the completed translation package.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "with[]": {
+            "type": "string"
+          },
+          "source_language": {
+            "type": "string"
+          },
+          "target_languages": {
+            "type": "string"
+          },
+          "documents": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "payment_method": {
+            "type": "string"
+          },
+          "card_id": {
+            "type": "string"
+          },
+          "payment_code": {
+            "type": "string"
+          },
+          "reference_code": {
+            "type": "string"
+          },
+          "raw": {
+            "type": "string"
+          },
+          "async": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-translation-project",
+          "description": "Initiate a new translation project by providing source documents and target languages. This step creates the project but does not launch it for translation yet.",
+          "operationId": "createProject",
+          "parameters": [
+            {
+              "name": "with[]",
+              "in": "query",
+              "value": "$inputs.with[]"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "source_language": "$inputs.source_language",
+              "target_languages": "$inputs.target_languages",
+              "documents": "$inputs.documents"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/coupon_code/id",
+            "status": "$response.body#/status"
+          }
+        },
+        {
+          "stepId": "launch-translation-project",
+          "description": "Launch the created translation project, initiating the translation process and incurring charges based on the selected payment method.",
+          "operationId": "launchProject",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-translation-project.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.create-translation-project.outputs.id",
+              "payment_method": "$inputs.payment_method",
+              "card_id": "$inputs.card_id",
+              "payment_code": "$inputs.payment_code",
+              "reference_code": "$inputs.reference_code"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status"
+          }
+        },
+        {
+          "stepId": "get-project-progress",
+          "description": "Retrieve the current translation and proofreading progress of the launched project in real-time.",
+          "operationId": "getProgress",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-translation-project.outputs.id"
+            },
+            {
+              "name": "raw",
+              "in": "query",
+              "value": "$inputs.raw"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "project_status": "$response.body#/project_status",
+            "languages": "$response.body#/languages"
+          }
+        },
+        {
+          "stepId": "package-translated-project",
+          "description": "Request the packaging of translated documents for the project, making them ready for download. This can be an asynchronous operation.",
+          "operationId": "package",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-translation-project.outputs.id"
+            },
+            {
+              "name": "async",
+              "in": "query",
+              "value": "$inputs.async"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "key": "$response.body#/key",
+            "status": "$response.body#/status"
+          }
+        },
+        {
+          "stepId": "check-package-status",
+          "description": "Check the status of the translation packaging process using the key obtained from the packaging request.",
+          "operationId": "trackPackage",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-translation-project.outputs.id"
+            },
+            {
+              "name": "key",
+              "in": "query",
+              "value": "$steps.package-translated-project.outputs.key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status"
+          }
+        },
+        {
+          "stepId": "download-translated-project",
+          "description": "Download the complete translation package for the project once packaging is finished.",
+          "operationId": "download",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-translation-project.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "file_content": "$response.body#/file_content"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-translation-project.outputs.id",
+        "status": "$steps.check-package-status.outputs.status",
+        "project_status": "$steps.get-project-progress.outputs.project_status",
+        "languages": "$steps.get-project-progress.outputs.languages",
+        "key": "$steps.package-translated-project.outputs.key",
+        "file_content": "$steps.download-translated-project.outputs.file_content"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "user-onboarding-and-payment-setup-corporate",
+      "summary": "This workflow enables an administrator to create a new user account, associate it with a corporate account, and configure the user's payment information, including billing details and credit card settings.",
+      "description": "This workflow enables an administrator to create a new user account, associate it with a corporate account, and configure the user's payment information, including billing details and credit card settings.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "notify": {
+            "type": "string"
+          },
+          "skip_validation": {
+            "type": "string"
+          },
+          "first_name": {
+            "type": "string"
+          },
+          "last_name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "corporate_id": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "billing": {
+            "type": "string"
+          },
+          "card": {
+            "type": "string"
+          },
+          "corporate": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-new-user",
+          "description": "Create a new user account, optionally associating it with a corporate account during creation.",
+          "operationId": "createUser",
+          "parameters": [
+            {
+              "name": "notify",
+              "in": "query",
+              "value": "$inputs.notify"
+            },
+            {
+              "name": "skip_validation",
+              "in": "query",
+              "value": "$inputs.skip_validation"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "first_name": "$inputs.first_name",
+              "last_name": "$inputs.last_name",
+              "email": "$inputs.email",
+              "corporate_id": "$inputs.corporate_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/client/corporate/id"
+          }
+        },
+        {
+          "stepId": "set-user-payment-info",
+          "description": "Update the newly created user's payment and billing information, including credit card details and corporate payment settings.",
+          "operationId": "updateUserPaymentInfo",
+          "parameters": [
+            {
+              "name": "userId",
+              "in": "path",
+              "value": "$steps.create-new-user.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "userId": "$steps.create-new-user.outputs.id",
+              "billing": "$inputs.billing",
+              "card": "$inputs.card",
+              "corporate": "$inputs.corporate"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-new-user.outputs.id",
+        "status": "$steps.set-user-payment-info.outputs.status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-user-profile-and-security",
+      "summary": "This workflow allows an authenticated user to update their personal profile details and securely change their account password.",
+      "description": "This workflow allows an authenticated user to update their personal profile details and securely change their account password.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "update-my-profile_body": {
+            "type": "object"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "update-my-profile",
+          "description": "Update personal account information such as name, email, contact details, and notification settings for the authenticated user.",
+          "operationId": "updateMe",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.update-my-profile_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/client/corporate/id",
+            "email": "$response.body#/client/corporate/email"
+          }
+        },
+        {
+          "stepId": "change-my-password",
+          "description": "Change the password for the authenticated user's account, requiring a new password that meets specified security criteria.",
+          "operationId": "updatePassword",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "password": "$inputs.password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.update-my-profile.outputs.id",
+        "email": "$steps.update-my-profile.outputs.email",
+        "status": "$steps.change-my-password.outputs.status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
