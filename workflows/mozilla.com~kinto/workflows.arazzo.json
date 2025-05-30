@@ -1,0 +1,1098 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/mozilla.com/kinto/1.22/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "synchronize-remote-settings-data",
+      "summary": "Enables a client application (like Firefox) to efficiently synchronize its local remote settings data by querying for global changes and then fetching specific collection changesets and updated records.",
+      "description": "Enables a client application (like Firefox) to efficiently synchronize its local remote settings data by querying for global changes and then fetching specific collection changesets and updated records.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "_limit": {
+            "type": "string"
+          },
+          "_sort": {
+            "type": "string"
+          },
+          "_token": {
+            "type": "string"
+          },
+          "_since": {
+            "type": "string"
+          },
+          "_to": {
+            "type": "string"
+          },
+          "_before": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "last_modified": {
+            "type": "string"
+          },
+          "_fields": {
+            "type": "string"
+          },
+          "If-Match": {
+            "type": "string"
+          },
+          "If-None-Match": {
+            "type": "string"
+          },
+          "bucket_id": {
+            "type": "string"
+          },
+          "collection_id": {
+            "type": "string"
+          },
+          "_expected": {
+            "type": "string"
+          },
+          "bucket": {
+            "type": "string"
+          },
+          "collection": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-global-changes",
+          "description": "Retrieves a high-level list of buckets and collections that have undergone changes since a specified timestamp.",
+          "operationId": "get_changess",
+          "parameters": [
+            {
+              "name": "_limit",
+              "in": "query",
+              "value": "$inputs._limit"
+            },
+            {
+              "name": "_sort",
+              "in": "query",
+              "value": "$inputs._sort"
+            },
+            {
+              "name": "_token",
+              "in": "query",
+              "value": "$inputs._token"
+            },
+            {
+              "name": "_since",
+              "in": "query",
+              "value": "$inputs._since"
+            },
+            {
+              "name": "_to",
+              "in": "query",
+              "value": "$inputs._to"
+            },
+            {
+              "name": "_before",
+              "in": "query",
+              "value": "$inputs._before"
+            },
+            {
+              "name": "id",
+              "in": "query",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "last_modified",
+              "in": "query",
+              "value": "$inputs.last_modified"
+            },
+            {
+              "name": "_fields",
+              "in": "query",
+              "value": "$inputs._fields"
+            },
+            {
+              "name": "If-Match",
+              "in": "header",
+              "value": "$inputs.If-Match"
+            },
+            {
+              "name": "If-None-Match",
+              "in": "header",
+              "value": "$inputs.If-None-Match"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "changed_items_list": "$response.body#/changed_items_list",
+            "Etag": "$response.headers.Etag",
+            "Last-Modified": "$response.headers.Last-Modified"
+          }
+        },
+        {
+          "stepId": "get-collection-changeset",
+          "description": "Fetches detailed changes (added, modified, deleted records) within a specific collection, using an ETag for conditional requests.",
+          "operationId": "get_collection-changeset",
+          "parameters": [
+            {
+              "name": "bucket_id",
+              "in": "path",
+              "value": "$steps.get-global-changes.outputs.changed_items_list.bucket"
+            },
+            {
+              "name": "collection_id",
+              "in": "path",
+              "value": "$steps.get-global-changes.outputs.changed_items_list.collection"
+            },
+            {
+              "name": "_since",
+              "in": "query",
+              "value": "$steps.get-global-changes.outputs.Etag"
+            },
+            {
+              "name": "_expected",
+              "in": "query",
+              "value": "$inputs._expected"
+            },
+            {
+              "name": "_limit",
+              "in": "query",
+              "value": "$inputs._limit"
+            },
+            {
+              "name": "bucket",
+              "in": "query",
+              "value": "$inputs.bucket"
+            },
+            {
+              "name": "collection",
+              "in": "query",
+              "value": "$inputs.collection"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "fetch-changed-record-details",
+          "description": "Retrieves the full data for a specific record that was identified as changed in the changeset.",
+          "operationId": "get_record",
+          "parameters": [
+            {
+              "name": "bucket_id",
+              "in": "path",
+              "value": "$steps.get-collection-changeset.outputs.collection_changeset_data.bucket_id"
+            },
+            {
+              "name": "collection_id",
+              "in": "path",
+              "value": "$steps.get-collection-changeset.outputs.collection_changeset_data.collection_id"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-collection-changeset.outputs.collection_changeset_data.changed_record_ids[0]"
+            },
+            {
+              "name": "_fields",
+              "in": "query",
+              "value": "$inputs._fields"
+            },
+            {
+              "name": "If-Match",
+              "in": "header",
+              "value": "$inputs.If-Match"
+            },
+            {
+              "name": "If-None-Match",
+              "in": "header",
+              "value": "$inputs.If-None-Match"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "record_data": "$response.body#/record_data",
+            "record_permissions": "$response.body#/record_permissions",
+            "Etag": "$response.headers.Etag",
+            "Last-Modified": "$response.headers.Last-Modified"
+          }
+        }
+      ],
+      "outputs": {
+        "changed_items_list": "$steps.get-global-changes.outputs.changed_items_list",
+        "Etag": "$steps.fetch-changed-record-details.outputs.Etag",
+        "Last-Modified": "$steps.fetch-changed-record-details.outputs.Last-Modified",
+        "record_data": "$steps.fetch-changed-record-details.outputs.record_data",
+        "record_permissions": "$steps.fetch-changed-record-details.outputs.record_permissions"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "browse-remote-settings-hierarchy",
+      "summary": "Allows an administrator or developer to explore the hierarchical structure of remote settings, starting from buckets, then collections, and finally records within them.",
+      "description": "Allows an administrator or developer to explore the hierarchical structure of remote settings, starting from buckets, then collections, and finally records within them.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "_limit": {
+            "type": "string"
+          },
+          "_sort": {
+            "type": "string"
+          },
+          "_token": {
+            "type": "string"
+          },
+          "_since": {
+            "type": "string"
+          },
+          "_to": {
+            "type": "string"
+          },
+          "_before": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "last_modified": {
+            "type": "string"
+          },
+          "_fields": {
+            "type": "string"
+          },
+          "If-Match": {
+            "type": "string"
+          },
+          "If-None-Match": {
+            "type": "string"
+          },
+          "bucket_id": {
+            "type": "string"
+          },
+          "collection_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-all-buckets",
+          "description": "Retrieves a list of all available buckets in the remote settings system.",
+          "operationId": "get_buckets",
+          "parameters": [
+            {
+              "name": "_limit",
+              "in": "query",
+              "value": "$inputs._limit"
+            },
+            {
+              "name": "_sort",
+              "in": "query",
+              "value": "$inputs._sort"
+            },
+            {
+              "name": "_token",
+              "in": "query",
+              "value": "$inputs._token"
+            },
+            {
+              "name": "_since",
+              "in": "query",
+              "value": "$inputs._since"
+            },
+            {
+              "name": "_to",
+              "in": "query",
+              "value": "$inputs._to"
+            },
+            {
+              "name": "_before",
+              "in": "query",
+              "value": "$inputs._before"
+            },
+            {
+              "name": "id",
+              "in": "query",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "last_modified",
+              "in": "query",
+              "value": "$inputs.last_modified"
+            },
+            {
+              "name": "_fields",
+              "in": "query",
+              "value": "$inputs._fields"
+            },
+            {
+              "name": "If-Match",
+              "in": "header",
+              "value": "$inputs.If-Match"
+            },
+            {
+              "name": "If-None-Match",
+              "in": "header",
+              "value": "$inputs.If-None-Match"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "bucket_list": "$response.body#/bucket_list",
+            "Etag": "$response.headers.Etag",
+            "Last-Modified": "$response.headers.Last-Modified"
+          }
+        },
+        {
+          "stepId": "list-collections-in-bucket",
+          "description": "Lists all collections within a specific bucket.",
+          "operationId": "get_collections",
+          "parameters": [
+            {
+              "name": "bucket_id",
+              "in": "path",
+              "value": "$steps.list-all-buckets.outputs.bucket_list.id"
+            },
+            {
+              "name": "_limit",
+              "in": "query",
+              "value": "$inputs._limit"
+            },
+            {
+              "name": "_sort",
+              "in": "query",
+              "value": "$inputs._sort"
+            },
+            {
+              "name": "_token",
+              "in": "query",
+              "value": "$inputs._token"
+            },
+            {
+              "name": "_since",
+              "in": "query",
+              "value": "$inputs._since"
+            },
+            {
+              "name": "_to",
+              "in": "query",
+              "value": "$inputs._to"
+            },
+            {
+              "name": "_before",
+              "in": "query",
+              "value": "$inputs._before"
+            },
+            {
+              "name": "id",
+              "in": "query",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "last_modified",
+              "in": "query",
+              "value": "$inputs.last_modified"
+            },
+            {
+              "name": "_fields",
+              "in": "query",
+              "value": "$inputs._fields"
+            },
+            {
+              "name": "If-Match",
+              "in": "header",
+              "value": "$inputs.If-Match"
+            },
+            {
+              "name": "If-None-Match",
+              "in": "header",
+              "value": "$inputs.If-None-Match"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "collection_list": "$response.body#/collection_list",
+            "Etag": "$response.headers.Etag",
+            "Last-Modified": "$response.headers.Last-Modified"
+          }
+        },
+        {
+          "stepId": "list-records-in-collection",
+          "description": "Retrieves a list of all records within a specific collection.",
+          "operationId": "get_records",
+          "parameters": [
+            {
+              "name": "bucket_id",
+              "in": "path",
+              "value": "$steps.list-collections-in-bucket.outputs.collection_list.bucket_id"
+            },
+            {
+              "name": "collection_id",
+              "in": "path",
+              "value": "$steps.list-collections-in-bucket.outputs.collection_list.id"
+            },
+            {
+              "name": "_limit",
+              "in": "query",
+              "value": "$inputs._limit"
+            },
+            {
+              "name": "_sort",
+              "in": "query",
+              "value": "$inputs._sort"
+            },
+            {
+              "name": "_token",
+              "in": "query",
+              "value": "$inputs._token"
+            },
+            {
+              "name": "_since",
+              "in": "query",
+              "value": "$inputs._since"
+            },
+            {
+              "name": "_to",
+              "in": "query",
+              "value": "$inputs._to"
+            },
+            {
+              "name": "_before",
+              "in": "query",
+              "value": "$inputs._before"
+            },
+            {
+              "name": "id",
+              "in": "query",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "last_modified",
+              "in": "query",
+              "value": "$inputs.last_modified"
+            },
+            {
+              "name": "_fields",
+              "in": "query",
+              "value": "$inputs._fields"
+            },
+            {
+              "name": "If-Match",
+              "in": "header",
+              "value": "$inputs.If-Match"
+            },
+            {
+              "name": "If-None-Match",
+              "in": "header",
+              "value": "$inputs.If-None-Match"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "record_list": "$response.body#/record_list",
+            "Etag": "$response.headers.Etag",
+            "Last-Modified": "$response.headers.Last-Modified"
+          }
+        }
+      ],
+      "outputs": {
+        "bucket_list": "$steps.list-all-buckets.outputs.bucket_list",
+        "Etag": "$steps.list-records-in-collection.outputs.Etag",
+        "Last-Modified": "$steps.list-records-in-collection.outputs.Last-Modified",
+        "collection_list": "$steps.list-collections-in-bucket.outputs.collection_list",
+        "record_list": "$steps.list-records-in-collection.outputs.record_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-specific-remote-setting-record",
+      "summary": "Allows a client to directly fetch a particular remote setting record given its bucket, collection, and record IDs.",
+      "description": "Allows a client to directly fetch a particular remote setting record given its bucket, collection, and record IDs.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "_fields": {
+            "type": "string"
+          },
+          "If-Match": {
+            "type": "string"
+          },
+          "If-None-Match": {
+            "type": "string"
+          },
+          "bucket_id": {
+            "type": "string"
+          },
+          "collection_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-bucket-details",
+          "description": "Retrieves detailed information about a specific bucket.",
+          "operationId": "get_bucket",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "_fields",
+              "in": "query",
+              "value": "$inputs._fields"
+            },
+            {
+              "name": "If-Match",
+              "in": "header",
+              "value": "$inputs.If-Match"
+            },
+            {
+              "name": "If-None-Match",
+              "in": "header",
+              "value": "$inputs.If-None-Match"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "bucket_data": "$response.body#/bucket_data",
+            "bucket_permissions": "$response.body#/bucket_permissions",
+            "Etag": "$response.headers.Etag",
+            "Last-Modified": "$response.headers.Last-Modified"
+          }
+        },
+        {
+          "stepId": "get-collection-details",
+          "description": "Retrieves detailed information about a specific collection within a bucket.",
+          "operationId": "get_collection",
+          "parameters": [
+            {
+              "name": "bucket_id",
+              "in": "path",
+              "value": "$steps.get-bucket-details.outputs.bucket_data.id"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "_fields",
+              "in": "query",
+              "value": "$inputs._fields"
+            },
+            {
+              "name": "If-Match",
+              "in": "header",
+              "value": "$inputs.If-Match"
+            },
+            {
+              "name": "If-None-Match",
+              "in": "header",
+              "value": "$inputs.If-None-Match"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "collection_data": "$response.body#/collection_data",
+            "collection_permissions": "$response.body#/collection_permissions",
+            "Etag": "$response.headers.Etag",
+            "Last-Modified": "$response.headers.Last-Modified"
+          }
+        },
+        {
+          "stepId": "get-record-details",
+          "description": "Retrieves the full data for a specific record within a collection.",
+          "operationId": "get_record",
+          "parameters": [
+            {
+              "name": "bucket_id",
+              "in": "path",
+              "value": "$steps.get-collection-details.outputs.collection_data.bucket_id"
+            },
+            {
+              "name": "collection_id",
+              "in": "path",
+              "value": "$steps.get-collection-details.outputs.collection_data.id"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "_fields",
+              "in": "query",
+              "value": "$inputs._fields"
+            },
+            {
+              "name": "If-Match",
+              "in": "header",
+              "value": "$inputs.If-Match"
+            },
+            {
+              "name": "If-None-Match",
+              "in": "header",
+              "value": "$inputs.If-None-Match"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "record_data": "$response.body#/record_data",
+            "record_permissions": "$response.body#/record_permissions",
+            "Etag": "$response.headers.Etag",
+            "Last-Modified": "$response.headers.Last-Modified"
+          }
+        }
+      ],
+      "outputs": {
+        "bucket_data": "$steps.get-bucket-details.outputs.bucket_data",
+        "bucket_permissions": "$steps.get-bucket-details.outputs.bucket_permissions",
+        "Etag": "$steps.get-record-details.outputs.Etag",
+        "Last-Modified": "$steps.get-record-details.outputs.Last-Modified",
+        "collection_data": "$steps.get-collection-details.outputs.collection_data",
+        "collection_permissions": "$steps.get-collection-details.outputs.collection_permissions",
+        "record_data": "$steps.get-record-details.outputs.record_data",
+        "record_permissions": "$steps.get-record-details.outputs.record_permissions"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-record-attachment-add",
+      "summary": "Attaches a file or data to an existing remote setting record.",
+      "description": "Attaches a file or data to an existing remote setting record.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "bucket_id": {
+            "type": "string"
+          },
+          "collection_id": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "_fields": {
+            "type": "string"
+          },
+          "If-Match": {
+            "type": "string"
+          },
+          "If-None-Match": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-record-for-attachment",
+          "description": "Retrieves the record details to confirm its existence before attaching data.",
+          "operationId": "get_record",
+          "parameters": [
+            {
+              "name": "bucket_id",
+              "in": "path",
+              "value": "$inputs.bucket_id"
+            },
+            {
+              "name": "collection_id",
+              "in": "path",
+              "value": "$inputs.collection_id"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "_fields",
+              "in": "query",
+              "value": "$inputs._fields"
+            },
+            {
+              "name": "If-Match",
+              "in": "header",
+              "value": "$inputs.If-Match"
+            },
+            {
+              "name": "If-None-Match",
+              "in": "header",
+              "value": "$inputs.If-None-Match"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "record_data": "$response.body#/record_data"
+          }
+        },
+        {
+          "stepId": "create-record-attachment",
+          "description": "Uploads and attaches data to the specified record.",
+          "operationId": "create_attachment",
+          "parameters": [
+            {
+              "name": "bucket_id",
+              "in": "path",
+              "value": "$steps.get-record-for-attachment.outputs.record_data.bucket_id"
+            },
+            {
+              "name": "collection_id",
+              "in": "path",
+              "value": "$steps.get-record-for-attachment.outputs.record_data.collection_id"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-record-for-attachment.outputs.record_data.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        }
+      ],
+      "outputs": {
+        "record_data": "$steps.get-record-for-attachment.outputs.record_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-record-attachment-remove",
+      "summary": "Removes an existing attachment from a remote setting record.",
+      "description": "Removes an existing attachment from a remote setting record.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "bucket_id": {
+            "type": "string"
+          },
+          "collection_id": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "_fields": {
+            "type": "string"
+          },
+          "If-Match": {
+            "type": "string"
+          },
+          "If-None-Match": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-record-for-detachment",
+          "description": "Retrieves the record details to confirm its existence before detaching data.",
+          "operationId": "get_record",
+          "parameters": [
+            {
+              "name": "bucket_id",
+              "in": "path",
+              "value": "$inputs.bucket_id"
+            },
+            {
+              "name": "collection_id",
+              "in": "path",
+              "value": "$inputs.collection_id"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "_fields",
+              "in": "query",
+              "value": "$inputs._fields"
+            },
+            {
+              "name": "If-Match",
+              "in": "header",
+              "value": "$inputs.If-Match"
+            },
+            {
+              "name": "If-None-Match",
+              "in": "header",
+              "value": "$inputs.If-None-Match"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "record_data": "$response.body#/record_data"
+          }
+        },
+        {
+          "stepId": "delete-record-attachment",
+          "description": "Deletes the attachment associated with the specified record.",
+          "operationId": "delete_attachment",
+          "parameters": [
+            {
+              "name": "bucket_id",
+              "in": "path",
+              "value": "$steps.get-record-for-detachment.outputs.record_data.bucket_id"
+            },
+            {
+              "name": "collection_id",
+              "in": "path",
+              "value": "$steps.get-record-for-detachment.outputs.record_data.collection_id"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-record-for-detachment.outputs.record_data.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        }
+      ],
+      "outputs": {
+        "record_data": "$steps.get-record-for-detachment.outputs.record_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "api-health-and-version-check",
+      "summary": "Checks the operational status and retrieves version information for the Remote Settings API instance.",
+      "description": "Checks the operational status and retrieves version information for the Remote Settings API instance.",
+      "steps": [
+        {
+          "stepId": "get-server-heartbeat",
+          "description": "Checks if the server is working properly.",
+          "operationId": "__heartbeat__",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "heartbeat_status": "$response.body#/heartbeat_status"
+          }
+        },
+        {
+          "stepId": "get-server-version",
+          "description": "Retrieves the running instance's version information.",
+          "operationId": "__version__",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "version_info": "$response.body#/version_info"
+          }
+        }
+      ],
+      "outputs": {
+        "heartbeat_status": "$steps.get-server-heartbeat.outputs.heartbeat_status",
+        "version_info": "$steps.get-server-version.outputs.version_info"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
