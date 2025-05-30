@@ -1,0 +1,514 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/neutrinoapi.net/main/3.7.1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "email-validation-and-verification",
+      "summary": "First, validates the email address syntax and domain, then performs an SMTP check to confirm the email address is active and can receive mail.",
+      "description": "First, validates the email address syntax and domain, then performs an SMTP check to confirm the email address is active and can receive mail.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "fix-typos": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "validate-email-syntax-domain",
+          "description": "Checks the email address for syntax errors and validates its domain, optionally fixing typos.",
+          "operationId": "EmailValidate",
+          "parameters": [
+            {
+              "name": "email",
+              "in": "query",
+              "value": "$inputs.email"
+            },
+            {
+              "name": "fix-typos",
+              "in": "query",
+              "value": "$inputs.fix-typos"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "valid": "$response.body#/valid",
+            "syntax-error": "$response.body#/syntax-error",
+            "domain-error": "$response.body#/domain-error",
+            "is-freemail": "$response.body#/is-freemail",
+            "email": "$response.body#/email",
+            "is-disposable": "$response.body#/is-disposable",
+            "typos-fixed": "$response.body#/typos-fixed",
+            "is-personal": "$response.body#/is-personal",
+            "provider": "$response.body#/provider",
+            "mx-ip": "$response.body#/mx-ip",
+            "domain-status": "$response.body#/domain-status"
+          }
+        },
+        {
+          "stepId": "verify-email-smtp",
+          "description": "Performs an SMTP connection to the mail server to verify the email address exists and can receive mail.",
+          "operationId": "EmailVerify",
+          "parameters": [
+            {
+              "name": "email",
+              "in": "query",
+              "value": "$inputs.email"
+            },
+            {
+              "name": "fix-typos",
+              "in": "query",
+              "value": "$inputs.fix-typos"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "valid": "$response.body#/valid",
+            "verified": "$response.body#/verified",
+            "smtp-status": "$response.body#/smtp-status",
+            "is-catch-all": "$response.body#/is-catch-all",
+            "is-deferred": "$response.body#/is-deferred",
+            "domain": "$response.body#/domain",
+            "domain-error": "$response.body#/domain-error",
+            "is-disposable": "$response.body#/is-disposable",
+            "is-freemail": "$response.body#/is-freemail",
+            "is-personal": "$response.body#/is-personal",
+            "mx-ip": "$response.body#/mx-ip",
+            "provider": "$response.body#/provider",
+            "smtp-response": "$response.body#/smtp-response",
+            "syntax-error": "$response.body#/syntax-error",
+            "typos-fixed": "$response.body#/typos-fixed"
+          }
+        }
+      ],
+      "outputs": {
+        "valid": "$steps.verify-email-smtp.outputs.valid",
+        "syntax-error": "$steps.verify-email-smtp.outputs.syntax-error",
+        "domain-error": "$steps.verify-email-smtp.outputs.domain-error",
+        "is-freemail": "$steps.verify-email-smtp.outputs.is-freemail",
+        "email": "$steps.validate-email-syntax-domain.outputs.email",
+        "is-disposable": "$steps.verify-email-smtp.outputs.is-disposable",
+        "typos-fixed": "$steps.verify-email-smtp.outputs.typos-fixed",
+        "is-personal": "$steps.verify-email-smtp.outputs.is-personal",
+        "provider": "$steps.verify-email-smtp.outputs.provider",
+        "mx-ip": "$steps.verify-email-smtp.outputs.mx-ip",
+        "domain-status": "$steps.validate-email-syntax-domain.outputs.domain-status",
+        "verified": "$steps.verify-email-smtp.outputs.verified",
+        "smtp-status": "$steps.verify-email-smtp.outputs.smtp-status",
+        "is-catch-all": "$steps.verify-email-smtp.outputs.is-catch-all",
+        "is-deferred": "$steps.verify-email-smtp.outputs.is-deferred",
+        "domain": "$steps.verify-email-smtp.outputs.domain",
+        "smtp-response": "$steps.verify-email-smtp.outputs.smtp-response"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "clean-user-content",
+      "summary": "Detects and censors profanity in user-generated text, then sanitizes any HTML content to prevent XSS or other vulnerabilities before displaying it on a website.",
+      "description": "Detects and censors profanity in user-generated text, then sanitizes any HTML content to prevent XSS or other vulnerabilities before displaying it on a website.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "filter-bad-words",
+          "description": "Scans the input content for bad words and censors them using a specified character.",
+          "operationId": "BadWordFilter",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "content": "$inputs.content"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "bad-words-list": "$response.body#/bad-words-list",
+            "bad-words-total": "$response.body#/bad-words-total",
+            "censored-content": "$response.body#/censored-content",
+            "is-bad": "$response.body#/is-bad"
+          }
+        },
+        {
+          "stepId": "sanitize-html",
+          "description": "Cleans and sanitizes the censored content, removing potentially malicious HTML tags based on the specified output type.",
+          "operationId": "HTMLClean",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "content": "$inputs.content"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "cleaned-content": "$response.body#/cleaned-content"
+          }
+        }
+      ],
+      "outputs": {
+        "bad-words-list": "$steps.filter-bad-words.outputs.bad-words-list",
+        "bad-words-total": "$steps.filter-bad-words.outputs.bad-words-total",
+        "censored-content": "$steps.filter-bad-words.outputs.censored-content",
+        "is-bad": "$steps.filter-bad-words.outputs.is-bad",
+        "cleaned-content": "$steps.sanitize-html.outputs.cleaned-content"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "payment-card-and-issuer-reputation-check",
+      "summary": "Validates a payment card's Bank Identification Number (BIN) and then checks the reputation of the card issuer's website against known blacklists to identify potential fraud risks.",
+      "description": "Validates a payment card's Bank Identification Number (BIN) and then checks the reputation of the card issuer's website against known blacklists to identify potential fraud risks.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "bin-number": {
+            "type": "string"
+          },
+          "customer-ip": {
+            "type": "string"
+          },
+          "host": {
+            "type": "string"
+          },
+          "list-rating": {
+            "type": "string"
+          },
+          "zones": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "lookup-bin-details",
+          "description": "Retrieves detailed information about a payment card's BIN, including the issuer's website and country.",
+          "operationId": "BINLookup",
+          "parameters": [
+            {
+              "name": "bin-number",
+              "in": "query",
+              "value": "$inputs.bin-number"
+            },
+            {
+              "name": "customer-ip",
+              "in": "query",
+              "value": "$inputs.customer-ip"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "valid": "$response.body#/valid",
+            "card-brand": "$response.body#/card-brand",
+            "card-type": "$response.body#/card-type",
+            "issuer": "$response.body#/issuer",
+            "issuer-website": "$response.body#/issuer-website",
+            "ip-blocklisted": "$response.body#/ip-blocklisted",
+            "ip-matches-bin": "$response.body#/ip-matches-bin",
+            "country-code": "$response.body#/country-code"
+          }
+        },
+        {
+          "stepId": "check-issuer-domain-reputation",
+          "description": "Checks the reputation of the card issuer's website against various blacklists to detect malicious activity.",
+          "operationId": "HostReputation",
+          "parameters": [
+            {
+              "name": "host",
+              "in": "query",
+              "value": "$inputs.host"
+            },
+            {
+              "name": "list-rating",
+              "in": "query",
+              "value": "$inputs.list-rating"
+            },
+            {
+              "name": "zones",
+              "in": "query",
+              "value": "$inputs.zones"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "is-listed": "$response.body#/is-listed",
+            "list-count": "$response.body#/list-count",
+            "lists": "$response.body#/lists"
+          }
+        }
+      ],
+      "outputs": {
+        "valid": "$steps.lookup-bin-details.outputs.valid",
+        "card-brand": "$steps.lookup-bin-details.outputs.card-brand",
+        "card-type": "$steps.lookup-bin-details.outputs.card-type",
+        "issuer": "$steps.lookup-bin-details.outputs.issuer",
+        "issuer-website": "$steps.lookup-bin-details.outputs.issuer-website",
+        "ip-blocklisted": "$steps.lookup-bin-details.outputs.ip-blocklisted",
+        "ip-matches-bin": "$steps.lookup-bin-details.outputs.ip-matches-bin",
+        "country-code": "$steps.lookup-bin-details.outputs.country-code",
+        "is-listed": "$steps.check-issuer-domain-reputation.outputs.is-listed",
+        "list-count": "$steps.check-issuer-domain-reputation.outputs.list-count",
+        "lists": "$steps.check-issuer-domain-reputation.outputs.lists"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "web-page-content-scrape-and-clean",
+      "summary": "Fetches the content of a specified URL and then sanitizes the retrieved HTML to ensure it's safe for display or further processing, removing potentially unsafe elements.",
+      "description": "Fetches the content of a specified URL and then sanitizes the retrieved HTML to ensure it's safe for display or further processing, removing potentially unsafe elements.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "fetch-content": {
+            "type": "string"
+          },
+          "ignore-certificate-errors": {
+            "type": "string"
+          },
+          "timeout": {
+            "type": "string"
+          },
+          "retry": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "fetch-url-content",
+          "description": "Retrieves the raw content of a web page from the given URL.",
+          "operationId": "URLInfo",
+          "parameters": [
+            {
+              "name": "url",
+              "in": "query",
+              "value": "$inputs.url"
+            },
+            {
+              "name": "fetch-content",
+              "in": "query",
+              "value": "$inputs.fetch-content"
+            },
+            {
+              "name": "ignore-certificate-errors",
+              "in": "query",
+              "value": "$inputs.ignore-certificate-errors"
+            },
+            {
+              "name": "timeout",
+              "in": "query",
+              "value": "$inputs.timeout"
+            },
+            {
+              "name": "retry",
+              "in": "query",
+              "value": "$inputs.retry"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "content": "$response.body#/content",
+            "http-ok": "$response.body#/http-ok",
+            "is-error": "$response.body#/is-error",
+            "title": "$response.body#/title",
+            "valid": "$response.body#/valid",
+            "content-type": "$response.body#/content-type",
+            "http-status": "$response.body#/http-status"
+          }
+        },
+        {
+          "stepId": "clean-html-content",
+          "description": "Sanitizes the fetched HTML content to remove potentially unsafe elements, preparing it for safe use.",
+          "operationId": "HTMLClean",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "content": "$inputs.content"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "cleaned-content": "$response.body#/cleaned-content"
+          }
+        }
+      ],
+      "outputs": {
+        "content": "$steps.fetch-url-content.outputs.content",
+        "http-ok": "$steps.fetch-url-content.outputs.http-ok",
+        "is-error": "$steps.fetch-url-content.outputs.is-error",
+        "title": "$steps.fetch-url-content.outputs.title",
+        "valid": "$steps.fetch-url-content.outputs.valid",
+        "content-type": "$steps.fetch-url-content.outputs.content-type",
+        "http-status": "$steps.fetch-url-content.outputs.http-status",
+        "cleaned-content": "$steps.clean-html-content.outputs.cleaned-content"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
