@@ -1,0 +1,558 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/zeno.fm/main/0.58-ddc52bb/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "discover-and-explore-podcasts",
+      "summary": "Enables users to search for podcasts based on various criteria, retrieve detailed information about a selected podcast, and then browse through its available episodes.",
+      "description": "Enables users to search for podcasts based on various criteria, retrieve detailed information about a selected podcast, and then browse through its available episodes.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "filters": {
+            "type": "string"
+          },
+          "hitsPerPage": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "podcastKey": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "episodeKey": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-podcasts",
+          "description": "Searches for podcasts using a query and optional filters like country, language, or category.",
+          "operationId": "searchPodcasts",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "query": "$inputs.query",
+              "filters": "$inputs.filters",
+              "hitsPerPage": "$inputs.hitsPerPage",
+              "page": "$inputs.page"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "hits": "$response.body#/hits",
+            "total": "$response.body#/total"
+          }
+        },
+        {
+          "stepId": "get-podcast-details",
+          "description": "Retrieves comprehensive details for a specific podcast identified by its key.",
+          "operationId": "getPodcast",
+          "parameters": [
+            {
+              "name": "podcastKey",
+              "in": "path",
+              "value": "$steps.search-podcasts.outputs.hits.key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "podcast": "$response.body#/podcast"
+          }
+        },
+        {
+          "stepId": "get-podcast-episodes",
+          "description": "Lists all episodes associated with a given podcast, allowing for pagination.",
+          "operationId": "getPodcastEpisodes",
+          "parameters": [
+            {
+              "name": "podcastKey",
+              "in": "path",
+              "value": "$steps.get-podcast-details.outputs.podcast.key"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "items": "$response.body#/items",
+            "total": "$response.body#/total"
+          }
+        },
+        {
+          "stepId": "get-podcast-episode-details",
+          "description": "Fetches detailed information for a specific episode within a podcast.",
+          "operationId": "getPodcastEpisode",
+          "parameters": [
+            {
+              "name": "podcastKey",
+              "in": "path",
+              "value": "$steps.get-podcast-episodes.outputs.items.podcastKey"
+            },
+            {
+              "name": "episodeKey",
+              "in": "path",
+              "value": "$steps.get-podcast-episodes.outputs.items.key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "episode": "$response.body#/episode"
+          }
+        }
+      ],
+      "outputs": {
+        "hits": "$steps.search-podcasts.outputs.hits",
+        "total": "$steps.get-podcast-episodes.outputs.total",
+        "podcast": "$steps.get-podcast-details.outputs.podcast",
+        "items": "$steps.get-podcast-episodes.outputs.items",
+        "episode": "$steps.get-podcast-episode-details.outputs.episode"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-new-podcast-with-episode",
+      "summary": "Allows a content creator to establish a new podcast on the platform and then immediately publish its first episode, including media and logo files.",
+      "description": "Allows a content creator to establish a new podcast on the platform and then immediately publish its first episode, including media and logo files.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "file_logo": {
+            "type": "string"
+          },
+          "podcast": {
+            "type": "string"
+          },
+          "podcastKey": {
+            "type": "string"
+          },
+          "episode": {
+            "type": "string"
+          },
+          "file_media": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-podcast",
+          "description": "Creates a new podcast entry, requiring essential metadata and a logo file.",
+          "operationId": "createPodcast",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "file_logo": "$inputs.file_logo",
+              "podcast": "$inputs.podcast"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "key": "$response.body#/key"
+          }
+        },
+        {
+          "stepId": "create-podcast-episode",
+          "description": "Adds a new episode to the previously created podcast, including episode details, logo, and media files.",
+          "operationId": "createPodcastEpisode",
+          "parameters": [
+            {
+              "name": "podcastKey",
+              "in": "path",
+              "value": "$steps.create-podcast.outputs.key"
+            }
+          ],
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "podcastKey": "$steps.create-podcast.outputs.key",
+              "episode": "$inputs.episode",
+              "file_logo": "$inputs.file_logo",
+              "file_media": "$inputs.file_media"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "key": "$response.body#/key"
+          }
+        }
+      ],
+      "outputs": {
+        "key": "$steps.create-podcast-episode.outputs.key"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "discover-and-explore-radio-stations",
+      "summary": "Allows users to find radio stations by searching or browsing, optionally filtering by genre, and then view detailed information about a selected station.",
+      "description": "Allows users to find radio stations by searching or browsing, optionally filtering by genre, and then view detailed information about a selected station.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "filters": {
+            "type": "string"
+          },
+          "hitsPerPage": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "minSessions": {
+            "type": "string"
+          },
+          "stationKey": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-station-genres",
+          "description": "Retrieves a list of available genres that can be used to filter station searches.",
+          "operationId": "getStationGenres",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "genres": "$response.body#/0/genres"
+          }
+        },
+        {
+          "stepId": "search-stations",
+          "description": "Searches for radio stations based on a query and optional filters, including genres obtained from a previous step.",
+          "operationId": "searchStations",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "query": "$inputs.query",
+              "filters": "$inputs.filters",
+              "hitsPerPage": "$inputs.hitsPerPage",
+              "page": "$inputs.page",
+              "minSessions": "$inputs.minSessions"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "hits": "$response.body#/hits",
+            "total": "$response.body#/total"
+          }
+        },
+        {
+          "stepId": "get-station-details",
+          "description": "Retrieves comprehensive details for a specific radio station identified by its key.",
+          "operationId": "getStation",
+          "parameters": [
+            {
+              "name": "stationKey",
+              "in": "path",
+              "value": "$steps.search-stations.outputs.hits.key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "station": "$response.body#/station"
+          }
+        }
+      ],
+      "outputs": {
+        "genres": "$steps.get-station-genres.outputs.genres",
+        "hits": "$steps.search-stations.outputs.hits",
+        "total": "$steps.search-stations.outputs.total",
+        "station": "$steps.get-station-details.outputs.station"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "monitor-partner-stream-status-and-tracks",
+      "summary": "Enables partners to retrieve real-time and historical information about their audio streams, including current listener counts and recently played tracks.",
+      "description": "Enables partners to retrieve real-time and historical information about their audio streams, including current listener counts and recently played tracks.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "currentTrack": {
+            "type": "string"
+          },
+          "X-Auth-Token": {
+            "type": "string"
+          },
+          "get-stream-list-information_body": {
+            "type": "object"
+          },
+          "streamId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-stream-list-information",
+          "description": "Retrieves basic information for a list of partner streams, such as their names and current status.",
+          "operationId": "getStreamListInformation",
+          "parameters": [
+            {
+              "name": "currentTrack",
+              "in": "query",
+              "value": "$inputs.currentTrack"
+            },
+            {
+              "name": "X-Auth-Token",
+              "in": "header",
+              "value": "$inputs.X-Auth-Token"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.get-stream-list-information_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "streamList": "$response.body#/0/streamList"
+          }
+        },
+        {
+          "stepId": "get-stream-information",
+          "description": "Retrieves detailed information for a specific partner stream, including current track details and listener count.",
+          "operationId": "getStreamInformation",
+          "parameters": [
+            {
+              "name": "streamId",
+              "in": "path",
+              "value": "$steps.get-stream-list-information.outputs.streamList.id"
+            },
+            {
+              "name": "currentTrack",
+              "in": "query",
+              "value": "$inputs.currentTrack"
+            },
+            {
+              "name": "X-Auth-Token",
+              "in": "header",
+              "value": "$inputs.X-Auth-Token"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "streamInfo": "$response.body#/streamInfo"
+          }
+        },
+        {
+          "stepId": "get-stream-tracks",
+          "description": "Retrieves a list of recently played tracks for a specific partner stream.",
+          "operationId": "getStreamTracks",
+          "parameters": [
+            {
+              "name": "streamId",
+              "in": "path",
+              "value": "$steps.get-stream-information.outputs.streamInfo.id"
+            },
+            {
+              "name": "X-Auth-Token",
+              "in": "header",
+              "value": "$inputs.X-Auth-Token"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tracks": "$response.body#/0/track"
+          }
+        }
+      ],
+      "outputs": {
+        "streamList": "$steps.get-stream-list-information.outputs.streamList",
+        "streamInfo": "$steps.get-stream-information.outputs.streamInfo",
+        "tracks": "$steps.get-stream-tracks.outputs.tracks"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
