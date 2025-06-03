@@ -1,0 +1,231 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/restful4up.local/main/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "unpack-and-emulate-file",
+      "summary": "Unpacks a given executable file and then obtains its emulation output for dynamic analysis. This workflow is crucial for understanding the behavior of obfuscated or packed malware by first revealing its true content and then observing its execution.",
+      "description": "Unpacks a given executable file and then obtains its emulation output for dynamic analysis. This workflow is crucial for understanding the behavior of obfuscated or packed malware by first revealing its true content and then observing its execution.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "unpack-file",
+          "description": "Uploads a file to be unpacked, revealing its original content.",
+          "operationId": "unpack",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "file": "$inputs.file"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "unpacked_file": "$response.body#/unpacked_file"
+          }
+        },
+        {
+          "stepId": "get-emulation-output",
+          "description": "Submits the unpacked file for emulation to observe its runtime behavior and generate a log of its actions.",
+          "operationId": "emulationOutput",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "file": "$inputs.file"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "output": "$response.body#/output"
+          }
+        }
+      ],
+      "outputs": {
+        "unpacked_file": "$steps.unpack-file.outputs.unpacked_file",
+        "output": "$steps.get-emulation-output.outputs.output"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "complete-file-analysis-and-cleanup",
+      "summary": "Executes a full analysis pipeline for a given file, including unpacking and emulation, and then performs a cleanup of uploaded files to ensure system hygiene and resource management. This represents a complete lifecycle for analyzing a single file.",
+      "description": "Executes a full analysis pipeline for a given file, including unpacking and emulation, and then performs a cleanup of uploaded files to ensure system hygiene and resource management. This represents a complete lifecycle for analyzing a single file.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "unpack-file",
+          "description": "Uploads the initial file for unpacking.",
+          "operationId": "unpack",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "file": "$inputs.file"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "unpacked_file": "$response.body#/unpacked_file"
+          }
+        },
+        {
+          "stepId": "get-emulation-output",
+          "description": "Submits the unpacked file for dynamic emulation to observe its behavior.",
+          "operationId": "emulationOutput",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "file": "$inputs.file"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "output": "$response.body#/output"
+          }
+        },
+        {
+          "stepId": "clean-uploaded-files",
+          "description": "Cleans up any temporary files uploaded during the analysis process, freeing up server resources.",
+          "operationId": "clean",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "files_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "unpacked_file": "$steps.unpack-file.outputs.unpacked_file",
+        "output": "$steps.get-emulation-output.outputs.output",
+        "files_data": "$steps.clean-uploaded-files.outputs.files_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
