@@ -1,0 +1,549 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/twilio.com/twilio_accounts_v1/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "secure-auth-token-rotation",
+      "summary": "Automates the process of rotating Twilio's primary authentication token for enhanced security. This involves creating a new secondary token, promoting it to become the primary, and then deleting the old primary token (which becomes secondary after promotion).",
+      "description": "Automates the process of rotating Twilio's primary authentication token for enhanced security. This involves creating a new secondary token, promoting it to become the primary, and then deleting the old primary token (which becomes secondary after promotion).",
+      "steps": [
+        {
+          "stepId": "create-secondary-auth-token",
+          "description": "Generates a new secondary authentication token for the account.",
+          "operationId": "CreateSecondaryAuthToken",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "account_sid": "$response.body#/account_sid",
+            "date_created": "$response.body#/date_created",
+            "date_updated": "$response.body#/date_updated",
+            "secondary_auth_token": "$response.body#/secondary_auth_token",
+            "url": "$response.body#/url"
+          }
+        },
+        {
+          "stepId": "promote-secondary-auth-token",
+          "description": "Promotes the currently active secondary authentication token to become the primary token.",
+          "operationId": "UpdateAuthTokenPromotion",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "account_sid": "$response.body#/account_sid",
+            "auth_token": "$response.body#/auth_token",
+            "date_created": "$response.body#/date_created",
+            "date_updated": "$response.body#/date_updated",
+            "url": "$response.body#/url"
+          }
+        },
+        {
+          "stepId": "delete-old-primary-auth-token",
+          "description": "Deletes the token that was previously the primary and is now the secondary token after promotion.",
+          "operationId": "DeleteSecondaryAuthToken",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "token_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "account_sid": "$steps.promote-secondary-auth-token.outputs.account_sid",
+        "date_created": "$steps.promote-secondary-auth-token.outputs.date_created",
+        "date_updated": "$steps.promote-secondary-auth-token.outputs.date_updated",
+        "secondary_auth_token": "$steps.create-secondary-auth-token.outputs.secondary_auth_token",
+        "url": "$steps.promote-secondary-auth-token.outputs.url",
+        "auth_token": "$steps.promote-secondary-auth-token.outputs.auth_token",
+        "token_data": "$steps.delete-old-primary-auth-token.outputs.token_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "bulk-contact-data-and-consent-update",
+      "summary": "Streamlines the process of adding or updating a large number of contact details and then simultaneously managing their communication consent status (opt-in/opt-out) in a single batch operation.",
+      "description": "Streamlines the process of adding or updating a large number of contact details and then simultaneously managing their communication consent status (opt-in/opt-out) in a single batch operation.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Items": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-bulk-contacts",
+          "description": "Uploads a list of contact details (phone number, country, zip code) in bulk.",
+          "operationId": "CreateBulkContacts",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Items": "$inputs.Items"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "items": "$response.body#/items"
+          }
+        },
+        {
+          "stepId": "create-bulk-consents",
+          "description": "Updates the opt-in/opt-out status for a list of contacts in bulk.",
+          "operationId": "CreateBulkConsents",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Items": "$inputs.Items"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "items": "$response.body#/items"
+          }
+        }
+      ],
+      "outputs": {
+        "items": "$steps.create-bulk-consents.outputs.items"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "aws-credential-creation-and-verification",
+      "summary": "Creates a new AWS credential entry in Twilio and then immediately retrieves its details to verify successful creation and obtain its full information.",
+      "description": "Creates a new AWS credential entry in Twilio and then immediately retrieves its details to verify successful creation and obtain its full information.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Credentials": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-aws-credential",
+          "description": "Creates a new AWS credential entry.",
+          "operationId": "CreateCredentialAws",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Credentials": "$inputs.Credentials"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "account_sid": "$response.body#/account_sid",
+            "friendly_name": "$response.body#/friendly_name",
+            "date_created": "$response.body#/date_created",
+            "date_updated": "$response.body#/date_updated",
+            "url": "$response.body#/url"
+          }
+        },
+        {
+          "stepId": "fetch-aws-credential",
+          "description": "Fetches the details of the newly created AWS credential using its SID.",
+          "operationId": "FetchCredentialAws",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.create-aws-credential.outputs.sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "account_sid": "$response.body#/account_sid",
+            "friendly_name": "$response.body#/friendly_name",
+            "date_created": "$response.body#/date_created",
+            "date_updated": "$response.body#/date_updated",
+            "url": "$response.body#/url"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.fetch-aws-credential.outputs.sid",
+        "account_sid": "$steps.fetch-aws-credential.outputs.account_sid",
+        "friendly_name": "$steps.fetch-aws-credential.outputs.friendly_name",
+        "date_created": "$steps.fetch-aws-credential.outputs.date_created",
+        "date_updated": "$steps.fetch-aws-credential.outputs.date_updated",
+        "url": "$steps.fetch-aws-credential.outputs.url"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "public-key-credential-creation-and-verification",
+      "summary": "Creates a new Public Key credential entry in Twilio and then immediately retrieves its details to verify successful creation and obtain its full information.",
+      "description": "Creates a new Public Key credential entry in Twilio and then immediately retrieves its details to verify successful creation and obtain its full information.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "PublicKey": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-public-key-credential",
+          "description": "Creates a new Public Key credential entry.",
+          "operationId": "CreateCredentialPublicKey",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "PublicKey": "$inputs.PublicKey"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "account_sid": "$response.body#/account_sid",
+            "friendly_name": "$response.body#/friendly_name",
+            "date_created": "$response.body#/date_created",
+            "date_updated": "$response.body#/date_updated",
+            "url": "$response.body#/url"
+          }
+        },
+        {
+          "stepId": "fetch-public-key-credential",
+          "description": "Fetches the details of the newly created Public Key credential using its SID.",
+          "operationId": "FetchCredentialPublicKey",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.create-public-key-credential.outputs.sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "account_sid": "$response.body#/account_sid",
+            "friendly_name": "$response.body#/friendly_name",
+            "date_created": "$response.body#/date_created",
+            "date_updated": "$response.body#/date_updated",
+            "url": "$response.body#/url"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.fetch-public-key-credential.outputs.sid",
+        "account_sid": "$steps.fetch-public-key-credential.outputs.account_sid",
+        "friendly_name": "$steps.fetch-public-key-credential.outputs.friendly_name",
+        "date_created": "$steps.fetch-public-key-credential.outputs.date_created",
+        "date_updated": "$steps.fetch-public-key-credential.outputs.date_updated",
+        "url": "$steps.fetch-public-key-credential.outputs.url"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "safelist-entry-addition-and-verification",
+      "summary": "Adds a specified phone number or prefix to the Twilio Safelist and then immediately checks if it has been successfully added.",
+      "description": "Adds a specified phone number or prefix to the Twilio Safelist and then immediately checks if it has been successfully added.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "PhoneNumber": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-safelist-entry",
+          "description": "Adds a phone number or prefix to the SafeList.",
+          "operationId": "CreateSafelist",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "PhoneNumber": "$inputs.PhoneNumber"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "phone_number": "$response.body#/phone_number"
+          }
+        },
+        {
+          "stepId": "verify-safelist-entry",
+          "description": "Checks if the previously added phone number exists in the SafeList.",
+          "operationId": "FetchSafelist",
+          "parameters": [
+            {
+              "name": "PhoneNumber",
+              "in": "query",
+              "value": "$steps.add-safelist-entry.outputs.phone_number"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "phone_number": "$response.body#/phone_number"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.verify-safelist-entry.outputs.sid",
+        "phone_number": "$steps.verify-safelist-entry.outputs.phone_number"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "safelist-entry-removal",
+      "summary": "Verifies the existence of a phone number or prefix in the Twilio Safelist and then removes it.",
+      "description": "Verifies the existence of a phone number or prefix in the Twilio Safelist and then removes it.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "PhoneNumber": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "check-safelist-entry",
+          "description": "Checks if a specific phone number or prefix exists in the SafeList.",
+          "operationId": "FetchSafelist",
+          "parameters": [
+            {
+              "name": "PhoneNumber",
+              "in": "query",
+              "value": "$inputs.PhoneNumber"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "phone_number": "$response.body#/phone_number"
+          }
+        },
+        {
+          "stepId": "remove-safelist-entry",
+          "description": "Removes the specified phone number or prefix from the SafeList.",
+          "operationId": "DeleteSafelist",
+          "parameters": [
+            {
+              "name": "PhoneNumber",
+              "in": "query",
+              "value": "$steps.check-safelist-entry.outputs.phone_number"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "entry_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.check-safelist-entry.outputs.sid",
+        "phone_number": "$steps.check-safelist-entry.outputs.phone_number",
+        "entry_data": "$steps.remove-safelist-entry.outputs.entry_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

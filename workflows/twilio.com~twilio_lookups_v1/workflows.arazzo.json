@@ -1,0 +1,208 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/twilio.com/twilio_lookups_v1/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "validate-and-enrich-phone-number-information",
+      "summary": "Perform a two-stage lookup for a phone number. First, a basic lookup validates the number and retrieves its fundamental details (like country code and national format). If successful, a second, more detailed lookup is performed to fetch additional, potentially cost-incurring information such as carrier details, caller name, and data from configured Add-ons. This workflow allows for a cost-effective validation before proceeding with more expensive data enrichment.",
+      "description": "Perform a two-stage lookup for a phone number. First, a basic lookup validates the number and retrieves its fundamental details (like country code and national format). If successful, a second, more detailed lookup is performed to fetch additional, potentially cost-incurring information such as carrier details, caller name, and data from configured Add-ons. This workflow allows for a cost-effective validation before proceeding with more expensive data enrichment.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "PhoneNumber": {
+            "type": "string"
+          },
+          "CountryCode": {
+            "type": "string"
+          },
+          "Type": {
+            "type": "string"
+          },
+          "AddOns": {
+            "type": "string"
+          },
+          "AddOnsData": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "basic-phone-number-lookup",
+          "description": "Performs a basic lookup to validate the phone number and retrieve its E.164 format, country code, and national format. This step does not request 'carrier' or 'caller-name' types, nor does it invoke any Add-ons, making it a potentially cheaper initial validation.",
+          "operationId": "FetchPhoneNumber",
+          "parameters": [
+            {
+              "name": "PhoneNumber",
+              "in": "path",
+              "value": "$inputs.PhoneNumber"
+            },
+            {
+              "name": "CountryCode",
+              "in": "query",
+              "value": "$inputs.CountryCode"
+            },
+            {
+              "name": "Type",
+              "in": "query",
+              "value": "$inputs.Type"
+            },
+            {
+              "name": "AddOns",
+              "in": "query",
+              "value": "$inputs.AddOns"
+            },
+            {
+              "name": "AddOnsData",
+              "in": "query",
+              "value": "$inputs.AddOnsData"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "phone_number": "$response.body#/phone_number",
+            "country_code": "$response.body#/country_code",
+            "national_format": "$response.body#/national_format"
+          }
+        },
+        {
+          "stepId": "detailed-phone-number-enrichment",
+          "description": "Enriches the phone number information by requesting specific data types (like carrier and caller name) and invoking configured Add-ons. This step typically incurs additional costs and is performed after a successful basic validation.",
+          "operationId": "FetchPhoneNumber",
+          "parameters": [
+            {
+              "name": "PhoneNumber",
+              "in": "path",
+              "value": "$inputs.PhoneNumber"
+            },
+            {
+              "name": "CountryCode",
+              "in": "query",
+              "value": "$inputs.CountryCode"
+            },
+            {
+              "name": "Type",
+              "in": "query",
+              "value": "$inputs.Type"
+            },
+            {
+              "name": "AddOns",
+              "in": "query",
+              "value": "$inputs.AddOns"
+            },
+            {
+              "name": "AddOnsData",
+              "in": "query",
+              "value": "$inputs.AddOnsData"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "caller_name": "$response.body#/caller_name",
+            "carrier": "$response.body#/carrier",
+            "add_ons": "$response.body#/add_ons"
+          }
+        }
+      ],
+      "outputs": {
+        "phone_number": "$steps.basic-phone-number-lookup.outputs.phone_number",
+        "country_code": "$steps.basic-phone-number-lookup.outputs.country_code",
+        "national_format": "$steps.basic-phone-number-lookup.outputs.national_format",
+        "caller_name": "$steps.detailed-phone-number-enrichment.outputs.caller_name",
+        "carrier": "$steps.detailed-phone-number-enrichment.outputs.carrier",
+        "add_ons": "$steps.detailed-phone-number-enrichment.outputs.add_ons"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

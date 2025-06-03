@@ -1,0 +1,816 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/twilio.com/twilio_messaging_v1/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "a2-p-10-dlc-campaign-onboarding",
+      "summary": "Registers a brand and creates an A2P 10DLC campaign for compliant application-to-person messaging in the United States. This workflow includes steps to check the status of the brand and campaign.",
+      "description": "Registers a brand and creates an A2P 10DLC campaign for compliant application-to-person messaging in the United States. This workflow includes steps to check the status of the brand and campaign.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "CustomerProfileBundleSid": {
+            "type": "string"
+          },
+          "A2PProfileBundleSid": {
+            "type": "string"
+          },
+          "MessagingServiceSid": {
+            "type": "string"
+          },
+          "Description": {
+            "type": "string"
+          },
+          "MessageFlow": {
+            "type": "string"
+          },
+          "MessageSamples": {
+            "type": "string"
+          },
+          "UsAppToPersonUsecase": {
+            "type": "string"
+          },
+          "HasEmbeddedLinks": {
+            "type": "string"
+          },
+          "HasEmbeddedPhone": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-brand-registration",
+          "description": "Initiates the registration of a new brand for A2P 10DLC messaging, requiring customer and A2P profile bundle SIDs.",
+          "operationId": "CreateBrandRegistrations",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "CustomerProfileBundleSid": "$inputs.CustomerProfileBundleSid",
+              "A2PProfileBundleSid": "$inputs.A2PProfileBundleSid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "status": "$response.body#/status"
+          }
+        },
+        {
+          "stepId": "create-us-a2p-campaign",
+          "description": "Creates a new US A2P campaign linked to the registered brand and a specific Messaging Service, detailing message flow and samples.",
+          "operationId": "CreateUsAppToPerson",
+          "parameters": [
+            {
+              "name": "MessagingServiceSid",
+              "in": "path",
+              "value": "$inputs.MessagingServiceSid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "BrandRegistrationSid": "$steps.create-brand-registration.outputs.sid",
+              "Description": "$inputs.Description",
+              "MessageFlow": "$inputs.MessageFlow",
+              "MessageSamples": "$inputs.MessageSamples",
+              "UsAppToPersonUsecase": "$inputs.UsAppToPersonUsecase",
+              "HasEmbeddedLinks": "$inputs.HasEmbeddedLinks",
+              "HasEmbeddedPhone": "$inputs.HasEmbeddedPhone"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "campaign_status": "$response.body#/campaign_status"
+          }
+        },
+        {
+          "stepId": "fetch-brand-registration-status",
+          "description": "Retrieves the current status and details of the brand registration.",
+          "operationId": "FetchBrandRegistrations",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.create-brand-registration.outputs.sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status",
+            "failure_reason": "$response.body#/failure_reason",
+            "errors": "$response.body#/errors"
+          }
+        },
+        {
+          "stepId": "fetch-us-a2p-campaign-status",
+          "description": "Retrieves the current status and details of the A2P campaign.",
+          "operationId": "FetchUsAppToPerson",
+          "parameters": [
+            {
+              "name": "MessagingServiceSid",
+              "in": "path",
+              "value": "$inputs.MessagingServiceSid"
+            },
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.create-us-a2p-campaign.outputs.sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "campaign_status": "$response.body#/campaign_status",
+            "errors": "$response.body#/errors"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.create-us-a2p-campaign.outputs.sid",
+        "status": "$steps.fetch-brand-registration-status.outputs.status",
+        "campaign_status": "$steps.fetch-us-a2p-campaign-status.outputs.campaign_status",
+        "failure_reason": "$steps.fetch-brand-registration-status.outputs.failure_reason",
+        "errors": "$steps.fetch-us-a2p-campaign-status.outputs.errors"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "provision-messaging-service-with-sender",
+      "summary": "Creates a new Twilio Messaging Service and associates a sender (e.g., a phone number) with it, enabling the service to send and receive messages. This is a fundamental setup for using Twilio Messaging.",
+      "description": "Creates a new Twilio Messaging Service and associates a sender (e.g., a phone number) with it, enabling the service to send and receive messages. This is a fundamental setup for using Twilio Messaging.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "FriendlyName": {
+            "type": "string"
+          },
+          "ServiceSid": {
+            "type": "string"
+          },
+          "PhoneNumberSid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-messaging-service",
+          "description": "Creates a new Messaging Service with a friendly name and optional inbound/status callback URLs.",
+          "operationId": "CreateService",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "FriendlyName": "$inputs.FriendlyName"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "friendly_name": "$response.body#/friendly_name"
+          }
+        },
+        {
+          "stepId": "add-phone-number-to-service",
+          "description": "Associates an existing Twilio Phone Number with the newly created Messaging Service.",
+          "operationId": "CreatePhoneNumber",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$steps.create-messaging-service.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "ServiceSid": "$steps.create-messaging-service.outputs.sid",
+              "PhoneNumberSid": "$inputs.PhoneNumberSid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "phone_number": "$response.body#/phone_number"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.add-phone-number-to-service.outputs.sid",
+        "friendly_name": "$steps.create-messaging-service.outputs.friendly_name",
+        "phone_number": "$steps.add-phone-number-to-service.outputs.phone_number"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "toll-free-number-verification-management",
+      "summary": "Manages the compliance verification process for a Toll-Free phone number, including initial submission, checking its status, and updating it if rejected.",
+      "description": "Manages the compliance verification process for a Toll-Free phone number, including initial submission, checking its status, and updating it if rejected.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "BusinessName": {
+            "type": "string"
+          },
+          "BusinessWebsite": {
+            "type": "string"
+          },
+          "NotificationEmail": {
+            "type": "string"
+          },
+          "UseCaseCategories": {
+            "type": "string"
+          },
+          "UseCaseSummary": {
+            "type": "string"
+          },
+          "ProductionMessageSample": {
+            "type": "string"
+          },
+          "OptInImageUrls": {
+            "type": "string"
+          },
+          "OptInType": {
+            "type": "string"
+          },
+          "MessageVolume": {
+            "type": "string"
+          },
+          "TollfreePhoneNumberSid": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "BusinessStreetAddress": {
+            "type": "string"
+          },
+          "BusinessStreetAddress2": {
+            "type": "string"
+          },
+          "BusinessCity": {
+            "type": "string"
+          },
+          "BusinessStateProvinceRegion": {
+            "type": "string"
+          },
+          "BusinessPostalCode": {
+            "type": "string"
+          },
+          "BusinessCountry": {
+            "type": "string"
+          },
+          "AdditionalInformation": {
+            "type": "string"
+          },
+          "BusinessContactFirstName": {
+            "type": "string"
+          },
+          "BusinessContactLastName": {
+            "type": "string"
+          },
+          "BusinessContactEmail": {
+            "type": "string"
+          },
+          "BusinessContactPhone": {
+            "type": "string"
+          },
+          "EditReason": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "submit-tollfree-verification",
+          "description": "Submits a new Toll-Free number for verification, providing all necessary business and use case details.",
+          "operationId": "CreateTollfreeVerification",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "BusinessName": "$inputs.BusinessName",
+              "BusinessWebsite": "$inputs.BusinessWebsite",
+              "NotificationEmail": "$inputs.NotificationEmail",
+              "UseCaseCategories": "$inputs.UseCaseCategories",
+              "UseCaseSummary": "$inputs.UseCaseSummary",
+              "ProductionMessageSample": "$inputs.ProductionMessageSample",
+              "OptInImageUrls": "$inputs.OptInImageUrls",
+              "OptInType": "$inputs.OptInType",
+              "MessageVolume": "$inputs.MessageVolume",
+              "TollfreePhoneNumberSid": "$inputs.TollfreePhoneNumberSid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "status": "$response.body#/status"
+          }
+        },
+        {
+          "stepId": "check-tollfree-verification-status",
+          "description": "Retrieves the current status of a submitted Toll-Free verification, including any rejection reasons.",
+          "operationId": "FetchTollfreeVerification",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.submit-tollfree-verification.outputs.sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status",
+            "rejection_reason": "$response.body#/rejection_reason",
+            "error_code": "$response.body#/error_code",
+            "edit_allowed": "$response.body#/edit_allowed"
+          }
+        },
+        {
+          "stepId": "update-tollfree-verification-if-rejected",
+          "description": "Updates a rejected Toll-Free verification with corrected information for re-submission.",
+          "operationId": "UpdateTollfreeVerification",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.submit-tollfree-verification.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Sid": "$steps.submit-tollfree-verification.outputs.sid",
+              "BusinessName": "$inputs.BusinessName",
+              "BusinessWebsite": "$inputs.BusinessWebsite",
+              "NotificationEmail": "$inputs.NotificationEmail",
+              "UseCaseCategories": "$inputs.UseCaseCategories",
+              "UseCaseSummary": "$inputs.UseCaseSummary",
+              "ProductionMessageSample": "$inputs.ProductionMessageSample",
+              "OptInImageUrls": "$inputs.OptInImageUrls",
+              "OptInType": "$inputs.OptInType",
+              "MessageVolume": "$inputs.MessageVolume",
+              "BusinessStreetAddress": "$inputs.BusinessStreetAddress",
+              "BusinessStreetAddress2": "$inputs.BusinessStreetAddress2",
+              "BusinessCity": "$inputs.BusinessCity",
+              "BusinessStateProvinceRegion": "$inputs.BusinessStateProvinceRegion",
+              "BusinessPostalCode": "$inputs.BusinessPostalCode",
+              "BusinessCountry": "$inputs.BusinessCountry",
+              "AdditionalInformation": "$inputs.AdditionalInformation",
+              "BusinessContactFirstName": "$inputs.BusinessContactFirstName",
+              "BusinessContactLastName": "$inputs.BusinessContactLastName",
+              "BusinessContactEmail": "$inputs.BusinessContactEmail",
+              "BusinessContactPhone": "$inputs.BusinessContactPhone",
+              "EditReason": "$inputs.EditReason"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.submit-tollfree-verification.outputs.sid",
+        "status": "$steps.update-tollfree-verification-if-rejected.outputs.status",
+        "rejection_reason": "$steps.check-tollfree-verification-status.outputs.rejection_reason",
+        "error_code": "$steps.check-tollfree-verification-status.outputs.error_code",
+        "edit_allowed": "$steps.check-tollfree-verification-status.outputs.edit_allowed"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "custom-branded-link-shortening-setup",
+      "summary": "Configures a custom domain for link shortening within Twilio Messaging Services, enabling branded links and click event tracking for messages sent through the service.",
+      "description": "Configures a custom domain for link shortening within Twilio Messaging Services, enabling branded links and click event tracking for messages sent through the service.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "DomainSid": {
+            "type": "string"
+          },
+          "FallbackUrl": {
+            "type": "string"
+          },
+          "CallbackUrl": {
+            "type": "string"
+          },
+          "ContinueOnFailure": {
+            "type": "string"
+          },
+          "DisableHttps": {
+            "type": "string"
+          },
+          "MessagingServiceSid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "configure-domain-settings",
+          "description": "Sets up fallback URLs, callback URLs for click events, and HTTPS preferences for a custom link shortening domain.",
+          "operationId": "UpdateDomainConfig",
+          "parameters": [
+            {
+              "name": "DomainSid",
+              "in": "path",
+              "value": "$inputs.DomainSid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "FallbackUrl": "$inputs.FallbackUrl",
+              "CallbackUrl": "$inputs.CallbackUrl",
+              "ContinueOnFailure": "$inputs.ContinueOnFailure",
+              "DisableHttps": "$inputs.DisableHttps"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "domain_sid": "$response.body#/domain_sid",
+            "config_sid": "$response.body#/config_sid"
+          }
+        },
+        {
+          "stepId": "request-managed-certificate",
+          "description": "Requests Twilio to manage the TLS certificate for the custom domain, simplifying certificate renewal.",
+          "operationId": "UpdateRequestManagedCert",
+          "parameters": [
+            {
+              "name": "DomainSid",
+              "in": "path",
+              "value": "$steps.configure-domain-settings.outputs.domain_sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "domain_sid": "$response.body#/domain_sid",
+            "managed": "$response.body#/managed",
+            "requesting": "$response.body#/requesting"
+          }
+        },
+        {
+          "stepId": "associate-domain-with-messaging-service",
+          "description": "Links the configured custom domain to a specific Messaging Service, enabling link shortening for messages sent via that service.",
+          "operationId": "CreateLinkshorteningMessagingService",
+          "parameters": [
+            {
+              "name": "DomainSid",
+              "in": "path",
+              "value": "$steps.configure-domain-settings.outputs.domain_sid"
+            },
+            {
+              "name": "MessagingServiceSid",
+              "in": "path",
+              "value": "$inputs.MessagingServiceSid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "domain_sid": "$response.body#/domain_sid",
+            "messaging_service_sid": "$response.body#/messaging_service_sid"
+          }
+        },
+        {
+          "stepId": "fetch-messaging-service-domain-association",
+          "description": "Retrieves the custom domain currently associated with a Messaging Service for link shortening.",
+          "operationId": "FetchLinkshorteningMessagingServiceDomainAssociation",
+          "parameters": [
+            {
+              "name": "MessagingServiceSid",
+              "in": "path",
+              "value": "$steps.associate-domain-with-messaging-service.outputs.messaging_service_sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "domain_sid": "$response.body#/domain_sid",
+            "messaging_service_sid": "$response.body#/messaging_service_sid"
+          }
+        }
+      ],
+      "outputs": {
+        "domain_sid": "$steps.fetch-messaging-service-domain-association.outputs.domain_sid",
+        "config_sid": "$steps.configure-domain-settings.outputs.config_sid",
+        "managed": "$steps.request-managed-certificate.outputs.managed",
+        "requesting": "$steps.request-managed-certificate.outputs.requesting",
+        "messaging_service_sid": "$steps.fetch-messaging-service-domain-association.outputs.messaging_service_sid"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-alpha-senders-for-messaging-service",
+      "summary": "Allows users to view existing, add new, and remove specific Alphanumeric Sender IDs associated with a particular Messaging Service.",
+      "description": "Allows users to view existing, add new, and remove specific Alphanumeric Sender IDs associated with a particular Messaging Service.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "ServiceSid": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "AlphaSender": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-alpha-senders",
+          "description": "Retrieves a list of all Alphanumeric Sender IDs currently associated with the specified Messaging Service.",
+          "operationId": "ListAlphaSender",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "alpha_senders": "$response.body#/alpha_senders"
+          }
+        },
+        {
+          "stepId": "create-alpha-sender",
+          "description": "Adds a new Alphanumeric Sender ID to the Messaging Service.",
+          "operationId": "CreateAlphaSender",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "AlphaSender": "$inputs.AlphaSender"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "alpha_sender": "$response.body#/alpha_sender"
+          }
+        },
+        {
+          "stepId": "delete-alpha-sender",
+          "description": "Removes a specific Alphanumeric Sender ID from the Messaging Service.",
+          "operationId": "DeleteAlphaSender",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.list-alpha-senders.outputs.alpha_senders.sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sender_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "alpha_senders": "$steps.list-alpha-senders.outputs.alpha_senders",
+        "sid": "$steps.create-alpha-sender.outputs.sid",
+        "alpha_sender": "$steps.create-alpha-sender.outputs.alpha_sender",
+        "sender_data": "$steps.delete-alpha-sender.outputs.sender_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

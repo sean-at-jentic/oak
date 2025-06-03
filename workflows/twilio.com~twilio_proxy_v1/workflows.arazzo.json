@@ -1,0 +1,570 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/twilio.com/twilio_proxy_v1/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "initiate-masked-conversation-session",
+      "summary": "Creates a new proxy session for masked communication and adds two participants to it, optionally sending an initial message from the system.",
+      "description": "Creates a new proxy session for masked communication and adds two participants to it, optionally sending an initial message from the system.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "ServiceSid": {
+            "type": "string"
+          },
+          "UniqueName": {
+            "type": "string"
+          },
+          "DateExpiry": {
+            "type": "string"
+          },
+          "Ttl": {
+            "type": "string"
+          },
+          "Mode": {
+            "type": "string"
+          },
+          "Status": {
+            "type": "string"
+          },
+          "Participants": {
+            "type": "string"
+          },
+          "SessionSid": {
+            "type": "string"
+          },
+          "Identifier": {
+            "type": "string"
+          },
+          "ParticipantSid": {
+            "type": "string"
+          },
+          "Body": {
+            "type": "string"
+          },
+          "MediaUrl": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-session",
+          "description": "Creates a new session within a specified Proxy Service to facilitate masked communication.",
+          "operationId": "CreateSession",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "UniqueName": "$inputs.UniqueName",
+              "DateExpiry": "$inputs.DateExpiry",
+              "Ttl": "$inputs.Ttl",
+              "Mode": "$inputs.Mode",
+              "Status": "$inputs.Status",
+              "Participants": "$inputs.Participants"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "unique_name": "$response.body#/unique_name",
+            "status": "$response.body#/status"
+          }
+        },
+        {
+          "stepId": "add-participant-1",
+          "description": "Adds the first participant to the newly created session.",
+          "operationId": "CreateParticipant",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "SessionSid",
+              "in": "path",
+              "value": "$steps.create-session.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "SessionSid": "$steps.create-session.outputs.sid",
+              "Identifier": "$inputs.Identifier"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "identifier": "$response.body#/identifier"
+          }
+        },
+        {
+          "stepId": "add-participant-2",
+          "description": "Adds the second participant to the session, enabling masked communication between them.",
+          "operationId": "CreateParticipant",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "SessionSid",
+              "in": "path",
+              "value": "$steps.create-session.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "SessionSid": "$steps.create-session.outputs.sid",
+              "Identifier": "$inputs.Identifier"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "identifier": "$response.body#/identifier"
+          }
+        },
+        {
+          "stepId": "send-initial-message",
+          "description": "Sends an initial message from the system to one of the participants in the session.",
+          "operationId": "CreateMessageInteraction",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "SessionSid",
+              "in": "path",
+              "value": "$steps.create-session.outputs.sid"
+            },
+            {
+              "name": "ParticipantSid",
+              "in": "path",
+              "value": "$steps.add-participant-1.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "SessionSid": "$steps.create-session.outputs.sid",
+              "ParticipantSid": "$steps.add-participant-1.outputs.sid",
+              "Body": "$inputs.Body",
+              "MediaUrl": "$inputs.MediaUrl"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "data": "$response.body#/data"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.send-initial-message.outputs.sid",
+        "unique_name": "$steps.create-session.outputs.unique_name",
+        "status": "$steps.create-session.outputs.status",
+        "identifier": "$steps.add-participant-2.outputs.identifier",
+        "data": "$steps.send-initial-message.outputs.data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "set-up-new-proxy-service",
+      "summary": "Establishes a new Twilio Proxy Service and populates its number pool with a phone number and/or short code, enabling masked communication. This is a foundational setup workflow.",
+      "description": "Establishes a new Twilio Proxy Service and populates its number pool with a phone number and/or short code, enabling masked communication. This is a foundational setup workflow.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "UniqueName": {
+            "type": "string"
+          },
+          "ServiceSid": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "PhoneNumber": {
+            "type": "string"
+          },
+          "IsReserved": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-proxy-service",
+          "description": "Creates a new Twilio Proxy Service, which acts as a container for sessions and numbers.",
+          "operationId": "CreateService",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "UniqueName": "$inputs.UniqueName"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "unique_name": "$response.body#/unique_name"
+          }
+        },
+        {
+          "stepId": "add-phone-number-to-pool",
+          "description": "Adds an existing Twilio Phone Number to the newly created Proxy Service's number pool, making it available for masked communication.",
+          "operationId": "CreatePhoneNumber",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$steps.create-proxy-service.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "ServiceSid": "$steps.create-proxy-service.outputs.sid",
+              "Sid": "$inputs.Sid",
+              "PhoneNumber": "$inputs.PhoneNumber",
+              "IsReserved": "$inputs.IsReserved"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "phone_number": "$response.body#/phone_number"
+          }
+        },
+        {
+          "stepId": "add-short-code-to-pool",
+          "description": "Adds an existing Twilio Short Code to the newly created Proxy Service's number pool, making it available for masked communication.",
+          "operationId": "CreateShortCode",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$steps.create-proxy-service.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "ServiceSid": "$steps.create-proxy-service.outputs.sid",
+              "Sid": "$inputs.Sid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "short_code": "$response.body#/short_code"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.add-short-code-to-pool.outputs.sid",
+        "unique_name": "$steps.create-proxy-service.outputs.unique_name",
+        "phone_number": "$steps.add-phone-number-to-pool.outputs.phone_number",
+        "short_code": "$steps.add-short-code-to-pool.outputs.short_code"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "monitor-specific-proxy-session",
+      "summary": "Retrieves comprehensive details of a specific proxy session, including its participants and all associated interactions, to review communication history and status.",
+      "description": "Retrieves comprehensive details of a specific proxy session, including its participants and all associated interactions, to review communication history and status.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "ServiceSid": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "SessionSid": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "fetch-session-details",
+          "description": "Fetches the detailed information for a specific proxy session.",
+          "operationId": "FetchSession",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$inputs.Sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "unique_name": "$response.body#/unique_name",
+            "status": "$response.body#/status",
+            "date_started": "$response.body#/date_started",
+            "date_last_interaction": "$response.body#/date_last_interaction"
+          }
+        },
+        {
+          "stepId": "list-session-participants",
+          "description": "Lists all participants associated with the fetched session.",
+          "operationId": "ListParticipant",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "SessionSid",
+              "in": "path",
+              "value": "$steps.fetch-session-details.outputs.sid"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "participants": "$response.body#/participants"
+          }
+        },
+        {
+          "stepId": "list-all-session-interactions",
+          "description": "Retrieves a list of all interactions (messages, calls) that have occurred within the session.",
+          "operationId": "ListInteraction",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "SessionSid",
+              "in": "path",
+              "value": "$steps.fetch-session-details.outputs.sid"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "interactions": "$response.body#/interactions"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.fetch-session-details.outputs.sid",
+        "unique_name": "$steps.fetch-session-details.outputs.unique_name",
+        "status": "$steps.fetch-session-details.outputs.status",
+        "date_started": "$steps.fetch-session-details.outputs.date_started",
+        "date_last_interaction": "$steps.fetch-session-details.outputs.date_last_interaction",
+        "participants": "$steps.list-session-participants.outputs.participants",
+        "interactions": "$steps.list-all-session-interactions.outputs.interactions"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

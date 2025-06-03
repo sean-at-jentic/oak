@@ -1,0 +1,997 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/twilio.com/twilio_microvisor_v1/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "deploy-or-update-application-on-device",
+      "summary": "This workflow allows an API consumer to list available applications and devices, then select an application to deploy or update on a specific device. It also provides an option to restart the application on the device.",
+      "description": "This workflow allows an API consumer to list available applications and devices, then select an application to deploy or update on a specific device. It also provides an option to restart the application on the device.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "RestartApp": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-available-apps",
+          "description": "Retrieves a list of all applications available in the account.",
+          "operationId": "ListApp",
+          "parameters": [
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "app_sid": "$response.body#/app_sid",
+            "app_unique_name": "$response.body#/app_unique_name"
+          }
+        },
+        {
+          "stepId": "list-registered-devices",
+          "description": "Retrieves a list of all devices registered with the account.",
+          "operationId": "ListDevice",
+          "parameters": [
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "device_sid": "$response.body#/device_sid",
+            "device_unique_name": "$response.body#/device_unique_name"
+          }
+        },
+        {
+          "stepId": "update-device-target-app",
+          "description": "Updates a specific device to target a new application, effectively deploying or updating the software on the device. Optionally restarts the application.",
+          "operationId": "UpdateDevice",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.list-registered-devices.outputs.device_sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Sid": "$steps.list-registered-devices.outputs.device_sid",
+              "TargetApp": "$steps.list-available-apps.outputs.app_sid",
+              "RestartApp": "$inputs.RestartApp"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "unique_name": "$response.body#/unique_name",
+            "app.target_sid": "$response.body#/app.target_sid",
+            "app.update_status": "$response.body#/app.update_status"
+          }
+        }
+      ],
+      "outputs": {
+        "app_sid": "$steps.list-available-apps.outputs.app_sid",
+        "app_unique_name": "$steps.list-available-apps.outputs.app_unique_name",
+        "device_sid": "$steps.list-registered-devices.outputs.device_sid",
+        "device_unique_name": "$steps.list-registered-devices.outputs.device_unique_name",
+        "sid": "$steps.update-device-target-app.outputs.sid",
+        "unique_name": "$steps.update-device-target-app.outputs.unique_name",
+        "app.target_sid": "$steps.update-device-target-app.outputs.app.target_sid",
+        "app.update_status": "$steps.update-device-target-app.outputs.app.update_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-device-configuration",
+      "summary": "This workflow allows an API consumer to create a new configuration for a specific Microvisor device, and then retrieve that configuration to verify its details.",
+      "description": "This workflow allows an API consumer to create a new configuration for a specific Microvisor device, and then retrieve that configuration to verify its details.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "DeviceSid": {
+            "type": "string"
+          },
+          "Key": {
+            "type": "string"
+          },
+          "Value": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-devices-for-config",
+          "description": "Retrieves a list of all devices to select one for configuration management.",
+          "operationId": "ListDevice",
+          "parameters": [
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "device_sid": "$response.body#/device_sid"
+          }
+        },
+        {
+          "stepId": "create-device-config",
+          "description": "Creates a new configuration key-value pair for the selected device.",
+          "operationId": "CreateDeviceConfig",
+          "parameters": [
+            {
+              "name": "DeviceSid",
+              "in": "path",
+              "value": "$steps.list-devices-for-config.outputs.device_sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "DeviceSid": "$steps.list-devices-for-config.outputs.device_sid",
+              "Key": "$inputs.Key",
+              "Value": "$inputs.Value"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "key": "$response.body#/key",
+            "value": "$response.body#/value",
+            "device_sid": "$response.body#/device_sid"
+          }
+        },
+        {
+          "stepId": "fetch-created-device-config",
+          "description": "Retrieves the details of the newly created device configuration.",
+          "operationId": "FetchDeviceConfig",
+          "parameters": [
+            {
+              "name": "DeviceSid",
+              "in": "path",
+              "value": "$inputs.DeviceSid"
+            },
+            {
+              "name": "Key",
+              "in": "path",
+              "value": "$inputs.Key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "key": "$response.body#/key",
+            "value": "$response.body#/value",
+            "date_updated": "$response.body#/date_updated"
+          }
+        }
+      ],
+      "outputs": {
+        "device_sid": "$steps.create-device-config.outputs.device_sid",
+        "key": "$steps.fetch-created-device-config.outputs.key",
+        "value": "$steps.fetch-created-device-config.outputs.value",
+        "date_updated": "$steps.fetch-created-device-config.outputs.date_updated"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-device-secrets",
+      "summary": "This workflow allows an API consumer to create a new secret for a specific Microvisor device and then retrieve its metadata (the secret value itself is not returned for security reasons).",
+      "description": "This workflow allows an API consumer to create a new secret for a specific Microvisor device and then retrieve its metadata (the secret value itself is not returned for security reasons).",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "DeviceSid": {
+            "type": "string"
+          },
+          "Key": {
+            "type": "string"
+          },
+          "Value": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-devices-for-secret",
+          "description": "Retrieves a list of all devices to select one for secret management.",
+          "operationId": "ListDevice",
+          "parameters": [
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "device_sid": "$response.body#/device_sid"
+          }
+        },
+        {
+          "stepId": "create-device-secret",
+          "description": "Creates a new secret key-value pair for the selected device.",
+          "operationId": "CreateDeviceSecret",
+          "parameters": [
+            {
+              "name": "DeviceSid",
+              "in": "path",
+              "value": "$steps.list-devices-for-secret.outputs.device_sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "DeviceSid": "$steps.list-devices-for-secret.outputs.device_sid",
+              "Key": "$inputs.Key",
+              "Value": "$inputs.Value"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "key": "$response.body#/key",
+            "device_sid": "$response.body#/device_sid"
+          }
+        },
+        {
+          "stepId": "fetch-created-device-secret-metadata",
+          "description": "Retrieves the metadata (key and rotation date) of the newly created device secret.",
+          "operationId": "FetchDeviceSecret",
+          "parameters": [
+            {
+              "name": "DeviceSid",
+              "in": "path",
+              "value": "$inputs.DeviceSid"
+            },
+            {
+              "name": "Key",
+              "in": "path",
+              "value": "$inputs.Key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "key": "$response.body#/key",
+            "date_rotated": "$response.body#/date_rotated"
+          }
+        }
+      ],
+      "outputs": {
+        "device_sid": "$steps.create-device-secret.outputs.device_sid",
+        "key": "$steps.fetch-created-device-secret-metadata.outputs.key",
+        "date_rotated": "$steps.fetch-created-device-secret-metadata.outputs.date_rotated"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "update-existing-device-configuration",
+      "summary": "This workflow enables an API consumer to update the value of an existing configuration for a specific Microvisor device.",
+      "description": "This workflow enables an API consumer to update the value of an existing configuration for a specific Microvisor device.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "DeviceSid": {
+            "type": "string"
+          },
+          "Key": {
+            "type": "string"
+          },
+          "Value": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-devices-for-update-config",
+          "description": "Retrieves a list of all devices to select one for configuration update.",
+          "operationId": "ListDevice",
+          "parameters": [
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "device_sid": "$response.body#/device_sid"
+          }
+        },
+        {
+          "stepId": "list-device-configs-to-update",
+          "description": "Lists existing configurations for the selected device to identify the key to update.",
+          "operationId": "ListDeviceConfig",
+          "parameters": [
+            {
+              "name": "DeviceSid",
+              "in": "path",
+              "value": "$steps.list-devices-for-update-config.outputs.device_sid"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "config_key": "$response.body#/config_key"
+          }
+        },
+        {
+          "stepId": "update-device-config-value",
+          "description": "Updates the value of the specified device configuration.",
+          "operationId": "UpdateDeviceConfig",
+          "parameters": [
+            {
+              "name": "DeviceSid",
+              "in": "path",
+              "value": "$steps.list-devices-for-update-config.outputs.device_sid"
+            },
+            {
+              "name": "Key",
+              "in": "path",
+              "value": "$steps.list-device-configs-to-update.outputs.config_key"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "DeviceSid": "$steps.list-devices-for-update-config.outputs.device_sid",
+              "Key": "$steps.list-device-configs-to-update.outputs.config_key",
+              "Value": "$inputs.Value"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "key": "$response.body#/key",
+            "value": "$response.body#/value",
+            "date_updated": "$response.body#/date_updated"
+          }
+        }
+      ],
+      "outputs": {
+        "device_sid": "$steps.list-devices-for-update-config.outputs.device_sid",
+        "config_key": "$steps.list-device-configs-to-update.outputs.config_key",
+        "key": "$steps.update-device-config-value.outputs.key",
+        "value": "$steps.update-device-config-value.outputs.value",
+        "date_updated": "$steps.update-device-config-value.outputs.date_updated"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "enable-or-disable-device-application-logging",
+      "summary": "This workflow enables or disables application logging for a specific Microvisor device. Logging is enabled for 24 hours when activated.",
+      "description": "This workflow enables or disables application logging for a specific Microvisor device. Logging is enabled for 24 hours when activated.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "LoggingEnabled": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-devices-for-logging",
+          "description": "Retrieves a list of all devices to select one for logging management.",
+          "operationId": "ListDevice",
+          "parameters": [
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "device_sid": "$response.body#/device_sid"
+          }
+        },
+        {
+          "stepId": "update-device-logging-status",
+          "description": "Updates the logging status (enable/disable) for the specified device.",
+          "operationId": "UpdateDevice",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.list-devices-for-logging.outputs.device_sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Sid": "$steps.list-devices-for-logging.outputs.device_sid",
+              "LoggingEnabled": "$inputs.LoggingEnabled"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "logging.enabled": "$response.body#/logging.enabled",
+            "logging.date_expires": "$response.body#/logging.date_expires"
+          }
+        }
+      ],
+      "outputs": {
+        "device_sid": "$steps.list-devices-for-logging.outputs.device_sid",
+        "logging.enabled": "$steps.update-device-logging-status.outputs.logging.enabled",
+        "logging.date_expires": "$steps.update-device-logging-status.outputs.logging.date_expires"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-application-manifest-details",
+      "summary": "This workflow allows an API consumer to list available applications and then fetch the detailed manifest, including the base-64 encoded bytes, for a specific application. This is useful for verifying app integrity or understanding its contents.",
+      "description": "This workflow allows an API consumer to list available applications and then fetch the detailed manifest, including the base-64 encoded bytes, for a specific application. This is useful for verifying app integrity or understanding its contents.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "AppSid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-apps-for-manifest",
+          "description": "Retrieves a list of all applications to select one for manifest retrieval.",
+          "operationId": "ListApp",
+          "parameters": [
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "app_sid": "$response.body#/app_sid"
+          }
+        },
+        {
+          "stepId": "fetch-app-manifest",
+          "description": "Fetches the manifest details for the selected application.",
+          "operationId": "FetchAppManifest",
+          "parameters": [
+            {
+              "name": "AppSid",
+              "in": "path",
+              "value": "$steps.list-apps-for-manifest.outputs.app_sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "app_sid": "$response.body#/app_sid",
+            "hash": "$response.body#/hash",
+            "encoded_bytes": "$response.body#/encoded_bytes"
+          }
+        }
+      ],
+      "outputs": {
+        "app_sid": "$steps.fetch-app-manifest.outputs.app_sid",
+        "hash": "$steps.fetch-app-manifest.outputs.hash",
+        "encoded_bytes": "$steps.fetch-app-manifest.outputs.encoded_bytes"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-account-configuration",
+      "summary": "This workflow enables an API consumer to create a new account-wide configuration and then retrieve its details to confirm the creation and current value.",
+      "description": "This workflow enables an API consumer to create a new account-wide configuration and then retrieve its details to confirm the creation and current value.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Key": {
+            "type": "string"
+          },
+          "Value": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-account-config",
+          "description": "Creates a new configuration key-value pair for the entire account.",
+          "operationId": "CreateAccountConfig",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Key": "$inputs.Key",
+              "Value": "$inputs.Value"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "key": "$response.body#/key",
+            "value": "$response.body#/value"
+          }
+        },
+        {
+          "stepId": "fetch-account-config",
+          "description": "Retrieves the details of the newly created account configuration.",
+          "operationId": "FetchAccountConfig",
+          "parameters": [
+            {
+              "name": "Key",
+              "in": "path",
+              "value": "$inputs.Key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "key": "$response.body#/key",
+            "value": "$response.body#/value",
+            "date_updated": "$response.body#/date_updated"
+          }
+        }
+      ],
+      "outputs": {
+        "key": "$steps.fetch-account-config.outputs.key",
+        "value": "$steps.fetch-account-config.outputs.value",
+        "date_updated": "$steps.fetch-account-config.outputs.date_updated"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-account-secrets",
+      "summary": "This workflow allows an API consumer to create a new account-wide secret and then retrieve its metadata (the secret value itself is not returned for security reasons).",
+      "description": "This workflow allows an API consumer to create a new account-wide secret and then retrieve its metadata (the secret value itself is not returned for security reasons).",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Key": {
+            "type": "string"
+          },
+          "Value": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-account-secret",
+          "description": "Creates a new secret key-value pair for the entire account.",
+          "operationId": "CreateAccountSecret",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Key": "$inputs.Key",
+              "Value": "$inputs.Value"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "key": "$response.body#/key"
+          }
+        },
+        {
+          "stepId": "fetch-account-secret-metadata",
+          "description": "Retrieves the metadata (key and rotation date) of the newly created account secret.",
+          "operationId": "FetchAccountSecret",
+          "parameters": [
+            {
+              "name": "Key",
+              "in": "path",
+              "value": "$inputs.Key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "key": "$response.body#/key",
+            "date_rotated": "$response.body#/date_rotated"
+          }
+        }
+      ],
+      "outputs": {
+        "key": "$steps.fetch-account-secret-metadata.outputs.key",
+        "date_rotated": "$steps.fetch-account-secret-metadata.outputs.date_rotated"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

@@ -1,0 +1,308 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/twilio.com/twilio_notify_v1/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "onboard-notification-service",
+      "summary": "Sets up a new Twilio Notify Service. This workflow first creates a push notification credential (APN, FCM, or GCM) and then creates a new Notify Service, linking it to the newly created credential. This is a foundational workflow for enabling notification capabilities.",
+      "description": "Sets up a new Twilio Notify Service. This workflow first creates a push notification credential (APN, FCM, or GCM) and then creates a new Notify Service, linking it to the newly created credential. This is a foundational workflow for enabling notification capabilities.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Type": {
+            "type": "string"
+          },
+          "FriendlyName": {
+            "type": "string"
+          },
+          "MessagingServiceSid": {
+            "type": "string"
+          },
+          "LogEnabled": {
+            "type": "string"
+          },
+          "DeliveryCallbackUrl": {
+            "type": "string"
+          },
+          "DeliveryCallbackEnabled": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-credential",
+          "description": "Creates a new credential for a specific push notification service (APN, FCM, or GCM). Requires the `Type` of credential and relevant keys/certificates.",
+          "operationId": "CreateCredential",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Type": "$inputs.Type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "type": "$response.body#/type"
+          }
+        },
+        {
+          "stepId": "create-service",
+          "description": "Creates a new notification service. The SID of the newly created credential can be used to configure APN, GCM, or FCM push notifications for this service. Also allows setting a friendly name and SMS messaging service SID.",
+          "operationId": "CreateService",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "ApnCredentialSid": "$steps.create-credential.outputs.sid",
+              "GcmCredentialSid": "$steps.create-credential.outputs.sid",
+              "FcmCredentialSid": "$steps.create-credential.outputs.sid",
+              "FriendlyName": "$inputs.FriendlyName",
+              "MessagingServiceSid": "$inputs.MessagingServiceSid",
+              "LogEnabled": "$inputs.LogEnabled",
+              "DeliveryCallbackUrl": "$inputs.DeliveryCallbackUrl",
+              "DeliveryCallbackEnabled": "$inputs.DeliveryCallbackEnabled"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "friendly_name": "$response.body#/friendly_name"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.create-service.outputs.sid",
+        "type": "$steps.create-credential.outputs.type",
+        "friendly_name": "$steps.create-service.outputs.friendly_name"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-user-bindings",
+      "summary": "Allows an administrator or user to list all registered bindings for a specific user identity within a service and then delete a particular binding if it's no longer needed (e.g., an old device).",
+      "description": "Allows an administrator or user to list all registered bindings for a specific user identity within a service and then delete a particular binding if it's no longer needed (e.g., an old device).",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "ServiceSid": {
+            "type": "string"
+          },
+          "StartDate": {
+            "type": "string"
+          },
+          "EndDate": {
+            "type": "string"
+          },
+          "Identity": {
+            "type": "string"
+          },
+          "Tag": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-bindings-for-identity",
+          "description": "Retrieves a list of all bindings associated with a specific user identity within a service. Requires the Service SID and the user's identity.",
+          "operationId": "ListBinding",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "StartDate",
+              "in": "query",
+              "value": "$inputs.StartDate"
+            },
+            {
+              "name": "EndDate",
+              "in": "query",
+              "value": "$inputs.EndDate"
+            },
+            {
+              "name": "Identity",
+              "in": "query",
+              "value": "$inputs.Identity"
+            },
+            {
+              "name": "Tag",
+              "in": "query",
+              "value": "$inputs.Tag"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "bindings": "$response.body#/bindings"
+          }
+        },
+        {
+          "stepId": "delete-binding",
+          "description": "Deletes a specific binding by its SID, effectively unregistering a device or channel for a user. The binding SID is typically obtained from the 'list-bindings-for-identity' step.",
+          "operationId": "DeleteBinding",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$steps.list-bindings-for-identity.outputs.bindings.service_sid"
+            },
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.list-bindings-for-identity.outputs.bindings.sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "binding_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "bindings": "$steps.list-bindings-for-identity.outputs.bindings",
+        "binding_data": "$steps.delete-binding.outputs.binding_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

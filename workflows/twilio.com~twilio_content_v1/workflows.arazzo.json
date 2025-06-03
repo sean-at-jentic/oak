@@ -1,0 +1,340 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/twilio.com/twilio_content_v1/1.1.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "create-content-and-request-whats-app-approval",
+      "summary": "Allows a user to create a new content resource and then immediately submit it for WhatsApp approval. This is a critical step for using content on the WhatsApp channel, as WhatsApp templates require explicit approval.",
+      "description": "Allows a user to create a new content resource and then immediately submit it for WhatsApp approval. This is a critical step for using content on the WhatsApp channel, as WhatsApp templates require explicit approval.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string"
+          },
+          "types": {
+            "type": "string"
+          },
+          "ContentSid": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-content",
+          "description": "Creates a new content resource with specified details such as friendly name, language, variables, and content types (e.g., text, media, location).",
+          "operationId": "CreateContent",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "language": "$inputs.language",
+              "types": "$inputs.types"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "friendly_name": "$response.body#/friendly_name"
+          }
+        },
+        {
+          "stepId": "submit-whatsapp-approval",
+          "description": "Submits the newly created content for WhatsApp approval, providing a name and category for the template.",
+          "operationId": "CreateApprovalCreate",
+          "parameters": [
+            {
+              "name": "ContentSid",
+              "in": "path",
+              "value": "$steps.create-content.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "ContentSid": "$steps.create-content.outputs.sid",
+              "name": "$steps.create-content.outputs.friendly_name",
+              "category": "$inputs.category"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status",
+            "rejection_reason": "$response.body#/rejection_reason"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.create-content.outputs.sid",
+        "friendly_name": "$steps.create-content.outputs.friendly_name",
+        "status": "$steps.submit-whatsapp-approval.outputs.status",
+        "rejection_reason": "$steps.submit-whatsapp-approval.outputs.rejection_reason"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "check-specific-content-approval-status",
+      "summary": "Enables a user to retrieve the detailed approval status for a particular content resource by its unique identifier (Content SID). This is useful for monitoring the progress of content approval.",
+      "description": "Enables a user to retrieve the detailed approval status for a particular content resource by its unique identifier (Content SID). This is useful for monitoring the progress of content approval.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Sid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "fetch-content",
+          "description": "Fetches the detailed information of a specific content resource using its unique SID.",
+          "operationId": "FetchContent",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$inputs.Sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "friendly_name": "$response.body#/friendly_name",
+            "language": "$response.body#/language",
+            "types": "$response.body#/types"
+          }
+        },
+        {
+          "stepId": "fetch-approval-status",
+          "description": "Retrieves the approval request status for the previously fetched content, including WhatsApp-specific approval details.",
+          "operationId": "FetchApprovalFetch",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.fetch-content.outputs.sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "whatsapp": "$response.body#/whatsapp"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.fetch-content.outputs.sid",
+        "friendly_name": "$steps.fetch-content.outputs.friendly_name",
+        "language": "$steps.fetch-content.outputs.language",
+        "types": "$steps.fetch-content.outputs.types",
+        "whatsapp": "$steps.fetch-approval-status.outputs.whatsapp"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "list-and-delete-content",
+      "summary": "Allows a user to list their existing content resources, identify a specific one from the list, and then delete it. This workflow is essential for managing and cleaning up unused or outdated content templates.",
+      "description": "Allows a user to list their existing content resources, identify a specific one from the list, and then delete it. This workflow is essential for managing and cleaning up unused or outdated content templates.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-content",
+          "description": "Retrieves a paginated list of all content resources associated with the account, providing their SIDs and other details.",
+          "operationId": "ListContent",
+          "parameters": [
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "contents": "$response.body#/contents"
+          }
+        },
+        {
+          "stepId": "delete-specific-content",
+          "description": "Deletes a specific content resource identified by its unique SID, typically selected from the list obtained in the previous step.",
+          "operationId": "DeleteContent",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.list-content.outputs.contents.sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "deletion_status": "$response.body#/deletion_status"
+          }
+        }
+      ],
+      "outputs": {
+        "contents": "$steps.list-content.outputs.contents",
+        "deletion_status": "$steps.delete-specific-content.outputs.deletion_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
