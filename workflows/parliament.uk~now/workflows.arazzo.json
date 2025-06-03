@@ -1,0 +1,172 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/parliament.uk/now/v1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "check-for-annunciator-content-updates",
+      "summary": "Allows an application to efficiently check for new annunciator messages by first retrieving the current message's timestamp and then querying for any messages published after that specific time. This is particularly useful for polling mechanisms to keep displays up-to-date without redundant data retrieval.",
+      "description": "Allows an application to efficiently check for new annunciator messages by first retrieving the current message's timestamp and then querying for any messages published after that specific time. This is particularly useful for polling mechanisms to keep displays up-to-date without redundant data retrieval.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "annunciator": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-initial-message",
+          "description": "Retrieves the current message to establish a baseline timestamp and annunciator type for subsequent update checks.",
+          "operationPath": "openapi_source#/paths/~1api~1Message~1message~1{annunciator}~1current/get",
+          "parameters": [
+            {
+              "name": "annunciator",
+              "in": "path",
+              "value": "$inputs.annunciator"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "publishTime": "$response.body#/publishTime",
+            "annunciatorType": "$response.body#/annunciatorType"
+          }
+        },
+        {
+          "stepId": "get-messages-after-timestamp",
+          "description": "Fetches the most recent message published after the specified date and time for the given annunciator type, indicating if new content is available.",
+          "operationPath": "openapi_source#/paths/~1api~1Message~1message~1{annunciator}~1{date}/get",
+          "parameters": [
+            {
+              "name": "annunciator",
+              "in": "path",
+              "value": "$steps.get-initial-message.outputs.annunciatorType"
+            },
+            {
+              "name": "date",
+              "in": "path",
+              "value": "$steps.get-initial-message.outputs.publishTime"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "annunciatorDisabled": "$response.body#/annunciatorDisabled",
+            "id": "$response.body#/id",
+            "slides": "$response.body#/slides",
+            "scrollingMessages": "$response.body#/scrollingMessages",
+            "annunciatorType": "$response.body#/annunciatorType",
+            "publishTime": "$response.body#/publishTime",
+            "isSecurityOverride": "$response.body#/isSecurityOverride",
+            "showCommonsBell": "$response.body#/showCommonsBell",
+            "showLordsBell": "$response.body#/showLordsBell"
+          }
+        }
+      ],
+      "outputs": {
+        "publishTime": "$steps.get-messages-after-timestamp.outputs.publishTime",
+        "annunciatorType": "$steps.get-messages-after-timestamp.outputs.annunciatorType",
+        "annunciatorDisabled": "$steps.get-messages-after-timestamp.outputs.annunciatorDisabled",
+        "id": "$steps.get-messages-after-timestamp.outputs.id",
+        "slides": "$steps.get-messages-after-timestamp.outputs.slides",
+        "scrollingMessages": "$steps.get-messages-after-timestamp.outputs.scrollingMessages",
+        "isSecurityOverride": "$steps.get-messages-after-timestamp.outputs.isSecurityOverride",
+        "showCommonsBell": "$steps.get-messages-after-timestamp.outputs.showCommonsBell",
+        "showLordsBell": "$steps.get-messages-after-timestamp.outputs.showLordsBell"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

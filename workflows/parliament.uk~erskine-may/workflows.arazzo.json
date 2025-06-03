@@ -1,0 +1,581 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/parliament.uk/erskine-may/v1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "browse-erskine-may-content-hierarchy",
+      "summary": "Allows users to navigate the structured content of Erskine May, starting from top-level Parts, drilling down to Chapters, then Sections, and finally viewing the detailed content of a specific section.",
+      "description": "Allows users to navigate the structured content of Erskine May, starting from top-level Parts, drilling down to Chapters, then Sections, and finally viewing the detailed content of a specific section.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "partNumber": {
+            "type": "string"
+          },
+          "chapterNumber": {
+            "type": "string"
+          },
+          "sectionId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-all-parts",
+          "description": "Retrieves a list of all top-level parts of Erskine May, providing an initial overview of the content structure.",
+          "operationPath": "openapi_source#/paths/~1api~1Part/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "parts": "$response.body#/0/parts"
+          }
+        },
+        {
+          "stepId": "get-part-details",
+          "description": "Retrieves detailed information for a specific part, including a list of its constituent chapters.",
+          "operationPath": "openapi_source#/paths/~1api~1Part~1{partNumber}/get",
+          "parameters": [
+            {
+              "name": "partNumber",
+              "in": "path",
+              "value": "$steps.get-all-parts.outputs.parts.number"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "part_details": "$response.body#/part_details"
+          }
+        },
+        {
+          "stepId": "get-chapter-overview",
+          "description": "Retrieves an overview of a specific chapter, including its title, description, and a list of its sections.",
+          "operationPath": "openapi_source#/paths/~1api~1Chapter~1{chapterNumber}/get",
+          "parameters": [
+            {
+              "name": "chapterNumber",
+              "in": "path",
+              "value": "$steps.get-part-details.outputs.part_details.chapters[0].number"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "chapter_overview": "$response.body#/chapter_overview"
+          }
+        },
+        {
+          "stepId": "get-section-detail",
+          "description": "Retrieves the full detailed content of a specific section, including its HTML content and footnotes.",
+          "operationPath": "openapi_source#/paths/~1api~1Section~1{sectionId}/get",
+          "parameters": [
+            {
+              "name": "sectionId",
+              "in": "path",
+              "value": "$steps.get-chapter-overview.outputs.chapter_overview.sections[0].id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "section_detail": "$response.body#/section_detail"
+          }
+        }
+      ],
+      "outputs": {
+        "parts": "$steps.get-all-parts.outputs.parts",
+        "part_details": "$steps.get-part-details.outputs.part_details",
+        "chapter_overview": "$steps.get-chapter-overview.outputs.chapter_overview",
+        "section_detail": "$steps.get-section-detail.outputs.section_detail"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "search-index-terms-and-retrieve-full-details",
+      "summary": "Enables users to search for specific index terms using a keyword and then retrieve the complete information for a selected index term, including its associated references within Erskine May.",
+      "description": "Enables users to search for specific index terms using a keyword and then retrieve the complete information for a selected index term, including its associated references within Erskine May.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "searchTerm": {
+            "type": "string"
+          },
+          "skip": {
+            "type": "string"
+          },
+          "take": {
+            "type": "string"
+          },
+          "indexTermId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-index-terms",
+          "description": "Searches for index terms that contain the specified search term, returning a list of matching index term overviews.",
+          "operationPath": "openapi_source#/paths/~1api~1Search~1IndexTermSearchResults~1{searchTerm}/get",
+          "parameters": [
+            {
+              "name": "searchTerm",
+              "in": "path",
+              "value": "$inputs.searchTerm"
+            },
+            {
+              "name": "skip",
+              "in": "query",
+              "value": "$inputs.skip"
+            },
+            {
+              "name": "take",
+              "in": "query",
+              "value": "$inputs.take"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "index_term_search_results": "$response.body#/index_term_search_results"
+          }
+        },
+        {
+          "stepId": "get-index-term-by-id",
+          "description": "Retrieves the full detailed information of a specific index term using its unique ID, including its display name, cross-references, and associated paragraph references.",
+          "operationPath": "openapi_source#/paths/~1api~1IndexTerm~1{indexTermId}/get",
+          "parameters": [
+            {
+              "name": "indexTermId",
+              "in": "path",
+              "value": "$steps.search-index-terms.outputs.index_term_search_results.searchResults[0].id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "index_term_details": "$response.body#/index_term_details"
+          }
+        }
+      ],
+      "outputs": {
+        "index_term_search_results": "$steps.search-index-terms.outputs.index_term_search_results",
+        "index_term_details": "$steps.get-index-term-by-id.outputs.index_term_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "search-paragraphs-and-view-section-content",
+      "summary": "Enables users to search for specific text within paragraphs, then locate the containing section using the paragraph reference, and finally retrieve the full content of that section for context.",
+      "description": "Enables users to search for specific text within paragraphs, then locate the containing section using the paragraph reference, and finally retrieve the full content of that section for context.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "searchTerm": {
+            "type": "string"
+          },
+          "skip": {
+            "type": "string"
+          },
+          "take": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "sectionId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-paragraphs",
+          "description": "Searches for paragraphs containing the specified search term in their content, returning a list of matching paragraph overviews.",
+          "operationPath": "openapi_source#/paths/~1api~1Search~1ParagraphSearchResults~1{searchTerm}/get",
+          "parameters": [
+            {
+              "name": "searchTerm",
+              "in": "path",
+              "value": "$inputs.searchTerm"
+            },
+            {
+              "name": "skip",
+              "in": "query",
+              "value": "$inputs.skip"
+            },
+            {
+              "name": "take",
+              "in": "query",
+              "value": "$inputs.take"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "paragraph_search_results": "$response.body#/paragraph_search_results"
+          }
+        },
+        {
+          "stepId": "get-section-overview-by-paragraph-reference",
+          "description": "Retrieves a section overview based on a specific paragraph reference, providing the immediate structural context for the found paragraph.",
+          "operationPath": "openapi_source#/paths/~1api~1Search~1Paragraph~1{reference}/get",
+          "parameters": [
+            {
+              "name": "reference",
+              "in": "path",
+              "value": "$steps.search-paragraphs.outputs.paragraph_search_results.searchResults[0].paragraphReference"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "section_overview_from_paragraph": "$response.body#/section_overview_from_paragraph"
+          }
+        },
+        {
+          "stepId": "get-section-detail",
+          "description": "Retrieves the full detailed content of the section identified by the paragraph search, allowing users to read the complete context.",
+          "operationPath": "openapi_source#/paths/~1api~1Section~1{sectionId}/get",
+          "parameters": [
+            {
+              "name": "sectionId",
+              "in": "path",
+              "value": "$steps.get-section-overview-by-paragraph-reference.outputs.section_overview_from_paragraph.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "section_detail": "$response.body#/section_detail"
+          }
+        }
+      ],
+      "outputs": {
+        "paragraph_search_results": "$steps.search-paragraphs.outputs.paragraph_search_results",
+        "section_overview_from_paragraph": "$steps.get-section-overview-by-paragraph-reference.outputs.section_overview_from_paragraph",
+        "section_detail": "$steps.get-section-detail.outputs.section_detail"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "browse-index-terms-alphabetically-and-retrieve-full-details",
+      "summary": "Allows users to browse index terms by their starting letter and then retrieve the complete information for a selected index term, providing an alternative way to discover content.",
+      "description": "Allows users to browse index terms by their starting letter and then retrieve the complete information for a selected index term, providing an alternative way to discover content.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "startLetter": {
+            "type": "string"
+          },
+          "skip": {
+            "type": "string"
+          },
+          "take": {
+            "type": "string"
+          },
+          "indexTermId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "browse-index-terms-by-letter",
+          "description": "Retrieves a paginated list of index terms filtered by a specified starting letter.",
+          "operationPath": "openapi_source#/paths/~1api~1IndexTerm~1browse/get",
+          "parameters": [
+            {
+              "name": "startLetter",
+              "in": "query",
+              "value": "$inputs.startLetter"
+            },
+            {
+              "name": "skip",
+              "in": "query",
+              "value": "$inputs.skip"
+            },
+            {
+              "name": "take",
+              "in": "query",
+              "value": "$inputs.take"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "browsed_index_terms": "$response.body#/browsed_index_terms"
+          }
+        },
+        {
+          "stepId": "get-index-term-by-id",
+          "description": "Retrieves the full detailed information of a specific index term using its unique ID.",
+          "operationPath": "openapi_source#/paths/~1api~1IndexTerm~1{indexTermId}/get",
+          "parameters": [
+            {
+              "name": "indexTermId",
+              "in": "path",
+              "value": "$steps.browse-index-terms-by-letter.outputs.browsed_index_terms.searchResults[0].id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "index_term_details": "$response.body#/index_term_details"
+          }
+        }
+      ],
+      "outputs": {
+        "browsed_index_terms": "$steps.browse-index-terms-by-letter.outputs.browsed_index_terms",
+        "index_term_details": "$steps.get-index-term-by-id.outputs.index_term_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "search-sections-and-view-full-details",
+      "summary": "Allows users to search for sections by title and then retrieve the complete content of a selected section, providing direct access to relevant procedural information.",
+      "description": "Allows users to search for sections by title and then retrieve the complete content of a selected section, providing direct access to relevant procedural information.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "searchTerm": {
+            "type": "string"
+          },
+          "skip": {
+            "type": "string"
+          },
+          "take": {
+            "type": "string"
+          },
+          "sectionId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-sections",
+          "description": "Searches for sections that contain the specified search term in their title, returning a list of matching section overviews.",
+          "operationPath": "openapi_source#/paths/~1api~1Search~1SectionSearchResults~1{searchTerm}/get",
+          "parameters": [
+            {
+              "name": "searchTerm",
+              "in": "path",
+              "value": "$inputs.searchTerm"
+            },
+            {
+              "name": "skip",
+              "in": "query",
+              "value": "$inputs.skip"
+            },
+            {
+              "name": "take",
+              "in": "query",
+              "value": "$inputs.take"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "section_search_results": "$response.body#/section_search_results"
+          }
+        },
+        {
+          "stepId": "get-section-detail",
+          "description": "Retrieves the full detailed content of a specific section by its ID, including its HTML content and footnotes.",
+          "operationPath": "openapi_source#/paths/~1api~1Section~1{sectionId}/get",
+          "parameters": [
+            {
+              "name": "sectionId",
+              "in": "path",
+              "value": "$steps.search-sections.outputs.section_search_results.searchResults[0].sectionId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "section_detail": "$response.body#/section_detail"
+          }
+        }
+      ],
+      "outputs": {
+        "section_search_results": "$steps.search-sections.outputs.section_search_results",
+        "section_detail": "$steps.get-section-detail.outputs.section_detail"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
