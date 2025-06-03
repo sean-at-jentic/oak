@@ -1,0 +1,399 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/xero.com/xero_assets/7.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "register-new-fixed-asset",
+      "summary": "Allows a user to register a new fixed asset in Xero by first retrieving available asset types and then creating the asset with the appropriate type. This workflow assumes the user selects an existing asset type from the retrieved list.",
+      "description": "Allows a user to register a new fixed asset in Xero by first retrieving available asset types and then creating the asset with the appropriate type. This workflow assumes the user selects an existing asset type from the retrieved list.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "xero-tenant-id": {
+            "type": "string"
+          },
+          "Idempotency-Key": {
+            "type": "string"
+          },
+          "assetName": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-available-asset-types",
+          "description": "Retrieves a list of all available fixed asset types configured in Xero. This helps in selecting the correct category for a new asset.",
+          "operationId": "getAssetTypes",
+          "parameters": [
+            {
+              "name": "xero-tenant-id",
+              "in": "header",
+              "value": "$inputs.xero-tenant-id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "asset_types": "$response.body#/0/assetTypeId",
+            "first_asset_type_id": "$response.body#/0/first_asset_type_id"
+          }
+        },
+        {
+          "stepId": "create-new-fixed-asset",
+          "description": "Adds a new fixed asset to the system using a selected asset type. Requires details like asset name, purchase date, price, and depreciation settings. The 'bookDepreciationSetting' input should be a JSON object conforming to the BookDepreciationSetting schema.",
+          "operationId": "createAsset",
+          "parameters": [
+            {
+              "name": "xero-tenant-id",
+              "in": "header",
+              "value": "$inputs.xero-tenant-id"
+            },
+            {
+              "name": "Idempotency-Key",
+              "in": "header",
+              "value": "$inputs.Idempotency-Key"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "assetTypeId": "$steps.get-available-asset-types.outputs.first_asset_type_id",
+              "assetName": "$inputs.assetName"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "new_asset_id": "$response.body#/new_asset_id",
+            "new_asset_name": "$response.body#/new_asset_name",
+            "new_asset_status": "$response.body#/new_asset_status"
+          }
+        }
+      ],
+      "outputs": {
+        "asset_types": "$steps.get-available-asset-types.outputs.asset_types",
+        "first_asset_type_id": "$steps.get-available-asset-types.outputs.first_asset_type_id",
+        "new_asset_id": "$steps.create-new-fixed-asset.outputs.new_asset_id",
+        "new_asset_name": "$steps.create-new-fixed-asset.outputs.new_asset_name",
+        "new_asset_status": "$steps.create-new-fixed-asset.outputs.new_asset_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-and-inspect-fixed-assets",
+      "summary": "Enables a user to search for fixed assets based on their status (e.g., 'REGISTERED' or 'DISPOSED') and then retrieve detailed information for a specific asset from the search results.",
+      "description": "Enables a user to search for fixed assets based on their status (e.g., 'REGISTERED' or 'DISPOSED') and then retrieve detailed information for a specific asset from the search results.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "xero-tenant-id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "pageSize": {
+            "type": "string"
+          },
+          "orderBy": {
+            "type": "string"
+          },
+          "sortDirection": {
+            "type": "string"
+          },
+          "filterBy": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-fixed-assets",
+          "description": "Searches for fixed assets based on their status. Can be filtered, paginated, and ordered.",
+          "operationId": "getAssets",
+          "parameters": [
+            {
+              "name": "xero-tenant-id",
+              "in": "header",
+              "value": "$inputs.xero-tenant-id"
+            },
+            {
+              "name": "status",
+              "in": "query",
+              "value": "$inputs.status"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            },
+            {
+              "name": "orderBy",
+              "in": "query",
+              "value": "$inputs.orderBy"
+            },
+            {
+              "name": "sortDirection",
+              "in": "query",
+              "value": "$inputs.sortDirection"
+            },
+            {
+              "name": "filterBy",
+              "in": "query",
+              "value": "$inputs.filterBy"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "asset_list": "$response.body#/asset_list",
+            "first_asset_id_from_search": "$response.body#/first_asset_id_from_search"
+          }
+        },
+        {
+          "stepId": "get-fixed-asset-details",
+          "description": "Retrieves comprehensive details for a specific fixed asset using its unique ID, typically obtained from a prior search.",
+          "operationId": "getAssetById",
+          "parameters": [
+            {
+              "name": "xero-tenant-id",
+              "in": "header",
+              "value": "$inputs.xero-tenant-id"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.search-fixed-assets.outputs.first_asset_id_from_search"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "asset_details": "$response.body#/asset_details"
+          }
+        }
+      ],
+      "outputs": {
+        "asset_list": "$steps.search-fixed-assets.outputs.asset_list",
+        "first_asset_id_from_search": "$steps.search-fixed-assets.outputs.first_asset_id_from_search",
+        "asset_details": "$steps.get-fixed-asset-details.outputs.asset_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-fixed-asset-categories",
+      "summary": "Provides functionality to view existing fixed asset categories (types) and create new ones, which is crucial for organizing assets within Xero. This workflow helps in setting up the foundational structure for asset management.",
+      "description": "Provides functionality to view existing fixed asset categories (types) and create new ones, which is crucial for organizing assets within Xero. This workflow helps in setting up the foundational structure for asset management.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "xero-tenant-id": {
+            "type": "string"
+          },
+          "Idempotency-Key": {
+            "type": "string"
+          },
+          "assetTypeName": {
+            "type": "string"
+          },
+          "bookDepreciationSetting": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-all-asset-types",
+          "description": "Fetches all predefined and custom fixed asset types available in the system.",
+          "operationId": "getAssetTypes",
+          "parameters": [
+            {
+              "name": "xero-tenant-id",
+              "in": "header",
+              "value": "$inputs.xero-tenant-id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "existing_asset_types": "$response.body#/0/existing_asset_types"
+          }
+        },
+        {
+          "stepId": "create-new-asset-type",
+          "description": "Adds a new fixed asset type to the system, defining its name and default depreciation settings. The 'bookDepreciationSetting' input should be a JSON object conforming to the BookDepreciationSetting schema.",
+          "operationId": "createAssetType",
+          "parameters": [
+            {
+              "name": "xero-tenant-id",
+              "in": "header",
+              "value": "$inputs.xero-tenant-id"
+            },
+            {
+              "name": "Idempotency-Key",
+              "in": "header",
+              "value": "$inputs.Idempotency-Key"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "assetTypeName": "$inputs.assetTypeName",
+              "bookDepreciationSetting": "$inputs.bookDepreciationSetting"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "new_asset_type_id": "$response.body#/new_asset_type_id",
+            "new_asset_type_name": "$response.body#/new_asset_type_name"
+          }
+        }
+      ],
+      "outputs": {
+        "existing_asset_types": "$steps.get-all-asset-types.outputs.existing_asset_types",
+        "new_asset_type_id": "$steps.create-new-asset-type.outputs.new_asset_type_id",
+        "new_asset_type_name": "$steps.create-new-asset-type.outputs.new_asset_type_name"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

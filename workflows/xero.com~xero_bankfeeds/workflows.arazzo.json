@@ -1,0 +1,388 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/xero.com/xero_bankfeeds/7.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "onboard-new-bank-feed--submit-initial-statements",
+      "summary": "This workflow allows a financial institution to establish a new bank feed connection for a customer's account in Xero and immediately submit the first set of bank statements for that connection. This is a common onboarding process for new customers or accounts.",
+      "description": "This workflow allows a financial institution to establish a new bank feed connection for a customer's account in Xero and immediately submit the first set of bank statements for that connection. This is a common onboarding process for new customers or accounts.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Xero-Tenant-Id": {
+            "type": "string"
+          },
+          "Idempotency-Key": {
+            "type": "string"
+          },
+          "create-feed-connection_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-feed-connection",
+          "description": "Creates one or more new feed connections in Xero. This links a financial institution's account to a Xero bank account.",
+          "operationId": "createFeedConnections",
+          "parameters": [
+            {
+              "name": "Xero-Tenant-Id",
+              "in": "header",
+              "value": "$inputs.Xero-Tenant-Id"
+            },
+            {
+              "name": "Idempotency-Key",
+              "in": "header",
+              "value": "$inputs.Idempotency-Key"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-feed-connection_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "submit-initial-statements",
+          "description": "Submits the first set of bank statements for the newly created feed connection. This populates the Xero bank account with initial transaction data.",
+          "operationId": "createStatements",
+          "parameters": [
+            {
+              "name": "Xero-Tenant-Id",
+              "in": "header",
+              "value": "$inputs.Xero-Tenant-Id"
+            },
+            {
+              "name": "Idempotency-Key",
+              "in": "header",
+              "value": "$inputs.Idempotency-Key"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "feedConnectionId": "$steps.create-feed-connection.outputs.id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Statements": "$response.body#/Statements"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-feed-connection.outputs.id",
+        "Statements": "$steps.submit-initial-statements.outputs.Statements"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "list-and-inspect-bank-feed-connections",
+      "summary": "This workflow allows a financial institution to retrieve a list of all their active bank feed connections and then drill down to view the detailed information of a specific connection. This is useful for monitoring and managing existing feeds.",
+      "description": "This workflow allows a financial institution to retrieve a list of all their active bank feed connections and then drill down to view the detailed information of a specific connection. This is useful for monitoring and managing existing feeds.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Xero-Tenant-Id": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "pageSize": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-all-feed-connections",
+          "description": "Retrieves a paginated list of all existing bank feed connections associated with the financial institution.",
+          "operationId": "getFeedConnections",
+          "parameters": [
+            {
+              "name": "Xero-Tenant-Id",
+              "in": "header",
+              "value": "$inputs.Xero-Tenant-Id"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "FeedConnections": "$response.body#/FeedConnections",
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "get-specific-feed-connection",
+          "description": "Retrieves detailed information for a single bank feed connection using its unique ID, typically obtained from the list of all connections.",
+          "operationId": "getFeedConnection",
+          "parameters": [
+            {
+              "name": "Xero-Tenant-Id",
+              "in": "header",
+              "value": "$inputs.Xero-Tenant-Id"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-all-feed-connections.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "FeedConnection": "$response.body#/FeedConnection"
+          }
+        }
+      ],
+      "outputs": {
+        "FeedConnections": "$steps.get-all-feed-connections.outputs.FeedConnections",
+        "id": "$steps.get-all-feed-connections.outputs.id",
+        "FeedConnection": "$steps.get-specific-feed-connection.outputs.FeedConnection"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "audit-submitted-statements",
+      "summary": "This workflow enables a financial institution to retrieve a list of all previously submitted bank statements and then inspect the details of a specific statement. This is useful for auditing, reconciliation, or troubleshooting data submission issues.",
+      "description": "This workflow enables a financial institution to retrieve a list of all previously submitted bank statements and then inspect the details of a specific statement. This is useful for auditing, reconciliation, or troubleshooting data submission issues.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Xero-Tenant-Id": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "pageSize": {
+            "type": "string"
+          },
+          "Xero-Application-Id": {
+            "type": "string"
+          },
+          "Xero-User-Id": {
+            "type": "string"
+          },
+          "statementId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-all-statements",
+          "description": "Retrieves a paginated list of all bank statements previously submitted by the financial institution.",
+          "operationId": "getStatements",
+          "parameters": [
+            {
+              "name": "Xero-Tenant-Id",
+              "in": "header",
+              "value": "$inputs.Xero-Tenant-Id"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "pageSize",
+              "in": "query",
+              "value": "$inputs.pageSize"
+            },
+            {
+              "name": "Xero-Application-Id",
+              "in": "header",
+              "value": "$inputs.Xero-Application-Id"
+            },
+            {
+              "name": "Xero-User-Id",
+              "in": "header",
+              "value": "$inputs.Xero-User-Id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Statements": "$response.body#/Statements",
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "get-specific-statement",
+          "description": "Retrieves detailed information for a single bank statement using its unique ID, typically obtained from the list of all statements.",
+          "operationId": "getStatement",
+          "parameters": [
+            {
+              "name": "Xero-Tenant-Id",
+              "in": "header",
+              "value": "$inputs.Xero-Tenant-Id"
+            },
+            {
+              "name": "statementId",
+              "in": "path",
+              "value": "$steps.get-all-statements.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Statement": "$response.body#/Statement"
+          }
+        }
+      ],
+      "outputs": {
+        "Statements": "$steps.get-all-statements.outputs.Statements",
+        "id": "$steps.get-all-statements.outputs.id",
+        "Statement": "$steps.get-specific-statement.outputs.Statement"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

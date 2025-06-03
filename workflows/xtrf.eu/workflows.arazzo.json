@@ -1,0 +1,1524 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/xtrf.eu/main/2.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "create-and-manage-smart-project",
+      "summary": "Automates the creation of a new Smart Project, including uploading and categorizing files, and updating project notes. This workflow is crucial for initiating and managing translation projects efficiently.",
+      "description": "Automates the creation of a new Smart Project, including uploading and categorizing files, and updating project notes. This workflow is crucial for initiating and managing translation projects efficiently.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "clientId": {
+            "type": "string"
+          },
+          "serviceId": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "file": {
+            "type": "string"
+          },
+          "files": {
+            "type": "string"
+          },
+          "duplicateFileAction": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-smart-project",
+          "description": "Creates a new Smart Project with essential details like client and service.",
+          "operationId": "create_7",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name",
+              "clientId": "$inputs.clientId",
+              "serviceId": "$inputs.serviceId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "upload-project-work-file",
+          "description": "Uploads a file to the newly created project. This file will later be categorized.",
+          "operationId": "uploadFile_2",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "path",
+              "value": "$inputs.projectId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "file": "$inputs.file"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "add-uploaded-file-to-project",
+          "description": "Categorizes the uploaded file within the project, assigning it a type (e.g., work file, reference file) and relevant languages.",
+          "operationId": "addFiles_1",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "path",
+              "value": "$inputs.projectId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "files": "$inputs.files",
+              "duplicateFileAction": "$inputs.duplicateFileAction"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "project_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-project-client-notes",
+          "description": "Updates the client-facing notes for the project.",
+          "operationId": "updateClientNotes",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "path",
+              "value": "$inputs.projectId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "value": "$inputs.value"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "notes_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-project-details",
+          "description": "Retrieves the full details of the created project to verify its setup.",
+          "operationId": "getById_10",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "path",
+              "value": "$inputs.projectId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-smart-project.outputs.id",
+        "project_data": "$steps.add-uploaded-file-to-project.outputs.project_data",
+        "notes_data": "$steps.update-project-client-notes.outputs.notes_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "client-invoice-generation-and-payment-tracking",
+      "summary": "Manages the lifecycle of client invoices, from creation based on tasks to tracking and recording payments.",
+      "description": "Manages the lifecycle of client invoices, from creation based on tasks to tracking and recording payments.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "tasksIds": {
+            "type": "string"
+          },
+          "prepaymentsIds": {
+            "type": "string"
+          },
+          "invoiceId": {
+            "type": "string"
+          },
+          "embed": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "paymentDate": {
+            "type": "string"
+          },
+          "paymentMethodId": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-client-invoice",
+          "description": "Creates a new client invoice, typically from completed tasks.",
+          "operationId": "create_1",
+          "requestBody": {
+            "contentType": "application/json;charset=UTF-8",
+            "payload": {
+              "type": "$inputs.type",
+              "tasksIds": "$inputs.tasksIds",
+              "prepaymentsIds": "$inputs.prepaymentsIds"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "get-client-invoice-details",
+          "description": "Retrieves detailed information about the newly created invoice.",
+          "operationId": "getById",
+          "parameters": [
+            {
+              "name": "invoiceId",
+              "in": "path",
+              "value": "$inputs.invoiceId"
+            },
+            {
+              "name": "embed",
+              "in": "query",
+              "value": "$inputs.embed"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "add-client-invoice-payment",
+          "description": "Records a payment received for the client invoice, automatically updating its payment status.",
+          "operationId": "createPayment",
+          "parameters": [
+            {
+              "name": "invoiceId",
+              "in": "path",
+              "value": "$inputs.invoiceId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json;charset=UTF-8",
+            "payload": {
+              "amount": "$inputs.amount",
+              "paymentDate": "$inputs.paymentDate",
+              "paymentMethodId": "$inputs.paymentMethodId",
+              "notes": "$inputs.notes"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "payment_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-client-invoice-payments",
+          "description": "Retrieves all recorded payments for the specific client invoice.",
+          "operationId": "getPayments",
+          "parameters": [
+            {
+              "name": "invoiceId",
+              "in": "path",
+              "value": "$inputs.invoiceId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        }
+      ],
+      "outputs": {
+        "payment_data": "$steps.add-client-invoice-payment.outputs.payment_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "client-onboarding-and-contact-management",
+      "summary": "Facilitates the process of adding new clients to the system, setting up their addresses, and creating associated contact persons with their communication details.",
+      "description": "Facilitates the process of adding new clients to the system, setting up their addresses, and creating associated contact persons with their communication details.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "customerId": {
+            "type": "string"
+          },
+          "addressLine1": {
+            "type": "string"
+          },
+          "addressLine2": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "postalCode": {
+            "type": "string"
+          },
+          "provinceId": {
+            "type": "string"
+          },
+          "countryId": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "personId": {
+            "type": "string"
+          },
+          "phones": {
+            "type": "string"
+          },
+          "sms": {
+            "type": "string"
+          },
+          "fax": {
+            "type": "string"
+          },
+          "loginOrEmail": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-client",
+          "description": "Registers a new client in the system with basic information.",
+          "operationId": "create_3",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name",
+              "fullName": "$inputs.fullName"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "update-client-address",
+          "description": "Updates the billing address for the newly created client.",
+          "operationId": "updateAddress",
+          "parameters": [
+            {
+              "name": "customerId",
+              "in": "path",
+              "value": "$inputs.customerId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "addressLine1": "$inputs.addressLine1",
+              "addressLine2": "$inputs.addressLine2",
+              "city": "$inputs.city",
+              "postalCode": "$inputs.postalCode",
+              "provinceId": "$inputs.provinceId",
+              "countryId": "$inputs.countryId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "create-client-person",
+          "description": "Adds a new contact person associated with the client.",
+          "operationId": "create_2",
+          "requestBody": {
+            "contentType": "application/json;charset=UTF-8",
+            "payload": {
+              "name": "$inputs.name",
+              "lastName": "$inputs.lastName",
+              "customerId": "$inputs.customerId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "update-client-person-contact",
+          "description": "Updates the contact details (e.g., phone numbers, additional emails) for the client person.",
+          "operationId": "updateContact",
+          "parameters": [
+            {
+              "name": "personId",
+              "in": "path",
+              "value": "$inputs.personId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json;charset=UTF-8",
+            "payload": {
+              "phones": "$inputs.phones",
+              "sms": "$inputs.sms",
+              "fax": "$inputs.fax"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "generate-person-sign-in-token",
+          "description": "Generates a single-use sign-in token for the client person to access the customer portal.",
+          "operationId": "generateSingleUseSignInToken",
+          "requestBody": {
+            "contentType": "application/json;charset=UTF-8",
+            "payload": {
+              "loginOrEmail": "$inputs.loginOrEmail"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        }
+      ],
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "classic-project-creation-and-task-assignment",
+      "summary": "Streamlines the creation of a Classic Project, including defining language combinations, adding tasks, and initiating them for execution.",
+      "description": "Streamlines the creation of a Classic Project, including defining language combinations, adding tasks, and initiating them for execution.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string"
+          },
+          "serviceId": {
+            "type": "string"
+          },
+          "specializationId": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "sourceLanguageId": {
+            "type": "string"
+          },
+          "targetLanguageId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "clientTaskPONumber": {
+            "type": "string"
+          },
+          "languageCombination": {
+            "type": "string"
+          },
+          "dates": {
+            "type": "string"
+          },
+          "people": {
+            "type": "string"
+          },
+          "instructions": {
+            "type": "string"
+          },
+          "workflowId": {
+            "type": "string"
+          },
+          "files": {
+            "type": "string"
+          },
+          "taskId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-classic-project",
+          "description": "Creates a new Classic Project with specified customer, service, and specialization.",
+          "operationId": "create_6",
+          "requestBody": {
+            "contentType": "application/json;charset=UTF-8",
+            "payload": {
+              "customerId": "$inputs.customerId",
+              "serviceId": "$inputs.serviceId",
+              "specializationId": "$inputs.specializationId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "create-project-language-combination",
+          "description": "Adds a new language combination to the project, defining the source and target languages for translation.",
+          "operationId": "createLanguageCombination",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "path",
+              "value": "$inputs.projectId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "sourceLanguageId": "$inputs.sourceLanguageId",
+              "targetLanguageId": "$inputs.targetLanguageId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "create-project-task",
+          "description": "Creates a new task within the project, linked to a specific language combination and workflow.",
+          "operationId": "createTask",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "path",
+              "value": "$inputs.projectId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name",
+              "clientTaskPONumber": "$inputs.clientTaskPONumber",
+              "languageCombination": "$inputs.languageCombination",
+              "dates": "$inputs.dates",
+              "people": "$inputs.people",
+              "instructions": "$inputs.instructions",
+              "specializationId": "$inputs.specializationId",
+              "workflowId": "$inputs.workflowId",
+              "files": "$inputs.files"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "start-task",
+          "description": "Changes the status of the created task to 'started', initiating its workflow.",
+          "operationId": "start_1",
+          "parameters": [
+            {
+              "name": "taskId",
+              "in": "path",
+              "value": "$inputs.taskId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "task_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "task_data": "$steps.start-task.outputs.task_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "smart-quote-lifecycle-management",
+      "summary": "Manages the full lifecycle of a Smart Quote, from creation and initial setup to updating details and changing its status through the approval process.",
+      "description": "Manages the full lifecycle of a Smart Quote, from creation and initial setup to updating details and changing its status through the approval process.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "clientId": {
+            "type": "string"
+          },
+          "serviceId": {
+            "type": "string"
+          },
+          "quoteId": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-smart-quote",
+          "description": "Creates a new Smart Quote with basic information.",
+          "operationId": "create_8",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name",
+              "clientId": "$inputs.clientId",
+              "serviceId": "$inputs.serviceId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "update-quote-expected-delivery-date",
+          "description": "Sets or updates the expected delivery date for the quote.",
+          "operationId": "updateExpectedDeliveryDate",
+          "parameters": [
+            {
+              "name": "quoteId",
+              "in": "path",
+              "value": "$inputs.quoteId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "value": "$inputs.value"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "date_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-quote-client-notes",
+          "description": "Adds or updates internal notes related to the client for the quote.",
+          "operationId": "updateClientNotes_1",
+          "parameters": [
+            {
+              "name": "quoteId",
+              "in": "path",
+              "value": "$inputs.quoteId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "value": "$inputs.value"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "notes_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "change-quote-status-to-sent",
+          "description": "Changes the quote status to 'SENT', indicating it has been sent to the client for review.",
+          "operationId": "changeStatus_3",
+          "parameters": [
+            {
+              "name": "quoteId",
+              "in": "path",
+              "value": "$inputs.quoteId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "status": "$inputs.status"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sent_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "change-quote-status-to-approved",
+          "description": "Changes the quote status to 'APPROVED', signifying client acceptance and readiness for project conversion.",
+          "operationId": "changeStatus_3",
+          "parameters": [
+            {
+              "name": "quoteId",
+              "in": "path",
+              "value": "$inputs.quoteId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "status": "$inputs.status"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "approved_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-smart-quote.outputs.id",
+        "date_data": "$steps.update-quote-expected-delivery-date.outputs.date_data",
+        "notes_data": "$steps.update-quote-client-notes.outputs.notes_data",
+        "sent_data": "$steps.change-quote-status-to-sent.outputs.sent_data",
+        "approved_data": "$steps.change-quote-status-to-approved.outputs.approved_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-custom-data-views",
+      "summary": "Enables users to create, configure, and utilize custom tabular views for various data types (e.g., Projects, Tasks) within the XTRF Home Portal, allowing for tailored data browsing and reporting.",
+      "description": "Enables users to create, configure, and utilize custom tabular views for various data types (e.g., Projects, Tasks) within the XTRF Home Portal, allowing for tailored data browsing and reporting.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "className": {
+            "type": "string"
+          },
+          "placeName": {
+            "type": "string"
+          },
+          "settings": {
+            "type": "string"
+          },
+          "columns": {
+            "type": "string"
+          },
+          "order": {
+            "type": "string"
+          },
+          "permissions": {
+            "type": "string"
+          },
+          "viewId": {
+            "type": "string"
+          },
+          "update-view-columns_body": {
+            "type": "object"
+          },
+          "update-view-filter_body": {
+            "type": "object"
+          },
+          "page": {
+            "type": "string"
+          },
+          "additionalOrder": {
+            "type": "string"
+          },
+          "useDeferredColumns": {
+            "type": "string"
+          },
+          "maxRows": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-views-brief-for-class",
+          "description": "Retrieves a brief list of existing views for a specified data class (e.g., 'Project', 'Customer').",
+          "operationId": "getViewsBrief",
+          "parameters": [
+            {
+              "name": "className",
+              "in": "path",
+              "value": "$inputs.className"
+            },
+            {
+              "name": "placeName",
+              "in": "query",
+              "value": "$inputs.placeName"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "create-new-view",
+          "description": "Creates a new custom view for the specified data class, defining its initial settings, columns, order, and permissions.",
+          "operationId": "create",
+          "parameters": [
+            {
+              "name": "className",
+              "in": "path",
+              "value": "$inputs.className"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json;charset=UTF-8",
+            "payload": {
+              "settings": "$inputs.settings",
+              "columns": "$inputs.columns",
+              "order": "$inputs.order",
+              "permissions": "$inputs.permissions"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "update-view-columns",
+          "description": "Modifies the columns displayed in the custom view.",
+          "operationId": "updateColumns",
+          "parameters": [
+            {
+              "name": "viewId",
+              "in": "path",
+              "value": "$inputs.viewId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json;charset=UTF-8",
+            "payload": "$inputs.update-view-columns_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "update-view-filter",
+          "description": "Applies or updates filters to the custom view to narrow down the displayed data.",
+          "operationId": "updateFilter",
+          "parameters": [
+            {
+              "name": "viewId",
+              "in": "path",
+              "value": "$inputs.viewId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json;charset=UTF-8",
+            "payload": "$inputs.update-view-filter_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "browse-data-with-view",
+          "description": "Retrieves data using the newly configured custom view, applying its defined columns and filters.",
+          "operationId": "browseJSON",
+          "parameters": [
+            {
+              "name": "viewId",
+              "in": "query",
+              "value": "$inputs.viewId"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "additionalOrder",
+              "in": "query",
+              "value": "$inputs.additionalOrder"
+            },
+            {
+              "name": "useDeferredColumns",
+              "in": "query",
+              "value": "$inputs.useDeferredColumns"
+            },
+            {
+              "name": "maxRows",
+              "in": "query",
+              "value": "$inputs.maxRows"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        }
+      ],
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-project-groups",
+      "summary": "Allows for the creation of new project groups and the linking of existing classic projects and quotes to these groups for better organization and management.",
+      "description": "Allows for the creation of new project groups and the linking of existing classic projects and quotes to these groups for better organization and management.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "customerIds": {
+            "type": "string"
+          },
+          "updatedSince": {
+            "type": "string"
+          },
+          "projectGroupId": {
+            "type": "string"
+          },
+          "projectIds": {
+            "type": "string"
+          },
+          "smartProjectIds": {
+            "type": "string"
+          },
+          "quoteIds": {
+            "type": "string"
+          },
+          "smartQuoteIds": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-project-group",
+          "description": "Creates a new project group with a specified name and associated customers.",
+          "operationId": "create_4",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name",
+              "customerIds": "$inputs.customerIds"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "get-all-classic-project-ids",
+          "description": "Retrieves internal identifiers for all classic projects, optionally filtered by update time.",
+          "operationId": "getAllIds_6",
+          "parameters": [
+            {
+              "name": "updatedSince",
+              "in": "query",
+              "value": "$inputs.updatedSince"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "link-projects-to-group",
+          "description": "Links selected classic and/or smart projects to the newly created project group.",
+          "operationId": "linkProject",
+          "parameters": [
+            {
+              "name": "projectGroupId",
+              "in": "path",
+              "value": "$inputs.projectGroupId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "projectIds": "$inputs.projectIds",
+              "smartProjectIds": "$inputs.smartProjectIds"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "get-all-classic-quote-ids",
+          "description": "Retrieves internal identifiers for all classic quotes, optionally filtered by update time.",
+          "operationId": "getAllIds_7",
+          "parameters": [
+            {
+              "name": "updatedSince",
+              "in": "query",
+              "value": "$inputs.updatedSince"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "link-quotes-to-group",
+          "description": "Links selected classic and/or smart quotes to the project group.",
+          "operationId": "linkQuote",
+          "parameters": [
+            {
+              "name": "projectGroupId",
+              "in": "path",
+              "value": "$inputs.projectGroupId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "quoteIds": "$inputs.quoteIds",
+              "smartQuoteIds": "$inputs.smartQuoteIds"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        }
+      ],
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "vendor-invoice-processing",
+      "summary": "Manages the creation and status updates for vendor invoices, typically generated from completed jobs.",
+      "description": "Manages the creation and status updates for vendor invoices, typically generated from completed jobs.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "jobsIds": {
+            "type": "string"
+          },
+          "invoiceId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-vendor-invoice",
+          "description": "Creates a new vendor invoice based on specified job IDs.",
+          "operationId": "create_5",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "jobsIds": "$inputs.jobsIds"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "invoicesIds": "$response.body#/invoicesIds",
+            "invoiceUrl": "$response.body#/invoiceUrl"
+          }
+        },
+        {
+          "stepId": "send-vendor-invoice",
+          "description": "Sends the created vendor invoice to the vendor.",
+          "operationId": "send",
+          "parameters": [
+            {
+              "name": "invoiceId",
+              "in": "path",
+              "value": "$inputs.invoiceId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "invoice_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "set-vendor-invoice-status",
+          "description": "Updates the status of the vendor invoice (e.g., to 'CONFIRMED' or 'BILL_CREATED').",
+          "operationId": "setStatus",
+          "parameters": [
+            {
+              "name": "invoiceId",
+              "in": "path",
+              "value": "$inputs.invoiceId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "status": "$inputs.status"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "invoicesIds": "$steps.create-vendor-invoice.outputs.invoicesIds",
+        "invoiceUrl": "$steps.create-vendor-invoice.outputs.invoiceUrl",
+        "invoice_data": "$steps.send-vendor-invoice.outputs.invoice_data",
+        "status_data": "$steps.set-vendor-invoice-status.outputs.status_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-sensitive-clients-and-trusted-vendors",
+      "summary": "Configures and manages lists of sensitive clients and trusted vendors, which can impact data visibility and job assignment processes.",
+      "description": "Configures and manages lists of sensitive clients and trusted vendors, which can impact data visibility and job assignment processes.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "updatedSince": {
+            "type": "string"
+          },
+          "nameEquals": {
+            "type": "string"
+          },
+          "emailEquals": {
+            "type": "string"
+          },
+          "customerId": {
+            "type": "string"
+          },
+          "embed": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "providerId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-all-clients-ids",
+          "description": "Retrieves internal identifiers for all clients.",
+          "operationId": "getAllIds_2",
+          "parameters": [
+            {
+              "name": "updatedSince",
+              "in": "query",
+              "value": "$inputs.updatedSince"
+            },
+            {
+              "name": "nameEquals",
+              "in": "query",
+              "value": "$inputs.nameEquals"
+            },
+            {
+              "name": "emailEquals",
+              "in": "query",
+              "value": "$inputs.emailEquals"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "get-client-details",
+          "description": "Retrieves full details of a specific client, including their name.",
+          "operationId": "getById_2",
+          "parameters": [
+            {
+              "name": "customerId",
+              "in": "path",
+              "value": "$inputs.customerId"
+            },
+            {
+              "name": "embed",
+              "in": "query",
+              "value": "$inputs.embed"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "add-sensitive-client",
+          "description": "Adds a client to the list of sensitive clients.",
+          "operationId": "addClient",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "value": "$inputs.value",
+              "text": "$inputs.text"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "get-all-vendors-ids",
+          "description": "Retrieves internal identifiers for all vendors.",
+          "operationId": "getAllIds_5",
+          "parameters": [
+            {
+              "name": "updatedSince",
+              "in": "query",
+              "value": "$inputs.updatedSince"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "get-vendor-details",
+          "description": "Retrieves full details of a specific vendor, including their name.",
+          "operationId": "getById_6",
+          "parameters": [
+            {
+              "name": "providerId",
+              "in": "path",
+              "value": "$inputs.providerId"
+            },
+            {
+              "name": "embed",
+              "in": "query",
+              "value": "$inputs.embed"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "add-trusted-vendor",
+          "description": "Adds a vendor to the list of trusted vendors.",
+          "operationId": "addVendor",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "value": "$inputs.value",
+              "text": "$inputs.text"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        }
+      ],
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
