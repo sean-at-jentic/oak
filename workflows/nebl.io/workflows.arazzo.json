@@ -1,0 +1,753 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/nebl.io/main/1.3.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "issue-and-broadcast-ntp1-token",
+      "summary": "Allows a user to issue a new NTP1 token on the Neblio blockchain by first building the unsigned transaction and then broadcasting the externally signed transaction to the network. Transaction signing must be handled externally.",
+      "description": "Allows a user to issue a new NTP1 token on the Neblio blockchain by first building the unsigned transaction and then broadcasting the externally signed transaction to the network. Transaction signing must be handled externally.",
+      "steps": [
+        {
+          "stepId": "build-issue-token-transaction",
+          "description": "Builds an unsigned raw transaction hex for issuing a new NTP1 token. This hex needs to be signed off-chain before broadcasting.",
+          "operationId": "issueToken",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tokenId": "$response.body#/tokenId",
+            "txHex": "$response.body#/txHex"
+          }
+        },
+        {
+          "stepId": "broadcast-signed-transaction",
+          "description": "Broadcasts the externally signed raw transaction hex to the Neblio network to finalize the token issuance.",
+          "operationId": "broadcastTx",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "txid": "$response.body#/txid"
+          }
+        }
+      ],
+      "outputs": {
+        "tokenId": "$steps.build-issue-token-transaction.outputs.tokenId",
+        "txHex": "$steps.build-issue-token-transaction.outputs.txHex",
+        "txid": "$steps.broadcast-signed-transaction.outputs.txid"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "send-and-broadcast-ntp1-token",
+      "summary": "Enables a user to build a transaction to send existing NTP1 tokens and then broadcast the externally signed transaction to the network. Transaction signing must be handled externally.",
+      "description": "Enables a user to build a transaction to send existing NTP1 tokens and then broadcast the externally signed transaction to the network. Transaction signing must be handled externally.",
+      "steps": [
+        {
+          "stepId": "build-send-token-transaction",
+          "description": "Builds an unsigned raw transaction hex for sending NTP1 tokens. This hex needs to be signed off-chain before broadcasting.",
+          "operationId": "sendToken",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "txHex": "$response.body#/txHex",
+            "ntp1OutputIndexes": "$response.body#/ntp1OutputIndexes",
+            "multisigOutputs": "$response.body#/multisigOutputs"
+          }
+        },
+        {
+          "stepId": "broadcast-signed-transaction",
+          "description": "Broadcasts the externally signed raw transaction hex to the Neblio network to finalize the token transfer.",
+          "operationId": "broadcastTx",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "txid": "$response.body#/txid"
+          }
+        }
+      ],
+      "outputs": {
+        "txHex": "$steps.build-send-token-transaction.outputs.txHex",
+        "ntp1OutputIndexes": "$steps.build-send-token-transaction.outputs.ntp1OutputIndexes",
+        "multisigOutputs": "$steps.build-send-token-transaction.outputs.multisigOutputs",
+        "txid": "$steps.broadcast-signed-transaction.outputs.txid"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-comprehensive-ntp1-token-details",
+      "summary": "Provides a complete overview of an NTP1 token, including its unique identifier, detailed metadata, and a list of all addresses currently holding the token.",
+      "description": "Provides a complete overview of an NTP1 token, including its unique identifier, detailed metadata, and a list of all addresses currently holding the token.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "tokensymbol": {
+            "type": "string"
+          },
+          "tokenid": {
+            "type": "string"
+          },
+          "verbosity": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-token-id-by-symbol",
+          "description": "Translates a human-readable token symbol into its unique blockchain token ID.",
+          "operationId": "getTokenId",
+          "parameters": [
+            {
+              "name": "tokensymbol",
+              "in": "path",
+              "value": "$inputs.tokensymbol"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tokenId": "$response.body#/tokenId",
+            "tokenName": "$response.body#/tokenName"
+          }
+        },
+        {
+          "stepId": "get-token-metadata",
+          "description": "Retrieves detailed metadata associated with the token, such as divisibility, supply, and issuance information.",
+          "operationId": "getTokenMetadata",
+          "parameters": [
+            {
+              "name": "tokenid",
+              "in": "path",
+              "value": "$steps.get-token-id-by-symbol.outputs.tokenId"
+            },
+            {
+              "name": "verbosity",
+              "in": "query",
+              "value": "$inputs.verbosity"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tokenId": "$response.body#/tokenId",
+            "someUtxo": "$response.body#/someUtxo",
+            "divisibility": "$response.body#/divisibility",
+            "lockStatus": "$response.body#/lockStatus",
+            "aggregationPolicy": "$response.body#/aggregationPolicy",
+            "initialIssuanceAmount": "$response.body#/initialIssuanceAmount",
+            "totalSupply": "$response.body#/totalSupply",
+            "numOfHolders": "$response.body#/numOfHolders",
+            "numOfTransfers": "$response.body#/numOfTransfers",
+            "numOfIssuance": "$response.body#/numOfIssuance",
+            "numOfBurns": "$response.body#/numOfBurns",
+            "firstBlock": "$response.body#/firstBlock",
+            "issuanceTxid": "$response.body#/issuanceTxid",
+            "issueAddress": "$response.body#/issueAddress",
+            "metadataOfIssuance": "$response.body#/metadataOfIssuance",
+            "metadataOfUtxo": "$response.body#/metadataOfUtxo"
+          }
+        },
+        {
+          "stepId": "get-token-holders",
+          "description": "Fetches a list of all Neblio addresses currently holding the token and the respective amounts they hold.",
+          "operationId": "getTokenHolders",
+          "parameters": [
+            {
+              "name": "tokenid",
+              "in": "path",
+              "value": "$steps.get-token-id-by-symbol.outputs.tokenId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tokenId": "$response.body#/tokenId",
+            "holders": "$response.body#/holders",
+            "divibility": "$response.body#/divibility",
+            "lockStatus": "$response.body#/lockStatus",
+            "aggregationPolicy": "$response.body#/aggregationPolicy",
+            "someUtxo": "$response.body#/someUtxo"
+          }
+        }
+      ],
+      "outputs": {
+        "tokenId": "$steps.get-token-holders.outputs.tokenId",
+        "tokenName": "$steps.get-token-id-by-symbol.outputs.tokenName",
+        "someUtxo": "$steps.get-token-holders.outputs.someUtxo",
+        "divisibility": "$steps.get-token-metadata.outputs.divisibility",
+        "lockStatus": "$steps.get-token-holders.outputs.lockStatus",
+        "aggregationPolicy": "$steps.get-token-holders.outputs.aggregationPolicy",
+        "initialIssuanceAmount": "$steps.get-token-metadata.outputs.initialIssuanceAmount",
+        "totalSupply": "$steps.get-token-metadata.outputs.totalSupply",
+        "numOfHolders": "$steps.get-token-metadata.outputs.numOfHolders",
+        "numOfTransfers": "$steps.get-token-metadata.outputs.numOfTransfers",
+        "numOfIssuance": "$steps.get-token-metadata.outputs.numOfIssuance",
+        "numOfBurns": "$steps.get-token-metadata.outputs.numOfBurns",
+        "firstBlock": "$steps.get-token-metadata.outputs.firstBlock",
+        "issuanceTxid": "$steps.get-token-metadata.outputs.issuanceTxid",
+        "issueAddress": "$steps.get-token-metadata.outputs.issueAddress",
+        "metadataOfIssuance": "$steps.get-token-metadata.outputs.metadataOfIssuance",
+        "metadataOfUtxo": "$steps.get-token-metadata.outputs.metadataOfUtxo",
+        "holders": "$steps.get-token-holders.outputs.holders",
+        "divibility": "$steps.get-token-holders.outputs.divibility"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "monitor-neblio-address-activity",
+      "summary": "Provides a comprehensive view of a Neblio address, including its NEBL balance, unspent transaction outputs (UTXOs), and a paginated list of its transaction history.",
+      "description": "Provides a comprehensive view of a Neblio address, including its NEBL balance, unspent transaction outputs (UTXOs), and a paginated list of its transaction history.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "block": {
+            "type": "string"
+          },
+          "pageNum": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-address-summary",
+          "description": "Retrieves a summary of NEBL balance, total received/sent, and transaction counts for a given address.",
+          "operationId": "getAddress",
+          "parameters": [
+            {
+              "name": "address",
+              "in": "path",
+              "value": "$inputs.address"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "addrStr": "$response.body#/addrStr",
+            "balance": "$response.body#/balance",
+            "balanceSat": "$response.body#/balanceSat",
+            "totalReceived": "$response.body#/totalReceived",
+            "totalReceivedSat": "$response.body#/totalReceivedSat",
+            "totalSent": "$response.body#/totalSent",
+            "totalSentSat": "$response.body#/totalSentSat",
+            "unconfirmedBalance": "$response.body#/unconfirmedBalance",
+            "unconfirmedBalanceSat": "$response.body#/unconfirmedBalanceSat",
+            "unconfirmedTxAppearances": "$response.body#/unconfirmedTxAppearances",
+            "txAppearances": "$response.body#/txAppearances",
+            "transactions": "$response.body#/transactions"
+          }
+        },
+        {
+          "stepId": "get-address-utxos",
+          "description": "Lists all unspent transaction outputs (UTXOs) associated with the address, which are crucial for building new transactions.",
+          "operationId": "getAddressUtxos",
+          "parameters": [
+            {
+              "name": "address",
+              "in": "path",
+              "value": "$steps.get-address-summary.outputs.addrStr"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "address": "$response.body#/0/address",
+            "txid": "$response.body#/0/txid",
+            "vout": "$response.body#/0/vout",
+            "ts": "$response.body#/0/ts",
+            "scriptPubKey": "$response.body#/0/scriptPubKey",
+            "amount": "$response.body#/0/amount",
+            "confirmations": "$response.body#/0/confirmations"
+          }
+        },
+        {
+          "stepId": "get-address-transactions",
+          "description": "Retrieves a paginated list of all transactions involving the address, providing a complete history.",
+          "operationId": "getTxs",
+          "parameters": [
+            {
+              "name": "address",
+              "in": "query",
+              "value": "$steps.get-address-summary.outputs.addrStr"
+            },
+            {
+              "name": "block",
+              "in": "query",
+              "value": "$inputs.block"
+            },
+            {
+              "name": "pageNum",
+              "in": "query",
+              "value": "$inputs.pageNum"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pagesTotal": "$response.body#/pagesTotal",
+            "txs": "$response.body#/txs"
+          }
+        }
+      ],
+      "outputs": {
+        "addrStr": "$steps.get-address-summary.outputs.addrStr",
+        "balance": "$steps.get-address-summary.outputs.balance",
+        "balanceSat": "$steps.get-address-summary.outputs.balanceSat",
+        "totalReceived": "$steps.get-address-summary.outputs.totalReceived",
+        "totalReceivedSat": "$steps.get-address-summary.outputs.totalReceivedSat",
+        "totalSent": "$steps.get-address-summary.outputs.totalSent",
+        "totalSentSat": "$steps.get-address-summary.outputs.totalSentSat",
+        "unconfirmedBalance": "$steps.get-address-summary.outputs.unconfirmedBalance",
+        "unconfirmedBalanceSat": "$steps.get-address-summary.outputs.unconfirmedBalanceSat",
+        "unconfirmedTxAppearances": "$steps.get-address-summary.outputs.unconfirmedTxAppearances",
+        "txAppearances": "$steps.get-address-summary.outputs.txAppearances",
+        "transactions": "$steps.get-address-summary.outputs.transactions",
+        "address": "$steps.get-address-utxos.outputs.address",
+        "txid": "$steps.get-address-utxos.outputs.txid",
+        "vout": "$steps.get-address-utxos.outputs.vout",
+        "ts": "$steps.get-address-utxos.outputs.ts",
+        "scriptPubKey": "$steps.get-address-utxos.outputs.scriptPubKey",
+        "amount": "$steps.get-address-utxos.outputs.amount",
+        "confirmations": "$steps.get-address-utxos.outputs.confirmations",
+        "pagesTotal": "$steps.get-address-transactions.outputs.pagesTotal",
+        "txs": "$steps.get-address-transactions.outputs.txs"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "burn-and-broadcast-ntp1-token",
+      "summary": "Allows a user to build a transaction to burn NTP1 tokens and then broadcast the externally signed transaction to the network. Transaction signing must be handled externally.",
+      "description": "Allows a user to build a transaction to burn NTP1 tokens and then broadcast the externally signed transaction to the network. Transaction signing must be handled externally.",
+      "steps": [
+        {
+          "stepId": "build-burn-token-transaction",
+          "description": "Builds an unsigned raw transaction hex for burning NTP1 tokens. This hex needs to be signed off-chain before broadcasting.",
+          "operationId": "burnToken",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "txHex": "$response.body#/txHex",
+            "ntp1OutputIndexes": "$response.body#/ntp1OutputIndexes",
+            "multisigOutputs": "$response.body#/multisigOutputs"
+          }
+        },
+        {
+          "stepId": "broadcast-signed-transaction",
+          "description": "Broadcasts the externally signed raw transaction hex to the Neblio network to finalize the token burn.",
+          "operationId": "broadcastTx",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "txid": "$response.body#/txid"
+          }
+        }
+      ],
+      "outputs": {
+        "txHex": "$steps.build-burn-token-transaction.outputs.txHex",
+        "ntp1OutputIndexes": "$steps.build-burn-token-transaction.outputs.ntp1OutputIndexes",
+        "multisigOutputs": "$steps.build-burn-token-transaction.outputs.multisigOutputs",
+        "txid": "$steps.broadcast-signed-transaction.outputs.txid"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "explore-neblio-block-details",
+      "summary": "Allows a user to retrieve detailed information about a specific Neblio block, starting from its index, and then fetching all transactions contained within that block.",
+      "description": "Allows a user to retrieve detailed information about a specific Neblio block, starting from its index, and then fetching all transactions contained within that block.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "blockindex": {
+            "type": "string"
+          },
+          "blockhash": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "block": {
+            "type": "string"
+          },
+          "pageNum": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-block-hash-by-index",
+          "description": "Retrieves the hash of a block given its numerical index on the blockchain.",
+          "operationId": "getBlockIndex",
+          "parameters": [
+            {
+              "name": "blockindex",
+              "in": "path",
+              "value": "$inputs.blockindex"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "blockHash": "$response.body#/blockHash"
+          }
+        },
+        {
+          "stepId": "get-block-details",
+          "description": "Fetches comprehensive details about the block, including its size, height, and merkle root, using its hash.",
+          "operationId": "getBlock",
+          "parameters": [
+            {
+              "name": "blockhash",
+              "in": "path",
+              "value": "$steps.get-block-hash-by-index.outputs.blockHash"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "hash": "$response.body#/hash",
+            "confirmations": "$response.body#/confirmations",
+            "size": "$response.body#/size",
+            "height": "$response.body#/height",
+            "version": "$response.body#/version",
+            "merkleroot": "$response.body#/merkleroot",
+            "tx": "$response.body#/tx",
+            "time": "$response.body#/time",
+            "nonce": "$response.body#/nonce",
+            "bits": "$response.body#/bits",
+            "difficulty": "$response.body#/difficulty",
+            "previousblockhash": "$response.body#/previousblockhash",
+            "nextblockhash": "$response.body#/nextblockhash",
+            "reward": "$response.body#/reward"
+          }
+        },
+        {
+          "stepId": "get-block-transactions",
+          "description": "Retrieves a paginated list of all transactions included in the specified block.",
+          "operationId": "getTxs",
+          "parameters": [
+            {
+              "name": "address",
+              "in": "query",
+              "value": "$inputs.address"
+            },
+            {
+              "name": "block",
+              "in": "query",
+              "value": "$steps.get-block-hash-by-index.outputs.blockHash"
+            },
+            {
+              "name": "pageNum",
+              "in": "query",
+              "value": "$inputs.pageNum"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pagesTotal": "$response.body#/pagesTotal",
+            "txs": "$response.body#/txs"
+          }
+        }
+      ],
+      "outputs": {
+        "blockHash": "$steps.get-block-hash-by-index.outputs.blockHash",
+        "hash": "$steps.get-block-details.outputs.hash",
+        "confirmations": "$steps.get-block-details.outputs.confirmations",
+        "size": "$steps.get-block-details.outputs.size",
+        "height": "$steps.get-block-details.outputs.height",
+        "version": "$steps.get-block-details.outputs.version",
+        "merkleroot": "$steps.get-block-details.outputs.merkleroot",
+        "tx": "$steps.get-block-details.outputs.tx",
+        "time": "$steps.get-block-details.outputs.time",
+        "nonce": "$steps.get-block-details.outputs.nonce",
+        "bits": "$steps.get-block-details.outputs.bits",
+        "difficulty": "$steps.get-block-details.outputs.difficulty",
+        "previousblockhash": "$steps.get-block-details.outputs.previousblockhash",
+        "nextblockhash": "$steps.get-block-details.outputs.nextblockhash",
+        "reward": "$steps.get-block-details.outputs.reward",
+        "pagesTotal": "$steps.get-block-transactions.outputs.pagesTotal",
+        "txs": "$steps.get-block-transactions.outputs.txs"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "testnet-faucet-and-balance-check",
+      "summary": "Allows developers to obtain testnet NEBL from the faucet for development and testing purposes, and then immediately verify their address balance to confirm the withdrawal.",
+      "description": "Allows developers to obtain testnet NEBL from the faucet for development and testing purposes, and then immediately verify their address balance to confirm the withdrawal.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "request-testnet-nebl",
+          "description": "Requests a specified amount of testnet NEBL to be sent to a given Neblio Testnet address.",
+          "operationId": "testnet_getFaucet",
+          "parameters": [
+            {
+              "name": "address",
+              "in": "query",
+              "value": "$inputs.address"
+            },
+            {
+              "name": "amount",
+              "in": "query",
+              "value": "$inputs.amount"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status",
+            "data": "$response.body#/data"
+          }
+        },
+        {
+          "stepId": "check-testnet-balance",
+          "description": "Verifies the updated NEBL balance of the address after the faucet withdrawal to confirm receipt.",
+          "operationId": "testnet_getAddressBalance",
+          "parameters": [
+            {
+              "name": "address",
+              "in": "path",
+              "value": "$inputs.address"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "balance": "$response.body#/balance"
+          }
+        }
+      ],
+      "outputs": {
+        "status": "$steps.request-testnet-nebl.outputs.status",
+        "data": "$steps.request-testnet-nebl.outputs.data",
+        "balance": "$steps.check-testnet-balance.outputs.balance"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
