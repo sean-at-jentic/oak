@@ -1,0 +1,562 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/turbinelabs.io/main/1.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "deploy-new-domain-with-basic-routing",
+      "summary": "Establishes a new public-facing domain, creates a listener to accept traffic for it, defines a set of reusable routing rules, and then creates a route to direct incoming requests to appropriate backend services based on these rules.",
+      "description": "Establishes a new public-facing domain, creates a listener to accept traffic for it, defines a set of reusable routing rules, and then creates a route to direct incoming requests to appropriate backend services based on these rules.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "filters": {
+            "type": "string"
+          },
+          "zone_key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "port": {
+            "type": "string"
+          },
+          "listener_key": {
+            "type": "string"
+          },
+          "protocol": {
+            "type": "string"
+          },
+          "default": {
+            "type": "string"
+          },
+          "domain_key": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "shared_rules_key": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-zone-key",
+          "description": "Retrieves the key of an existing zone where the new domain and its associated components will be deployed.",
+          "operationPath": "openapi_source#/paths/~1zone/get",
+          "parameters": [
+            {
+              "name": "filters",
+              "in": "query",
+              "value": "$inputs.filters"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "result[].zone_key": "$response.body#/result[].zone_key"
+          }
+        },
+        {
+          "stepId": "create-domain",
+          "description": "Creates a new domain (hostname and port) within the selected zone, optionally configuring aliases, CORS, HTTPS enforcement, redirects, and SSL.",
+          "operationPath": "openapi_source#/paths/~1domain/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "zone_key": "$inputs.zone_key",
+              "name": "$inputs.name",
+              "port": "$inputs.port"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "result.domain_key": "$response.body#/result.domain_key",
+            "result.checksum": "$response.body#/result.checksum"
+          }
+        },
+        {
+          "stepId": "create-listener",
+          "description": "Creates a listener that will bind to a specific IP and port, configured to handle a particular protocol (e.g., HTTP, HTTP/2, TCP) and associated with the new domain.",
+          "operationPath": "openapi_source#/paths/~1listener/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "listener_key": "$inputs.listener_key",
+              "name": "$inputs.name",
+              "port": "$inputs.port",
+              "protocol": "$inputs.protocol"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "result.listener_key": "$response.body#/result.listener_key",
+            "result.checksum": "$response.body#/result.checksum"
+          }
+        },
+        {
+          "stepId": "create-shared-rules",
+          "description": "Defines a new set of reusable routing rules, including constraints and default behavior, that can be referenced by multiple routes.",
+          "operationPath": "openapi_source#/paths/~1shared_rules/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name",
+              "zone_key": "$inputs.zone_key",
+              "default": "$inputs.default"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "result.shared_rules_key": "$response.body#/result.shared_rules_key",
+            "result.checksum": "$response.body#/result.checksum"
+          }
+        },
+        {
+          "stepId": "create-route",
+          "description": "Creates a new route that maps a specific path within the domain to the defined shared rules, enabling traffic direction to backend clusters.",
+          "operationPath": "openapi_source#/paths/~1route/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "domain_key": "$inputs.domain_key",
+              "zone_key": "$inputs.zone_key",
+              "path": "$inputs.path",
+              "shared_rules_key": "$inputs.shared_rules_key"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "result.route_key": "$response.body#/result.route_key",
+            "result.checksum": "$response.body#/result.checksum"
+          }
+        }
+      ],
+      "outputs": {
+        "result[].zone_key": "$steps.get-zone-key.outputs.result[].zone_key",
+        "result.domain_key": "$steps.create-domain.outputs.result.domain_key",
+        "result.checksum": "$steps.create-route.outputs.result.checksum",
+        "result.listener_key": "$steps.create-listener.outputs.result.listener_key",
+        "result.shared_rules_key": "$steps.create-shared-rules.outputs.result.shared_rules_key",
+        "result.route_key": "$steps.create-route.outputs.result.route_key"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "provision-new-cluster-with-instances",
+      "summary": "Creates a new logical deployment unit (cluster) within a specified zone and then adds one or more backend instances to that cluster, preparing it to serve traffic.",
+      "description": "Creates a new logical deployment unit (cluster) within a specified zone and then adds one or more backend instances to that cluster, preparing it to serve traffic.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "filters": {
+            "type": "string"
+          },
+          "zone_key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "clusterKey": {
+            "type": "string"
+          },
+          "host": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "string"
+          },
+          "port": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-zone-key",
+          "description": "Retrieves the key of an existing zone where the new cluster will be provisioned. This step allows the user to select or confirm the target zone.",
+          "operationPath": "openapi_source#/paths/~1zone/get",
+          "parameters": [
+            {
+              "name": "filters",
+              "in": "query",
+              "value": "$inputs.filters"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "result[].zone_key": "$response.body#/result[].zone_key"
+          }
+        },
+        {
+          "stepId": "create-cluster",
+          "description": "Creates a new cluster with a given name and optional configurations (e.g., circuit breakers, health checks) within the selected zone.",
+          "operationPath": "openapi_source#/paths/~1cluster/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "zone_key": "$inputs.zone_key",
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "result.cluster_key": "$response.body#/result.cluster_key",
+            "result.checksum": "$response.body#/result.checksum"
+          }
+        },
+        {
+          "stepId": "add-instance-to-cluster",
+          "description": "Adds a new instance (identified by host and port) to the newly created cluster. This operation can be repeated to add multiple instances.",
+          "operationPath": "openapi_source#/paths/~1cluster~1{clusterKey}~1instances/post",
+          "parameters": [
+            {
+              "name": "clusterKey",
+              "in": "path",
+              "value": "$inputs.clusterKey"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "host": "$inputs.host",
+              "metadata": "$inputs.metadata",
+              "port": "$inputs.port"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "result.host": "$response.body#/result.host",
+            "result.port": "$response.body#/result.port"
+          }
+        }
+      ],
+      "outputs": {
+        "result[].zone_key": "$steps.get-zone-key.outputs.result[].zone_key",
+        "result.cluster_key": "$steps.create-cluster.outputs.result.cluster_key",
+        "result.checksum": "$steps.create-cluster.outputs.result.checksum",
+        "result.host": "$steps.add-instance-to-cluster.outputs.result.host",
+        "result.port": "$steps.add-instance-to-cluster.outputs.result.port"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "revoke-existing-access-token",
+      "summary": "Allows an authenticated user to list their existing API access tokens and then delete a specific one by its key and checksum, enhancing security by revoking compromised or unused tokens.",
+      "description": "Allows an authenticated user to list their existing API access tokens and then delete a specific one by its key and checksum, enhancing security by revoking compromised or unused tokens.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "access-token-key": {
+            "type": "string"
+          },
+          "checksum": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-access-tokens",
+          "description": "Retrieves a list of all access tokens associated with the authenticated user, providing their keys, descriptions, and checksums.",
+          "operationPath": "openapi_source#/paths/~1admin~1user~1self~1access_tokens/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "result": "$response.body#/result"
+          }
+        },
+        {
+          "stepId": "delete-access-token",
+          "description": "Deletes the specified access token using its unique key and the current checksum for verification, effectively revoking its access.",
+          "operationPath": "openapi_source#/paths/~1admin~1user~1self~1access_token~1{access-token-key}/delete",
+          "parameters": [
+            {
+              "name": "access-token-key",
+              "in": "path",
+              "value": "$inputs.access-token-key"
+            },
+            {
+              "name": "checksum",
+              "in": "query",
+              "value": "$inputs.checksum"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "empty": "$response.body#/empty"
+          }
+        }
+      ],
+      "outputs": {
+        "result": "$steps.list-access-tokens.outputs.result",
+        "empty": "$steps.delete-access-token.outputs.empty"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "audit-domain-configuration-changes",
+      "summary": "Allows a user to select an existing domain and retrieve its detailed audit log, showing all changes made to it and related components (proxies, routes, shared rules, clusters) over a specified time period.",
+      "description": "Allows a user to select an existing domain and retrieve its detailed audit log, showing all changes made to it and related components (proxies, routes, shared rules, clusters) over a specified time period.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "filters": {
+            "type": "string"
+          },
+          "domainKey": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string"
+          },
+          "end": {
+            "type": "string"
+          },
+          "max_results": {
+            "type": "string"
+          },
+          "ref_id": {
+            "type": "string"
+          },
+          "direction": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-domains",
+          "description": "Retrieves a list of all configured domains, allowing the user to select the domain for which they want to view the audit log.",
+          "operationPath": "openapi_source#/paths/~1domain/get",
+          "parameters": [
+            {
+              "name": "filters",
+              "in": "query",
+              "value": "$inputs.filters"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "result": "$response.body#/result"
+          }
+        },
+        {
+          "stepId": "get-domain-changelog",
+          "description": "Fetches the comprehensive audit log for the selected domain, including changes to its configuration and any directly or indirectly associated infrastructure components.",
+          "operationPath": "openapi_source#/paths/~1changelog~1domain-graph~1{domainKey}/get",
+          "parameters": [
+            {
+              "name": "domainKey",
+              "in": "path",
+              "value": "$inputs.domainKey"
+            },
+            {
+              "name": "start",
+              "in": "query",
+              "value": "$inputs.start"
+            },
+            {
+              "name": "end",
+              "in": "query",
+              "value": "$inputs.end"
+            },
+            {
+              "name": "max_results",
+              "in": "query",
+              "value": "$inputs.max_results"
+            },
+            {
+              "name": "ref_id",
+              "in": "query",
+              "value": "$inputs.ref_id"
+            },
+            {
+              "name": "direction",
+              "in": "query",
+              "value": "$inputs.direction"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "result": "$response.body#/result"
+          }
+        }
+      ],
+      "outputs": {
+        "result": "$steps.get-domain-changelog.outputs.result"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

@@ -1,0 +1,966 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/twilio.com/twilio_numbers_v2/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "host-a-single-phone-number",
+      "summary": "Initiate the process of hosting a phone number on Twilio's platform, including creating the hosted number order, generating an authorization document, and managing the verification process.",
+      "description": "Initiate the process of hosting a phone number on Twilio's platform, including creating the hosted number order, generating an authorization document, and managing the verification process.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "PhoneNumber": {
+            "type": "string"
+          },
+          "ContactPhoneNumber": {
+            "type": "string"
+          },
+          "AddressSid": {
+            "type": "string"
+          },
+          "Email": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "Status": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-hosted-number-order",
+          "description": "Creates a new hosted number order for a specific phone number, generating an authorization document for signing.",
+          "operationId": "CreateHostedNumberOrder",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "PhoneNumber": "$inputs.PhoneNumber",
+              "ContactPhoneNumber": "$inputs.ContactPhoneNumber",
+              "AddressSid": "$inputs.AddressSid",
+              "Email": "$inputs.Email"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "signing_document_sid": "$response.body#/signing_document_sid",
+            "status": "$response.body#/status"
+          }
+        },
+        {
+          "stepId": "fetch-authorization-document",
+          "description": "Retrieves the details of the authorization document generated for the hosted number order, which needs to be signed externally.",
+          "operationId": "FetchAuthorizationDocument",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.create-hosted-number-order.outputs.signing_document_sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status",
+            "email": "$response.body#/email"
+          }
+        },
+        {
+          "stepId": "update-hosted-number-order-for-verification",
+          "description": "Updates the hosted number order status to 'pending-verification' and initiates the ownership verification call.",
+          "operationId": "UpdateHostedNumberOrder",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.create-hosted-number-order.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Sid": "$steps.create-hosted-number-order.outputs.sid",
+              "Status": "$inputs.Status"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status",
+            "verification_code": "$response.body#/verification_code"
+          }
+        },
+        {
+          "stepId": "fetch-hosted-number-order-status",
+          "description": "Monitors the status of the hosted number order until it reaches 'completed' or 'action-required'.",
+          "operationId": "FetchHostedNumberOrder",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.create-hosted-number-order.outputs.sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status",
+            "failure_reason": "$response.body#/failure_reason",
+            "incoming_phone_number_sid": "$response.body#/incoming_phone_number_sid"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.create-hosted-number-order.outputs.sid",
+        "signing_document_sid": "$steps.create-hosted-number-order.outputs.signing_document_sid",
+        "status": "$steps.fetch-hosted-number-order-status.outputs.status",
+        "email": "$steps.fetch-authorization-document.outputs.email",
+        "verification_code": "$steps.update-hosted-number-order-for-verification.outputs.verification_code",
+        "failure_reason": "$steps.fetch-hosted-number-order-status.outputs.failure_reason",
+        "incoming_phone_number_sid": "$steps.fetch-hosted-number-order-status.outputs.incoming_phone_number_sid"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "complete-regulatory-bundle-submission",
+      "summary": "A comprehensive workflow to fulfill regulatory requirements by creating end-user profiles, uploading supporting documents, assembling them into a regulatory bundle, evaluating its compliance, and submitting it for Twilio's review.",
+      "description": "A comprehensive workflow to fulfill regulatory requirements by creating end-user profiles, uploading supporting documents, assembling them into a regulatory bundle, evaluating its compliance, and submitting it for Twilio's review.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "EndUserType": {
+            "type": "string"
+          },
+          "IsoCountry": {
+            "type": "string"
+          },
+          "NumberType": {
+            "type": "string"
+          },
+          "IncludeConstraints": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "FriendlyName": {
+            "type": "string"
+          },
+          "Type": {
+            "type": "string"
+          },
+          "Email": {
+            "type": "string"
+          },
+          "BundleSid": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "Status": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-regulation-requirements",
+          "description": "Identifies the specific regulatory requirements (end-user types, document types, and fields) for a given country and number type.",
+          "operationId": "ListRegulation",
+          "parameters": [
+            {
+              "name": "EndUserType",
+              "in": "query",
+              "value": "$inputs.EndUserType"
+            },
+            {
+              "name": "IsoCountry",
+              "in": "query",
+              "value": "$inputs.IsoCountry"
+            },
+            {
+              "name": "NumberType",
+              "in": "query",
+              "value": "$inputs.NumberType"
+            },
+            {
+              "name": "IncludeConstraints",
+              "in": "query",
+              "value": "$inputs.IncludeConstraints"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "results": "$response.body#/results"
+          }
+        },
+        {
+          "stepId": "create-end-user",
+          "description": "Creates an End User resource (individual or business) with required attributes based on regulatory requirements.",
+          "operationId": "CreateEndUser",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "FriendlyName": "$inputs.FriendlyName",
+              "Type": "$inputs.Type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        },
+        {
+          "stepId": "create-supporting-document",
+          "description": "Uploads or creates a Supporting Document resource with required attributes, such as proof of address or government ID.",
+          "operationId": "CreateSupportingDocument",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "FriendlyName": "$inputs.FriendlyName",
+              "Type": "$inputs.Type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        },
+        {
+          "stepId": "create-regulatory-bundle",
+          "description": "Creates a new regulatory bundle, linking it to a specific regulation.",
+          "operationId": "CreateBundle",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "RegulationSid": "$steps.list-regulation-requirements.outputs.results[0].sid",
+              "FriendlyName": "$inputs.FriendlyName",
+              "Email": "$inputs.Email"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        },
+        {
+          "stepId": "assign-end-user-to-bundle",
+          "description": "Assigns the created End User to the regulatory bundle.",
+          "operationId": "CreateItemAssignment",
+          "parameters": [
+            {
+              "name": "BundleSid",
+              "in": "path",
+              "value": "$steps.create-regulatory-bundle.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "BundleSid": "$steps.create-regulatory-bundle.outputs.sid",
+              "ObjectSid": "$steps.create-end-user.outputs.sid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        },
+        {
+          "stepId": "assign-supporting-document-to-bundle",
+          "description": "Assigns the created Supporting Document to the regulatory bundle.",
+          "operationId": "CreateItemAssignment",
+          "parameters": [
+            {
+              "name": "BundleSid",
+              "in": "path",
+              "value": "$steps.create-regulatory-bundle.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "BundleSid": "$steps.create-regulatory-bundle.outputs.sid",
+              "ObjectSid": "$steps.create-supporting-document.outputs.sid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        },
+        {
+          "stepId": "create-bundle-evaluation",
+          "description": "Triggers an evaluation of the bundle's compliance against the associated regulation.",
+          "operationId": "CreateEvaluation",
+          "parameters": [
+            {
+              "name": "BundleSid",
+              "in": "path",
+              "value": "$steps.create-regulatory-bundle.outputs.sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "status": "$response.body#/status",
+            "results": "$response.body#/results"
+          }
+        },
+        {
+          "stepId": "fetch-bundle-evaluation",
+          "description": "Retrieves the detailed results of the bundle evaluation to check for compliance status and any failures.",
+          "operationId": "FetchEvaluation",
+          "parameters": [
+            {
+              "name": "BundleSid",
+              "in": "path",
+              "value": "$steps.create-regulatory-bundle.outputs.sid"
+            },
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.create-bundle-evaluation.outputs.sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status",
+            "results": "$response.body#/results"
+          }
+        },
+        {
+          "stepId": "submit-bundle-for-review",
+          "description": "Submits the bundle for Twilio's official review after ensuring it is compliant based on evaluation results.",
+          "operationId": "UpdateBundle",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.create-regulatory-bundle.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Sid": "$steps.create-regulatory-bundle.outputs.sid",
+              "Status": "$inputs.Status"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status"
+          }
+        }
+      ],
+      "outputs": {
+        "results": "$steps.fetch-bundle-evaluation.outputs.results",
+        "sid": "$steps.create-bundle-evaluation.outputs.sid",
+        "status": "$steps.submit-bundle-for-review.outputs.status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "update-regulatory-bundle-item-and-re-evaluate",
+      "summary": "Modifies an existing end-user or supporting document associated with a regulatory bundle and then re-evaluates the bundle's compliance status to reflect the changes.",
+      "description": "Modifies an existing end-user or supporting document associated with a regulatory bundle and then re-evaluates the bundle's compliance status to reflect the changes.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "BundleSid": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "FriendlyName": {
+            "type": "string"
+          },
+          "Attributes": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-bundle-item-assignments",
+          "description": "Lists all items (End Users and Supporting Documents) currently assigned to a specific regulatory bundle.",
+          "operationId": "ListItemAssignment",
+          "parameters": [
+            {
+              "name": "BundleSid",
+              "in": "path",
+              "value": "$inputs.BundleSid"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "results": "$response.body#/results"
+          }
+        },
+        {
+          "stepId": "fetch-item-details",
+          "description": "Fetches the details of a specific assigned item (either an End User or a Supporting Document) based on its SID.",
+          "operationId": "FetchEndUser",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.list-bundle-item-assignments.outputs.results.object_sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "friendly_name": "$response.body#/friendly_name",
+            "attributes": "$response.body#/attributes",
+            "type": "$response.body#/type"
+          }
+        },
+        {
+          "stepId": "fetch-item-details",
+          "description": "Fetches the details of a specific assigned item (either an End User or a Supporting Document) based on its SID.",
+          "operationId": "FetchSupportingDocument",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.list-bundle-item-assignments.outputs.results.object_sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "friendly_name": "$response.body#/friendly_name",
+            "attributes": "$response.body#/attributes",
+            "type": "$response.body#/type"
+          }
+        },
+        {
+          "stepId": "update-item-details",
+          "description": "Updates the attributes or friendly name of the fetched End User or Supporting Document.",
+          "operationId": "UpdateEndUser",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.list-bundle-item-assignments.outputs.results.object_sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Sid": "$steps.list-bundle-item-assignments.outputs.results[0].object_sid",
+              "FriendlyName": "$inputs.FriendlyName",
+              "Attributes": "$inputs.Attributes"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "friendly_name": "$response.body#/friendly_name",
+            "attributes": "$response.body#/attributes"
+          }
+        },
+        {
+          "stepId": "update-item-details",
+          "description": "Updates the attributes or friendly name of the fetched End User or Supporting Document.",
+          "operationId": "UpdateSupportingDocument",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.list-bundle-item-assignments.outputs.results.object_sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Sid": "$steps.list-bundle-item-assignments.outputs.results[0].object_sid",
+              "FriendlyName": "$inputs.FriendlyName",
+              "Attributes": "$inputs.Attributes"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "friendly_name": "$response.body#/friendly_name",
+            "attributes": "$response.body#/attributes"
+          }
+        },
+        {
+          "stepId": "create-bundle-re-evaluation",
+          "description": "Triggers a new evaluation of the bundle to ensure it remains compliant after item updates.",
+          "operationId": "CreateEvaluation",
+          "parameters": [
+            {
+              "name": "BundleSid",
+              "in": "path",
+              "value": "$steps.list-bundle-item-assignments.outputs.results.bundle_sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "status": "$response.body#/status",
+            "results": "$response.body#/results"
+          }
+        }
+      ],
+      "outputs": {
+        "results": "$steps.create-bundle-re-evaluation.outputs.results",
+        "friendly_name": "$steps.update-item-details.outputs.friendly_name",
+        "attributes": "$steps.update-item-details.outputs.attributes",
+        "type": "$steps.fetch-item-details.outputs.type",
+        "sid": "$steps.create-bundle-re-evaluation.outputs.sid",
+        "status": "$steps.create-bundle-re-evaluation.outputs.status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "clone-regulatory-bundle-to-another-account",
+      "summary": "Duplicates an existing regulatory bundle, including its associated end-user and supporting document items, to a different Twilio subaccount, facilitating compliance reuse across accounts.",
+      "description": "Duplicates an existing regulatory bundle, including its associated end-user and supporting document items, to a different Twilio subaccount, facilitating compliance reuse across accounts.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Sid": {
+            "type": "string"
+          },
+          "BundleSid": {
+            "type": "string"
+          },
+          "TargetAccountSid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "fetch-source-bundle",
+          "description": "Retrieves the details of the source bundle to be cloned.",
+          "operationId": "FetchBundle",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$inputs.Sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "friendly_name": "$response.body#/friendly_name"
+          }
+        },
+        {
+          "stepId": "clone-bundle-to-account",
+          "description": "Creates a new clone of the bundle in the specified target account, including all bundle items.",
+          "operationId": "CreateBundleClone",
+          "parameters": [
+            {
+              "name": "BundleSid",
+              "in": "path",
+              "value": "$steps.fetch-source-bundle.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "BundleSid": "$steps.fetch-source-bundle.outputs.sid",
+              "TargetAccountSid": "$inputs.TargetAccountSid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "bundle_sid": "$response.body#/bundle_sid"
+          }
+        },
+        {
+          "stepId": "fetch-cloned-bundle-details",
+          "description": "Fetches the details of the newly cloned bundle to verify its creation and status.",
+          "operationId": "FetchBundle",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.clone-bundle-to-account.outputs.bundle_sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status",
+            "friendly_name": "$response.body#/friendly_name"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.fetch-source-bundle.outputs.sid",
+        "friendly_name": "$steps.fetch-cloned-bundle-details.outputs.friendly_name",
+        "bundle_sid": "$steps.clone-bundle-to-account.outputs.bundle_sid",
+        "status": "$steps.fetch-cloned-bundle-details.outputs.status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "copy-regulatory-bundle-within-same-account",
+      "summary": "Creates a new regulatory bundle by copying an existing one within the same Twilio account, allowing for quick setup of similar compliance requirements without recreating items.",
+      "description": "Creates a new regulatory bundle by copying an existing one within the same Twilio account, allowing for quick setup of similar compliance requirements without recreating items.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Sid": {
+            "type": "string"
+          },
+          "BundleSid": {
+            "type": "string"
+          },
+          "FriendlyName": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "fetch-source-bundle",
+          "description": "Retrieves the details of the source bundle to be copied.",
+          "operationId": "FetchBundle",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$inputs.Sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "friendly_name": "$response.body#/friendly_name"
+          }
+        },
+        {
+          "stepId": "copy-bundle-within-account",
+          "description": "Creates a new copy of the bundle within the same account, including all bundle items.",
+          "operationId": "CreateBundleCopy",
+          "parameters": [
+            {
+              "name": "BundleSid",
+              "in": "path",
+              "value": "$steps.fetch-source-bundle.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "BundleSid": "$steps.fetch-source-bundle.outputs.sid",
+              "FriendlyName": "$inputs.FriendlyName"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        },
+        {
+          "stepId": "fetch-copied-bundle-details",
+          "description": "Fetches the details of the newly copied bundle to verify its creation and status.",
+          "operationId": "FetchBundle",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.copy-bundle-within-account.outputs.sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status",
+            "friendly_name": "$response.body#/friendly_name"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.copy-bundle-within-account.outputs.sid",
+        "friendly_name": "$steps.fetch-copied-bundle-details.outputs.friendly_name",
+        "status": "$steps.fetch-copied-bundle-details.outputs.status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

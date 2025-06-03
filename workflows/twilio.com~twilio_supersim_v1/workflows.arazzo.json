@@ -1,0 +1,763 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/twilio.com/twilio_supersim_v1/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "provision-and-activate-super-sim",
+      "summary": "This workflow allows a user to register a new physical Super SIM to their account and then activate it by assigning it to a Fleet. This is a core process for bringing new IoT devices online.",
+      "description": "This workflow allows a user to register a new physical Super SIM to their account and then activate it by assigning it to a Fleet. This is a core process for bringing new IoT devices online.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Iccid": {
+            "type": "string"
+          },
+          "RegistrationCode": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "Status": {
+            "type": "string"
+          },
+          "Fleet": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "register-sim",
+          "description": "Registers a new Super SIM to the Twilio account using its ICCID and a registration code.",
+          "operationId": "CreateSim",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Iccid": "$inputs.Iccid",
+              "RegistrationCode": "$inputs.RegistrationCode"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "iccid": "$response.body#/iccid",
+            "status": "$response.body#/status"
+          }
+        },
+        {
+          "stepId": "assign-and-activate-sim",
+          "description": "Updates the registered Super SIM's status to 'active' and assigns it to a specific Fleet, enabling it for data and SMS communication.",
+          "operationId": "UpdateSim",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.register-sim.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Sid": "$steps.register-sim.outputs.sid",
+              "Status": "$inputs.Status",
+              "Fleet": "$inputs.Fleet"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "status": "$response.body#/status",
+            "fleet_sid": "$response.body#/fleet_sid"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.assign-and-activate-sim.outputs.sid",
+        "iccid": "$steps.register-sim.outputs.iccid",
+        "status": "$steps.assign-and-activate-sim.outputs.status",
+        "fleet_sid": "$steps.assign-and-activate-sim.outputs.fleet_sid"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "order-and-retrieve-e-sim-activation-code",
+      "summary": "This workflow enables ordering a new eSIM profile and then retrieving its activation code, which is essential for provisioning an eSIM-capable device.",
+      "description": "This workflow enables ordering a new eSIM profile and then retrieving its activation code, which is essential for provisioning an eSIM-capable device.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "CallbackUrl": {
+            "type": "string"
+          },
+          "CallbackMethod": {
+            "type": "string"
+          },
+          "GenerateMatchingId": {
+            "type": "string"
+          },
+          "Eid": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "order-esim-profile",
+          "description": "Orders a new eSIM Profile, optionally generating a matching ID for activation.",
+          "operationId": "CreateEsimProfile",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "CallbackUrl": "$inputs.CallbackUrl",
+              "CallbackMethod": "$inputs.CallbackMethod",
+              "GenerateMatchingId": "$inputs.GenerateMatchingId",
+              "Eid": "$inputs.Eid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "status": "$response.body#/status",
+            "activation_code": "$response.body#/activation_code",
+            "matching_id": "$response.body#/matching_id"
+          }
+        },
+        {
+          "stepId": "fetch-esim-profile-details",
+          "description": "Fetches the details of the ordered eSIM Profile, including its activation code, once it becomes available.",
+          "operationId": "FetchEsimProfile",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.order-esim-profile.outputs.sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "status": "$response.body#/status",
+            "activation_code": "$response.body#/activation_code",
+            "matching_id": "$response.body#/matching_id"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.fetch-esim-profile-details.outputs.sid",
+        "status": "$steps.fetch-esim-profile-details.outputs.status",
+        "activation_code": "$steps.fetch-esim-profile-details.outputs.activation_code",
+        "matching_id": "$steps.fetch-esim-profile-details.outputs.matching_id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-fleet-network-access",
+      "summary": "This workflow allows for the creation of a custom network access profile, adding specific networks to it, and then associating this profile with a Super SIM Fleet to control its connectivity.",
+      "description": "This workflow allows for the creation of a custom network access profile, adding specific networks to it, and then associating this profile with a Super SIM Fleet to control its connectivity.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "UniqueName": {
+            "type": "string"
+          },
+          "Networks": {
+            "type": "string"
+          },
+          "NetworkAccessProfileSid": {
+            "type": "string"
+          },
+          "Network": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-network-access-profile",
+          "description": "Creates a new Network Access Profile to define which cellular networks Super SIMs can connect to.",
+          "operationId": "CreateNetworkAccessProfile",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "UniqueName": "$inputs.UniqueName",
+              "Networks": "$inputs.Networks"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "unique_name": "$response.body#/unique_name"
+          }
+        },
+        {
+          "stepId": "add-network-to-profile",
+          "description": "Adds a specific network (identified by its SID) to the newly created Network Access Profile.",
+          "operationId": "CreateNetworkAccessProfileNetwork",
+          "parameters": [
+            {
+              "name": "NetworkAccessProfileSid",
+              "in": "path",
+              "value": "$steps.create-network-access-profile.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "NetworkAccessProfileSid": "$steps.create-network-access-profile.outputs.sid",
+              "Network": "$inputs.Network"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "network_access_profile_sid": "$response.body#/network_access_profile_sid"
+          }
+        },
+        {
+          "stepId": "create-fleet-with-network-profile",
+          "description": "Creates a new Fleet and associates it with the configured Network Access Profile, ensuring all SIMs in this fleet adhere to the defined network access rules.",
+          "operationId": "CreateFleet",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "NetworkAccessProfile": "$steps.create-network-access-profile.outputs.sid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "unique_name": "$response.body#/unique_name",
+            "network_access_profile_sid": "$response.body#/network_access_profile_sid"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.create-fleet-with-network-profile.outputs.sid",
+        "unique_name": "$steps.create-fleet-with-network-profile.outputs.unique_name",
+        "network_access_profile_sid": "$steps.create-fleet-with-network-profile.outputs.network_access_profile_sid"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "send-and-monitor-sms-command-to-sim",
+      "summary": "This workflow enables sending an SMS command to a Super SIM and then monitoring its delivery status. Useful for remote device control or configuration.",
+      "description": "This workflow enables sending an SMS command to a Super SIM and then monitoring its delivery status. Useful for remote device control or configuration.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Sim": {
+            "type": "string"
+          },
+          "Payload": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "send-sms-command",
+          "description": "Sends an SMS command with a specified payload to a target Super SIM.",
+          "operationId": "CreateSmsCommand",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Sim": "$inputs.Sim",
+              "Payload": "$inputs.Payload"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "sim_sid": "$response.body#/sim_sid",
+            "status": "$response.body#/status"
+          }
+        },
+        {
+          "stepId": "monitor-sms-command-status",
+          "description": "Retrieves the current status of the sent SMS command (e.g., queued, sent, delivered, failed).",
+          "operationId": "FetchSmsCommand",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.send-sms-command.outputs.sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "status": "$response.body#/status",
+            "direction": "$response.body#/direction"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.monitor-sms-command-status.outputs.sid",
+        "sim_sid": "$steps.send-sms-command.outputs.sim_sid",
+        "status": "$steps.monitor-sms-command-status.outputs.status",
+        "direction": "$steps.monitor-sms-command-status.outputs.direction"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "send-and-monitor-ip-command-to-sim",
+      "summary": "This workflow facilitates sending an IP command to a Super SIM and subsequently checking its delivery status. Ideal for direct IP-based communication with IoT devices.",
+      "description": "This workflow facilitates sending an IP command to a Super SIM and subsequently checking its delivery status. Ideal for direct IP-based communication with IoT devices.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Sim": {
+            "type": "string"
+          },
+          "Payload": {
+            "type": "string"
+          },
+          "DevicePort": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "send-ip-command",
+          "description": "Sends an IP command with a specified payload and device port to a target Super SIM.",
+          "operationId": "CreateIpCommand",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Sim": "$inputs.Sim",
+              "Payload": "$inputs.Payload",
+              "DevicePort": "$inputs.DevicePort"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "sim_sid": "$response.body#/sim_sid",
+            "status": "$response.body#/status"
+          }
+        },
+        {
+          "stepId": "monitor-ip-command-status",
+          "description": "Retrieves the current status of the sent IP command (e.g., queued, sent, received, failed).",
+          "operationId": "FetchIpCommand",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.send-ip-command.outputs.sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "status": "$response.body#/status",
+            "direction": "$response.body#/direction"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.monitor-ip-command-status.outputs.sid",
+        "sim_sid": "$steps.send-ip-command.outputs.sim_sid",
+        "status": "$steps.monitor-ip-command-status.outputs.status",
+        "direction": "$steps.monitor-ip-command-status.outputs.direction"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "analyze-sim-usage-and-billing",
+      "summary": "This workflow provides a comprehensive view of a specific Super SIM's usage and billing periods, allowing for detailed cost and data consumption analysis.",
+      "description": "This workflow provides a comprehensive view of a specific Super SIM's usage and billing periods, allowing for detailed cost and data consumption analysis.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Sim": {
+            "type": "string"
+          },
+          "Fleet": {
+            "type": "string"
+          },
+          "Network": {
+            "type": "string"
+          },
+          "IsoCountry": {
+            "type": "string"
+          },
+          "Group": {
+            "type": "string"
+          },
+          "Granularity": {
+            "type": "string"
+          },
+          "StartTime": {
+            "type": "string"
+          },
+          "EndTime": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "SimSid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-sim-usage-records",
+          "description": "Retrieves detailed usage records for a specific Super SIM, allowing filtering by time granularity.",
+          "operationId": "ListUsageRecord",
+          "parameters": [
+            {
+              "name": "Sim",
+              "in": "query",
+              "value": "$inputs.Sim"
+            },
+            {
+              "name": "Fleet",
+              "in": "query",
+              "value": "$inputs.Fleet"
+            },
+            {
+              "name": "Network",
+              "in": "query",
+              "value": "$inputs.Network"
+            },
+            {
+              "name": "IsoCountry",
+              "in": "query",
+              "value": "$inputs.IsoCountry"
+            },
+            {
+              "name": "Group",
+              "in": "query",
+              "value": "$inputs.Group"
+            },
+            {
+              "name": "Granularity",
+              "in": "query",
+              "value": "$inputs.Granularity"
+            },
+            {
+              "name": "StartTime",
+              "in": "query",
+              "value": "$inputs.StartTime"
+            },
+            {
+              "name": "EndTime",
+              "in": "query",
+              "value": "$inputs.EndTime"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "usage_records": "$response.body#/usage_records"
+          }
+        },
+        {
+          "stepId": "list-sim-billing-periods",
+          "description": "Retrieves the billing periods associated with the Super SIM, showing active and ready periods.",
+          "operationId": "ListBillingPeriod",
+          "parameters": [
+            {
+              "name": "SimSid",
+              "in": "path",
+              "value": "$inputs.SimSid"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "billing_periods": "$response.body#/billing_periods"
+          }
+        },
+        {
+          "stepId": "list-sim-ip-addresses",
+          "description": "Retrieves the IP addresses assigned to the Super SIM, useful for network diagnostics.",
+          "operationId": "ListSimIpAddress",
+          "parameters": [
+            {
+              "name": "SimSid",
+              "in": "path",
+              "value": "$inputs.SimSid"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ip_addresses": "$response.body#/ip_addresses"
+          }
+        }
+      ],
+      "outputs": {
+        "usage_records": "$steps.list-sim-usage-records.outputs.usage_records",
+        "billing_periods": "$steps.list-sim-billing-periods.outputs.billing_periods",
+        "ip_addresses": "$steps.list-sim-ip-addresses.outputs.ip_addresses"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

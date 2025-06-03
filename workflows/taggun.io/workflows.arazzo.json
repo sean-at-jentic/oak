@@ -1,0 +1,351 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/taggun.io/main/1.15.510/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "transcribe-receipt-and-provide-feedback",
+      "summary": "This workflow allows users to transcribe a receipt image to extract detailed information and then provide feedback on the accuracy of the transcription, which helps improve the OCR model over time.",
+      "description": "This workflow allows users to transcribe a receipt image to extract detailed information and then provide feedback on the accuracy of the transcription, which helps improve the OCR model over time.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "apikey": {
+            "type": "string"
+          },
+          "extractLineItems": {
+            "type": "string"
+          },
+          "extractTime": {
+            "type": "string"
+          },
+          "ignoreMerchantName": {
+            "type": "string"
+          },
+          "incognito": {
+            "type": "string"
+          },
+          "ipAddress": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "near": {
+            "type": "string"
+          },
+          "referenceId": {
+            "type": "string"
+          },
+          "refresh": {
+            "type": "string"
+          },
+          "subAccountId": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "transcribe-receipt-verbose",
+          "description": "Uploads a receipt image file and transcribes it, returning a detailed result including a reference ID for potential feedback.",
+          "operationId": "postApiReceiptV1VerboseFile",
+          "parameters": [
+            {
+              "name": "apikey",
+              "in": "header",
+              "value": "$inputs.apikey"
+            }
+          ],
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "extractLineItems": "$inputs.extractLineItems",
+              "extractTime": "$inputs.extractTime",
+              "ignoreMerchantName": "$inputs.ignoreMerchantName",
+              "incognito": "$inputs.incognito",
+              "ipAddress": "$inputs.ipAddress",
+              "language": "$inputs.language",
+              "near": "$inputs.near",
+              "referenceId": "$inputs.referenceId",
+              "refresh": "$inputs.refresh",
+              "subAccountId": "$inputs.subAccountId",
+              "userId": "$inputs.userId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "referenceId": "$response.body#/referenceId",
+            "trackingId": "$response.body#/trackingId",
+            "confidenceLevel": "$response.body#/confidenceLevel",
+            "date": "$response.body#/date",
+            "merchantName": "$response.body#/merchantName",
+            "totalAmount": "$response.body#/totalAmount",
+            "taxAmount": "$response.body#/taxAmount"
+          }
+        },
+        {
+          "stepId": "submit-receipt-feedback",
+          "description": "Submits manually verified receipt data for feedback and training purposes, linked to a previously transcribed receipt via its reference ID.",
+          "operationId": "postApiAccountV1Feedback",
+          "parameters": [
+            {
+              "name": "apikey",
+              "in": "header",
+              "value": "$inputs.apikey"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "referenceId": "$steps.transcribe-receipt-verbose.outputs.referenceId",
+              "date": "$steps.transcribe-receipt-verbose.outputs.date",
+              "merchantName": "$steps.transcribe-receipt-verbose.outputs.merchantName",
+              "totalAmount": "$steps.transcribe-receipt-verbose.outputs.totalAmount",
+              "taxAmount": "$steps.transcribe-receipt-verbose.outputs.taxAmount"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "result": "$response.body#/result"
+          }
+        }
+      ],
+      "outputs": {
+        "referenceId": "$steps.transcribe-receipt-verbose.outputs.referenceId",
+        "trackingId": "$steps.transcribe-receipt-verbose.outputs.trackingId",
+        "confidenceLevel": "$steps.transcribe-receipt-verbose.outputs.confidenceLevel",
+        "date": "$steps.transcribe-receipt-verbose.outputs.date",
+        "merchantName": "$steps.transcribe-receipt-verbose.outputs.merchantName",
+        "totalAmount": "$steps.transcribe-receipt-verbose.outputs.totalAmount",
+        "taxAmount": "$steps.transcribe-receipt-verbose.outputs.taxAmount",
+        "result": "$steps.submit-receipt-feedback.outputs.result"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "configure-and-apply-receipt-validation-campaign",
+      "summary": "This workflow enables users to define custom validation rules for receipts by creating campaign settings, retrieve these settings for review, and then apply them to automatically validate a scanned receipt.",
+      "description": "This workflow enables users to define custom validation rules for receipts by creating campaign settings, retrieve these settings for review, and then apply them to automatically validate a scanned receipt.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "apikey": {
+            "type": "string"
+          },
+          "campaignId": {
+            "type": "string"
+          },
+          "balanceOwing": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          },
+          "fraudDetection": {
+            "type": "string"
+          },
+          "merchantNames": {
+            "type": "string"
+          },
+          "productCodes": {
+            "type": "string"
+          },
+          "productLineItems": {
+            "type": "string"
+          },
+          "smartValidate": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-validation-campaign-settings",
+          "description": "Creates a new set of validation campaign settings for a specified campaign ID, defining rules for receipt validation.",
+          "operationId": "postApiValidationV1CampaignSettingsCreateCampaignid",
+          "parameters": [
+            {
+              "name": "apikey",
+              "in": "header",
+              "value": "$inputs.apikey"
+            },
+            {
+              "name": "campaignId",
+              "in": "path",
+              "value": "$inputs.campaignId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "balanceOwing": "$inputs.balanceOwing",
+              "date": "$inputs.date",
+              "fraudDetection": "$inputs.fraudDetection",
+              "merchantNames": "$inputs.merchantNames",
+              "productCodes": "$inputs.productCodes",
+              "productLineItems": "$inputs.productLineItems",
+              "smartValidate": "$inputs.smartValidate"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "get-validation-campaign-settings",
+          "description": "Retrieves the detailed settings for a specific validation campaign, allowing users to review the defined rules.",
+          "operationId": "getApiValidationV1CampaignSettingsCampaignid",
+          "parameters": [
+            {
+              "name": "apikey",
+              "in": "header",
+              "value": "$inputs.apikey"
+            },
+            {
+              "name": "campaignId",
+              "in": "path",
+              "value": "$steps.create-validation-campaign-settings.outputs.campaignId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "validate-receipt-with-campaign",
+          "description": "Uploads a receipt image file and validates it against the predefined rules of a specific validation campaign.",
+          "operationId": "postApiValidationV1CampaignReceiptvalidationFile",
+          "parameters": [
+            {
+              "name": "apikey",
+              "in": "header",
+              "value": "$inputs.apikey"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "validation_result": "$response.body#/validation_result"
+          }
+        }
+      ],
+      "outputs": {
+        "validation_result": "$steps.validate-receipt-with-campaign.outputs.validation_result"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

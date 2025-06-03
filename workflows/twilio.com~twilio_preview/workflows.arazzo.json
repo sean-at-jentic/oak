@@ -1,0 +1,1423 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/twilio.com/twilio_preview/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "onboard-a-hosted-phone-number",
+      "summary": "Initiate the process of hosting an existing phone number on Twilio's platform, including creating the hosted number order, generating and managing the authorization document, and completing the ownership verification.",
+      "description": "Initiate the process of hosting an existing phone number on Twilio's platform, including creating the hosted number order, generating and managing the authorization document, and completing the ownership verification.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "PhoneNumber": {
+            "type": "string"
+          },
+          "SmsCapability": {
+            "type": "string"
+          },
+          "AddressSid": {
+            "type": "string"
+          },
+          "Email": {
+            "type": "string"
+          },
+          "ContactTitle": {
+            "type": "string"
+          },
+          "ContactPhoneNumber": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "Status": {
+            "type": "string"
+          },
+          "Extension": {
+            "type": "string"
+          },
+          "CallDelay": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-hosted-number-order",
+          "description": "Initiates the order to host a phone number, specifying capabilities and the preferred verification type (phone-call or phone-bill).",
+          "operationId": "CreateHostedNumbersHostedNumberOrder",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "PhoneNumber": "$inputs.PhoneNumber",
+              "SmsCapability": "$inputs.SmsCapability"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "signing_document_sid": "$response.body#/signing_document_sid",
+            "status": "$response.body#/status",
+            "verification_code": "$response.body#/verification_code"
+          }
+        },
+        {
+          "stepId": "create-authorization-document",
+          "description": "Creates the authorization document (LOA) required for hosting, linking it to the newly created hosted number order. This document will be sent for signing.",
+          "operationId": "CreateHostedNumbersAuthorizationDocument",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "HostedNumberOrderSids": "$steps.create-hosted-number-order.outputs.sid",
+              "AddressSid": "$inputs.AddressSid",
+              "Email": "$inputs.Email",
+              "ContactTitle": "$inputs.ContactTitle",
+              "ContactPhoneNumber": "$inputs.ContactPhoneNumber"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "status": "$response.body#/status"
+          }
+        },
+        {
+          "stepId": "update-authorization-document-status",
+          "description": "Updates the status of the authorization document, typically after it has been sent for signing or if its status changes (e.g., to 'signing').",
+          "operationId": "UpdateHostedNumbersAuthorizationDocument",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.create-authorization-document.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Sid": "$steps.create-authorization-document.outputs.sid",
+              "Status": "$inputs.Status"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status"
+          }
+        },
+        {
+          "stepId": "complete-hosted-number-verification",
+          "description": "Completes the ownership verification for the hosted number, typically by providing a verification code received via a phone call (if 'phone-call' verification type was chosen).",
+          "operationId": "UpdateHostedNumbersHostedNumberOrder",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.create-hosted-number-order.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Sid": "$steps.create-hosted-number-order.outputs.sid",
+              "VerificationCode": "$steps.create-hosted-number-order.outputs.verification_code",
+              "Extension": "$inputs.Extension",
+              "CallDelay": "$inputs.CallDelay"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status",
+            "verification_attempts": "$response.body#/verification_attempts"
+          }
+        },
+        {
+          "stepId": "monitor-hosted-number-order-progress",
+          "description": "Periodically checks the status of the hosted number order as it moves through carrier processing to completion, providing updates on its state and any failure reasons.",
+          "operationId": "FetchHostedNumbersHostedNumberOrder",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.create-hosted-number-order.outputs.sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status",
+            "failure_reason": "$response.body#/failure_reason",
+            "incoming_phone_number_sid": "$response.body#/incoming_phone_number_sid"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.create-authorization-document.outputs.sid",
+        "signing_document_sid": "$steps.create-hosted-number-order.outputs.signing_document_sid",
+        "status": "$steps.monitor-hosted-number-order-progress.outputs.status",
+        "verification_code": "$steps.create-hosted-number-order.outputs.verification_code",
+        "verification_attempts": "$steps.complete-hosted-number-verification.outputs.verification_attempts",
+        "failure_reason": "$steps.monitor-hosted-number-order-progress.outputs.failure_reason",
+        "incoming_phone_number_sid": "$steps.monitor-hosted-number-order-progress.outputs.incoming_phone_number_sid"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-authorization-documents",
+      "summary": "Retrieve and update the status of authorization documents (LOAs) related to hosted phone numbers.",
+      "description": "Retrieve and update the status of authorization documents (LOAs) related to hosted phone numbers.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Email": {
+            "type": "string"
+          },
+          "Status": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "HostedNumberOrderSids": {
+            "type": "string"
+          },
+          "AddressSid": {
+            "type": "string"
+          },
+          "CcEmails": {
+            "type": "string"
+          },
+          "ContactTitle": {
+            "type": "string"
+          },
+          "ContactPhoneNumber": {
+            "type": "string"
+          },
+          "SigningDocumentSid": {
+            "type": "string"
+          },
+          "PhoneNumber": {
+            "type": "string"
+          },
+          "IncomingPhoneNumberSid": {
+            "type": "string"
+          },
+          "FriendlyName": {
+            "type": "string"
+          },
+          "UniqueName": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-authorization-documents",
+          "description": "Retrieves a list of all authorization documents belonging to the account, with optional filtering by email or status.",
+          "operationId": "ListHostedNumbersAuthorizationDocument",
+          "parameters": [
+            {
+              "name": "Email",
+              "in": "query",
+              "value": "$inputs.Email"
+            },
+            {
+              "name": "Status",
+              "in": "query",
+              "value": "$inputs.Status"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "items": "$response.body#/items"
+          }
+        },
+        {
+          "stepId": "fetch-authorization-document-details",
+          "description": "Fetches the detailed information for a specific authorization document using its unique SID.",
+          "operationId": "FetchHostedNumbersAuthorizationDocument",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$inputs.Sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "status": "$response.body#/status",
+            "email": "$response.body#/email",
+            "cc_emails": "$response.body#/cc_emails"
+          }
+        },
+        {
+          "stepId": "update-authorization-document",
+          "description": "Updates properties of an authorization document, such as its status (e.g., to 'signing'), associated hosted number orders, or contact information.",
+          "operationId": "UpdateHostedNumbersAuthorizationDocument",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$inputs.Sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "HostedNumberOrderSids": "$inputs.HostedNumberOrderSids",
+              "AddressSid": "$inputs.AddressSid",
+              "Email": "$inputs.Email",
+              "CcEmails": "$inputs.CcEmails",
+              "Status": "$inputs.Status",
+              "ContactTitle": "$inputs.ContactTitle",
+              "ContactPhoneNumber": "$inputs.ContactPhoneNumber"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "status": "$response.body#/status"
+          }
+        },
+        {
+          "stepId": "list-dependent-hosted-number-orders",
+          "description": "Retrieves a list of hosted number orders that are associated with a specific authorization document.",
+          "operationId": "ListHostedNumbersDependentHostedNumberOrder",
+          "parameters": [
+            {
+              "name": "SigningDocumentSid",
+              "in": "path",
+              "value": "$inputs.SigningDocumentSid"
+            },
+            {
+              "name": "Status",
+              "in": "query",
+              "value": "$inputs.Status"
+            },
+            {
+              "name": "PhoneNumber",
+              "in": "query",
+              "value": "$inputs.PhoneNumber"
+            },
+            {
+              "name": "IncomingPhoneNumberSid",
+              "in": "query",
+              "value": "$inputs.IncomingPhoneNumberSid"
+            },
+            {
+              "name": "FriendlyName",
+              "in": "query",
+              "value": "$inputs.FriendlyName"
+            },
+            {
+              "name": "UniqueName",
+              "in": "query",
+              "value": "$inputs.UniqueName"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "items": "$response.body#/items"
+          }
+        }
+      ],
+      "outputs": {
+        "items": "$steps.list-dependent-hosted-number-orders.outputs.items",
+        "sid": "$steps.update-authorization-document.outputs.sid",
+        "status": "$steps.update-authorization-document.outputs.status",
+        "email": "$steps.fetch-authorization-document-details.outputs.email",
+        "cc_emails": "$steps.fetch-authorization-document-details.outputs.cc_emails"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "discover-and-install-marketplace-add-on",
+      "summary": "Browse available add-ons in the Twilio Marketplace, retrieve their details including configuration requirements, and then install a selected add-on on the account.",
+      "description": "Browse available add-ons in the Twilio Marketplace, retrieve their details including configuration requirements, and then install a selected add-on on the account.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "AvailableAddOnSid": {
+            "type": "string"
+          },
+          "AcceptTermsOfService": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-available-add-ons",
+          "description": "Retrieves a list of all add-ons currently available for installation in the Twilio Marketplace.",
+          "operationId": "ListMarketplaceAvailableAddOn",
+          "parameters": [
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "available_add_ons": "$response.body#/available_add_ons"
+          }
+        },
+        {
+          "stepId": "fetch-available-add-on-details",
+          "description": "Fetches detailed information about a specific available add-on, including its description, pricing type, and the JSON schema for its configuration.",
+          "operationId": "FetchMarketplaceAvailableAddOn",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$inputs.Sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "friendly_name": "$response.body#/friendly_name",
+            "description": "$response.body#/description",
+            "pricing_type": "$response.body#/pricing_type",
+            "configuration_schema": "$response.body#/configuration_schema"
+          }
+        },
+        {
+          "stepId": "list-available-add-on-extensions",
+          "description": "Retrieves a list of extensions (features) provided by a specific available add-on.",
+          "operationId": "ListMarketplaceAvailableAddOnExtension",
+          "parameters": [
+            {
+              "name": "AvailableAddOnSid",
+              "in": "path",
+              "value": "$inputs.AvailableAddOnSid"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "extensions": "$response.body#/extensions"
+          }
+        },
+        {
+          "stepId": "install-add-on",
+          "description": "Installs a chosen add-on onto the Twilio account, requiring acceptance of terms of service and providing any necessary configuration.",
+          "operationId": "CreateMarketplaceInstalledAddOn",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "AvailableAddOnSid": "$inputs.AvailableAddOnSid",
+              "AcceptTermsOfService": "$inputs.AcceptTermsOfService"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "friendly_name": "$response.body#/friendly_name",
+            "configuration": "$response.body#/configuration"
+          }
+        }
+      ],
+      "outputs": {
+        "available_add_ons": "$steps.list-available-add-ons.outputs.available_add_ons",
+        "sid": "$steps.install-add-on.outputs.sid",
+        "friendly_name": "$steps.install-add-on.outputs.friendly_name",
+        "description": "$steps.fetch-available-add-on-details.outputs.description",
+        "pricing_type": "$steps.fetch-available-add-on-details.outputs.pricing_type",
+        "configuration_schema": "$steps.fetch-available-add-on-details.outputs.configuration_schema",
+        "extensions": "$steps.list-available-add-on-extensions.outputs.extensions",
+        "configuration": "$steps.install-add-on.outputs.configuration"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "send-and-track-wireless-commands",
+      "summary": "Send a command to a wireless device or SIM and then track the status of that command.",
+      "description": "Send a command to a wireless device or SIM and then track the status of that command.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Command": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "Device": {
+            "type": "string"
+          },
+          "Sim": {
+            "type": "string"
+          },
+          "Status": {
+            "type": "string"
+          },
+          "Direction": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-wireless-command",
+          "description": "Sends a command to a specified wireless device or SIM, with options for callback URLs and command mode.",
+          "operationId": "CreateWirelessCommand",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Command": "$inputs.Command"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "status": "$response.body#/status"
+          }
+        },
+        {
+          "stepId": "fetch-wireless-command-status",
+          "description": "Retrieves the current status and details of a specific wireless command that was previously sent.",
+          "operationId": "FetchWirelessCommand",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$inputs.Sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "status": "$response.body#/status",
+            "command": "$response.body#/command",
+            "direction": "$response.body#/direction"
+          }
+        },
+        {
+          "stepId": "list-wireless-commands",
+          "description": "Retrieves a list of all wireless commands, allowing for filtering by device, SIM, status, or direction.",
+          "operationId": "ListWirelessCommand",
+          "parameters": [
+            {
+              "name": "Device",
+              "in": "query",
+              "value": "$inputs.Device"
+            },
+            {
+              "name": "Sim",
+              "in": "query",
+              "value": "$inputs.Sim"
+            },
+            {
+              "name": "Status",
+              "in": "query",
+              "value": "$inputs.Status"
+            },
+            {
+              "name": "Direction",
+              "in": "query",
+              "value": "$inputs.Direction"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "commands": "$response.body#/commands"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.fetch-wireless-command-status.outputs.sid",
+        "status": "$steps.fetch-wireless-command-status.outputs.status",
+        "command": "$steps.fetch-wireless-command-status.outputs.command",
+        "direction": "$steps.fetch-wireless-command-status.outputs.direction",
+        "commands": "$steps.list-wireless-commands.outputs.commands"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-installed-add-on-configuration",
+      "summary": "View and update the configuration and properties of an already installed Twilio Marketplace Add-on.",
+      "description": "View and update the configuration and properties of an already installed Twilio Marketplace Add-on.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "Configuration": {
+            "type": "string"
+          },
+          "UniqueName": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-installed-add-ons",
+          "description": "Retrieves a list of all add-ons currently installed on the account.",
+          "operationId": "ListMarketplaceInstalledAddOn",
+          "parameters": [
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "installed_add_ons": "$response.body#/installed_add_ons"
+          }
+        },
+        {
+          "stepId": "fetch-installed-add-on-details",
+          "description": "Fetches the detailed information for a specific installed add-on, including its current configuration.",
+          "operationId": "FetchMarketplaceInstalledAddOn",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$inputs.Sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "friendly_name": "$response.body#/friendly_name",
+            "description": "$response.body#/description",
+            "configuration": "$response.body#/configuration",
+            "unique_name": "$response.body#/unique_name"
+          }
+        },
+        {
+          "stepId": "update-installed-add-on-configuration",
+          "description": "Modifies the configuration or unique name of an installed add-on.",
+          "operationId": "UpdateMarketplaceInstalledAddOn",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$inputs.Sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Configuration": "$inputs.Configuration",
+              "UniqueName": "$inputs.UniqueName"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "configuration": "$response.body#/configuration",
+            "unique_name": "$response.body#/unique_name"
+          }
+        }
+      ],
+      "outputs": {
+        "installed_add_ons": "$steps.list-installed-add-ons.outputs.installed_add_ons",
+        "sid": "$steps.fetch-installed-add-on-details.outputs.sid",
+        "friendly_name": "$steps.fetch-installed-add-on-details.outputs.friendly_name",
+        "description": "$steps.fetch-installed-add-on-details.outputs.description",
+        "configuration": "$steps.update-installed-add-on-configuration.outputs.configuration",
+        "unique_name": "$steps.update-installed-add-on-configuration.outputs.unique_name"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "monitor-wireless-sim-usage",
+      "summary": "Retrieve current usage data for a specific wireless SIM over a specified period.",
+      "description": "Retrieve current usage data for a specific wireless SIM over a specified period.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Status": {
+            "type": "string"
+          },
+          "Iccid": {
+            "type": "string"
+          },
+          "RatePlan": {
+            "type": "string"
+          },
+          "EId": {
+            "type": "string"
+          },
+          "SimRegistrationCode": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "SimSid": {
+            "type": "string"
+          },
+          "End": {
+            "type": "string"
+          },
+          "Start": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-wireless-sims",
+          "description": "Retrieves a list of all wireless SIMs associated with the account, allowing for filtering by status, ICCID, or rate plan.",
+          "operationId": "ListWirelessSim",
+          "parameters": [
+            {
+              "name": "Status",
+              "in": "query",
+              "value": "$inputs.Status"
+            },
+            {
+              "name": "Iccid",
+              "in": "query",
+              "value": "$inputs.Iccid"
+            },
+            {
+              "name": "RatePlan",
+              "in": "query",
+              "value": "$inputs.RatePlan"
+            },
+            {
+              "name": "EId",
+              "in": "query",
+              "value": "$inputs.EId"
+            },
+            {
+              "name": "SimRegistrationCode",
+              "in": "query",
+              "value": "$inputs.SimRegistrationCode"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sims": "$response.body#/sims"
+          }
+        },
+        {
+          "stepId": "fetch-wireless-sim-usage",
+          "description": "Fetches the data and command usage details for a specific wireless SIM, optionally within a start and end date.",
+          "operationId": "FetchWirelessUsage",
+          "parameters": [
+            {
+              "name": "SimSid",
+              "in": "path",
+              "value": "$inputs.SimSid"
+            },
+            {
+              "name": "End",
+              "in": "query",
+              "value": "$inputs.End"
+            },
+            {
+              "name": "Start",
+              "in": "query",
+              "value": "$inputs.Start"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "data_usage": "$response.body#/data_usage",
+            "commands_usage": "$response.body#/commands_usage",
+            "period": "$response.body#/period"
+          }
+        }
+      ],
+      "outputs": {
+        "sims": "$steps.list-wireless-sims.outputs.sims",
+        "data_usage": "$steps.fetch-wireless-sim-usage.outputs.data_usage",
+        "commands_usage": "$steps.fetch-wireless-sim-usage.outputs.commands_usage",
+        "period": "$steps.fetch-wireless-sim-usage.outputs.period"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "assign-rate-plan-to-wireless-sim",
+      "summary": "Assign or change the rate plan for a specific wireless SIM.",
+      "description": "Assign or change the rate plan for a specific wireless SIM.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Status": {
+            "type": "string"
+          },
+          "Iccid": {
+            "type": "string"
+          },
+          "RatePlan": {
+            "type": "string"
+          },
+          "EId": {
+            "type": "string"
+          },
+          "SimRegistrationCode": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-wireless-sims-for-rate-plan",
+          "description": "Retrieves a list of all wireless SIMs to select one for rate plan assignment.",
+          "operationId": "ListWirelessSim",
+          "parameters": [
+            {
+              "name": "Status",
+              "in": "query",
+              "value": "$inputs.Status"
+            },
+            {
+              "name": "Iccid",
+              "in": "query",
+              "value": "$inputs.Iccid"
+            },
+            {
+              "name": "RatePlan",
+              "in": "query",
+              "value": "$inputs.RatePlan"
+            },
+            {
+              "name": "EId",
+              "in": "query",
+              "value": "$inputs.EId"
+            },
+            {
+              "name": "SimRegistrationCode",
+              "in": "query",
+              "value": "$inputs.SimRegistrationCode"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sims": "$response.body#/sims"
+          }
+        },
+        {
+          "stepId": "list-wireless-rate-plans",
+          "description": "Retrieves a list of all available wireless rate plans to choose from.",
+          "operationId": "ListWirelessRatePlan",
+          "parameters": [
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "rate_plans": "$response.body#/rate_plans"
+          }
+        },
+        {
+          "stepId": "update-wireless-sim-rate-plan",
+          "description": "Updates a specific wireless SIM to assign a new rate plan to it.",
+          "operationId": "UpdateWirelessSim",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$inputs.Sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "RatePlan": "$inputs.RatePlan"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "rate_plan_sid": "$response.body#/rate_plan_sid",
+            "status": "$response.body#/status"
+          }
+        }
+      ],
+      "outputs": {
+        "sims": "$steps.list-wireless-sims-for-rate-plan.outputs.sims",
+        "rate_plans": "$steps.list-wireless-rate-plans.outputs.rate_plans",
+        "rate_plan_sid": "$steps.update-wireless-sim-rate-plan.outputs.rate_plan_sid",
+        "status": "$steps.update-wireless-sim-rate-plan.outputs.status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-installed-add-on-extensions",
+      "summary": "View and enable/disable specific extensions for an installed Twilio Marketplace Add-on.",
+      "description": "View and enable/disable specific extensions for an installed Twilio Marketplace Add-on.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "InstalledAddOnSid": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "Enabled": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-installed-add-ons-for-extension-management",
+          "description": "Retrieves a list of all installed add-ons to select one for extension management.",
+          "operationId": "ListMarketplaceInstalledAddOn",
+          "parameters": [
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "installed_add_ons": "$response.body#/installed_add_ons"
+          }
+        },
+        {
+          "stepId": "list-installed-add-on-extensions",
+          "description": "Retrieves a list of extensions associated with a specific installed add-on.",
+          "operationId": "ListMarketplaceInstalledAddOnExtension",
+          "parameters": [
+            {
+              "name": "InstalledAddOnSid",
+              "in": "path",
+              "value": "$inputs.InstalledAddOnSid"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "extensions": "$response.body#/extensions"
+          }
+        },
+        {
+          "stepId": "update-installed-add-on-extension-status",
+          "description": "Enables or disables a specific extension for an installed add-on.",
+          "operationId": "UpdateMarketplaceInstalledAddOnExtension",
+          "parameters": [
+            {
+              "name": "InstalledAddOnSid",
+              "in": "path",
+              "value": "$inputs.InstalledAddOnSid"
+            },
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$inputs.Sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Enabled": "$inputs.Enabled"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "enabled": "$response.body#/enabled"
+          }
+        }
+      ],
+      "outputs": {
+        "installed_add_ons": "$steps.list-installed-add-ons-for-extension-management.outputs.installed_add_ons",
+        "extensions": "$steps.list-installed-add-on-extensions.outputs.extensions",
+        "enabled": "$steps.update-installed-add-on-extension-status.outputs.enabled"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

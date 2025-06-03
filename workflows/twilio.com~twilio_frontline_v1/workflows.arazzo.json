@@ -1,0 +1,186 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/twilio.com/twilio_frontline_v1/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "manage-frontline-user-profile",
+      "summary": "This workflow allows an API consumer to first retrieve the current details of a specific Twilio Frontline user (e.g., an agent) and then subsequently update their profile attributes such as their friendly name, avatar, availability status, or overall state. This is crucial for administrators to manage agent availability and information, or for agents to update their own profiles.",
+      "description": "This workflow allows an API consumer to first retrieve the current details of a specific Twilio Frontline user (e.g., an agent) and then subsequently update their profile attributes such as their friendly name, avatar, availability status, or overall state. This is crucial for administrators to manage agent availability and information, or for agents to update their own profiles.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Sid": {
+            "type": "string"
+          },
+          "FriendlyName": {
+            "type": "string"
+          },
+          "Avatar": {
+            "type": "string"
+          },
+          "State": {
+            "type": "string"
+          },
+          "IsAvailable": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-frontline-user-details",
+          "description": "Fetches the complete profile information for a Twilio Frontline user, identified by their SID or identity. This provides the current state of the user's attributes.",
+          "operationId": "FetchUser",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$inputs.Sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "identity": "$response.body#/identity",
+            "friendly_name": "$response.body#/friendly_name",
+            "avatar": "$response.body#/avatar",
+            "state": "$response.body#/state",
+            "is_available": "$response.body#/is_available",
+            "url": "$response.body#/url"
+          }
+        },
+        {
+          "stepId": "update-frontline-user-profile",
+          "description": "Updates selected profile attributes of the previously fetched Frontline user. This can include changing their friendly name, avatar URL, availability status, or state (active/deactivated), based on the information retrieved in the prior step.",
+          "operationId": "UpdateUser",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$inputs.Sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "FriendlyName": "$inputs.FriendlyName",
+              "Avatar": "$inputs.Avatar",
+              "State": "$inputs.State",
+              "IsAvailable": "$inputs.IsAvailable"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "identity": "$response.body#/identity",
+            "friendly_name": "$response.body#/friendly_name",
+            "avatar": "$response.body#/avatar",
+            "state": "$response.body#/state",
+            "is_available": "$response.body#/is_available",
+            "url": "$response.body#/url"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.update-frontline-user-profile.outputs.sid",
+        "identity": "$steps.update-frontline-user-profile.outputs.identity",
+        "friendly_name": "$steps.update-frontline-user-profile.outputs.friendly_name",
+        "avatar": "$steps.update-frontline-user-profile.outputs.avatar",
+        "state": "$steps.update-frontline-user-profile.outputs.state",
+        "is_available": "$steps.update-frontline-user-profile.outputs.is_available",
+        "url": "$steps.update-frontline-user-profile.outputs.url"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

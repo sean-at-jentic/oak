@@ -1,0 +1,187 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/twilio.com/twilio_oauth_v1/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "oauth-authorization-code-flow",
+      "summary": "Performs the OAuth 2.0 Authorization Code Grant flow to obtain an access token and refresh token on behalf of a user. This workflow involves initiating an authorization request, which typically redirects the user for consent (an external step), and then exchanging the authorization code received for various tokens.",
+      "description": "Performs the OAuth 2.0 Authorization Code Grant flow to obtain an access token and refresh token on behalf of a user. This workflow involves initiating an authorization request, which typically redirects the user for consent (an external step), and then exchanging the authorization code received for various tokens.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "ResponseType": {
+            "type": "string"
+          },
+          "ClientId": {
+            "type": "string"
+          },
+          "RedirectUri": {
+            "type": "string"
+          },
+          "Scope": {
+            "type": "string"
+          },
+          "State": {
+            "type": "string"
+          },
+          "GrantType": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "initiate-authorization",
+          "description": "Initiates the authorization process by constructing the authorization URL. The user (or client application) is expected to redirect to this URL to grant consent. Upon successful consent, Twilio will redirect back to the provided `RedirectUri` with an authorization `code`.",
+          "operationId": "FetchAuthorize",
+          "parameters": [
+            {
+              "name": "ResponseType",
+              "in": "query",
+              "value": "$inputs.ResponseType"
+            },
+            {
+              "name": "ClientId",
+              "in": "query",
+              "value": "$inputs.ClientId"
+            },
+            {
+              "name": "RedirectUri",
+              "in": "query",
+              "value": "$inputs.RedirectUri"
+            },
+            {
+              "name": "Scope",
+              "in": "query",
+              "value": "$inputs.Scope"
+            },
+            {
+              "name": "State",
+              "in": "query",
+              "value": "$inputs.State"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ]
+        },
+        {
+          "stepId": "exchange-code-for-tokens",
+          "description": "Exchanges the authorization `code` (obtained externally after user consent from the `RedirectUri`) for an `access_token`, `refresh_token`, and optionally an `id_token`. This step completes the authorization code grant flow.",
+          "operationId": "CreateToken",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "GrantType": "$inputs.GrantType",
+              "ClientId": "$inputs.ClientId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "access_token": "$response.body#/access_token",
+            "refresh_token": "$response.body#/refresh_token",
+            "id_token": "$response.body#/id_token",
+            "token_type": "$response.body#/token_type",
+            "expires_in": "$response.body#/expires_in"
+          }
+        }
+      ],
+      "outputs": {
+        "access_token": "$steps.exchange-code-for-tokens.outputs.access_token",
+        "refresh_token": "$steps.exchange-code-for-tokens.outputs.refresh_token",
+        "id_token": "$steps.exchange-code-for-tokens.outputs.id_token",
+        "token_type": "$steps.exchange-code-for-tokens.outputs.token_type",
+        "expires_in": "$steps.exchange-code-for-tokens.outputs.expires_in"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

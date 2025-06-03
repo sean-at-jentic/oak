@@ -1,0 +1,1232 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/twilio.com/twilio_taskrouter_v1/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "task-assignment-and-resolution",
+      "summary": "Demonstrates the lifecycle of a task from its initial creation, through being reserved by a worker, to its final completion by the worker.",
+      "description": "Demonstrates the lifecycle of a task from its initial creation, through being reserved by a worker, to its final completion by the worker.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "WorkspaceSid": {
+            "type": "string"
+          },
+          "WorkflowSid": {
+            "type": "string"
+          },
+          "Attributes": {
+            "type": "string"
+          },
+          "TaskSid": {
+            "type": "string"
+          },
+          "ReservationStatus": {
+            "type": "string"
+          },
+          "WorkerSid": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "If-Match": {
+            "type": "string"
+          },
+          "AssignmentStatus": {
+            "type": "string"
+          },
+          "Reason": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-task",
+          "description": "Creates a new task with specific attributes, which will then be routed by a workflow to an available worker.",
+          "operationId": "CreateTask",
+          "parameters": [
+            {
+              "name": "WorkspaceSid",
+              "in": "path",
+              "value": "$inputs.WorkspaceSid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "WorkflowSid": "$inputs.WorkflowSid",
+              "Attributes": "$inputs.Attributes"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        },
+        {
+          "stepId": "list-task-reservations",
+          "description": "Retrieves the pending reservation(s) for the newly created task, indicating which worker it was assigned to.",
+          "operationId": "ListTaskReservation",
+          "parameters": [
+            {
+              "name": "WorkspaceSid",
+              "in": "path",
+              "value": "$inputs.WorkspaceSid"
+            },
+            {
+              "name": "TaskSid",
+              "in": "path",
+              "value": "$steps.create-task.outputs.sid"
+            },
+            {
+              "name": "ReservationStatus",
+              "in": "query",
+              "value": "$inputs.ReservationStatus"
+            },
+            {
+              "name": "WorkerSid",
+              "in": "query",
+              "value": "$inputs.WorkerSid"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "reservations": "$response.body#/reservations"
+          }
+        },
+        {
+          "stepId": "update-worker-reservation-accept",
+          "description": "The worker accepts the task reservation, moving the task to an 'assigned' state and initiating the work.",
+          "operationId": "UpdateWorkerReservation",
+          "parameters": [
+            {
+              "name": "WorkspaceSid",
+              "in": "path",
+              "value": "$inputs.WorkspaceSid"
+            },
+            {
+              "name": "WorkerSid",
+              "in": "path",
+              "value": "$steps.list-task-reservations.outputs.reservations.worker_sid"
+            },
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.list-task-reservations.outputs.reservations.sid"
+            },
+            {
+              "name": "If-Match",
+              "in": "header",
+              "value": "$inputs.If-Match"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "WorkerSid": "$steps.list-task-reservations.outputs.reservations[0].worker_sid",
+              "Sid": "$steps.list-task-reservations.outputs.reservations[0].sid",
+              "ReservationStatus": "$inputs.ReservationStatus"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "reservation_status": "$response.body#/reservation_status"
+          }
+        },
+        {
+          "stepId": "update-task-complete",
+          "description": "Marks the task as completed after the worker finishes the work, updating its assignment status.",
+          "operationId": "UpdateTask",
+          "parameters": [
+            {
+              "name": "WorkspaceSid",
+              "in": "path",
+              "value": "$inputs.WorkspaceSid"
+            },
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.create-task.outputs.sid"
+            },
+            {
+              "name": "If-Match",
+              "in": "header",
+              "value": "$inputs.If-Match"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Sid": "$steps.create-task.outputs.sid",
+              "AssignmentStatus": "$inputs.AssignmentStatus",
+              "Reason": "$inputs.Reason"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "assignment_status": "$response.body#/assignment_status"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.create-task.outputs.sid",
+        "reservations": "$steps.list-task-reservations.outputs.reservations",
+        "reservation_status": "$steps.update-worker-reservation-accept.outputs.reservation_status",
+        "assignment_status": "$steps.update-task-complete.outputs.assignment_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "initial-taskrouter-workspace-setup",
+      "summary": "Sets up a new Taskrouter Workspace with essential components: default activities (available, offline), a default task channel, a task queue, and a basic workflow for routing. This is a foundational setup for any contact center.",
+      "description": "Sets up a new Taskrouter Workspace with essential components: default activities (available, offline), a default task channel, a task queue, and a basic workflow for routing. This is a foundational setup for any contact center.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "FriendlyName": {
+            "type": "string"
+          },
+          "WorkspaceSid": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "UniqueName": {
+            "type": "string"
+          },
+          "Configuration": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-workspace",
+          "description": "Creates the main Taskrouter Workspace, which is the top-level container for all Taskrouter resources.",
+          "operationId": "CreateWorkspace",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "FriendlyName": "$inputs.FriendlyName"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        },
+        {
+          "stepId": "create-available-activity",
+          "description": "Creates an 'Available' activity, representing a state where workers are ready to receive tasks.",
+          "operationId": "CreateActivity",
+          "parameters": [
+            {
+              "name": "WorkspaceSid",
+              "in": "path",
+              "value": "$steps.create-workspace.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "WorkspaceSid": "$steps.create-workspace.outputs.sid",
+              "FriendlyName": "$inputs.FriendlyName"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        },
+        {
+          "stepId": "create-offline-activity",
+          "description": "Creates an 'Offline' activity, representing a state where workers are not available for tasks.",
+          "operationId": "CreateActivity",
+          "parameters": [
+            {
+              "name": "WorkspaceSid",
+              "in": "path",
+              "value": "$steps.create-workspace.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "WorkspaceSid": "$steps.create-workspace.outputs.sid",
+              "FriendlyName": "$inputs.FriendlyName"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        },
+        {
+          "stepId": "update-workspace-default-activities",
+          "description": "Updates the newly created workspace to set the default activity for new workers and the activity for timed-out reservations.",
+          "operationId": "UpdateWorkspace",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.create-workspace.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Sid": "$steps.create-workspace.outputs.sid",
+              "DefaultActivitySid": "$steps.create-available-activity.outputs.sid",
+              "TimeoutActivitySid": "$steps.create-offline-activity.outputs.sid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "activities_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-default-task-channel",
+          "description": "Creates a default task channel (e.g., 'voice') to categorize different types of work.",
+          "operationId": "CreateTaskChannel",
+          "parameters": [
+            {
+              "name": "WorkspaceSid",
+              "in": "path",
+              "value": "$steps.create-workspace.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "WorkspaceSid": "$steps.create-workspace.outputs.sid",
+              "FriendlyName": "$inputs.FriendlyName",
+              "UniqueName": "$inputs.UniqueName"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        },
+        {
+          "stepId": "create-task-queue",
+          "description": "Creates a task queue where tasks wait to be assigned to workers, defining worker selection criteria and activities for reservation/assignment.",
+          "operationId": "CreateTaskQueue",
+          "parameters": [
+            {
+              "name": "WorkspaceSid",
+              "in": "path",
+              "value": "$steps.create-workspace.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "WorkspaceSid": "$steps.create-workspace.outputs.sid",
+              "ReservationActivitySid": "$steps.create-available-activity.outputs.sid",
+              "AssignmentActivitySid": "$steps.create-offline-activity.outputs.sid",
+              "FriendlyName": "$inputs.FriendlyName"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        },
+        {
+          "stepId": "create-workflow",
+          "description": "Creates a workflow that defines the routing logic for tasks, directing them to appropriate task queues and workers.",
+          "operationId": "CreateWorkflow",
+          "parameters": [
+            {
+              "name": "WorkspaceSid",
+              "in": "path",
+              "value": "$steps.create-workspace.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "WorkspaceSid": "$steps.create-workspace.outputs.sid",
+              "FriendlyName": "$inputs.FriendlyName",
+              "Configuration": "$inputs.Configuration"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.create-workflow.outputs.sid",
+        "activities_data": "$steps.update-workspace-default-activities.outputs.activities_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "agent-status-and-capacity-management",
+      "summary": "Allows an administrator or agent management system to update a worker's activity status (e.g., 'on-break') and adjust their capacity for specific task channels (e.g., 'voice' or 'chat').",
+      "description": "Allows an administrator or agent management system to update a worker's activity status (e.g., 'on-break') and adjust their capacity for specific task channels (e.g., 'voice' or 'chat').",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "WorkspaceSid": {
+            "type": "string"
+          },
+          "ActivityName": {
+            "type": "string"
+          },
+          "ActivitySid": {
+            "type": "string"
+          },
+          "Available": {
+            "type": "string"
+          },
+          "FriendlyName": {
+            "type": "string"
+          },
+          "TargetWorkersExpression": {
+            "type": "string"
+          },
+          "TaskQueueName": {
+            "type": "string"
+          },
+          "TaskQueueSid": {
+            "type": "string"
+          },
+          "Ordering": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "If-Match": {
+            "type": "string"
+          },
+          "WorkerSid": {
+            "type": "string"
+          },
+          "Capacity": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-workers",
+          "description": "Lists workers in a workspace, optionally filtered by friendly name, to identify the target worker for status or capacity updates.",
+          "operationId": "ListWorker",
+          "parameters": [
+            {
+              "name": "WorkspaceSid",
+              "in": "path",
+              "value": "$inputs.WorkspaceSid"
+            },
+            {
+              "name": "ActivityName",
+              "in": "query",
+              "value": "$inputs.ActivityName"
+            },
+            {
+              "name": "ActivitySid",
+              "in": "query",
+              "value": "$inputs.ActivitySid"
+            },
+            {
+              "name": "Available",
+              "in": "query",
+              "value": "$inputs.Available"
+            },
+            {
+              "name": "FriendlyName",
+              "in": "query",
+              "value": "$inputs.FriendlyName"
+            },
+            {
+              "name": "TargetWorkersExpression",
+              "in": "query",
+              "value": "$inputs.TargetWorkersExpression"
+            },
+            {
+              "name": "TaskQueueName",
+              "in": "query",
+              "value": "$inputs.TaskQueueName"
+            },
+            {
+              "name": "TaskQueueSid",
+              "in": "query",
+              "value": "$inputs.TaskQueueSid"
+            },
+            {
+              "name": "Ordering",
+              "in": "query",
+              "value": "$inputs.Ordering"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "workers": "$response.body#/workers"
+          }
+        },
+        {
+          "stepId": "list-activities",
+          "description": "Lists available activities to find the SID for the desired worker status (e.g., 'On-Break').",
+          "operationId": "ListActivity",
+          "parameters": [
+            {
+              "name": "WorkspaceSid",
+              "in": "path",
+              "value": "$inputs.WorkspaceSid"
+            },
+            {
+              "name": "FriendlyName",
+              "in": "query",
+              "value": "$inputs.FriendlyName"
+            },
+            {
+              "name": "Available",
+              "in": "query",
+              "value": "$inputs.Available"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "activities": "$response.body#/activities"
+          }
+        },
+        {
+          "stepId": "update-worker-activity",
+          "description": "Updates the worker's current activity status (e.g., from 'available' to 'on-break').",
+          "operationId": "UpdateWorker",
+          "parameters": [
+            {
+              "name": "WorkspaceSid",
+              "in": "path",
+              "value": "$inputs.WorkspaceSid"
+            },
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.list-workers.outputs.workers.sid"
+            },
+            {
+              "name": "If-Match",
+              "in": "header",
+              "value": "$inputs.If-Match"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Sid": "$steps.list-workers.outputs.workers[0].sid",
+              "ActivitySid": "$steps.list-activities.outputs.activities[?(@.friendly_name=='On-Break')].sid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "activity_name": "$response.body#/activity_name"
+          }
+        },
+        {
+          "stepId": "list-worker-channels",
+          "description": "Lists the worker's assigned task channels to identify the specific channel for which capacity needs to be updated.",
+          "operationId": "ListWorkerChannel",
+          "parameters": [
+            {
+              "name": "WorkspaceSid",
+              "in": "path",
+              "value": "$inputs.WorkspaceSid"
+            },
+            {
+              "name": "WorkerSid",
+              "in": "path",
+              "value": "$steps.list-workers.outputs.workers.sid"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "channels": "$response.body#/channels"
+          }
+        },
+        {
+          "stepId": "update-worker-channel-capacity",
+          "description": "Adjusts the worker's capacity for a specific task channel, controlling how many tasks of that type they can handle concurrently.",
+          "operationId": "UpdateWorkerChannel",
+          "parameters": [
+            {
+              "name": "WorkspaceSid",
+              "in": "path",
+              "value": "$inputs.WorkspaceSid"
+            },
+            {
+              "name": "WorkerSid",
+              "in": "path",
+              "value": "$steps.list-workers.outputs.workers.sid"
+            },
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.list-worker-channels.outputs.channels.task_channel_unique_name=='voice')].sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "WorkerSid": "$steps.list-workers.outputs.workers[0].sid",
+              "Sid": "$steps.list-worker-channels.outputs.channels[?(@.task_channel_unique_name=='voice')].sid",
+              "Capacity": "$inputs.Capacity"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "configured_capacity": "$response.body#/configured_capacity"
+          }
+        }
+      ],
+      "outputs": {
+        "workers": "$steps.list-workers.outputs.workers",
+        "activities": "$steps.list-activities.outputs.activities",
+        "activity_name": "$steps.update-worker-activity.outputs.activity_name",
+        "channels": "$steps.list-worker-channels.outputs.channels",
+        "configured_capacity": "$steps.update-worker-channel-capacity.outputs.configured_capacity"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "comprehensive-contact-center-performance-overview",
+      "summary": "Gathers real-time and cumulative statistics across the entire workspace, including overall performance, and detailed metrics for individual task queues and workers. This workflow is crucial for supervisors and managers to monitor operational efficiency and identify trends.",
+      "description": "Gathers real-time and cumulative statistics across the entire workspace, including overall performance, and detailed metrics for individual task queues and workers. This workflow is crucial for supervisors and managers to monitor operational efficiency and identify trends.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "WorkspaceSid": {
+            "type": "string"
+          },
+          "TaskChannel": {
+            "type": "string"
+          },
+          "EndDate": {
+            "type": "string"
+          },
+          "Minutes": {
+            "type": "string"
+          },
+          "StartDate": {
+            "type": "string"
+          },
+          "SplitByWaitTime": {
+            "type": "string"
+          },
+          "FriendlyName": {
+            "type": "string"
+          },
+          "EvaluateWorkerAttributes": {
+            "type": "string"
+          },
+          "WorkerSid": {
+            "type": "string"
+          },
+          "Ordering": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "TaskQueueSid": {
+            "type": "string"
+          },
+          "ActivityName": {
+            "type": "string"
+          },
+          "ActivitySid": {
+            "type": "string"
+          },
+          "Available": {
+            "type": "string"
+          },
+          "TargetWorkersExpression": {
+            "type": "string"
+          },
+          "TaskQueueName": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "fetch-workspace-real-time-statistics",
+          "description": "Retrieves current real-time statistics for the entire workspace, showing active tasks and worker statuses.",
+          "operationId": "FetchWorkspaceRealTimeStatistics",
+          "parameters": [
+            {
+              "name": "WorkspaceSid",
+              "in": "path",
+              "value": "$inputs.WorkspaceSid"
+            },
+            {
+              "name": "TaskChannel",
+              "in": "query",
+              "value": "$inputs.TaskChannel"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "total_tasks": "$response.body#/total_tasks",
+            "total_workers": "$response.body#/total_workers",
+            "tasks_by_status": "$response.body#/tasks_by_status",
+            "activity_statistics": "$response.body#/activity_statistics"
+          }
+        },
+        {
+          "stepId": "fetch-workspace-cumulative-statistics",
+          "description": "Retrieves cumulative statistics for the entire workspace over a specified period, including average task acceptance time and total tasks completed.",
+          "operationId": "FetchWorkspaceCumulativeStatistics",
+          "parameters": [
+            {
+              "name": "WorkspaceSid",
+              "in": "path",
+              "value": "$inputs.WorkspaceSid"
+            },
+            {
+              "name": "EndDate",
+              "in": "query",
+              "value": "$inputs.EndDate"
+            },
+            {
+              "name": "Minutes",
+              "in": "query",
+              "value": "$inputs.Minutes"
+            },
+            {
+              "name": "StartDate",
+              "in": "query",
+              "value": "$inputs.StartDate"
+            },
+            {
+              "name": "TaskChannel",
+              "in": "query",
+              "value": "$inputs.TaskChannel"
+            },
+            {
+              "name": "SplitByWaitTime",
+              "in": "query",
+              "value": "$inputs.SplitByWaitTime"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "avg_task_acceptance_time": "$response.body#/avg_task_acceptance_time",
+            "tasks_completed": "$response.body#/tasks_completed",
+            "reservations_accepted": "$response.body#/reservations_accepted"
+          }
+        },
+        {
+          "stepId": "list-task-queues",
+          "description": "Gets a list of all task queues within the workspace to enable fetching individual queue statistics.",
+          "operationId": "ListTaskQueue",
+          "parameters": [
+            {
+              "name": "WorkspaceSid",
+              "in": "path",
+              "value": "$inputs.WorkspaceSid"
+            },
+            {
+              "name": "FriendlyName",
+              "in": "query",
+              "value": "$inputs.FriendlyName"
+            },
+            {
+              "name": "EvaluateWorkerAttributes",
+              "in": "query",
+              "value": "$inputs.EvaluateWorkerAttributes"
+            },
+            {
+              "name": "WorkerSid",
+              "in": "query",
+              "value": "$inputs.WorkerSid"
+            },
+            {
+              "name": "Ordering",
+              "in": "query",
+              "value": "$inputs.Ordering"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "task_queues": "$response.body#/task_queues"
+          }
+        },
+        {
+          "stepId": "fetch-task-queue-real-time-statistics",
+          "description": "Retrieves real-time statistics for a specific task queue, showing current tasks waiting and available workers.",
+          "operationId": "FetchTaskQueueRealTimeStatistics",
+          "parameters": [
+            {
+              "name": "WorkspaceSid",
+              "in": "path",
+              "value": "$inputs.WorkspaceSid"
+            },
+            {
+              "name": "TaskQueueSid",
+              "in": "path",
+              "value": "$steps.list-task-queues.outputs.task_queues.sid"
+            },
+            {
+              "name": "TaskChannel",
+              "in": "query",
+              "value": "$inputs.TaskChannel"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "total_tasks": "$response.body#/total_tasks",
+            "total_available_workers": "$response.body#/total_available_workers",
+            "longest_task_waiting_age": "$response.body#/longest_task_waiting_age"
+          }
+        },
+        {
+          "stepId": "list-workers",
+          "description": "Gets a list of all workers within the workspace to enable fetching individual worker statistics.",
+          "operationId": "ListWorker",
+          "parameters": [
+            {
+              "name": "WorkspaceSid",
+              "in": "path",
+              "value": "$inputs.WorkspaceSid"
+            },
+            {
+              "name": "ActivityName",
+              "in": "query",
+              "value": "$inputs.ActivityName"
+            },
+            {
+              "name": "ActivitySid",
+              "in": "query",
+              "value": "$inputs.ActivitySid"
+            },
+            {
+              "name": "Available",
+              "in": "query",
+              "value": "$inputs.Available"
+            },
+            {
+              "name": "FriendlyName",
+              "in": "query",
+              "value": "$inputs.FriendlyName"
+            },
+            {
+              "name": "TargetWorkersExpression",
+              "in": "query",
+              "value": "$inputs.TargetWorkersExpression"
+            },
+            {
+              "name": "TaskQueueName",
+              "in": "query",
+              "value": "$inputs.TaskQueueName"
+            },
+            {
+              "name": "TaskQueueSid",
+              "in": "query",
+              "value": "$inputs.TaskQueueSid"
+            },
+            {
+              "name": "Ordering",
+              "in": "query",
+              "value": "$inputs.Ordering"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "workers": "$response.body#/workers"
+          }
+        },
+        {
+          "stepId": "fetch-worker-instance-statistics",
+          "description": "Retrieves detailed statistics for a specific worker, including their cumulative and real-time performance metrics.",
+          "operationId": "FetchWorkerInstanceStatistics",
+          "parameters": [
+            {
+              "name": "WorkspaceSid",
+              "in": "path",
+              "value": "$inputs.WorkspaceSid"
+            },
+            {
+              "name": "WorkerSid",
+              "in": "path",
+              "value": "$steps.list-workers.outputs.workers.sid"
+            },
+            {
+              "name": "Minutes",
+              "in": "query",
+              "value": "$inputs.Minutes"
+            },
+            {
+              "name": "StartDate",
+              "in": "query",
+              "value": "$inputs.StartDate"
+            },
+            {
+              "name": "EndDate",
+              "in": "query",
+              "value": "$inputs.EndDate"
+            },
+            {
+              "name": "TaskChannel",
+              "in": "query",
+              "value": "$inputs.TaskChannel"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "cumulative": "$response.body#/cumulative",
+            "realtime": "$response.body#/realtime"
+          }
+        }
+      ],
+      "outputs": {
+        "total_tasks": "$steps.fetch-task-queue-real-time-statistics.outputs.total_tasks",
+        "total_workers": "$steps.fetch-workspace-real-time-statistics.outputs.total_workers",
+        "tasks_by_status": "$steps.fetch-workspace-real-time-statistics.outputs.tasks_by_status",
+        "activity_statistics": "$steps.fetch-workspace-real-time-statistics.outputs.activity_statistics",
+        "avg_task_acceptance_time": "$steps.fetch-workspace-cumulative-statistics.outputs.avg_task_acceptance_time",
+        "tasks_completed": "$steps.fetch-workspace-cumulative-statistics.outputs.tasks_completed",
+        "reservations_accepted": "$steps.fetch-workspace-cumulative-statistics.outputs.reservations_accepted",
+        "task_queues": "$steps.list-task-queues.outputs.task_queues",
+        "total_available_workers": "$steps.fetch-task-queue-real-time-statistics.outputs.total_available_workers",
+        "longest_task_waiting_age": "$steps.fetch-task-queue-real-time-statistics.outputs.longest_task_waiting_age",
+        "workers": "$steps.list-workers.outputs.workers",
+        "cumulative": "$steps.fetch-worker-instance-statistics.outputs.cumulative",
+        "realtime": "$steps.fetch-worker-instance-statistics.outputs.realtime"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

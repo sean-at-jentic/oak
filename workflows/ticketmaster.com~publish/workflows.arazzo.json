@@ -1,0 +1,347 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/ticketmaster.com/publish/v2/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "publish-event-with-video",
+      "summary": "Creates a new event in the Ticketmaster system and then associates a promotional video with it. This workflow is valuable for event organizers to publish event details and rich media content in a single process.",
+      "description": "Creates a new event in the Ticketmaster system and then associates a promotional video with it. This workflow is valuable for event organizers to publish event details and rich media content in a single process.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "TMPS-Correlation-Id": {
+            "type": "string"
+          },
+          "create-event_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-event",
+          "description": "Publishes the initial event data to Ticketmaster. The `eventData` input should be a complete `Event` object, including required fields like `type`, `names`, and `dates`.",
+          "operationId": "publishEvent",
+          "parameters": [
+            {
+              "name": "TMPS-Correlation-Id",
+              "in": "header",
+              "value": "$inputs.TMPS-Correlation-Id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-event_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "add-event-video",
+          "description": "Adds a video to the newly created event. The `eventId` is a path parameter derived from the previous step's output, and `videoData` is a complete `Video` object containing video URL and licensing information.",
+          "operationId": "publishEventVideos",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "TMPS-Correlation-Id",
+              "in": "header",
+              "value": "$inputs.TMPS-Correlation-Id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "eventId": "$steps.create-event.outputs.id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.add-event-video.outputs.id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "publish-venue-with-custom-extension",
+      "summary": "Creates a new venue entry and then adds custom, non-standardized data to it using the generic extension mechanism. This allows for storing additional internal or specific venue details not covered by standard fields, linked by the venue's ID.",
+      "description": "Creates a new venue entry and then adds custom, non-standardized data to it using the generic extension mechanism. This allows for storing additional internal or specific venue details not covered by standard fields, linked by the venue's ID.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "TMPS-Correlation-Id": {
+            "type": "string"
+          },
+          "create-venue_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-venue",
+          "description": "Publishes the initial venue data to Ticketmaster. The `venueData` input should be a complete `Venue` object, including required fields like `type`, `names`, and `address`.",
+          "operationId": "publishVenue",
+          "parameters": [
+            {
+              "name": "TMPS-Correlation-Id",
+              "in": "header",
+              "value": "$inputs.TMPS-Correlation-Id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-venue_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "add-venue-extension",
+          "description": "Adds a custom extension to the newly created venue. The `extensionData` input should be a complete `ExtensionData` object, with its `relatedEntityId` field populated from the `create-venue` step's output and `relatedEntityType` set to 'venue'.",
+          "operationId": "publishExtension",
+          "parameters": [
+            {
+              "name": "TMPS-Correlation-Id",
+              "in": "header",
+              "value": "$inputs.TMPS-Correlation-Id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "relatedEntityId": "$steps.create-venue.outputs.id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.add-venue-extension.outputs.id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "publish-attraction-and-patch-details",
+      "summary": "Creates a new attraction and then immediately applies a patch to update or augment some of its details. This is useful for initial data setup where some information might be added or corrected shortly after the initial creation.",
+      "description": "Creates a new attraction and then immediately applies a patch to update or augment some of its details. This is useful for initial data setup where some information might be added or corrected shortly after the initial creation.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "TMPS-Correlation-Id": {
+            "type": "string"
+          },
+          "create-attraction_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-attraction",
+          "description": "Publishes the initial attraction data to Ticketmaster. The `attractionData` input should be a complete `Attraction` object, including required fields like `type` and `names`.",
+          "operationId": "publishAttraction",
+          "parameters": [
+            {
+              "name": "TMPS-Correlation-Id",
+              "in": "header",
+              "value": "$inputs.TMPS-Correlation-Id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-attraction_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "patch-attraction-details",
+          "description": "Applies a patch to update details of the newly created attraction. The `attractionId` is a path parameter, and `augmentationData` is a complete `AugmentationData` object. Its `relatedEntityId` field must be populated with the `attractionId`.",
+          "operationId": "patchAttraction",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "TMPS-Correlation-Id",
+              "in": "header",
+              "value": "$inputs.TMPS-Correlation-Id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "attractionId": "$steps.create-attraction.outputs.id",
+              "relatedEntityId": "$steps.create-attraction.outputs.id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.patch-attraction-details.outputs.id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
