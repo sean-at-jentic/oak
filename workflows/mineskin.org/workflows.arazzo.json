@@ -1,0 +1,512 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/mineskin.org/main/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "generate-skin-from-url-and-retrieve-full-details",
+      "summary": "Allows a user to generate a Minecraft skin from a provided image URL and then immediately retrieve all associated details, including the texture data, for use in applications or games.",
+      "description": "Allows a user to generate a Minecraft skin from a provided image URL and then immediately retrieve all associated details, including the texture data, for use in applications or games.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "User-Agent": {
+            "type": "string"
+          },
+          "Authorization": {
+            "type": "string"
+          },
+          "generate-skin-url_body": {
+            "type": "object"
+          },
+          "uuid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "generate-skin-url",
+          "description": "Submits an image URL to the MineSkin API to generate a new Minecraft skin.",
+          "operationPath": "openapi_source#/paths/~1generate~1url/post",
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "in": "header",
+              "value": "$inputs.User-Agent"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$inputs.Authorization"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.generate-skin-url_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "uuid": "$response.body#/uuid",
+            "name": "$response.body#/name",
+            "variant": "$response.body#/variant",
+            "data": "$response.body#/data",
+            "delayInfo": "$response.body#/delayInfo"
+          }
+        },
+        {
+          "stepId": "get-generated-skin-details",
+          "description": "Retrieves the full details of the newly generated skin using its unique UUID.",
+          "operationPath": "openapi_source#/paths/~1get~1uuid~1{uuid}/get",
+          "parameters": [
+            {
+              "name": "uuid",
+              "in": "path",
+              "value": "$steps.generate-skin-url.outputs.uuid"
+            },
+            {
+              "name": "User-Agent",
+              "in": "header",
+              "value": "$inputs.User-Agent"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$inputs.Authorization"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "uuid": "$response.body#/uuid",
+            "name": "$response.body#/name",
+            "variant": "$response.body#/variant",
+            "data": "$response.body#/data"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.get-generated-skin-details.outputs.id",
+        "uuid": "$steps.get-generated-skin-details.outputs.uuid",
+        "name": "$steps.get-generated-skin-details.outputs.name",
+        "variant": "$steps.get-generated-skin-details.outputs.variant",
+        "data": "$steps.get-generated-skin-details.outputs.data",
+        "delayInfo": "$steps.generate-skin-url.outputs.delayInfo"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "validate-minecraft-user-and-generate-skin-from-user",
+      "summary": "Enables validating a Minecraft username to obtain its UUID, and then using that UUID to generate a skin based on the user's current Minecraft skin.",
+      "description": "Enables validating a Minecraft username to obtain its UUID, and then using that UUID to generate a skin based on the user's current Minecraft skin.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "User-Agent": {
+            "type": "string"
+          },
+          "Authorization": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "validate-minecraft-username",
+          "description": "Checks if a Minecraft username is valid and retrieves its associated UUID.",
+          "operationPath": "openapi_source#/paths/~1validate~1name~1{name}/get",
+          "parameters": [
+            {
+              "name": "name",
+              "in": "path",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "User-Agent",
+              "in": "header",
+              "value": "$inputs.User-Agent"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "valid": "$response.body#/valid",
+            "uuid": "$response.body#/uuid",
+            "name": "$response.body#/name"
+          }
+        },
+        {
+          "stepId": "generate-skin-from-user-uuid",
+          "description": "Generates a skin using the validated Minecraft user's UUID.",
+          "operationPath": "openapi_source#/paths/~1generate~1user/post",
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "in": "header",
+              "value": "$inputs.User-Agent"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$inputs.Authorization"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "uuid": "$steps.validate-minecraft-username.outputs.uuid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "uuid": "$response.body#/uuid",
+            "name": "$response.body#/name",
+            "variant": "$response.body#/variant",
+            "data": "$response.body#/data",
+            "delayInfo": "$response.body#/delayInfo"
+          }
+        }
+      ],
+      "outputs": {
+        "valid": "$steps.validate-minecraft-username.outputs.valid",
+        "uuid": "$steps.generate-skin-from-user-uuid.outputs.uuid",
+        "name": "$steps.generate-skin-from-user-uuid.outputs.name",
+        "id": "$steps.generate-skin-from-user-uuid.outputs.id",
+        "variant": "$steps.generate-skin-from-user-uuid.outputs.variant",
+        "data": "$steps.generate-skin-from-user-uuid.outputs.data",
+        "delayInfo": "$steps.generate-skin-from-user-uuid.outputs.delayInfo"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "browse-public-skins-and-get-specific-skin-details",
+      "summary": "Allows browsing a paginated list of publicly available skins and then retrieving detailed information for a selected skin from the list.",
+      "description": "Allows browsing a paginated list of publicly available skins and then retrieving detailed information for a selected skin from the list.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "string"
+          },
+          "User-Agent": {
+            "type": "string"
+          },
+          "uuid": {
+            "type": "string"
+          },
+          "Authorization": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-public-skins",
+          "description": "Retrieves a page of publicly available skin information, including basic details like ID, name, and URL.",
+          "operationPath": "openapi_source#/paths/~1get~1list~1{page}/get",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "path",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "User-Agent",
+              "in": "header",
+              "value": "$inputs.User-Agent"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "skins": "$response.body#/skins",
+            "page": "$response.body#/page"
+          }
+        },
+        {
+          "stepId": "get-selected-skin-details",
+          "description": "Fetches the full details of a specific skin selected from the public list using its UUID.",
+          "operationPath": "openapi_source#/paths/~1get~1uuid~1{uuid}/get",
+          "parameters": [
+            {
+              "name": "uuid",
+              "in": "path",
+              "value": "$steps.list-public-skins.outputs.skins.uuid"
+            },
+            {
+              "name": "User-Agent",
+              "in": "header",
+              "value": "$inputs.User-Agent"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$inputs.Authorization"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "uuid": "$response.body#/uuid",
+            "name": "$response.body#/name",
+            "variant": "$response.body#/variant",
+            "data": "$response.body#/data"
+          }
+        }
+      ],
+      "outputs": {
+        "skins": "$steps.list-public-skins.outputs.skins",
+        "page": "$steps.list-public-skins.outputs.page",
+        "id": "$steps.get-selected-skin-details.outputs.id",
+        "uuid": "$steps.get-selected-skin-details.outputs.uuid",
+        "name": "$steps.get-selected-skin-details.outputs.name",
+        "variant": "$steps.get-selected-skin-details.outputs.variant",
+        "data": "$steps.get-selected-skin-details.outputs.data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "check-api-delay-and-generate-skin-from-upload",
+      "summary": "Allows a client to check the current API rate limit and delay information before proceeding to upload an image file to generate a new Minecraft skin, helping to manage request pacing and avoid rate limits.",
+      "description": "Allows a client to check the current API rate limit and delay information before proceeding to upload an image file to generate a new Minecraft skin, helping to manage request pacing and avoid rate limits.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "User-Agent": {
+            "type": "string"
+          },
+          "Authorization": {
+            "type": "string"
+          },
+          "generate-skin-from-upload_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-api-delay-info",
+          "description": "Retrieves information about the current API delay and when the next request is allowed, useful for client-side rate limit management.",
+          "operationPath": "openapi_source#/paths/~1get~1delay/get",
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "in": "header",
+              "value": "$inputs.User-Agent"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$inputs.Authorization"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "millis": "$response.body#/millis",
+            "seconds": "$response.body#/seconds",
+            "nextRequest": "$response.body#/nextRequest",
+            "lastRequest": "$response.body#/lastRequest"
+          }
+        },
+        {
+          "stepId": "generate-skin-from-upload",
+          "description": "Uploads an image file to generate a new Minecraft skin. This step is typically performed after checking delay to ensure compliance with rate limits.",
+          "operationPath": "openapi_source#/paths/~1generate~1upload/post",
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "in": "header",
+              "value": "$inputs.User-Agent"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$inputs.Authorization"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": "$inputs.generate-skin-from-upload_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "uuid": "$response.body#/uuid",
+            "name": "$response.body#/name",
+            "variant": "$response.body#/variant",
+            "data": "$response.body#/data",
+            "delayInfo": "$response.body#/delayInfo"
+          }
+        }
+      ],
+      "outputs": {
+        "millis": "$steps.get-api-delay-info.outputs.millis",
+        "seconds": "$steps.get-api-delay-info.outputs.seconds",
+        "nextRequest": "$steps.get-api-delay-info.outputs.nextRequest",
+        "lastRequest": "$steps.get-api-delay-info.outputs.lastRequest",
+        "id": "$steps.generate-skin-from-upload.outputs.id",
+        "uuid": "$steps.generate-skin-from-upload.outputs.uuid",
+        "name": "$steps.generate-skin-from-upload.outputs.name",
+        "variant": "$steps.generate-skin-from-upload.outputs.variant",
+        "data": "$steps.generate-skin-from-upload.outputs.data",
+        "delayInfo": "$steps.generate-skin-from-upload.outputs.delayInfo"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
