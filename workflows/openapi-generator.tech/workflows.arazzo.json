@@ -1,0 +1,461 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/openapi-generator.tech/main/7.12.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "generate-and-download-client-library",
+      "summary": "Allows a user to generate a client SDK for a given OpenAPI specification and then download the generated code. This workflow typically involves first identifying supported languages, then understanding their options, initiating the generation process, and finally downloading the resulting file.",
+      "description": "Allows a user to generate a client SDK for a given OpenAPI specification and then download the generated code. This workflow typically involves first identifying supported languages, then understanding their options, initiating the generation process, and finally downloading the resulting file.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string"
+          },
+          "openAPIUrl": {
+            "type": "string"
+          },
+          "options": {
+            "type": "string"
+          },
+          "fileId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-supported-client-languages",
+          "description": "Retrieves a list of all supported client generation languages. This helps the user know what options are available for client SDK generation.",
+          "operationId": "clientOptions",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "supported_languages": "$response.body#/0/supported_languages"
+          }
+        },
+        {
+          "stepId": "get-client-language-options",
+          "description": "Retrieves the available generation options for a specific client language. This informs the user about configurable parameters (e.g., package name, artifact ID) for the chosen language.",
+          "operationId": "getClientOptions",
+          "parameters": [
+            {
+              "name": "language",
+              "in": "path",
+              "value": "$steps.get-supported-client-languages.outputs.supported_languages"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "client_generation_options": "$response.body#/client_generation_options"
+          }
+        },
+        {
+          "stepId": "generate-client-code",
+          "description": "Initiates the generation of a client library. Requires an OpenAPI specification (via URL or inline) and specific generation options for the chosen language. Returns a file ID for subsequent download.",
+          "operationId": "generateClient",
+          "parameters": [
+            {
+              "name": "language",
+              "in": "path",
+              "value": "$steps.get-supported-client-languages.outputs.supported_languages"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "language": "$steps.get-supported-client-languages.outputs.supported_languages[0]",
+              "openAPIUrl": "$inputs.openAPIUrl",
+              "options": "$inputs.options"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "file_id": "$response.body#/file_id",
+            "download_link": "$response.body#/download_link"
+          }
+        },
+        {
+          "stepId": "download-generated-file",
+          "description": "Downloads the compressed archive containing the generated client library using the provided file ID. This file ID is single-use.",
+          "operationId": "downloadFile",
+          "parameters": [
+            {
+              "name": "fileId",
+              "in": "path",
+              "value": "$steps.generate-client-code.outputs.file_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "generated_file_content": "$response.body#/generated_file_content"
+          }
+        }
+      ],
+      "outputs": {
+        "supported_languages": "$steps.get-supported-client-languages.outputs.supported_languages",
+        "client_generation_options": "$steps.get-client-language-options.outputs.client_generation_options",
+        "file_id": "$steps.generate-client-code.outputs.file_id",
+        "download_link": "$steps.generate-client-code.outputs.download_link",
+        "generated_file_content": "$steps.download-generated-file.outputs.generated_file_content"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "generate-and-download-server-stub",
+      "summary": "Allows a user to generate a server stub for a given OpenAPI specification and then download the generated code. This workflow mirrors the client generation process but for server frameworks.",
+      "description": "Allows a user to generate a server stub for a given OpenAPI specification and then download the generated code. This workflow mirrors the client generation process but for server frameworks.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "framework": {
+            "type": "string"
+          },
+          "openAPIUrl": {
+            "type": "string"
+          },
+          "options": {
+            "type": "string"
+          },
+          "fileId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-supported-server-frameworks",
+          "description": "Retrieves a list of all supported server generation frameworks. This helps the user know what options are available for server stub generation.",
+          "operationId": "serverOptions",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "supported_frameworks": "$response.body#/0/supported_frameworks"
+          }
+        },
+        {
+          "stepId": "get-server-framework-options",
+          "description": "Retrieves the available generation options for a specific server framework. This informs the user about configurable parameters for the chosen framework.",
+          "operationId": "getServerOptions",
+          "parameters": [
+            {
+              "name": "framework",
+              "in": "path",
+              "value": "$steps.get-supported-server-frameworks.outputs.supported_frameworks"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "server_generation_options": "$response.body#/server_generation_options"
+          }
+        },
+        {
+          "stepId": "generate-server-code",
+          "description": "Initiates the generation of a server stub. Requires an OpenAPI specification (via URL or inline) and specific generation options for the chosen framework. Returns a file ID for subsequent download.",
+          "operationId": "generateServerForLanguage",
+          "parameters": [
+            {
+              "name": "framework",
+              "in": "path",
+              "value": "$steps.get-supported-server-frameworks.outputs.supported_frameworks"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "framework": "$steps.get-supported-server-frameworks.outputs.supported_frameworks[0]",
+              "openAPIUrl": "$inputs.openAPIUrl",
+              "options": "$inputs.options"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "file_id": "$response.body#/file_id",
+            "download_link": "$response.body#/download_link"
+          }
+        },
+        {
+          "stepId": "download-generated-file",
+          "description": "Downloads the compressed archive containing the generated server stub using the provided file ID. This file ID is single-use.",
+          "operationId": "downloadFile",
+          "parameters": [
+            {
+              "name": "fileId",
+              "in": "path",
+              "value": "$steps.generate-server-code.outputs.file_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "generated_file_content": "$response.body#/generated_file_content"
+          }
+        }
+      ],
+      "outputs": {
+        "supported_frameworks": "$steps.get-supported-server-frameworks.outputs.supported_frameworks",
+        "server_generation_options": "$steps.get-server-framework-options.outputs.server_generation_options",
+        "file_id": "$steps.generate-server-code.outputs.file_id",
+        "download_link": "$steps.generate-server-code.outputs.download_link",
+        "generated_file_content": "$steps.download-generated-file.outputs.generated_file_content"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "discover-client-generation-options",
+      "summary": "Allows a user to explore the range of client languages supported by the generator and inspect the specific configuration options available for each, without performing code generation.",
+      "description": "Allows a user to explore the range of client languages supported by the generator and inspect the specific configuration options available for each, without performing code generation.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-supported-client-languages",
+          "description": "Retrieves a list of all supported client generation languages.",
+          "operationId": "clientOptions",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "supported_languages": "$response.body#/0/supported_languages"
+          }
+        },
+        {
+          "stepId": "get-client-language-options",
+          "description": "Retrieves the available generation options for a specific client language, providing details like default values and descriptions.",
+          "operationId": "getClientOptions",
+          "parameters": [
+            {
+              "name": "language",
+              "in": "path",
+              "value": "$steps.get-supported-client-languages.outputs.supported_languages"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "client_generation_options": "$response.body#/client_generation_options"
+          }
+        }
+      ],
+      "outputs": {
+        "supported_languages": "$steps.get-supported-client-languages.outputs.supported_languages",
+        "client_generation_options": "$steps.get-client-language-options.outputs.client_generation_options"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "discover-server-generation-options",
+      "summary": "Allows a user to explore the range of server frameworks supported by the generator and inspect the specific configuration options available for each, without performing code generation.",
+      "description": "Allows a user to explore the range of server frameworks supported by the generator and inspect the specific configuration options available for each, without performing code generation.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "framework": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-supported-server-frameworks",
+          "description": "Retrieves a list of all supported server generation frameworks.",
+          "operationId": "serverOptions",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "supported_frameworks": "$response.body#/0/supported_frameworks"
+          }
+        },
+        {
+          "stepId": "get-server-framework-options",
+          "description": "Retrieves the available generation options for a specific server framework, providing details like default values and descriptions.",
+          "operationId": "getServerOptions",
+          "parameters": [
+            {
+              "name": "framework",
+              "in": "path",
+              "value": "$steps.get-supported-server-frameworks.outputs.supported_frameworks"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "server_generation_options": "$response.body#/server_generation_options"
+          }
+        }
+      ],
+      "outputs": {
+        "supported_frameworks": "$steps.get-supported-server-frameworks.outputs.supported_frameworks",
+        "server_generation_options": "$steps.get-server-framework-options.outputs.server_generation_options"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

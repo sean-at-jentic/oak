@@ -1,0 +1,651 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/openpolicy.local/main/0.28.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "deploy-and-test-policy",
+      "summary": "Deploys a new Rego policy module to OPA and then immediately tests its functionality by executing a relevant query with input data. This workflow is crucial for validating policy behavior after deployment.",
+      "description": "Deploys a new Rego policy module to OPA and then immediately tests its functionality by executing a relevant query with input data. This workflow is crucial for validating policy behavior after deployment.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "pretty": {
+            "type": "string"
+          },
+          "metrics": {
+            "type": "string"
+          },
+          "deploy-policy-module_body": {
+            "type": "object"
+          },
+          "explain": {
+            "type": "string"
+          },
+          "execute-policy-query_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "deploy-policy-module",
+          "description": "Creates or updates a policy module with the given ID and Rego content. This makes the policy available for evaluation.",
+          "operationId": "putPolicyModule",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "pretty",
+              "in": "query",
+              "value": "$inputs.pretty"
+            },
+            {
+              "name": "metrics",
+              "in": "query",
+              "value": "$inputs.metrics"
+            }
+          ],
+          "requestBody": {
+            "contentType": "text/plain",
+            "payload": "$inputs.deploy-policy-module_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "policy_id": "$response.body#/policy_id"
+          }
+        },
+        {
+          "stepId": "execute-policy-query",
+          "description": "Executes a complex ad-hoc Rego query, typically referencing the newly deployed policy, with specific input data to test its behavior and get a decision.",
+          "operationId": "postQuery",
+          "parameters": [
+            {
+              "name": "pretty",
+              "in": "query",
+              "value": "$inputs.pretty"
+            },
+            {
+              "name": "explain",
+              "in": "query",
+              "value": "$inputs.explain"
+            },
+            {
+              "name": "metrics",
+              "in": "query",
+              "value": "$inputs.metrics"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/yaml",
+            "payload": "$inputs.execute-policy-query_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "query_result": "$response.body#/query_result"
+          }
+        }
+      ],
+      "outputs": {
+        "policy_id": "$steps.deploy-policy-module.outputs.policy_id",
+        "query_result": "$steps.execute-policy-query.outputs.query_result"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-and-inspect-policies",
+      "summary": "Fetches a list of all deployed policy modules and then retrieves the detailed content (raw Rego and AST) of a specific policy module from that list. This workflow is useful for auditing and understanding deployed policies.",
+      "description": "Fetches a list of all deployed policy modules and then retrieves the detailed content (raw Rego and AST) of a specific policy module from that list. This workflow is useful for auditing and understanding deployed policies.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "pretty": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-all-policies",
+          "description": "Retrieves a list of all policy modules currently deployed on the OPA server, providing their identifiers.",
+          "operationId": "getPolicies",
+          "parameters": [
+            {
+              "name": "pretty",
+              "in": "query",
+              "value": "$inputs.pretty"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "policies_list": "$response.body#/policies_list"
+          }
+        },
+        {
+          "stepId": "get-specific-policy",
+          "description": "Retrieves the full Rego content and Abstract Syntax Tree (AST) of a specific policy module by its ID, allowing for detailed inspection.",
+          "operationId": "getPolicyModule",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.list-all-policies.outputs.policies_list.id"
+            },
+            {
+              "name": "pretty",
+              "in": "query",
+              "value": "$inputs.pretty"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "policy_details": "$response.body#/policy_details"
+          }
+        }
+      ],
+      "outputs": {
+        "policies_list": "$steps.list-all-policies.outputs.policies_list",
+        "policy_details": "$steps.get-specific-policy.outputs.policy_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "update-and-verify-data-document",
+      "summary": "Creates an initial data document in OPA, applies a series of JSON patch operations to modify it, and then retrieves the document to verify that the changes were successfully applied. This workflow demonstrates dynamic data management.",
+      "description": "Creates an initial data document in OPA, applies a series of JSON patch operations to modify it, and then retrieves the document to verify that the changes were successfully applied. This workflow demonstrates dynamic data management.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "If-None-Match": {
+            "type": "string"
+          },
+          "initial-data-creation_body": {
+            "type": "object"
+          },
+          "input": {
+            "type": "string"
+          },
+          "pretty": {
+            "type": "string"
+          },
+          "provenance": {
+            "type": "string"
+          },
+          "explain": {
+            "type": "string"
+          },
+          "metrics": {
+            "type": "string"
+          },
+          "instrument": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "initial-data-creation",
+          "description": "Creates an initial data document or overwrites an existing one at the specified path, setting up the base data for policies.",
+          "operationId": "putDocument",
+          "parameters": [
+            {
+              "name": "path",
+              "in": "path",
+              "value": "$inputs.path"
+            },
+            {
+              "name": "If-None-Match",
+              "in": "header",
+              "value": "$inputs.If-None-Match"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.initial-data-creation_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "document_path": "$response.body#/document_path"
+          }
+        },
+        {
+          "stepId": "apply-data-patch",
+          "description": "Applies a series of JSON patch operations to modify the existing data document at the specified path, enabling granular updates.",
+          "operationId": "patchDocument",
+          "parameters": [
+            {
+              "name": "path",
+              "in": "path",
+              "value": "$steps.initial-data-creation.outputs.document_path"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "path": "$steps.initial-data-creation.outputs.document_path"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "patch_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "retrieve-updated-document",
+          "description": "Retrieves the content of the data document from the specified path to confirm that the applied changes are present.",
+          "operationId": "getDocument",
+          "parameters": [
+            {
+              "name": "path",
+              "in": "path",
+              "value": "$steps.initial-data-creation.outputs.document_path"
+            },
+            {
+              "name": "input",
+              "in": "query",
+              "value": "$inputs.input"
+            },
+            {
+              "name": "pretty",
+              "in": "query",
+              "value": "$inputs.pretty"
+            },
+            {
+              "name": "provenance",
+              "in": "query",
+              "value": "$inputs.provenance"
+            },
+            {
+              "name": "explain",
+              "in": "query",
+              "value": "$inputs.explain"
+            },
+            {
+              "name": "metrics",
+              "in": "query",
+              "value": "$inputs.metrics"
+            },
+            {
+              "name": "instrument",
+              "in": "query",
+              "value": "$inputs.instrument"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_document_content": "$response.body#/updated_document_content"
+          }
+        }
+      ],
+      "outputs": {
+        "document_path": "$steps.initial-data-creation.outputs.document_path",
+        "patch_data": "$steps.apply-data-patch.outputs.patch_data",
+        "updated_document_content": "$steps.retrieve-updated-document.outputs.updated_document_content"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "optimize-policy-query-with-compilation",
+      "summary": "Deploys an initial Rego policy and then uses the compile API to partially evaluate a query related to that policy. This process helps in optimizing policy evaluation by simplifying queries or policies for specific contexts.",
+      "description": "Deploys an initial Rego policy and then uses the compile API to partially evaluate a query related to that policy. This process helps in optimizing policy evaluation by simplifying queries or policies for specific contexts.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "pretty": {
+            "type": "string"
+          },
+          "metrics": {
+            "type": "string"
+          },
+          "deploy-initial-policy_body": {
+            "type": "object"
+          },
+          "explain": {
+            "type": "string"
+          },
+          "instrument": {
+            "type": "string"
+          },
+          "partially-evaluate-query_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "deploy-initial-policy",
+          "description": "Deploys an initial Rego policy module that will be referenced or partially evaluated in subsequent steps.",
+          "operationId": "putPolicyModule",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "pretty",
+              "in": "query",
+              "value": "$inputs.pretty"
+            },
+            {
+              "name": "metrics",
+              "in": "query",
+              "value": "$inputs.metrics"
+            }
+          ],
+          "requestBody": {
+            "contentType": "text/plain",
+            "payload": "$inputs.deploy-initial-policy_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "policy_id": "$response.body#/policy_id"
+          }
+        },
+        {
+          "stepId": "partially-evaluate-query",
+          "description": "Partially evaluates a Rego query against the deployed policy and optional input, returning a simplified policy or query that can be used for optimization.",
+          "operationId": "postCompile",
+          "parameters": [
+            {
+              "name": "pretty",
+              "in": "query",
+              "value": "$inputs.pretty"
+            },
+            {
+              "name": "explain",
+              "in": "query",
+              "value": "$inputs.explain"
+            },
+            {
+              "name": "metrics",
+              "in": "query",
+              "value": "$inputs.metrics"
+            },
+            {
+              "name": "instrument",
+              "in": "query",
+              "value": "$inputs.instrument"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.partially-evaluate-query_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "compiled_query_result": "$response.body#/compiled_query_result"
+          }
+        }
+      ],
+      "outputs": {
+        "policy_id": "$steps.deploy-initial-policy.outputs.policy_id",
+        "compiled_query_result": "$steps.partially-evaluate-query.outputs.compiled_query_result"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "health-and-configuration-monitoring",
+      "summary": "Checks the operational health of the OPA server, including bundle and plugin status, and then retrieves the server's active configuration. This workflow is essential for monitoring the OPA instance in production environments.",
+      "description": "Checks the operational health of the OPA server, including bundle and plugin status, and then retrieves the server's active configuration. This workflow is essential for monitoring the OPA instance in production environments.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "bundles": {
+            "type": "string"
+          },
+          "plugins": {
+            "type": "string"
+          },
+          "exclude-plugin": {
+            "type": "string"
+          },
+          "pretty": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "check-opa-health",
+          "description": "Verifies that the OPA server is operational and reports on bundle activation and plugin status, providing a quick health check.",
+          "operationId": "getHealth",
+          "parameters": [
+            {
+              "name": "bundles",
+              "in": "query",
+              "value": "$inputs.bundles"
+            },
+            {
+              "name": "plugins",
+              "in": "query",
+              "value": "$inputs.plugins"
+            },
+            {
+              "name": "exclude-plugin",
+              "in": "query",
+              "value": "$inputs.exclude-plugin"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "health_status": "$response.body#/health_status"
+          }
+        },
+        {
+          "stepId": "get-opa-configuration",
+          "description": "Retrieves the active configuration of the OPA server, allowing administrators to inspect its current settings.",
+          "operationId": "getConfig",
+          "parameters": [
+            {
+              "name": "pretty",
+              "in": "query",
+              "value": "$inputs.pretty"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "configuration_details": "$response.body#/configuration_details"
+          }
+        }
+      ],
+      "outputs": {
+        "health_status": "$steps.check-opa-health.outputs.health_status",
+        "configuration_details": "$steps.get-opa-configuration.outputs.configuration_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

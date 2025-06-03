@@ -1,0 +1,942 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/osf.io/main/2.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "project-creation-and-basic-management",
+      "summary": "Allows a user to create a new research project (node), add collaborators, update project details, and list its files. This workflow demonstrates the initial setup and basic management of a research project on OSF.",
+      "description": "Allows a user to create a new research project (node), add collaborators, update project details, and list its files. This workflow demonstrates the initial setup and basic management of a research project on OSF.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "node_id": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-project",
+          "description": "Creates a new top-level project (node) with a specified title and category. Projects are the fundamental units of research on OSF.",
+          "operationId": "nodes_create",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "node_id": "$response.body#/node_id"
+          }
+        },
+        {
+          "stepId": "add-contributor-to-project",
+          "description": "Adds a new user as a contributor to the newly created project, granting them specific permissions (read, write, or admin) and optionally making them bibliographic.",
+          "operationId": "nodes_contributors_create",
+          "parameters": [
+            {
+              "name": "node_id",
+              "in": "path",
+              "value": "$steps.create-project.outputs.node_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "node_id": "$steps.create-project.outputs.node_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "contributor_id": "$response.body#/contributor_id"
+          }
+        },
+        {
+          "stepId": "update-project-details",
+          "description": "Updates key metadata of the project, such as its title, description, or public visibility status.",
+          "operationId": "nodes_partial_update",
+          "parameters": [
+            {
+              "name": "node_id",
+              "in": "path",
+              "value": "$steps.create-project.outputs.node_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "node_id": "$steps.create-project.outputs.node_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_node_id": "$response.body#/updated_node_id"
+          }
+        },
+        {
+          "stepId": "list-project-files",
+          "description": "Retrieves a list of all files and folders associated with a specific storage provider (e.g., 'osfstorage') within the project. Note: Actual file upload/download operations are handled by the Waterbutler API, which is external to this specification.",
+          "operationId": "nodes_files_list",
+          "parameters": [
+            {
+              "name": "node_id",
+              "in": "path",
+              "value": "$steps.create-project.outputs.node_id"
+            },
+            {
+              "name": "provider",
+              "in": "path",
+              "value": "$inputs.provider"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "file_list": "$response.body#/file_list"
+          }
+        }
+      ],
+      "outputs": {
+        "node_id": "$steps.create-project.outputs.node_id",
+        "contributor_id": "$steps.add-contributor-to-project.outputs.contributor_id",
+        "updated_node_id": "$steps.update-project-details.outputs.updated_node_id",
+        "file_list": "$steps.list-project-files.outputs.file_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "discover-public-research-and-affiliations",
+      "summary": "Enables a user to explore public research projects, retrieve their detailed information, identify contributors, view institutional affiliations, and generate citations in various styles.",
+      "description": "Enables a user to explore public research projects, retrieve their detailed information, identify contributors, view institutional affiliations, and generate citations in various styles.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "node_id": {
+            "type": "string"
+          },
+          "style_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-public-nodes",
+          "description": "Lists all publicly accessible research projects and components available on the OSF.",
+          "operationId": "nodes_list",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "node_list": "$response.body#/node_list"
+          }
+        },
+        {
+          "stepId": "get-node-details",
+          "description": "Retrieves detailed information about a specific research node, including its description, creation date, and public status.",
+          "operationId": "nodes_read",
+          "parameters": [
+            {
+              "name": "node_id",
+              "in": "path",
+              "value": "$steps.list-public-nodes.outputs.node_list.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "node_details": "$response.body#/node_details",
+            "node_id_out": "$response.body#/node_id_out"
+          }
+        },
+        {
+          "stepId": "list-node-contributors",
+          "description": "Lists all individuals who have contributed to the selected research node, along with their roles and permissions.",
+          "operationId": "nodes_contributors_list",
+          "parameters": [
+            {
+              "name": "node_id",
+              "in": "path",
+              "value": "$steps.get-node-details.outputs.node_id_out"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "contributors_list": "$response.body#/contributors_list"
+          }
+        },
+        {
+          "stepId": "list-node-institutions",
+          "description": "Lists all institutions officially affiliated with the selected research node.",
+          "operationId": "nodes_institutions_list",
+          "parameters": [
+            {
+              "name": "node_id",
+              "in": "path",
+              "value": "$steps.get-node-details.outputs.node_id_out"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "institutions_list": "$response.body#/institutions_list"
+          }
+        },
+        {
+          "stepId": "get-node-citation-apa-style",
+          "description": "Generates a citation for the selected node in a specified citation style, such as APA.",
+          "operationId": "nodes_citation_read",
+          "parameters": [
+            {
+              "name": "style_id",
+              "in": "path",
+              "value": "$inputs.style_id"
+            },
+            {
+              "name": "node_id",
+              "in": "path",
+              "value": "$steps.get-node-details.outputs.node_id_out"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "citation_text": "$response.body#/citation_text"
+          }
+        }
+      ],
+      "outputs": {
+        "node_list": "$steps.list-public-nodes.outputs.node_list",
+        "node_details": "$steps.get-node-details.outputs.node_details",
+        "node_id_out": "$steps.get-node-details.outputs.node_id_out",
+        "contributors_list": "$steps.list-node-contributors.outputs.contributors_list",
+        "institutions_list": "$steps.list-node-institutions.outputs.institutions_list",
+        "citation_text": "$steps.get-node-citation-apa-style.outputs.citation_text"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-user-profile-and-contributions",
+      "summary": "Allows an authenticated user to view and update their personal profile information, and retrieve lists of all projects, registrations, and preprints they have contributed to.",
+      "description": "Allows an authenticated user to view and update their personal profile information, and retrieve lists of all projects, registrations, and preprints they have contributed to.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-current-user-profile",
+          "description": "Retrieves the detailed profile information for the currently authenticated user.",
+          "operationId": "users_read",
+          "parameters": [
+            {
+              "name": "user_id",
+              "in": "path",
+              "value": "$inputs.user_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_profile": "$response.body#/user_profile",
+            "user_id_out": "$response.body#/user_id_out"
+          }
+        },
+        {
+          "stepId": "update-user-profile",
+          "description": "Updates editable fields of the user's profile, such as their full name, given name, or timezone.",
+          "operationId": "users_partial_update",
+          "parameters": [
+            {
+              "name": "user_id",
+              "in": "path",
+              "value": "$steps.get-current-user-profile.outputs.user_id_out"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "user_id": "$steps.get-current-user-profile.outputs.user_id_out"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_user_profile": "$response.body#/updated_user_profile"
+          }
+        },
+        {
+          "stepId": "list-user-nodes",
+          "description": "Lists all research projects and components to which the user is a contributor.",
+          "operationId": "users_nodes_list",
+          "parameters": [
+            {
+              "name": "user_id",
+              "in": "path",
+              "value": "$steps.get-current-user-profile.outputs.user_id_out"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_nodes": "$response.body#/user_nodes"
+          }
+        },
+        {
+          "stepId": "list-user-registrations",
+          "description": "Lists all registrations (frozen versions of projects) to which the user is a contributor.",
+          "operationId": "users_registrations_list",
+          "parameters": [
+            {
+              "name": "user_id",
+              "in": "path",
+              "value": "$steps.get-current-user-profile.outputs.user_id_out"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_registrations": "$response.body#/user_registrations"
+          }
+        },
+        {
+          "stepId": "list-user-preprints",
+          "description": "Lists all preprints (early versions of research papers) to which the user is a contributor.",
+          "operationId": "users_preprints_list",
+          "parameters": [
+            {
+              "name": "user_id",
+              "in": "path",
+              "value": "$steps.get-current-user-profile.outputs.user_id_out"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_preprints": "$response.body#/user_preprints"
+          }
+        }
+      ],
+      "outputs": {
+        "user_profile": "$steps.get-current-user-profile.outputs.user_profile",
+        "user_id_out": "$steps.get-current-user-profile.outputs.user_id_out",
+        "updated_user_profile": "$steps.update-user-profile.outputs.updated_user_profile",
+        "user_nodes": "$steps.list-user-nodes.outputs.user_nodes",
+        "user_registrations": "$steps.list-user-registrations.outputs.user_registrations",
+        "user_preprints": "$steps.list-user-preprints.outputs.user_preprints"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "draft-registration-preparation",
+      "summary": "Guides a user through the process of initiating a draft registration for their research, selecting a schema, and filling out the required responses. This prepares the research for a formal, immutable registration.",
+      "description": "Guides a user through the process of initiating a draft registration for their research, selecting a schema, and filling out the required responses. This prepares the research for a formal, immutable registration.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "draft_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-registration-schemas",
+          "description": "Retrieves a list of all available registration schemas, which define the questions and structure for a registration.",
+          "operationId": "registration_schemas_list",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "schema_list": "$response.body#/schema_list"
+          }
+        },
+        {
+          "stepId": "create-draft-registration",
+          "description": "Initiates a new draft registration, optionally branching from an existing project, and associating it with a chosen registration schema.",
+          "operationId": "draft_registrations_create",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "draft_id": "$response.body#/id",
+            "registration_schema_id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "update-draft-registration-responses",
+          "description": "Updates the responses to the questions defined by the registration schema within the draft registration. This step is crucial for completing the registration form.",
+          "operationId": "nodes_draft_registrations_partial_update",
+          "parameters": [
+            {
+              "name": "draft_id",
+              "in": "path",
+              "value": "$steps.create-draft-registration.outputs.draft_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "draft_id": "$steps.create-draft-registration.outputs.draft_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_draft_id": "$response.body#/updated_draft_id"
+          }
+        },
+        {
+          "stepId": "retrieve-draft-registration",
+          "description": "Retrieves the current state and details of the draft registration, allowing verification of updates before final submission (which is not directly exposed via API).",
+          "operationId": "nodes_draft_registrations_read",
+          "parameters": [
+            {
+              "name": "draft_id",
+              "in": "path",
+              "value": "$steps.create-draft-registration.outputs.draft_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "draft_registration_details": "$response.body#/draft_registration_details"
+          }
+        }
+      ],
+      "outputs": {
+        "schema_list": "$steps.list-registration-schemas.outputs.schema_list",
+        "draft_id": "$steps.create-draft-registration.outputs.draft_id",
+        "registration_schema_id": "$steps.create-draft-registration.outputs.registration_schema_id",
+        "updated_draft_id": "$steps.update-draft-registration-responses.outputs.updated_draft_id",
+        "draft_registration_details": "$steps.retrieve-draft-registration.outputs.draft_registration_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "collection-content-curation",
+      "summary": "Allows a collection administrator to create a new collection, link existing research items (nodes or registrations) to it, and manage their associated metadata, facilitating organized content curation.",
+      "description": "Allows a collection administrator to create a new collection, link existing research items (nodes or registrations) to it, and manage their associated metadata, facilitating organized content curation.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-collection_body": {
+            "type": "object"
+          },
+          "collection_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-collection",
+          "description": "Creates a new collection, which acts as a curated grouping for research projects, preprints, or registrations.",
+          "operationId": "collections_create",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-collection_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "collection_id": "$response.body#/collection_id"
+          }
+        },
+        {
+          "stepId": "link-node-to-collection",
+          "description": "Links an existing node (project or component) to the newly created collection, making it part of the curated content.",
+          "operationId": "collections_linked_nodes_relationships",
+          "parameters": [
+            {
+              "name": "collection_id",
+              "in": "path",
+              "value": "$steps.create-collection.outputs.collection_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "collection_id": "$steps.create-collection.outputs.collection_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "collection_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-metadata-to-linked-node",
+          "description": "Adds custom metadata (e.g., subjects, volume) to a specific linked entity within the collection, enhancing its discoverability and organization.",
+          "operationId": "collections_add_metadata",
+          "parameters": [
+            {
+              "name": "collection_id",
+              "in": "path",
+              "value": "$steps.create-collection.outputs.collection_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "collection_id": "$steps.create-collection.outputs.collection_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "node_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-collection-linked-nodes",
+          "description": "Retrieves a comprehensive list of all nodes currently linked to the collection, allowing administrators to review the collection's contents.",
+          "operationId": "collections_linked_nodes_list",
+          "parameters": [
+            {
+              "name": "collection_id",
+              "in": "path",
+              "value": "$steps.create-collection.outputs.collection_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "linked_nodes": "$response.body#/linked_nodes"
+          }
+        }
+      ],
+      "outputs": {
+        "collection_id": "$steps.create-collection.outputs.collection_id",
+        "collection_data": "$steps.link-node-to-collection.outputs.collection_data",
+        "node_data": "$steps.add-metadata-to-linked-node.outputs.node_data",
+        "linked_nodes": "$steps.list-collection-linked-nodes.outputs.linked_nodes"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "preprint-publishing-and-versioning",
+      "summary": "Enables a user to publish a new preprint, update its details, and manage different versions of the preprint, supporting the open dissemination of research findings.",
+      "description": "Enables a user to publish a new preprint, update its details, and manage different versions of the preprint, supporting the open dissemination of research findings.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "preprint_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-preprint-providers",
+          "description": "Retrieves a list of all available preprint service providers (e.g., OSF Preprints, PsyArXiv) to choose where to publish a preprint.",
+          "operationId": "preprint_provider_list",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "provider_list": "$response.body#/provider_list"
+          }
+        },
+        {
+          "stepId": "create-preprint",
+          "description": "Publishes a new preprint by linking it to an existing OSF node (project) and a primary file, and associating it with a chosen preprint provider.",
+          "operationId": "preprints_create",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "preprint_provider_id": "$steps.list-preprint-providers.outputs.provider_list[0].id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "preprint_id": "$response.body#/preprint_id"
+          }
+        },
+        {
+          "stepId": "update-preprint-details",
+          "description": "Modifies the metadata of an existing preprint, such as its title, description, or associated DOI.",
+          "operationId": "preprints_partial_update",
+          "parameters": [
+            {
+              "name": "preprint_id",
+              "in": "path",
+              "value": "$steps.create-preprint.outputs.preprint_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "preprint_id": "$steps.create-preprint.outputs.preprint_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_preprint_id": "$response.body#/updated_preprint_id"
+          }
+        },
+        {
+          "stepId": "create-preprint-version",
+          "description": "Creates a new version of an existing preprint, allowing for updates to the research while maintaining a historical record.",
+          "operationId": "preprints_create",
+          "parameters": [
+            {
+              "name": "preprint_id",
+              "in": "path",
+              "value": "$steps.create-preprint.outputs.preprint_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "new_version_preprint_id": "$response.body#/new_version_preprint_id"
+          }
+        },
+        {
+          "stepId": "list-preprint-versions",
+          "description": "Retrieves a list of all historical versions of a specific preprint.",
+          "operationId": "versioned_preprints_list",
+          "parameters": [
+            {
+              "name": "preprint_id",
+              "in": "path",
+              "value": "$steps.create-preprint.outputs.preprint_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "preprint_versions": "$response.body#/preprint_versions"
+          }
+        }
+      ],
+      "outputs": {
+        "provider_list": "$steps.list-preprint-providers.outputs.provider_list",
+        "preprint_id": "$steps.create-preprint.outputs.preprint_id",
+        "updated_preprint_id": "$steps.update-preprint-details.outputs.updated_preprint_id",
+        "new_version_preprint_id": "$steps.create-preprint-version.outputs.new_version_preprint_id",
+        "preprint_versions": "$steps.list-preprint-versions.outputs.preprint_versions"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "moderating-collection-submissions",
+      "summary": "Enables a collection provider administrator or moderator to view and manage pending submissions to their collections, allowing for approval or rejection of content.",
+      "description": "Enables a collection provider administrator or moderator to view and manage pending submissions to their collections, allowing for approval or rejection of content.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "collection_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-collection-providers",
+          "description": "Retrieves a list of all available collection providers, which are entities that manage groups of collections.",
+          "operationId": "collection_provider_list",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "collection_provider_list": "$response.body#/collection_provider_list"
+          }
+        },
+        {
+          "stepId": "list-pending-submissions",
+          "description": "Lists all submissions (nodes, preprints, or registrations) that are currently awaiting moderation for a specific collection provider.",
+          "operationId": "collection_provider_detail",
+          "parameters": [
+            {
+              "name": "collection_id",
+              "in": "path",
+              "value": "$steps.list-collection-providers.outputs.collection_provider_list.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pending_submissions": "$response.body#/pending_submissions"
+          }
+        },
+        {
+          "stepId": "create-submission-action-approve",
+          "description": "Creates an action to approve a specific pending collection submission, changing its state to 'accepted' and adding it to the collection.",
+          "operationId": "collection_submission_actions",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "collection_submission_id": "$steps.list-pending-submissions.outputs.pending_submissions[0].id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_result": "$response.body#/action_result"
+          }
+        }
+      ],
+      "outputs": {
+        "collection_provider_list": "$steps.list-collection-providers.outputs.collection_provider_list",
+        "pending_submissions": "$steps.list-pending-submissions.outputs.pending_submissions",
+        "action_result": "$steps.create-submission-action-approve.outputs.action_result"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

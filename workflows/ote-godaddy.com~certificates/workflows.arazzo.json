@@ -1,0 +1,954 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/ote-godaddy.com/certificates/0.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "end-to-end-certificate-issuance-polling",
+      "summary": "This workflow allows a user to create a new SSL/TLS certificate order, continuously monitor its status and actions through polling until it is issued, and finally download the issued certificate bundle. This is crucial for automated certificate provisioning.",
+      "description": "This workflow allows a user to create a new SSL/TLS certificate order, continuously monitor its status and actions through polling until it is issued, and finally download the issued certificate bundle. This is crucial for automated certificate provisioning.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-Market-Id": {
+            "type": "string"
+          },
+          "csr": {
+            "type": "string"
+          },
+          "productType": {
+            "type": "string"
+          },
+          "period": {
+            "type": "string"
+          },
+          "contact": {
+            "type": "string"
+          },
+          "certificateId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-certificate-order",
+          "description": "Initiates a new certificate order. The response provides a certificateId for subsequent operations.",
+          "operationId": "certificate_create",
+          "parameters": [
+            {
+              "name": "X-Market-Id",
+              "in": "header",
+              "value": "$inputs.X-Market-Id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "csr": "$inputs.csr",
+              "productType": "$inputs.productType",
+              "period": "$inputs.period",
+              "contact": "$inputs.contact"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "certificateId": "$response.body#/certificateId"
+          }
+        },
+        {
+          "stepId": "get-certificate-status",
+          "description": "Retrieves the current status and details of the certificate order. This operation can be polled until the certificate status indicates 'ISSUED'.",
+          "operationId": "certificate_get",
+          "parameters": [
+            {
+              "name": "certificateId",
+              "in": "path",
+              "value": "$inputs.certificateId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "certificateId": "$response.body#/certificateId",
+            "status": "$response.body#/status",
+            "commonName": "$response.body#/commonName",
+            "serialNumber": "$response.body#/serialNumber",
+            "validEnd": "$response.body#/validEnd",
+            "progress": "$response.body#/progress"
+          }
+        },
+        {
+          "stepId": "retrieve-certificate-actions",
+          "description": "Fetches a history of all stateful actions related to the certificate lifecycle, providing granular updates on its progress.",
+          "operationId": "certificate_action_retrieve",
+          "parameters": [
+            {
+              "name": "certificateId",
+              "in": "path",
+              "value": "$inputs.certificateId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "actions": "$response.body#/0/actions"
+          }
+        },
+        {
+          "stepId": "download-issued-certificate",
+          "description": "Downloads the issued certificate bundle in PEM format once the certificate has been successfully issued.",
+          "operationId": "certificate_download",
+          "parameters": [
+            {
+              "name": "certificateId",
+              "in": "path",
+              "value": "$inputs.certificateId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pems": "$response.body#/pems",
+            "serialNumber": "$response.body#/serialNumber"
+          }
+        }
+      ],
+      "outputs": {
+        "certificateId": "$steps.get-certificate-status.outputs.certificateId",
+        "status": "$steps.get-certificate-status.outputs.status",
+        "commonName": "$steps.get-certificate-status.outputs.commonName",
+        "serialNumber": "$steps.download-issued-certificate.outputs.serialNumber",
+        "validEnd": "$steps.get-certificate-status.outputs.validEnd",
+        "progress": "$steps.get-certificate-status.outputs.progress",
+        "actions": "$steps.retrieve-certificate-actions.outputs.actions",
+        "pems": "$steps.download-issued-certificate.outputs.pems"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "certificate-reissue-process",
+      "summary": "This workflow enables reissuing an active certificate, typically to update the Certificate Signing Request (CSR), add/remove Subject Alternative Names (SANs), or change the root type. It includes monitoring the reissuance and downloading the new certificate.",
+      "description": "This workflow enables reissuing an active certificate, typically to update the Certificate Signing Request (CSR), add/remove Subject Alternative Names (SANs), or change the root type. It includes monitoring the reissuance and downloading the new certificate.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "certificateId": {
+            "type": "string"
+          },
+          "commonName": {
+            "type": "string"
+          },
+          "csr": {
+            "type": "string"
+          },
+          "subjectAlternativeNames": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-existing-certificate-details",
+          "description": "Retrieves the current details of an active certificate before initiating a reissue.",
+          "operationId": "certificate_get",
+          "parameters": [
+            {
+              "name": "certificateId",
+              "in": "path",
+              "value": "$inputs.certificateId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "certificateId": "$response.body#/certificateId",
+            "commonName": "$response.body#/commonName",
+            "status": "$response.body#/status",
+            "serialNumber": "$response.body#/serialNumber"
+          }
+        },
+        {
+          "stepId": "reissue-certificate",
+          "description": "Submits a request to reissue the specified certificate with new details (e.g., updated CSR, SANs).",
+          "operationId": "certificate_reissue",
+          "parameters": [
+            {
+              "name": "certificateId",
+              "in": "path",
+              "value": "$inputs.certificateId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "commonName": "$inputs.commonName",
+              "csr": "$inputs.csr",
+              "subjectAlternativeNames": "$inputs.subjectAlternativeNames"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "certificateId": "$response.body#/certificateId"
+          }
+        },
+        {
+          "stepId": "monitor-reissue-status",
+          "description": "Monitors the status of the reissuance request until the new certificate is issued.",
+          "operationId": "certificate_get",
+          "parameters": [
+            {
+              "name": "certificateId",
+              "in": "path",
+              "value": "$inputs.certificateId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "certificateId": "$response.body#/certificateId",
+            "status": "$response.body#/status",
+            "serialNumber": "$response.body#/serialNumber"
+          }
+        },
+        {
+          "stepId": "download-reissued-certificate",
+          "description": "Downloads the newly reissued certificate bundle.",
+          "operationId": "certificate_download",
+          "parameters": [
+            {
+              "name": "certificateId",
+              "in": "path",
+              "value": "$inputs.certificateId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pems": "$response.body#/pems",
+            "serialNumber": "$response.body#/serialNumber"
+          }
+        }
+      ],
+      "outputs": {
+        "certificateId": "$steps.monitor-reissue-status.outputs.certificateId",
+        "commonName": "$steps.get-existing-certificate-details.outputs.commonName",
+        "status": "$steps.monitor-reissue-status.outputs.status",
+        "serialNumber": "$steps.download-reissued-certificate.outputs.serialNumber",
+        "pems": "$steps.download-reissued-certificate.outputs.pems"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "certificate-renewal-process",
+      "summary": "This workflow facilitates the renewal of an expiring or expired certificate, allowing for updates to its configuration (e.g., CSR, validity period, SANs). It includes monitoring the renewal and downloading the renewed certificate.",
+      "description": "This workflow facilitates the renewal of an expiring or expired certificate, allowing for updates to its configuration (e.g., CSR, validity period, SANs). It includes monitoring the renewal and downloading the renewed certificate.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "certificateId": {
+            "type": "string"
+          },
+          "csr": {
+            "type": "string"
+          },
+          "period": {
+            "type": "string"
+          },
+          "subjectAlternativeNames": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-certificate-for-renewal",
+          "description": "Retrieves the current details of a certificate eligible for renewal.",
+          "operationId": "certificate_get",
+          "parameters": [
+            {
+              "name": "certificateId",
+              "in": "path",
+              "value": "$inputs.certificateId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "certificateId": "$response.body#/certificateId",
+            "commonName": "$response.body#/commonName",
+            "status": "$response.body#/status",
+            "validEnd": "$response.body#/validEnd"
+          }
+        },
+        {
+          "stepId": "renew-certificate",
+          "description": "Submits a request to renew the specified certificate, potentially with updated details.",
+          "operationId": "certificate_renew",
+          "parameters": [
+            {
+              "name": "certificateId",
+              "in": "path",
+              "value": "$inputs.certificateId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "csr": "$inputs.csr",
+              "period": "$inputs.period",
+              "subjectAlternativeNames": "$inputs.subjectAlternativeNames"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "certificateId": "$response.body#/certificateId"
+          }
+        },
+        {
+          "stepId": "monitor-renewal-status",
+          "description": "Monitors the status of the renewal request until the new certificate is issued.",
+          "operationId": "certificate_get",
+          "parameters": [
+            {
+              "name": "certificateId",
+              "in": "path",
+              "value": "$inputs.certificateId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "certificateId": "$response.body#/certificateId",
+            "status": "$response.body#/status",
+            "serialNumber": "$response.body#/serialNumber"
+          }
+        },
+        {
+          "stepId": "download-renewed-certificate",
+          "description": "Downloads the newly renewed certificate bundle.",
+          "operationId": "certificate_download",
+          "parameters": [
+            {
+              "name": "certificateId",
+              "in": "path",
+              "value": "$inputs.certificateId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pems": "$response.body#/pems",
+            "serialNumber": "$response.body#/serialNumber"
+          }
+        }
+      ],
+      "outputs": {
+        "certificateId": "$steps.monitor-renewal-status.outputs.certificateId",
+        "commonName": "$steps.get-certificate-for-renewal.outputs.commonName",
+        "status": "$steps.monitor-renewal-status.outputs.status",
+        "validEnd": "$steps.get-certificate-for-renewal.outputs.validEnd",
+        "serialNumber": "$steps.download-renewed-certificate.outputs.serialNumber",
+        "pems": "$steps.download-renewed-certificate.outputs.pems"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "customer-certificate-portfolio-management-v2",
+      "summary": "This workflow provides a comprehensive view for a customer or reseller to list all certificates associated with a customer ID, retrieve detailed information for specific certificates, and check the domain verification status for each domain within a certificate.",
+      "description": "This workflow provides a comprehensive view for a customer or reseller to list all certificates associated with a customer ID, retrieve detailed information for specific certificates, and check the domain verification status for each domain within a certificate.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "certificateId": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-customer-certificates",
+          "description": "Retrieves a paginated list of all certificates belonging to a specific customer.",
+          "operationId": "getCustomerCertificatesByCustomerId",
+          "parameters": [
+            {
+              "name": "customerId",
+              "in": "path",
+              "value": "$inputs.customerId"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "certificates": "$response.body#/certificates",
+            "pagination": "$response.body#/pagination"
+          }
+        },
+        {
+          "stepId": "get-detailed-certificate-info",
+          "description": "Fetches detailed information for a specific certificate identified by its ID and customer ID.",
+          "operationId": "getCertificateDetailByCertIdentifier",
+          "parameters": [
+            {
+              "name": "customerId",
+              "in": "path",
+              "value": "$inputs.customerId"
+            },
+            {
+              "name": "certificateId",
+              "in": "path",
+              "value": "$inputs.certificateId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "certificateId": "$response.body#/certificateId",
+            "commonName": "$response.body#/commonName",
+            "status": "$response.body#/status",
+            "type": "$response.body#/type",
+            "contact": "$response.body#/contact",
+            "organization": "$response.body#/organization"
+          }
+        },
+        {
+          "stepId": "get-domain-verification-status",
+          "description": "Retrieves the domain verification status for all domains included in a specific certificate.",
+          "operationId": "getDomainInformationByCertificateId",
+          "parameters": [
+            {
+              "name": "customerId",
+              "in": "path",
+              "value": "$inputs.customerId"
+            },
+            {
+              "name": "certificateId",
+              "in": "path",
+              "value": "$inputs.certificateId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "domainVerifications": "$response.body#/0/domainVerifications"
+          }
+        },
+        {
+          "stepId": "get-detailed-domain-verification",
+          "description": "Provides detailed domain verification and Certificate Authority Authorization (CAA) information for a specific domain within a certificate.",
+          "operationId": "getDomainDetailsByDomain",
+          "parameters": [
+            {
+              "name": "customerId",
+              "in": "path",
+              "value": "$inputs.customerId"
+            },
+            {
+              "name": "certificateId",
+              "in": "path",
+              "value": "$inputs.certificateId"
+            },
+            {
+              "name": "domain",
+              "in": "path",
+              "value": "$inputs.domain"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "domain": "$response.body#/domain",
+            "status": "$response.body#/status",
+            "certificateAuthorityAuthorization": "$response.body#/certificateAuthorityAuthorization"
+          }
+        }
+      ],
+      "outputs": {
+        "certificates": "$steps.list-customer-certificates.outputs.certificates",
+        "pagination": "$steps.list-customer-certificates.outputs.pagination",
+        "certificateId": "$steps.get-detailed-certificate-info.outputs.certificateId",
+        "commonName": "$steps.get-detailed-certificate-info.outputs.commonName",
+        "status": "$steps.get-detailed-domain-verification.outputs.status",
+        "type": "$steps.get-detailed-certificate-info.outputs.type",
+        "contact": "$steps.get-detailed-certificate-info.outputs.contact",
+        "organization": "$steps.get-detailed-certificate-info.outputs.organization",
+        "domainVerifications": "$steps.get-domain-verification-status.outputs.domainVerifications",
+        "domain": "$steps.get-detailed-domain-verification.outputs.domain",
+        "certificateAuthorityAuthorization": "$steps.get-detailed-domain-verification.outputs.certificateAuthorityAuthorization"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-pending-certificate",
+      "summary": "This workflow allows users to check the status of a pending certificate order and then cancel it if it's no longer needed or if there was an error in the order.",
+      "description": "This workflow allows users to check the status of a pending certificate order and then cancel it if it's no longer needed or if there was an error in the order.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "certificateId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-pending-certificate-status",
+          "description": "Retrieves the current status of a certificate order to confirm it is in a 'PENDING' state before cancellation.",
+          "operationId": "certificate_get",
+          "parameters": [
+            {
+              "name": "certificateId",
+              "in": "path",
+              "value": "$inputs.certificateId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "certificateId": "$response.body#/certificateId",
+            "status": "$response.body#/status"
+          }
+        },
+        {
+          "stepId": "cancel-pending-certificate",
+          "description": "Cancels a certificate order that is currently in a pending state.",
+          "operationId": "certificate_cancel",
+          "parameters": [
+            {
+              "name": "certificateId",
+              "in": "path",
+              "value": "$inputs.certificateId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "certificate_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "certificateId": "$steps.get-pending-certificate-status.outputs.certificateId",
+        "status": "$steps.get-pending-certificate-status.outputs.status",
+        "certificate_data": "$steps.cancel-pending-certificate.outputs.certificate_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "certificate-revocation-process",
+      "summary": "This workflow enables the revocation of an active certificate due to reasons such as key compromise, cessation of operation, or privilege withdrawal.",
+      "description": "This workflow enables the revocation of an active certificate due to reasons such as key compromise, cessation of operation, or privilege withdrawal.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "certificateId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-certificate-for-revocation",
+          "description": "Retrieves the current details of an active certificate to confirm its status before revocation.",
+          "operationId": "certificate_get",
+          "parameters": [
+            {
+              "name": "certificateId",
+              "in": "path",
+              "value": "$inputs.certificateId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "certificateId": "$response.body#/certificateId",
+            "status": "$response.body#/status",
+            "serialNumber": "$response.body#/serialNumber"
+          }
+        },
+        {
+          "stepId": "revoke-certificate",
+          "description": "Submits a request to revoke the specified active certificate, providing a reason for the revocation.",
+          "operationId": "certificate_revoke",
+          "parameters": [
+            {
+              "name": "certificateId",
+              "in": "path",
+              "value": "$inputs.certificateId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "reason": "$inputs.reason"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "certificate_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "certificateId": "$steps.get-certificate-for-revocation.outputs.certificateId",
+        "status": "$steps.get-certificate-for-revocation.outputs.status",
+        "serialNumber": "$steps.get-certificate-for-revocation.outputs.serialNumber",
+        "certificate_data": "$steps.revoke-certificate.outputs.certificate_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "certificate-communication-and-site-seal-management",
+      "summary": "This workflow allows users to manage email communications related to a certificate, including retrieving email history and resending specific emails, and also to retrieve the site seal HTML for display on a website.",
+      "description": "This workflow allows users to manage email communications related to a certificate, including retrieving email history and resending specific emails, and also to retrieve the site seal HTML for display on a website.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "certificateId": {
+            "type": "string"
+          },
+          "emailId": {
+            "type": "string"
+          },
+          "theme": {
+            "type": "string"
+          },
+          "locale": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-certificate-email-history",
+          "description": "Retrieves a list of all emails sent for a specific certificate, including their IDs and recipients.",
+          "operationId": "certificate_email_history",
+          "parameters": [
+            {
+              "name": "certificateId",
+              "in": "path",
+              "value": "$inputs.certificateId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "emailHistory": "$response.body#/emailHistory"
+          }
+        },
+        {
+          "stepId": "resend-specific-email",
+          "description": "Resends a specific email associated with the certificate, identified by its email ID.",
+          "operationId": "certificate_resend_email",
+          "parameters": [
+            {
+              "name": "certificateId",
+              "in": "path",
+              "value": "$inputs.certificateId"
+            },
+            {
+              "name": "emailId",
+              "in": "path",
+              "value": "$inputs.emailId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "email_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-certificate-site-seal",
+          "description": "Retrieves the HTML code for the site seal associated with an issued certificate, which can be embedded on a website.",
+          "operationId": "certificate_siteseal_get",
+          "parameters": [
+            {
+              "name": "certificateId",
+              "in": "path",
+              "value": "$inputs.certificateId"
+            },
+            {
+              "name": "theme",
+              "in": "query",
+              "value": "$inputs.theme"
+            },
+            {
+              "name": "locale",
+              "in": "query",
+              "value": "$inputs.locale"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "html": "$response.body#/html"
+          }
+        }
+      ],
+      "outputs": {
+        "emailHistory": "$steps.get-certificate-email-history.outputs.emailHistory",
+        "email_data": "$steps.resend-specific-email.outputs.email_data",
+        "html": "$steps.get-certificate-site-seal.outputs.html"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

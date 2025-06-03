@@ -1,0 +1,223 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/openfigi.com/main/2.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "search-figis-by-keyword-with-pagination",
+      "summary": "Perform a keyword-based search for FIGIs, applying various filters, and retrieve all available results by handling pagination. This allows users to find financial instruments matching broad criteria and iterate through large result sets.",
+      "description": "Perform a keyword-based search for FIGIs, applying various filters, and retrieve all available results by handling pagination. This allows users to find financial instruments matching broad criteria and iterate through large result sets.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "initial-keyword-search",
+          "description": "Initiates a search for FIGIs using a keyword query and optional filters, returning the first page of results and a token for subsequent pages.",
+          "operationPath": "openapi_source#/paths/~1search/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "query": "$inputs.query"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "data": "$response.body#/0/data",
+            "next": "$response.body#/0/next"
+          }
+        },
+        {
+          "stepId": "continue-keyword-search",
+          "description": "Retrieves subsequent pages of FIGI search results using the 'start' token obtained from the previous search call. The original query and filters must be re-provided.",
+          "operationPath": "openapi_source#/paths/~1search/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "start": "$steps.initial-keyword-search.outputs.next",
+              "query": "$inputs.query"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "data": "$response.body#/0/data",
+            "next": "$response.body#/0/next"
+          }
+        }
+      ],
+      "outputs": {
+        "data": "$steps.continue-keyword-search.outputs.data",
+        "next": "$steps.continue-keyword-search.outputs.next"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "filter-figis-with-total-count-and-pagination",
+      "summary": "Filter FIGIs based on specific criteria, retrieve the total count of matching results, and paginate through all available results, which are listed alphabetically by FIGI. This is useful for comprehensive data retrieval, reporting, and understanding the scope of available instruments.",
+      "description": "Filter FIGIs based on specific criteria, retrieve the total count of matching results, and paginate through all available results, which are listed alphabetically by FIGI. This is useful for comprehensive data retrieval, reporting, and understanding the scope of available instruments.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "initial-filtered-search_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "initial-filtered-search",
+          "description": "Starts a filtered search for FIGIs, providing the total count of matching results and the first page of data, along with a token for pagination.",
+          "operationPath": "openapi_source#/paths/~1filter/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.initial-filtered-search_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "data": "$response.body#/0/data",
+            "total": "$response.body#/0/total",
+            "next": "$response.body#/0/next"
+          }
+        },
+        {
+          "stepId": "continue-filtered-search",
+          "description": "Retrieves subsequent pages of filtered FIGI results using the 'start' token, maintaining the original query and filters, and providing the total count.",
+          "operationPath": "openapi_source#/paths/~1filter/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "start": "$steps.initial-filtered-search.outputs.next"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "data": "$response.body#/0/data",
+            "total": "$response.body#/0/total",
+            "next": "$response.body#/0/next"
+          }
+        }
+      ],
+      "outputs": {
+        "data": "$steps.continue-filtered-search.outputs.data",
+        "total": "$steps.continue-filtered-search.outputs.total",
+        "next": "$steps.continue-filtered-search.outputs.next"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
