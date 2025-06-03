@@ -1,0 +1,760 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/xero.com/xero_files/7.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "manage-file-associations-with-xero-business-objects",
+      "summary": "A core workflow for Xero, allowing users to upload a file (e.g., a receipt or invoice) and then associate it with a specific Xero business object like an invoice, contact, or bank transaction. It also includes verifying the association.",
+      "description": "A core workflow for Xero, allowing users to upload a file (e.g., a receipt or invoice) and then associate it with a specific Xero business object like an invoice, contact, or bank transaction. It also includes verifying the association.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "xero-tenant-id": {
+            "type": "string"
+          },
+          "Idempotency-Key": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "FileId": {
+            "type": "string"
+          },
+          "ObjectId": {
+            "type": "string"
+          },
+          "ObjectGroup": {
+            "type": "string"
+          },
+          "ObjectType": {
+            "type": "string"
+          },
+          "pagesize": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "string"
+          },
+          "direction": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "upload-file-for-association",
+          "description": "Uploads a file that will be associated with a Xero business object.",
+          "operationId": "uploadFile",
+          "parameters": [
+            {
+              "name": "xero-tenant-id",
+              "in": "header",
+              "value": "$inputs.xero-tenant-id"
+            },
+            {
+              "name": "Idempotency-Key",
+              "in": "header",
+              "value": "$inputs.Idempotency-Key"
+            }
+          ],
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "body": "$inputs.body",
+              "name": "$inputs.name",
+              "filename": "$inputs.filename"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Id": "$response.body#/Id"
+          }
+        },
+        {
+          "stepId": "create-file-association",
+          "description": "Creates a link between the uploaded file and a specified Xero business object (e.g., an Invoice, Contact).",
+          "operationId": "createFileAssociation",
+          "parameters": [
+            {
+              "name": "xero-tenant-id",
+              "in": "header",
+              "value": "$inputs.xero-tenant-id"
+            },
+            {
+              "name": "Idempotency-Key",
+              "in": "header",
+              "value": "$inputs.Idempotency-Key"
+            },
+            {
+              "name": "FileId",
+              "in": "path",
+              "value": "$steps.upload-file-for-association.outputs.Id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "FileId": "$steps.upload-file-for-association.outputs.Id",
+              "ObjectId": "$inputs.ObjectId",
+              "ObjectGroup": "$inputs.ObjectGroup",
+              "ObjectType": "$inputs.ObjectType"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "FileId": "$response.body#/FileId",
+            "ObjectId": "$response.body#/ObjectId"
+          }
+        },
+        {
+          "stepId": "get-associations-for-object",
+          "description": "Retrieves all file associations for the specified Xero business object to verify the newly created link.",
+          "operationId": "getAssociationsByObject",
+          "parameters": [
+            {
+              "name": "xero-tenant-id",
+              "in": "header",
+              "value": "$inputs.xero-tenant-id"
+            },
+            {
+              "name": "ObjectId",
+              "in": "path",
+              "value": "$steps.create-file-association.outputs.ObjectId"
+            },
+            {
+              "name": "pagesize",
+              "in": "query",
+              "value": "$inputs.pagesize"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "sort",
+              "in": "query",
+              "value": "$inputs.sort"
+            },
+            {
+              "name": "direction",
+              "in": "query",
+              "value": "$inputs.direction"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Association_list": "$response.body#/0/Association_list"
+          }
+        }
+      ],
+      "outputs": {
+        "Id": "$steps.upload-file-for-association.outputs.Id",
+        "FileId": "$steps.create-file-association.outputs.FileId",
+        "ObjectId": "$steps.create-file-association.outputs.ObjectId",
+        "Association_list": "$steps.get-associations-for-object.outputs.Association_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "upload-and-retrieve-file-content",
+      "summary": "Allows a user to upload a new file to their inbox, then retrieve its details and subsequently download its binary content. This workflow is essential for managing documents within Xero.",
+      "description": "Allows a user to upload a new file to their inbox, then retrieve its details and subsequently download its binary content. This workflow is essential for managing documents within Xero.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "xero-tenant-id": {
+            "type": "string"
+          },
+          "Idempotency-Key": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "FileId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "upload-file-to-inbox",
+          "description": "Uploads a new file to the user's default inbox.",
+          "operationId": "uploadFile",
+          "parameters": [
+            {
+              "name": "xero-tenant-id",
+              "in": "header",
+              "value": "$inputs.xero-tenant-id"
+            },
+            {
+              "name": "Idempotency-Key",
+              "in": "header",
+              "value": "$inputs.Idempotency-Key"
+            }
+          ],
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "body": "$inputs.body",
+              "name": "$inputs.name",
+              "filename": "$inputs.filename"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Id": "$response.body#/Id",
+            "Name": "$response.body#/Name"
+          }
+        },
+        {
+          "stepId": "get-uploaded-file-details",
+          "description": "Retrieves the metadata details of the newly uploaded file using its ID.",
+          "operationId": "getFile",
+          "parameters": [
+            {
+              "name": "xero-tenant-id",
+              "in": "header",
+              "value": "$inputs.xero-tenant-id"
+            },
+            {
+              "name": "FileId",
+              "in": "path",
+              "value": "$steps.upload-file-to-inbox.outputs.Id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "FileObject": "$response.body#/FileObject"
+          }
+        },
+        {
+          "stepId": "download-uploaded-file-content",
+          "description": "Downloads the actual binary content of the uploaded file.",
+          "operationId": "getFileContent",
+          "parameters": [
+            {
+              "name": "xero-tenant-id",
+              "in": "header",
+              "value": "$inputs.xero-tenant-id"
+            },
+            {
+              "name": "FileId",
+              "in": "path",
+              "value": "$steps.upload-file-to-inbox.outputs.Id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "file_content": "$response.body#/file_content"
+          }
+        }
+      ],
+      "outputs": {
+        "Id": "$steps.upload-file-to-inbox.outputs.Id",
+        "Name": "$steps.upload-file-to-inbox.outputs.Name",
+        "FileObject": "$steps.get-uploaded-file-details.outputs.FileObject",
+        "file_content": "$steps.download-uploaded-file-content.outputs.file_content"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-all-files-for-a-business-object",
+      "summary": "Allows users to find and retrieve all files that have been associated with a specific Xero business object (e.g., an invoice, contact, or bank transaction). This is crucial for auditing and accessing supporting documentation.",
+      "description": "Allows users to find and retrieve all files that have been associated with a specific Xero business object (e.g., an invoice, contact, or bank transaction). This is crucial for auditing and accessing supporting documentation.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "xero-tenant-id": {
+            "type": "string"
+          },
+          "ObjectId": {
+            "type": "string"
+          },
+          "pagesize": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "string"
+          },
+          "direction": {
+            "type": "string"
+          },
+          "FileId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-object-associations",
+          "description": "Retrieves a list of all file associations for a given Xero business object ID.",
+          "operationId": "getAssociationsByObject",
+          "parameters": [
+            {
+              "name": "xero-tenant-id",
+              "in": "header",
+              "value": "$inputs.xero-tenant-id"
+            },
+            {
+              "name": "ObjectId",
+              "in": "path",
+              "value": "$inputs.ObjectId"
+            },
+            {
+              "name": "pagesize",
+              "in": "query",
+              "value": "$inputs.pagesize"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "sort",
+              "in": "query",
+              "value": "$inputs.sort"
+            },
+            {
+              "name": "direction",
+              "in": "query",
+              "value": "$inputs.direction"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Association_list": "$response.body#/0/Association_list"
+          }
+        },
+        {
+          "stepId": "get-file-content-for-each-associated-file",
+          "description": "For each file ID found in the associations, this step retrieves the actual binary content of that file. (This step implies iteration over the 'Association_list').",
+          "operationId": "getFileContent",
+          "parameters": [
+            {
+              "name": "xero-tenant-id",
+              "in": "header",
+              "value": "$inputs.xero-tenant-id"
+            },
+            {
+              "name": "FileId",
+              "in": "path",
+              "value": "$inputs.FileId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "file_content": "$response.body#/file_content"
+          }
+        }
+      ],
+      "outputs": {
+        "Association_list": "$steps.get-object-associations.outputs.Association_list",
+        "file_content": "$steps.get-file-content-for-each-associated-file.outputs.file_content"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "organize-file-into-custom-folder",
+      "summary": "Enables users to create a new custom folder and then upload a file directly into that specific folder, facilitating better organization of documents beyond the default inbox.",
+      "description": "Enables users to create a new custom folder and then upload a file directly into that specific folder, facilitating better organization of documents beyond the default inbox.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "xero-tenant-id": {
+            "type": "string"
+          },
+          "Idempotency-Key": {
+            "type": "string"
+          },
+          "create-new-folder_body": {
+            "type": "object"
+          },
+          "FolderId": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-new-folder",
+          "description": "Creates a new custom folder with a specified name.",
+          "operationId": "createFolder",
+          "parameters": [
+            {
+              "name": "xero-tenant-id",
+              "in": "header",
+              "value": "$inputs.xero-tenant-id"
+            },
+            {
+              "name": "Idempotency-Key",
+              "in": "header",
+              "value": "$inputs.Idempotency-Key"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-new-folder_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Id": "$response.body#/Id",
+            "Name": "$response.body#/Name"
+          }
+        },
+        {
+          "stepId": "upload-file-to-custom-folder",
+          "description": "Uploads a file directly into the newly created custom folder.",
+          "operationId": "uploadFileToFolder",
+          "parameters": [
+            {
+              "name": "xero-tenant-id",
+              "in": "header",
+              "value": "$inputs.xero-tenant-id"
+            },
+            {
+              "name": "Idempotency-Key",
+              "in": "header",
+              "value": "$inputs.Idempotency-Key"
+            },
+            {
+              "name": "FolderId",
+              "in": "path",
+              "value": "$steps.create-new-folder.outputs.Id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "FolderId": "$steps.create-new-folder.outputs.Id",
+              "body": "$inputs.body",
+              "name": "$inputs.name",
+              "filename": "$inputs.filename"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Id": "$response.body#/Id"
+          }
+        }
+      ],
+      "outputs": {
+        "Id": "$steps.upload-file-to-custom-folder.outputs.Id",
+        "Name": "$steps.create-new-folder.outputs.Name"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "rename-an-existing-file",
+      "summary": "Enables users to list their existing files and then update the name of a specific file. This is useful for correcting errors or improving file descriptions.",
+      "description": "Enables users to list their existing files and then update the name of a specific file. This is useful for correcting errors or improving file descriptions.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "xero-tenant-id": {
+            "type": "string"
+          },
+          "pagesize": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "string"
+          },
+          "Idempotency-Key": {
+            "type": "string"
+          },
+          "FileId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-all-files",
+          "description": "Retrieves a paginated list of all files in the user's Xero Files account.",
+          "operationId": "getFiles",
+          "parameters": [
+            {
+              "name": "xero-tenant-id",
+              "in": "header",
+              "value": "$inputs.xero-tenant-id"
+            },
+            {
+              "name": "pagesize",
+              "in": "query",
+              "value": "$inputs.pagesize"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "sort",
+              "in": "query",
+              "value": "$inputs.sort"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Items": "$response.body#/Items"
+          }
+        },
+        {
+          "stepId": "update-file-name",
+          "description": "Updates the name property of a selected file.",
+          "operationId": "updateFile",
+          "parameters": [
+            {
+              "name": "xero-tenant-id",
+              "in": "header",
+              "value": "$inputs.xero-tenant-id"
+            },
+            {
+              "name": "Idempotency-Key",
+              "in": "header",
+              "value": "$inputs.Idempotency-Key"
+            },
+            {
+              "name": "FileId",
+              "in": "path",
+              "value": "$steps.list-all-files.outputs.Items.Id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "FileId": "$steps.list-all-files.outputs.Items[0].Id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Name": "$response.body#/Name",
+            "Id": "$response.body#/Id"
+          }
+        }
+      ],
+      "outputs": {
+        "Items": "$steps.list-all-files.outputs.Items",
+        "Name": "$steps.update-file-name.outputs.Name",
+        "Id": "$steps.update-file-name.outputs.Id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

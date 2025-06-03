@@ -1,0 +1,151 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/xero.com/xero-identity/7.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "manage-xero-tenant-connections",
+      "summary": "Allows an application user to view all Xero organizations (tenants) they have connected to the application and subsequently disconnect a specific tenant if desired. This workflow is crucial for users to control their data access and revoke permissions, ensuring they can manage which Xero entities their application can access.",
+      "description": "Allows an application user to view all Xero organizations (tenants) they have connected to the application and subsequently disconnect a specific tenant if desired. This workflow is crucial for users to control their data access and revoke permissions, ensuring they can manage which Xero entities their application can access.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "authEventId": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-connections",
+          "description": "Retrieves a list of all Xero tenant connections associated with the current user. Each connection object provides details such as the connection ID, tenant ID, tenant name, and type (e.g., ORGANISATION, PRACTICE).",
+          "operationId": "getConnections",
+          "parameters": [
+            {
+              "name": "authEventId",
+              "in": "query",
+              "value": "$inputs.authEventId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "connections": "$response.body#/0/connections"
+          }
+        },
+        {
+          "stepId": "disconnect-tenant",
+          "description": "Deletes a specific Xero tenant connection using its unique connection ID. This action revokes the application's access to that particular Xero tenant's data, effectively disconnecting it.",
+          "operationId": "deleteConnection",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.list-connections.outputs.connections.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tenant_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "connections": "$steps.list-connections.outputs.connections",
+        "tenant_data": "$steps.disconnect-tenant.outputs.tenant_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
