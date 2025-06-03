@@ -1,0 +1,215 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/wordassociations.net/main/1.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "explore-word-association-network",
+      "summary": "Enables users to delve deeper into word relationships by finding associations for an initial word, then selecting one of the resulting associated words to find its own associations, effectively traversing the semantic network.",
+      "description": "Enables users to delve deeper into word relationships by finding associations for an initial word, then selecting one of the resulting associated words to find its own associations, effectively traversing the semantic network.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "lang": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "pos": {
+            "type": "string"
+          },
+          "indent": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "initial-association-search",
+          "description": "Finds the initial set of associations for a given starting word or phrase.",
+          "operationPath": "openapi_source#/paths/~1json~1search/get",
+          "parameters": [
+            {
+              "name": "text",
+              "in": "query",
+              "value": "$inputs.text"
+            },
+            {
+              "name": "lang",
+              "in": "query",
+              "value": "$inputs.lang"
+            },
+            {
+              "name": "type",
+              "in": "query",
+              "value": "$inputs.type"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "pos",
+              "in": "query",
+              "value": "$inputs.pos"
+            },
+            {
+              "name": "indent",
+              "in": "query",
+              "value": "$inputs.indent"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "associated_words": "$response.body#/associated_words",
+            "request_params": "$response.body#/request_params"
+          }
+        },
+        {
+          "stepId": "explore-deeper-associations",
+          "description": "Finds associations for a word obtained from the previous association search, allowing for deeper exploration of the word association network.",
+          "operationPath": "openapi_source#/paths/~1json~1search/get",
+          "parameters": [
+            {
+              "name": "text",
+              "in": "query",
+              "value": "$steps.initial-association-search.outputs.associated_words.item"
+            },
+            {
+              "name": "lang",
+              "in": "query",
+              "value": "$steps.initial-association-search.outputs.request_params.lang"
+            },
+            {
+              "name": "type",
+              "in": "query",
+              "value": "$steps.initial-association-search.outputs.request_params.type"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$steps.initial-association-search.outputs.request_params.limit"
+            },
+            {
+              "name": "pos",
+              "in": "query",
+              "value": "$steps.initial-association-search.outputs.request_params.pos"
+            },
+            {
+              "name": "indent",
+              "in": "query",
+              "value": "$steps.initial-association-search.outputs.request_params.indent"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "deeper_associations_response": "$response.body#/deeper_associations_response"
+          }
+        }
+      ],
+      "outputs": {
+        "associated_words": "$steps.initial-association-search.outputs.associated_words",
+        "request_params": "$steps.initial-association-search.outputs.request_params",
+        "deeper_associations_response": "$steps.explore-deeper-associations.outputs.deeper_associations_response"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

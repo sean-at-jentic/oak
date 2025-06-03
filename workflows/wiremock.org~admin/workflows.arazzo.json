@@ -1,0 +1,365 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/wiremock.org/admin/3.12.1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "configure-and-persist-a-new-mock-api-endpoint",
+      "summary": "Allows API consumers to programmatically define a new mock response for a specific request pattern and ensure this definition is saved permanently to the WireMock backing store.",
+      "description": "Allows API consumers to programmatically define a new mock response for a specific request pattern and ensure this definition is saved permanently to the WireMock backing store.",
+      "steps": [
+        {
+          "stepId": "create-new-stub-mapping",
+          "description": "Defines a new stub mapping with a request pattern and the desired mock response.",
+          "operationId": "createNewStubMapping",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "stubMappingId": "$response.body#/stubMappingId"
+          }
+        },
+        {
+          "stepId": "persist-stub-mappings",
+          "description": "Saves all currently defined persistent stub mappings to the backing store, making them survive server restarts.",
+          "operationId": "persistStubMappings",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "mappings_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "stubMappingId": "$steps.create-new-stub-mapping.outputs.stubMappingId",
+        "mappings_data": "$steps.persist-stub-mappings.outputs.mappings_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "debug-unmatched-api-requests",
+      "summary": "Helps developers troubleshoot why incoming requests are not being matched by existing stub mappings by listing unmatched requests and suggesting near-miss stub mappings.",
+      "description": "Helps developers troubleshoot why incoming requests are not being matched by existing stub mappings by listing unmatched requests and suggesting near-miss stub mappings.",
+      "steps": [
+        {
+          "stepId": "find-unmatched-requests",
+          "description": "Retrieves a list of all requests that have been received by WireMock but did not match any configured stub mapping.",
+          "operationId": "findUnmatchedRequests",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "unmatchedRequests": "$response.body#/unmatchedRequests"
+          }
+        },
+        {
+          "stepId": "find-near-misses-for-specific-request",
+          "description": "Takes a specific logged request (e.g., one of the unmatched requests) and finds the closest matching stub mappings, providing hints for correction.",
+          "operationId": "findNearMissesForRequest",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "loggedRequest": "$steps.find-unmatched-requests.outputs.unmatchedRequests[0].request"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "nearMisses": "$response.body#/nearMisses"
+          }
+        }
+      ],
+      "outputs": {
+        "unmatchedRequests": "$steps.find-unmatched-requests.outputs.unmatchedRequests",
+        "nearMisses": "$steps.find-near-misses-for-specific-request.outputs.nearMisses"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "record-and-save-live-api-traffic-as-mocks",
+      "summary": "Automates the creation of stub mappings by recording actual HTTP interactions with a target API, which can then be used for playback in testing or development environments.",
+      "description": "Automates the creation of stub mappings by recording actual HTTP interactions with a target API, which can then be used for playback in testing or development environments.",
+      "steps": [
+        {
+          "stepId": "start-recording",
+          "description": "Initiates the recording process, specifying the target API base URL and optional filters for which requests to capture.",
+          "operationId": "startRecording",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "recording_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "stop-recording",
+          "description": "Halts the recording process and returns the generated stub mappings based on the captured traffic.",
+          "operationId": "stopRecording",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "recordedStubMappings": "$response.body#/recordedStubMappings"
+          }
+        },
+        {
+          "stepId": "persist-recorded-stub-mappings",
+          "description": "Saves the newly generated stub mappings (from the recording) to the WireMock backing store, making them permanent.",
+          "operationId": "persistStubMappings",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "mappings_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "recording_data": "$steps.start-recording.outputs.recording_data",
+        "recordedStubMappings": "$steps.stop-recording.outputs.recordedStubMappings",
+        "mappings_data": "$steps.persist-recorded-stub-mappings.outputs.mappings_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "verify-and-inspect-received-requests",
+      "summary": "Allows users to programmatically query the WireMock request journal to verify that specific requests were received and inspect their full details for testing or debugging purposes.",
+      "description": "Allows users to programmatically query the WireMock request journal to verify that specific requests were received and inspect their full details for testing or debugging purposes.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-requests-by-criteria",
+          "description": "Searches the request journal for requests matching a given pattern (e.g., URL, method, headers, body content).",
+          "operationId": "findRequestsByCriteria",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "matchingRequests": "$response.body#/matchingRequests"
+          }
+        },
+        {
+          "stepId": "get-request-by-id",
+          "description": "Retrieves the full details of a specific logged request using its unique ID, which would typically be obtained from a previous search.",
+          "operationId": "getRequestById",
+          "parameters": [
+            {
+              "name": "requestId",
+              "in": "path",
+              "value": "$steps.find-requests-by-criteria.outputs.matchingRequests.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "requestDetails": "$response.body#/requestDetails"
+          }
+        }
+      ],
+      "outputs": {
+        "matchingRequests": "$steps.find-requests-by-criteria.outputs.matchingRequests",
+        "requestDetails": "$steps.get-request-by-id.outputs.requestDetails"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-and-reset-scenario-states",
+      "summary": "Provides a way to inspect the current state of all defined scenarios and to reset them, which is essential for managing stateful mock behavior in automated testing.",
+      "description": "Provides a way to inspect the current state of all defined scenarios and to reset them, which is essential for managing stateful mock behavior in automated testing.",
+      "steps": [
+        {
+          "stepId": "get-all-scenarios",
+          "description": "Fetches the current state of all active scenarios configured in WireMock.",
+          "operationId": "getAllScenarios",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "allScenarios": "$response.body#/scenarios"
+          }
+        },
+        {
+          "stepId": "reset-all-scenarios",
+          "description": "Resets all scenarios to their initial 'Started' state, preparing them for a new test run or clean slate.",
+          "operationId": "resetAllScenarios",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "scenarios_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "allScenarios": "$steps.get-all-scenarios.outputs.allScenarios",
+        "scenarios_data": "$steps.reset-all-scenarios.outputs.scenarios_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

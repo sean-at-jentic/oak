@@ -1,0 +1,708 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/wikipathways.org/main/1.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "authenticated-pathway-update",
+      "summary": "Enables an authenticated user to log in, retrieve the current GPML (Graphical Pathway Markup Language) of an existing pathway, and then update it on WikiPathways with modifications.",
+      "description": "Enables an authenticated user to log in, retrieve the current GPML (Graphical Pathway Markup Language) of an existing pathway, and then update it on WikiPathways with modifications.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "pass": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "pwId": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "gpml": {
+            "type": "string"
+          },
+          "auth": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "login-user",
+          "description": "Authenticates a user with username and password to obtain an authentication key.",
+          "operationPath": "openapi_source#/paths/~1login/get",
+          "parameters": [
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "pass",
+              "in": "query",
+              "value": "$inputs.pass"
+            },
+            {
+              "name": "format",
+              "in": "query",
+              "value": "$inputs.format"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "auth_key": "$response.body#/auth_key",
+            "username": "$response.body#/username"
+          }
+        },
+        {
+          "stepId": "get-pathway-gpml",
+          "description": "Retrieves the GPML content and current revision of a specific pathway. The revision is crucial for subsequent updates.",
+          "operationPath": "openapi_source#/paths/~1getPathway/get",
+          "parameters": [
+            {
+              "name": "pwId",
+              "in": "query",
+              "value": "$inputs.pwId"
+            },
+            {
+              "name": "revision",
+              "in": "query",
+              "value": "$inputs.revision"
+            },
+            {
+              "name": "format",
+              "in": "query",
+              "value": "$inputs.format"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pwId": "$response.body#/pwId",
+            "gpml_content": "$response.body#/gpml_content",
+            "current_revision": "$response.body#/current_revision"
+          }
+        },
+        {
+          "stepId": "update-pathway",
+          "description": "Updates a pathway with new GPML content, requiring authentication, a description of changes, and the pathway's current revision.",
+          "operationPath": "openapi_source#/paths/~1updatePathway/get",
+          "parameters": [
+            {
+              "name": "pwId",
+              "in": "query",
+              "value": "$steps.get-pathway-gpml.outputs.pwId"
+            },
+            {
+              "name": "description",
+              "in": "query",
+              "value": "$inputs.description"
+            },
+            {
+              "name": "gpml",
+              "in": "query",
+              "value": "$steps.get-pathway-gpml.outputs.gpml_content"
+            },
+            {
+              "name": "revision",
+              "in": "query",
+              "value": "$steps.get-pathway-gpml.outputs.current_revision"
+            },
+            {
+              "name": "auth",
+              "in": "query",
+              "value": "$steps.login-user.outputs.auth_key"
+            },
+            {
+              "name": "username",
+              "in": "query",
+              "value": "$steps.login-user.outputs.username"
+            },
+            {
+              "name": "format",
+              "in": "query",
+              "value": "$inputs.format"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "update_status": "$response.body#/update_status"
+          }
+        }
+      ],
+      "outputs": {
+        "auth_key": "$steps.login-user.outputs.auth_key",
+        "username": "$steps.login-user.outputs.username",
+        "pwId": "$steps.get-pathway-gpml.outputs.pwId",
+        "gpml_content": "$steps.get-pathway-gpml.outputs.gpml_content",
+        "current_revision": "$steps.get-pathway-gpml.outputs.current_revision",
+        "update_status": "$steps.update-pathway.outputs.update_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "pathway-search-and-download",
+      "summary": "Allows users to search for biological pathways using text queries, retrieve detailed information about a selected pathway, and then download its content in various formats (e.g., GPML, image).",
+      "description": "Allows users to search for biological pathways using text queries, retrieve detailed information about a selected pathway, and then download its content in various formats (e.g., GPML, image).",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "species": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "pwId": {
+            "type": "string"
+          },
+          "fileType": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-pathways-by-text",
+          "description": "Searches for pathways based on a text query, optionally filtered by species, returning a list of matching pathway IDs.",
+          "operationPath": "openapi_source#/paths/~1findPathwaysByText/get",
+          "parameters": [
+            {
+              "name": "query",
+              "in": "query",
+              "value": "$inputs.query"
+            },
+            {
+              "name": "species",
+              "in": "query",
+              "value": "$inputs.species"
+            },
+            {
+              "name": "format",
+              "in": "query",
+              "value": "$inputs.format"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pathway_ids": "$response.body#/pathway_ids"
+          }
+        },
+        {
+          "stepId": "get-pathway-info",
+          "description": "Retrieves general information (name, species, current revision) for a specific pathway using its ID.",
+          "operationPath": "openapi_source#/paths/~1getPathwayInfo/get",
+          "parameters": [
+            {
+              "name": "pwId",
+              "in": "query",
+              "value": "$steps.find-pathways-by-text.outputs.pathway_ids"
+            },
+            {
+              "name": "format",
+              "in": "query",
+              "value": "$inputs.format"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pwId": "$response.body#/pwId",
+            "revision": "$response.body#/revision"
+          }
+        },
+        {
+          "stepId": "download-pathway-as",
+          "description": "Downloads the pathway content in a specified file format (e.g., GPML, SVG, PNG).",
+          "operationPath": "openapi_source#/paths/~1getPathwayAs/get",
+          "parameters": [
+            {
+              "name": "fileType",
+              "in": "query",
+              "value": "$inputs.fileType"
+            },
+            {
+              "name": "pwId",
+              "in": "query",
+              "value": "$steps.get-pathway-info.outputs.pwId"
+            },
+            {
+              "name": "revision",
+              "in": "query",
+              "value": "$steps.get-pathway-info.outputs.revision"
+            },
+            {
+              "name": "format",
+              "in": "query",
+              "value": "$inputs.format"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "downloaded_file_content": "$response.body#/downloaded_file_content"
+          }
+        }
+      ],
+      "outputs": {
+        "pathway_ids": "$steps.find-pathways-by-text.outputs.pathway_ids",
+        "pwId": "$steps.get-pathway-info.outputs.pwId",
+        "revision": "$steps.get-pathway-info.outputs.revision",
+        "downloaded_file_content": "$steps.download-pathway-as.outputs.downloaded_file_content"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "pathway-curation-tag-management",
+      "summary": "Enables authenticated users to view existing curation tags for a specific pathway and then add new tags to it, ensuring proper versioning.",
+      "description": "Enables authenticated users to view existing curation tags for a specific pathway and then add new tags to it, ensuring proper versioning.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "pass": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "pwId": {
+            "type": "string"
+          },
+          "tagName": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "string"
+          },
+          "auth": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "login-user",
+          "description": "Authenticates a user to obtain an authentication key and username.",
+          "operationPath": "openapi_source#/paths/~1login/get",
+          "parameters": [
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "pass",
+              "in": "query",
+              "value": "$inputs.pass"
+            },
+            {
+              "name": "format",
+              "in": "query",
+              "value": "$inputs.format"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "auth_key": "$response.body#/auth_key",
+            "username": "$response.body#/username"
+          }
+        },
+        {
+          "stepId": "get-pathway-info",
+          "description": "Retrieves general information about the pathway, including its current revision, which is needed for applying tags.",
+          "operationPath": "openapi_source#/paths/~1getPathwayInfo/get",
+          "parameters": [
+            {
+              "name": "pwId",
+              "in": "query",
+              "value": "$inputs.pwId"
+            },
+            {
+              "name": "format",
+              "in": "query",
+              "value": "$inputs.format"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pwId": "$response.body#/pwId",
+            "revision": "$response.body#/revision"
+          }
+        },
+        {
+          "stepId": "get-curation-tags",
+          "description": "Retrieves all existing curation tags associated with a given pathway ID.",
+          "operationPath": "openapi_source#/paths/~1getCurationTags/get",
+          "parameters": [
+            {
+              "name": "pwId",
+              "in": "query",
+              "value": "$steps.get-pathway-info.outputs.pwId"
+            },
+            {
+              "name": "format",
+              "in": "query",
+              "value": "$inputs.format"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "curation_tags": "$response.body#/curation_tags"
+          }
+        },
+        {
+          "stepId": "save-curation-tag",
+          "description": "Applies a new curation tag to a pathway, requiring authentication, tag details, and the pathway's current revision.",
+          "operationPath": "openapi_source#/paths/~1saveCurationTag/get",
+          "parameters": [
+            {
+              "name": "pwId",
+              "in": "query",
+              "value": "$steps.get-pathway-info.outputs.pwId"
+            },
+            {
+              "name": "tagName",
+              "in": "query",
+              "value": "$inputs.tagName"
+            },
+            {
+              "name": "text",
+              "in": "query",
+              "value": "$inputs.text"
+            },
+            {
+              "name": "revision",
+              "in": "query",
+              "value": "$steps.get-pathway-info.outputs.revision"
+            },
+            {
+              "name": "auth",
+              "in": "query",
+              "value": "$steps.login-user.outputs.auth_key"
+            },
+            {
+              "name": "username",
+              "in": "query",
+              "value": "$steps.login-user.outputs.username"
+            },
+            {
+              "name": "format",
+              "in": "query",
+              "value": "$inputs.format"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "save_status": "$response.body#/save_status"
+          }
+        }
+      ],
+      "outputs": {
+        "auth_key": "$steps.login-user.outputs.auth_key",
+        "username": "$steps.login-user.outputs.username",
+        "pwId": "$steps.get-pathway-info.outputs.pwId",
+        "revision": "$steps.get-pathway-info.outputs.revision",
+        "curation_tags": "$steps.get-curation-tags.outputs.curation_tags",
+        "save_status": "$steps.save-curation-tag.outputs.save_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "pathway-history-exploration",
+      "summary": "Allows users to retrieve the detailed revision history and the history of curation tag changes for a specific biological pathway, filtered by a timestamp.",
+      "description": "Allows users to retrieve the detailed revision history and the history of curation tag changes for a specific biological pathway, filtered by a timestamp.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "pwId": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-pathway-info",
+          "description": "Retrieves general information about the pathway, confirming its existence and providing basic details.",
+          "operationPath": "openapi_source#/paths/~1getPathwayInfo/get",
+          "parameters": [
+            {
+              "name": "pwId",
+              "in": "query",
+              "value": "$inputs.pwId"
+            },
+            {
+              "name": "format",
+              "in": "query",
+              "value": "$inputs.format"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pwId": "$response.body#/pwId"
+          }
+        },
+        {
+          "stepId": "get-pathway-history",
+          "description": "Fetches the detailed revision history for the specified pathway from a given timestamp.",
+          "operationPath": "openapi_source#/paths/~1getPathwayHistory/get",
+          "parameters": [
+            {
+              "name": "pwId",
+              "in": "query",
+              "value": "$steps.get-pathway-info.outputs.pwId"
+            },
+            {
+              "name": "timestamp",
+              "in": "query",
+              "value": "$inputs.timestamp"
+            },
+            {
+              "name": "format",
+              "in": "query",
+              "value": "$inputs.format"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pathway_history": "$response.body#/pathway_history"
+          }
+        },
+        {
+          "stepId": "get-curation-tag-history",
+          "description": "Retrieves the history of curation tag changes for the pathway from a given timestamp.",
+          "operationPath": "openapi_source#/paths/~1getCurationTagHistory/get",
+          "parameters": [
+            {
+              "name": "pwId",
+              "in": "query",
+              "value": "$steps.get-pathway-info.outputs.pwId"
+            },
+            {
+              "name": "timestamp",
+              "in": "query",
+              "value": "$inputs.timestamp"
+            },
+            {
+              "name": "format",
+              "in": "query",
+              "value": "$inputs.format"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "curation_tag_history": "$response.body#/curation_tag_history"
+          }
+        }
+      ],
+      "outputs": {
+        "pwId": "$steps.get-pathway-info.outputs.pwId",
+        "pathway_history": "$steps.get-pathway-history.outputs.pathway_history",
+        "curation_tag_history": "$steps.get-curation-tag-history.outputs.curation_tag_history"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

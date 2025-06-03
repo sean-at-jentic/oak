@@ -1,0 +1,764 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/whatsapp.local/main/1.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "user-account-registration--verification",
+      "summary": "Allows a new WhatsApp Business API account to be registered by requesting a verification code (via SMS or voice) and then verifying the account with the received code.",
+      "description": "Allows a new WhatsApp Business API account to be registered by requesting a verification code (via SMS or voice) and then verifying the account with the received code.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "cc": {
+            "type": "string"
+          },
+          "phone_number": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "cert": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "request-registration-code",
+          "description": "Requests a verification code to be sent to the specified phone number. This is the first step in registering a new WhatsApp Business API account.",
+          "operationId": "RequestCode",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "cc": "$inputs.cc",
+              "phone_number": "$inputs.phone_number",
+              "method": "$inputs.method",
+              "cert": "$inputs.cert"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "vname": "$response.body#/vname"
+          }
+        },
+        {
+          "stepId": "register-account",
+          "description": "Registers the account using the verification code received out-of-band (e.g., via SMS or voice call).",
+          "operationId": "RegisterAccount",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "code": "$inputs.code"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "account_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "vname": "$steps.request-registration-code.outputs.vname",
+        "account_data": "$steps.register-account.outputs.account_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "send-text-message-to-a-contact",
+      "summary": "Verifies if a phone number is a valid WhatsApp contact and then sends a text message to them.",
+      "description": "Verifies if a phone number is a valid WhatsApp contact and then sends a text message to them.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "contacts": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "check-contact-validity",
+          "description": "Checks if one or more phone numbers are valid WhatsApp contacts and retrieves their WhatsApp IDs (WA IDs).",
+          "operationId": "CheckContact",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "contacts": "$inputs.contacts"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "wa_id": "$response.body#/wa_id"
+          }
+        },
+        {
+          "stepId": "send-text-message",
+          "description": "Sends a text message to a validated WhatsApp contact using their WA ID.",
+          "operationId": "SendMessage",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "to": "$steps.check-contact-validity.outputs.wa_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "message_id": "$response.body#/message_id"
+          }
+        }
+      ],
+      "outputs": {
+        "wa_id": "$steps.check-contact-validity.outputs.wa_id",
+        "message_id": "$steps.send-text-message.outputs.message_id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "send-media-message-to-a-contact",
+      "summary": "Uploads a media file (e.g., image, video, document), verifies a phone number as a WhatsApp contact, and then sends the media as a message.",
+      "description": "Uploads a media file (e.g., image, video, document), verifies a phone number as a WhatsApp contact, and then sends the media as a message.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "upload-media-file_body": {
+            "type": "object"
+          },
+          "contacts": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "upload-media-file",
+          "description": "Uploads a media file to the WhatsApp Business API client, receiving a media ID for future use.",
+          "operationId": "UploadMedia",
+          "requestBody": {
+            "contentType": "application/pdf",
+            "payload": "$inputs.upload-media-file_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "media_id": "$response.body#/media_id"
+          }
+        },
+        {
+          "stepId": "check-contact-validity",
+          "description": "Checks if one or more phone numbers are valid WhatsApp contacts and retrieves their WhatsApp IDs.",
+          "operationId": "CheckContact",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "contacts": "$inputs.contacts"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "wa_id": "$response.body#/wa_id"
+          }
+        },
+        {
+          "stepId": "send-image-message",
+          "description": "Sends an image message to a validated WhatsApp contact using the uploaded media ID and an optional caption.",
+          "operationId": "SendMessage",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "to": "$steps.check-contact-validity.outputs.wa_id",
+              "image_id": "$steps.upload-media-file.outputs.media_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "message_id": "$response.body#/message_id"
+          }
+        }
+      ],
+      "outputs": {
+        "media_id": "$steps.upload-media-file.outputs.media_id",
+        "wa_id": "$steps.check-contact-validity.outputs.wa_id",
+        "message_id": "$steps.send-image-message.outputs.message_id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-business-profile",
+      "summary": "Retrieve and update the business's public profile information, such as address, description, email, industry, and websites, which is displayed on WhatsApp.",
+      "description": "Retrieve and update the business's public profile information, such as address, description, email, industry, and websites, which is displayed on WhatsApp.",
+      "steps": [
+        {
+          "stepId": "get-business-profile",
+          "description": "Retrieves the current business profile settings.",
+          "operationId": "GetBusinessProfile",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "address": "$response.body#/address",
+            "description": "$response.body#/description",
+            "email": "$response.body#/email",
+            "vertical": "$response.body#/vertical",
+            "websites": "$response.body#/websites"
+          }
+        },
+        {
+          "stepId": "update-business-profile",
+          "description": "Updates the business profile with new information. All fields must be provided, even if unchanged.",
+          "operationId": "updateBusinessProfile",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "address": "$steps.get-business-profile.outputs.address",
+              "description": "$steps.get-business-profile.outputs.description",
+              "email": "$steps.get-business-profile.outputs.email",
+              "vertical": "$steps.get-business-profile.outputs.vertical",
+              "websites": "$steps.get-business-profile.outputs.websites"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "profile_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "address": "$steps.get-business-profile.outputs.address",
+        "description": "$steps.get-business-profile.outputs.description",
+        "email": "$steps.get-business-profile.outputs.email",
+        "vertical": "$steps.get-business-profile.outputs.vertical",
+        "websites": "$steps.get-business-profile.outputs.websites",
+        "profile_data": "$steps.update-business-profile.outputs.profile_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "configure-application-settings",
+      "summary": "Retrieve and update core application settings, such as webhook configurations, media auto-download preferences, and callback behavior.",
+      "description": "Retrieve and update core application settings, such as webhook configurations, media auto-download preferences, and callback behavior.",
+      "steps": [
+        {
+          "stepId": "get-application-settings",
+          "description": "Retrieves the current application settings, including webhook URLs, media handling, and callback delays.",
+          "operationId": "GetApplicationSettings",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "callback_backoff_delay_ms": "$response.body#/callback_backoff_delay_ms",
+            "max_callback_backoff_delay_ms": "$response.body#/max_callback_backoff_delay_ms",
+            "callback_persist": "$response.body#/callback_persist",
+            "media": "$response.body#/media",
+            "webhooks": "$response.body#/webhooks",
+            "on_call_pager": "$response.body#/on_call_pager",
+            "pass_through": "$response.body#/pass_through",
+            "sent_status": "$response.body#/sent_status",
+            "unhealthy_interval": "$response.body#/unhealthy_interval",
+            "heartbeat_interval": "$response.body#/heartbeat_interval"
+          }
+        },
+        {
+          "stepId": "update-application-settings",
+          "description": "Updates specific application settings. Only provided fields will be modified, allowing for partial updates.",
+          "operationId": "UpdateApplicationSettings",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "callback_backoff_delay_ms": "$steps.get-application-settings.outputs.callback_backoff_delay_ms",
+              "max_callback_backoff_delay_ms": "$steps.get-application-settings.outputs.max_callback_backoff_delay_ms",
+              "callback_persist": "$steps.get-application-settings.outputs.callback_persist",
+              "media": "$steps.get-application-settings.outputs.media",
+              "webhooks": "$steps.get-application-settings.outputs.webhooks",
+              "on_call_pager": "$steps.get-application-settings.outputs.on_call_pager",
+              "pass_through": "$steps.get-application-settings.outputs.pass_through",
+              "sent_status": "$steps.get-application-settings.outputs.sent_status",
+              "unhealthy_interval": "$steps.get-application-settings.outputs.unhealthy_interval",
+              "heartbeat_interval": "$steps.get-application-settings.outputs.heartbeat_interval"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "settings_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "callback_backoff_delay_ms": "$steps.get-application-settings.outputs.callback_backoff_delay_ms",
+        "max_callback_backoff_delay_ms": "$steps.get-application-settings.outputs.max_callback_backoff_delay_ms",
+        "callback_persist": "$steps.get-application-settings.outputs.callback_persist",
+        "media": "$steps.get-application-settings.outputs.media",
+        "webhooks": "$steps.get-application-settings.outputs.webhooks",
+        "on_call_pager": "$steps.get-application-settings.outputs.on_call_pager",
+        "pass_through": "$steps.get-application-settings.outputs.pass_through",
+        "sent_status": "$steps.get-application-settings.outputs.sent_status",
+        "unhealthy_interval": "$steps.get-application-settings.outputs.unhealthy_interval",
+        "heartbeat_interval": "$steps.get-application-settings.outputs.heartbeat_interval",
+        "settings_data": "$steps.update-application-settings.outputs.settings_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "backup-and-restore-application-data",
+      "summary": "Securely back up the current application configuration and data, and then restore it from a previously generated encrypted backup.",
+      "description": "Securely back up the current application configuration and data, and then restore it from a previously generated encrypted backup.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "backup-settings",
+          "description": "Creates an encrypted backup of the application settings and data using a provided password.",
+          "operationId": "BackupSettings",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "password": "$inputs.password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "data": "$response.body#/data"
+          }
+        },
+        {
+          "stepId": "restore-settings",
+          "description": "Restores application settings and data from a provided encrypted backup, requiring the original password used for encryption.",
+          "operationId": "RestoreSettings",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "data": "$steps.backup-settings.outputs.data",
+              "password": "$inputs.password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "settings_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "data": "$steps.backup-settings.outputs.data",
+        "settings_data": "$steps.restore-settings.outputs.settings_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-and-update-group-subject",
+      "summary": "Creates a new WhatsApp group and then updates its subject.",
+      "description": "Creates a new WhatsApp group and then updates its subject.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "subject": {
+            "type": "string"
+          },
+          "GroupId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-group",
+          "description": "Creates a new WhatsApp group with a specified subject.",
+          "operationId": "CreateGroup",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "subject": "$inputs.subject"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "group_id": "$response.body#/group_id"
+          }
+        },
+        {
+          "stepId": "update-group-subject",
+          "description": "Updates the subject of an existing WhatsApp group using its ID.",
+          "operationId": "UpdateGroupInfo",
+          "parameters": [
+            {
+              "name": "GroupId",
+              "in": "path",
+              "value": "$steps.create-group.outputs.group_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "GroupId": "$steps.create-group.outputs.group_id",
+              "subject": "$inputs.subject"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "subject_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "group_id": "$steps.create-group.outputs.group_id",
+        "subject_data": "$steps.update-group-subject.outputs.subject_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-profile-about-section",
+      "summary": "Retrieve and update the 'About' text displayed on the WhatsApp profile.",
+      "description": "Retrieve and update the 'About' text displayed on the WhatsApp profile.",
+      "steps": [
+        {
+          "stepId": "get-profile-about",
+          "description": "Retrieves the current 'About' text from the profile.",
+          "operationId": "GetProfileAbout",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "text": "$response.body#/text"
+          }
+        },
+        {
+          "stepId": "update-profile-about",
+          "description": "Updates the 'About' text on the profile.",
+          "operationId": "UpdateProfileAbout",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "text": "$steps.get-profile-about.outputs.text"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "about_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "text": "$steps.get-profile-about.outputs.text",
+        "about_data": "$steps.update-profile-about.outputs.about_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-profile-photo",
+      "summary": "Retrieves the current profile photo link and then updates the profile photo.",
+      "description": "Retrieves the current profile photo link and then updates the profile photo.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "string"
+          },
+          "File": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-profile-photo",
+          "description": "Retrieves the link to the current profile photo, optionally specifying a format.",
+          "operationId": "GetProfilePhoto",
+          "parameters": [
+            {
+              "name": "format",
+              "in": "query",
+              "value": "$inputs.format"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "link": "$response.body#/link"
+          }
+        },
+        {
+          "stepId": "update-profile-photo",
+          "description": "Uploads and sets a new profile photo for the account.",
+          "operationId": "UpdateProfilePhoto",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "File": "$inputs.File"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "photo_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "link": "$steps.get-profile-photo.outputs.link",
+        "photo_data": "$steps.update-profile-photo.outputs.photo_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
