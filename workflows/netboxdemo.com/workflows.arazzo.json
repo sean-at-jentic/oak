@@ -1,0 +1,336 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/netboxdemo.com/main/2.4/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "provision-new-physical-device",
+      "summary": "Registers a new physical network device within NetBox. This workflow covers the creation of necessary foundational entities like Manufacturer, Device Type, Device Role, Site, and Rack, if they don't already exist, before finally creating and placing the device itself. This is a core process for populating the DCIM inventory.",
+      "description": "Registers a new physical network device within NetBox. This workflow covers the creation of necessary foundational entities like Manufacturer, Device Type, Device Role, Site, and Rack, if they don't already exist, before finally creating and placing the device itself. This is a core process for populating the DCIM inventory.",
+      "steps": [
+        {
+          "stepId": "create-manufacturer",
+          "description": "Creates a new manufacturer entry for the device. This step is a prerequisite if the manufacturer does not yet exist in NetBox.",
+          "operationId": "dcim_manufacturers_create",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "manufacturer_id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "create-device-type",
+          "description": "Defines a new device type (model) for the device, linking it to the manufacturer. This step is a prerequisite if the device type does not yet exist.",
+          "operationId": "dcim_device-types_create",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "device_type_id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "create-device-role",
+          "description": "Establishes a functional role for the device (e.g., 'router', 'switch', 'server'). This step is a prerequisite if the role does not yet exist.",
+          "operationId": "dcim_device-roles_create",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "device_role_id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "create-site",
+          "description": "Registers a new physical location (site) where the device will be deployed. This step is a prerequisite if the site does not yet exist.",
+          "operationId": "dcim_sites_create",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "site_id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "create-rack",
+          "description": "Adds a new rack within the specified site. This is where the device will be physically installed.",
+          "operationId": "dcim_racks_create",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "rack_id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "create-device",
+          "description": "Creates the actual device instance, linking it to its type, role, site, and rack. This completes the basic provisioning of a physical asset.",
+          "operationId": "dcim_devices_create",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "device_id": "$response.body#/id",
+            "device_name": "$response.body#/device_role"
+          }
+        }
+      ],
+      "outputs": {
+        "manufacturer_id": "$steps.create-manufacturer.outputs.manufacturer_id",
+        "device_type_id": "$steps.create-device-type.outputs.device_type_id",
+        "device_role_id": "$steps.create-device-role.outputs.device_role_id",
+        "site_id": "$steps.create-site.outputs.site_id",
+        "rack_id": "$steps.create-rack.outputs.rack_id",
+        "device_id": "$steps.create-device.outputs.device_id",
+        "device_name": "$steps.create-device.outputs.device_name"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "discover-connected-device-details",
+      "summary": "This workflow allows a user to determine what device (if any) is connected to a given peer device and peer interface, and then retrieves comprehensive details about that connected device. This is highly valuable for network troubleshooting, auditing, and automated discovery processes.",
+      "description": "This workflow allows a user to determine what device (if any) is connected to a given peer device and peer interface, and then retrieves comprehensive details about that connected device. This is highly valuable for network troubleshooting, auditing, and automated discovery processes.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "peer_device": {
+            "type": "string"
+          },
+          "peer_interface": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-connected-device",
+          "description": "Identifies the device connected to a specified peer device and interface. Requires the name of the peer device and its interface.",
+          "operationId": "dcim_connected-device_list",
+          "parameters": [
+            {
+              "name": "peer_device",
+              "in": "query",
+              "value": "$inputs.peer_device"
+            },
+            {
+              "name": "peer_interface",
+              "in": "query",
+              "value": "$inputs.peer_interface"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "connected_device_id": "$response.body#/id",
+            "connected_device_name": "$response.body#/connected_device_name"
+          }
+        },
+        {
+          "stepId": "read-connected-device-details",
+          "description": "Retrieves comprehensive details, including configuration context, for the discovered connected device using its ID.",
+          "operationId": "dcim_devices_read",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-connected-device.outputs.connected_device_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "device_details": "$response.body#/device_details"
+          }
+        }
+      ],
+      "outputs": {
+        "connected_device_id": "$steps.get-connected-device.outputs.connected_device_id",
+        "connected_device_name": "$steps.get-connected-device.outputs.connected_device_name",
+        "device_details": "$steps.read-connected-device-details.outputs.device_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "generate-and-render-topology-map",
+      "summary": "This workflow enables the creation of a new topology map definition within NetBox and subsequently renders it to visualize network connections based on specified device patterns. This is valuable for network documentation and operational insights.",
+      "description": "This workflow enables the creation of a new topology map definition within NetBox and subsequently renders it to visualize network connections based on specified device patterns. This is valuable for network documentation and operational insights.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-topology-map",
+          "description": "Defines a new topology map. It requires a name, slug, associated site, and device patterns (regular expressions) to identify devices to include in the diagram.",
+          "operationId": "extras_topology-maps_create",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "topology_map_id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "render-topology-map",
+          "description": "Renders the previously defined topology map, generating the visual representation of the network based on the specified patterns.",
+          "operationId": "extras_topology-maps_render",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-topology-map.outputs.topology_map_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "rendered_map_data": "$response.body#/rendered_map_data"
+          }
+        }
+      ],
+      "outputs": {
+        "topology_map_id": "$steps.create-topology-map.outputs.topology_map_id",
+        "rendered_map_data": "$steps.render-topology-map.outputs.rendered_map_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
