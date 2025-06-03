@@ -1,0 +1,631 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/storecove.com/main/2.0.1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "onboard-new-legal-entity-and-register-for-electronic-exchange",
+      "summary": "This workflow allows a user to set up a new business entity (Legal Entity) within Storecove, define its basic information, and then register it for electronic document exchange by creating Peppol identifiers and additional tax identifiers. This is a foundational setup process for using Storecove's e-invoicing capabilities.",
+      "description": "This workflow allows a user to set up a new business entity (Legal Entity) within Storecove, define its basic information, and then register it for electronic document exchange by creating Peppol identifiers and additional tax identifiers. This is a foundational setup process for using Storecove's e-invoicing capabilities.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "party_name": {
+            "type": "string"
+          },
+          "line1": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "zip": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "legal_entity_id": {
+            "type": "string"
+          },
+          "identifier": {
+            "type": "string"
+          },
+          "scheme": {
+            "type": "string"
+          },
+          "superscheme": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-legal-entity",
+          "description": "Creates a new Legal Entity with essential business information. This entity will represent the sender or receiver of electronic documents.",
+          "operationId": "create_legal_entity",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "party_name": "$inputs.party_name",
+              "line1": "$inputs.line1",
+              "city": "$inputs.city",
+              "zip": "$inputs.zip",
+              "country": "$inputs.country"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "party_name": "$response.body#/party_name",
+            "country": "$response.body#/country"
+          }
+        },
+        {
+          "stepId": "create-peppol-identifier",
+          "description": "Registers a new Peppol identifier for the created Legal Entity, enabling it to participate in the Peppol network for electronic document exchange.",
+          "operationId": "create_peppol_identifier",
+          "parameters": [
+            {
+              "name": "legal_entity_id",
+              "in": "path",
+              "value": "$steps.create-legal-entity.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "legal_entity_id": "$steps.create-legal-entity.outputs.id",
+              "identifier": "$inputs.identifier",
+              "scheme": "$inputs.scheme",
+              "superscheme": "$inputs.superscheme"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "identifier": "$response.body#/identifier",
+            "scheme": "$response.body#/scheme"
+          }
+        },
+        {
+          "stepId": "create-additional-tax-identifier",
+          "description": "Adds an additional tax identifier to the Legal Entity, which can be used for specific tax scenarios like consumer tax mode in certain countries (e.g., India).",
+          "operationId": "create_additional_tax_identifier",
+          "parameters": [
+            {
+              "name": "legal_entity_id",
+              "in": "path",
+              "value": "$steps.create-legal-entity.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "legal_entity_id": "$steps.create-legal-entity.outputs.id",
+              "country": "$inputs.country",
+              "identifier": "$inputs.identifier",
+              "scheme": "$inputs.scheme",
+              "superscheme": "$inputs.superscheme"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "identifier": "$response.body#/identifier"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-additional-tax-identifier.outputs.id",
+        "party_name": "$steps.create-legal-entity.outputs.party_name",
+        "country": "$steps.create-legal-entity.outputs.country",
+        "identifier": "$steps.create-additional-tax-identifier.outputs.identifier",
+        "scheme": "$steps.create-peppol-identifier.outputs.scheme"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "send-electronic-document-and-retrieve-evidence",
+      "summary": "This workflow enables a user to send an electronic document (such as an invoice or an order) to a recipient, first by discovering the recipient's capabilities, then submitting the document, and finally retrieving the submission evidence for tracking and compliance.",
+      "description": "This workflow enables a user to send an electronic document (such as an invoice or an order) to a recipient, first by discovering the recipient's capabilities, then submitting the document, and finally retrieving the submission evidence for tracking and compliance.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "document": {
+            "type": "string"
+          },
+          "idempotencyGuid": {
+            "type": "string"
+          },
+          "legalEntityId": {
+            "type": "string"
+          },
+          "routing": {
+            "type": "string"
+          },
+          "guid": {
+            "type": "string"
+          },
+          "evidence_type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "discover-recipient-capabilities",
+          "description": "Discovers if a network participant exists and what document types they are capable of receiving, which helps in determining the optimal routing for the document.",
+          "operationId": "discovery_receives",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "code": "$response.body#/code",
+            "email": "$response.body#/email"
+          }
+        },
+        {
+          "stepId": "submit-document",
+          "description": "Submits a new electronic document (e.g., Invoice, Order) for delivery to the specified recipient. The routing information can be informed by the discovery step.",
+          "operationId": "create_document_submission",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "document": "$inputs.document",
+              "idempotencyGuid": "$inputs.idempotencyGuid",
+              "legalEntityId": "$inputs.legalEntityId",
+              "routing": "$inputs.routing"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "guid": "$response.body#/guid"
+          }
+        },
+        {
+          "stepId": "get-document-submission-evidence",
+          "description": "Retrieves the evidence for a specific document submission, including details about the transmission and any generated documents.",
+          "operationId": "show_document_submission_evidence",
+          "parameters": [
+            {
+              "name": "guid",
+              "in": "path",
+              "value": "$steps.submit-document.outputs.guid"
+            },
+            {
+              "name": "evidence_type",
+              "in": "path",
+              "value": "$inputs.evidence_type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "documents": "$response.body#/documents",
+            "evidence": "$response.body#/evidence",
+            "network": "$response.body#/network",
+            "receiver": "$response.body#/receiver",
+            "sender": "$response.body#/sender"
+          }
+        }
+      ],
+      "outputs": {
+        "code": "$steps.discover-recipient-capabilities.outputs.code",
+        "email": "$steps.discover-recipient-capabilities.outputs.email",
+        "guid": "$steps.submit-document.outputs.guid",
+        "documents": "$steps.get-document-submission-evidence.outputs.documents",
+        "evidence": "$steps.get-document-submission-evidence.outputs.evidence",
+        "network": "$steps.get-document-submission-evidence.outputs.network",
+        "receiver": "$steps.get-document-submission-evidence.outputs.receiver",
+        "sender": "$steps.get-document-submission-evidence.outputs.sender"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "process-incoming-electronic-document",
+      "summary": "This workflow describes the process of receiving an electronic document (e.g., an email with an invoice), notifying Storecove about it, and then retrieving the parsed structured data or the original document for further processing within the user's system.",
+      "description": "This workflow describes the process of receiving an electronic document (e.g., an email with an invoice), notifying Storecove about it, and then retrieving the parsed structured data or the original document for further processing within the user's system.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "legal_entity_id": {
+            "type": "string"
+          },
+          "document": {
+            "type": "string"
+          },
+          "parseStrategy": {
+            "type": "string"
+          },
+          "guid": {
+            "type": "string"
+          },
+          "syntax": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "receive-document-notification",
+          "description": "Notifies Storecove about a newly received document, which will then be parsed and processed. This is typically triggered by an external event, like an email arriving.",
+          "operationId": "receive_document",
+          "parameters": [
+            {
+              "name": "legal_entity_id",
+              "in": "path",
+              "value": "$inputs.legal_entity_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "document": "$inputs.document",
+              "parseStrategy": "$inputs.parseStrategy"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "guid": "$response.body#/guid"
+          }
+        },
+        {
+          "stepId": "get-parsed-received-document",
+          "description": "Retrieves the content of a received document, either as parsed JSON data or in its original format, using the GUID obtained from the notification.",
+          "operationId": "get_received_document",
+          "parameters": [
+            {
+              "name": "guid",
+              "in": "path",
+              "value": "$steps.receive-document-notification.outputs.guid"
+            },
+            {
+              "name": "syntax",
+              "in": "path",
+              "value": "$inputs.syntax"
+            },
+            {
+              "name": "version",
+              "in": "query",
+              "value": "$inputs.version"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "document": "$response.body#/document",
+            "original": "$response.body#/original",
+            "legalEntityId": "$response.body#/legalEntityId"
+          }
+        }
+      ],
+      "outputs": {
+        "guid": "$steps.receive-document-notification.outputs.guid",
+        "document": "$steps.get-parsed-received-document.outputs.document",
+        "original": "$steps.get-parsed-received-document.outputs.original",
+        "legalEntityId": "$steps.get-parsed-received-document.outputs.legalEntityId"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "poll-and-process-webhook-events",
+      "summary": "This workflow describes a common integration pattern where an API consumer periodically polls Storecove for new webhook events from a queue and then deletes them after successful processing to acknowledge receipt and prevent reprocessing.",
+      "description": "This workflow describes a common integration pattern where an API consumer periodically polls Storecove for new webhook events from a queue and then deletes them after successful processing to acknowledge receipt and prevent reprocessing.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "guid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-next-webhook-instance",
+          "description": "Retrieves the next available webhook instance from the queue. If no instances are available, a 204 (No Content) response is returned.",
+          "operationId": "get_webhook_instances",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "guid": "$response.body#/guid",
+            "body": "$response.body#/body"
+          }
+        },
+        {
+          "stepId": "delete-webhook-instance",
+          "description": "Deletes a specific webhook instance from the queue after it has been successfully processed by the consumer, ensuring it is not retrieved again.",
+          "operationId": "delete_webhook_instance",
+          "parameters": [
+            {
+              "name": "guid",
+              "in": "path",
+              "value": "$steps.get-next-webhook-instance.outputs.guid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status"
+          }
+        }
+      ],
+      "outputs": {
+        "guid": "$steps.get-next-webhook-instance.outputs.guid",
+        "body": "$steps.get-next-webhook-instance.outputs.body",
+        "status": "$steps.delete-webhook-instance.outputs.status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-singapore-iras-c5-email-activation",
+      "summary": "This workflow outlines the process of initiating and subsequently canceling a C5 email activation for a Legal Entity with a Singapore UEN identifier, which is a specific requirement for e-invoicing compliance with the Inland Revenue Authority of Singapore (IRAS).",
+      "description": "This workflow outlines the process of initiating and subsequently canceling a C5 email activation for a Legal Entity with a Singapore UEN identifier, which is a specific requirement for e-invoicing compliance with the Inland Revenue Authority of Singapore (IRAS).",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "legal_entity_id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "identifier": {
+            "type": "string"
+          },
+          "scheme": {
+            "type": "string"
+          },
+          "superscheme": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "request-c5-email-activation",
+          "description": "Initiates a new C5 Email Activation request for a specified Legal Entity and SG:UEN identifier. This typically involves an email-based verification flow.",
+          "operationId": "create_c5_email",
+          "parameters": [
+            {
+              "name": "legal_entity_id",
+              "in": "path",
+              "value": "$inputs.legal_entity_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "email": "$inputs.email",
+              "name": "$inputs.name",
+              "identifier": "$inputs.identifier",
+              "scheme": "$inputs.scheme",
+              "superscheme": "$inputs.superscheme"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status",
+            "legal_entity_id": "$response.body#/legal_entity_id",
+            "identifier": "$response.body#/identifier",
+            "scheme": "$response.body#/scheme",
+            "superscheme": "$response.body#/superscheme"
+          }
+        },
+        {
+          "stepId": "cancel-c5-email-activation",
+          "description": "Cancels an previously initiated C5 email activation or deactivation request for a given Legal Entity and identifier.",
+          "operationPath": "openapi_source#/paths/~1api~1v2~1legal_entities~1{legal_entity_id}~1c5~1iras~1email~1cancel(.{format})/put",
+          "parameters": [
+            {
+              "name": "legal_entity_id",
+              "in": "path",
+              "value": "$steps.request-c5-email-activation.outputs.legal_entity_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "legal_entity_id": "$steps.request-c5-email-activation.outputs.legal_entity_id",
+              "identifier": "$steps.request-c5-email-activation.outputs.identifier",
+              "scheme": "$steps.request-c5-email-activation.outputs.scheme",
+              "superscheme": "$steps.request-c5-email-activation.outputs.superscheme"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status"
+          }
+        }
+      ],
+      "outputs": {
+        "status": "$steps.cancel-c5-email-activation.outputs.status",
+        "legal_entity_id": "$steps.request-c5-email-activation.outputs.legal_entity_id",
+        "identifier": "$steps.request-c5-email-activation.outputs.identifier",
+        "scheme": "$steps.request-c5-email-activation.outputs.scheme",
+        "superscheme": "$steps.request-c5-email-activation.outputs.superscheme"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

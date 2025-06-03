@@ -1,0 +1,754 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/slicebox.local/main/2.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "dicom-image-ingestion-and-metadata-browsing",
+      "summary": "Enables users to import DICOM images into Slicebox via a structured import session and then browse the hierarchical metadata (patient, study, series, image levels) of the imported data.",
+      "description": "Enables users to import DICOM images into Slicebox via a structured import session and then browse the hierarchical metadata (patient, study, series, image levels) of the imported data.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "add-dicom-to-session_body": {
+            "type": "object"
+          },
+          "startIndex": {
+            "type": "string"
+          },
+          "count": {
+            "type": "string"
+          },
+          "queryProperties": {
+            "type": "string"
+          },
+          "startindex": {
+            "type": "string"
+          },
+          "seriesid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-import-session",
+          "description": "Initiates a new import session, providing a container for incoming DICOM files.",
+          "operationPath": "openapi_source#/paths/~1import~1sessions/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "name": "$response.body#/name",
+            "user": "$response.body#/user",
+            "userId": "$response.body#/userId",
+            "created": "$response.body#/created",
+            "lastUpdated": "$response.body#/lastUpdated",
+            "filesAdded": "$response.body#/filesAdded",
+            "filesImported": "$response.body#/filesImported",
+            "filesRejected": "$response.body#/filesRejected"
+          }
+        },
+        {
+          "stepId": "add-dicom-to-session",
+          "description": "Uploads a DICOM dataset to the specified import session. This adds the image to the Slicebox database.",
+          "operationPath": "openapi_source#/paths/~1import~1sessions~1{id}~1images/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/octet-stream",
+            "payload": "$inputs.add-dicom-to-session_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "seriesId": "$response.body#/seriesId",
+            "sopInstanceUID": "$response.body#/sopInstanceUID",
+            "instanceNumber": "$response.body#/instanceNumber",
+            "imageType": "$response.body#/imageType"
+          }
+        },
+        {
+          "stepId": "query-flat-series-metadata",
+          "description": "Searches and retrieves flattened metadata, combining patient, study, and series information for easier browsing.",
+          "operationPath": "openapi_source#/paths/~1metadata~1flatseries~1query/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "startIndex": "$inputs.startIndex",
+              "count": "$inputs.count",
+              "queryProperties": "$inputs.queryProperties"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "flatSeries": "$response.body#/0/flatSeries"
+          }
+        },
+        {
+          "stepId": "get-images-for-series",
+          "description": "Retrieves all individual image metadata records associated with a specific series ID.",
+          "operationPath": "openapi_source#/paths/~1metadata~1images/get",
+          "parameters": [
+            {
+              "name": "startindex",
+              "in": "query",
+              "value": "$inputs.startindex"
+            },
+            {
+              "name": "count",
+              "in": "query",
+              "value": "$inputs.count"
+            },
+            {
+              "name": "seriesid",
+              "in": "query",
+              "value": "$inputs.seriesid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "image": "$response.body#/0/image"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.add-dicom-to-session.outputs.id",
+        "name": "$steps.create-import-session.outputs.name",
+        "user": "$steps.create-import-session.outputs.user",
+        "userId": "$steps.create-import-session.outputs.userId",
+        "created": "$steps.create-import-session.outputs.created",
+        "lastUpdated": "$steps.create-import-session.outputs.lastUpdated",
+        "filesAdded": "$steps.create-import-session.outputs.filesAdded",
+        "filesImported": "$steps.create-import-session.outputs.filesImported",
+        "filesRejected": "$steps.create-import-session.outputs.filesRejected",
+        "seriesId": "$steps.add-dicom-to-session.outputs.seriesId",
+        "sopInstanceUID": "$steps.add-dicom-to-session.outputs.sopInstanceUID",
+        "instanceNumber": "$steps.add-dicom-to-session.outputs.instanceNumber",
+        "imageType": "$steps.add-dicom-to-session.outputs.imageType",
+        "flatSeries": "$steps.query-flat-series-metadata.outputs.flatSeries",
+        "image": "$steps.get-images-for-series.outputs.image"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "anonymize-and-export-medical-images",
+      "summary": "Allows users to apply anonymization profiles to medical images by modifying DICOM tags and then create an export set of these (or any other selected) images for download as a zip archive.",
+      "description": "Allows users to apply anonymization profiles to medical images by modifying DICOM tags and then create an export set of these (or any other selected) images for download as a zip archive.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "tagValues": {
+            "type": "string"
+          },
+          "create-image-export-set_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-image-attributes",
+          "description": "Fetches all DICOM attributes for a given image, which can be used to identify data for anonymization.",
+          "operationPath": "openapi_source#/paths/~1images~1{id}~1attributes/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "imageAttribute": "$response.body#/0/imageAttribute"
+          }
+        },
+        {
+          "stepId": "anonymize-image",
+          "description": "Anonymizes a specific image by replacing it with a new version containing modified DICOM attribute values according to a provided profile.",
+          "operationPath": "openapi_source#/paths/~1images~1{id}~1anonymize/put",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "profile": "$inputs.profile",
+              "tagValues": "$inputs.tagValues"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "seriesId": "$response.body#/seriesId",
+            "sopInstanceUID": "$response.body#/sopInstanceUID",
+            "instanceNumber": "$response.body#/instanceNumber",
+            "imageType": "$response.body#/imageType"
+          }
+        },
+        {
+          "stepId": "create-image-export-set",
+          "description": "Creates a temporary export set containing a specified list of image IDs, preparing them for bulk download.",
+          "operationPath": "openapi_source#/paths/~1images~1export/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-image-export-set_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "value": "$response.body#/value"
+          }
+        },
+        {
+          "stepId": "download-export-set",
+          "description": "Downloads the images associated with a previously created export set as a zip archive.",
+          "operationPath": "openapi_source#/paths/~1images~1export/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "query",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "zip_archive": "$response.body#/zip_archive"
+          }
+        }
+      ],
+      "outputs": {
+        "imageAttribute": "$steps.get-image-attributes.outputs.imageAttribute",
+        "id": "$steps.anonymize-image.outputs.id",
+        "seriesId": "$steps.anonymize-image.outputs.seriesId",
+        "sopInstanceUID": "$steps.anonymize-image.outputs.sopInstanceUID",
+        "instanceNumber": "$steps.anonymize-image.outputs.instanceNumber",
+        "imageType": "$steps.anonymize-image.outputs.imageType",
+        "value": "$steps.create-image-export-set.outputs.value",
+        "zip_archive": "$steps.download-export-set.outputs.zip_archive"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "user-authentication-and-session-management",
+      "summary": "Allows a user to log in to the Slicebox API, retrieve their current session information, and then log out, managing their API access lifecycle.",
+      "description": "Allows a user to log in to the Slicebox API, retrieve their current session information, and then log out, managing their API access lifecycle.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "pass": {
+            "type": "string"
+          },
+          "user": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "login-user",
+          "description": "Authenticates user credentials to establish an API session. A successful response typically sets a session cookie.",
+          "operationPath": "openapi_source#/paths/~1users~1login/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "pass": "$inputs.pass",
+              "user": "$inputs.user"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-current-user-info",
+          "description": "Retrieves detailed information about the currently authenticated user based on the active session.",
+          "operationPath": "openapi_source#/paths/~1users~1current/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "user": "$response.body#/user",
+            "role": "$response.body#/role"
+          }
+        },
+        {
+          "stepId": "logout-user",
+          "description": "Terminates the current user's session, invalidating any associated session cookies.",
+          "operationPath": "openapi_source#/paths/~1users~1logout/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "user_data": "$steps.logout-user.outputs.user_data",
+        "id": "$steps.get-current-user-info.outputs.id",
+        "user": "$steps.get-current-user-info.outputs.user",
+        "role": "$steps.get-current-user-info.outputs.role"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "box-to-box-image-sharing-and-monitoring",
+      "summary": "Facilitates the secure sharing of medical images between two Slicebox instances ('boxes'), including establishing a connection, sending images, and monitoring the transfer status.",
+      "description": "Facilitates the secure sharing of medical images between two Slicebox instances ('boxes'), including establishing a connection, sending images, and monitoring the transfer status.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "baseUrl": {
+            "type": "string"
+          },
+          "defaultProfile": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "imageTagValuesSet": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "startindex": {
+            "type": "string"
+          },
+          "count": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "connect-to-remote-box",
+          "description": "Establishes a new connection to a remote Slicebox instance, enabling image transfer.",
+          "operationPath": "openapi_source#/paths/~1boxes~1connect/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "baseUrl": "$inputs.baseUrl",
+              "defaultProfile": "$inputs.defaultProfile",
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "name": "$response.body#/name",
+            "baseUrl": "$response.body#/baseUrl",
+            "online": "$response.body#/online",
+            "profile": "$response.body#/profile",
+            "sendMethod": "$response.body#/sendMethod",
+            "token": "$response.body#/token"
+          }
+        },
+        {
+          "stepId": "send-images-to-box",
+          "description": "Sends a selection of images to the specified connected remote box, optionally applying anonymization during transfer.",
+          "operationPath": "openapi_source#/paths/~1boxes~1{id}~1send/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "imageTagValuesSet": "$inputs.imageTagValuesSet",
+              "profile": "$inputs.profile"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "box_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "monitor-outgoing-transactions",
+          "description": "Retrieves a list of all outgoing image transactions, showing their status (e.g., finished, sending, waiting, failed).",
+          "operationPath": "openapi_source#/paths/~1boxes~1outgoing/get",
+          "parameters": [
+            {
+              "name": "startindex",
+              "in": "query",
+              "value": "$inputs.startindex"
+            },
+            {
+              "name": "count",
+              "in": "query",
+              "value": "$inputs.count"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "outgoingTransaction": "$response.body#/0/outgoingTransaction"
+          }
+        },
+        {
+          "stepId": "get-images-from-outgoing-transaction",
+          "description": "Lists the specific images that were part of a given outgoing transaction.",
+          "operationPath": "openapi_source#/paths/~1boxes~1outgoing~1{id}~1images/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "image": "$response.body#/0/image"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.connect-to-remote-box.outputs.id",
+        "name": "$steps.connect-to-remote-box.outputs.name",
+        "baseUrl": "$steps.connect-to-remote-box.outputs.baseUrl",
+        "online": "$steps.connect-to-remote-box.outputs.online",
+        "profile": "$steps.connect-to-remote-box.outputs.profile",
+        "sendMethod": "$steps.connect-to-remote-box.outputs.sendMethod",
+        "token": "$steps.connect-to-remote-box.outputs.token",
+        "box_data": "$steps.send-images-to-box.outputs.box_data",
+        "outgoingTransaction": "$steps.monitor-outgoing-transactions.outputs.outgoingTransaction",
+        "image": "$steps.get-images-from-outgoing-transaction.outputs.image"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "configure-automated-dicom-forwarding",
+      "summary": "Allows administrators to set up and manage rules for automatically forwarding incoming DICOM images from various configured sources (e.g., PACS, other boxes) to specified destinations (e.g., another PACS, another box).",
+      "description": "Allows administrators to set up and manage rules for automatically forwarding incoming DICOM images from various configured sources (e.g., PACS, other boxes) to specified destinations (e.g., another PACS, another box).",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "destination": {
+            "type": "string"
+          },
+          "keepImages": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "startindex": {
+            "type": "string"
+          },
+          "count": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-available-sources",
+          "description": "Retrieves a list of all configured data sources from which images can be received (e.g., users, boxes, directories, SCPs).",
+          "operationPath": "openapi_source#/paths/~1sources/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "source": "$response.body#/0/sourceId"
+          }
+        },
+        {
+          "stepId": "list-available-destinations",
+          "description": "Retrieves a list of all configured destinations to which images can be sent (e.g., boxes, SCUs).",
+          "operationPath": "openapi_source#/paths/~1destinations/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "destination": "$response.body#/0/destinationId"
+          }
+        },
+        {
+          "stepId": "add-forwarding-rule",
+          "description": "Creates a new rule to automatically forward images from a specified source to a destination, with an option to keep a copy of the images.",
+          "operationPath": "openapi_source#/paths/~1forwarding~1rules/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "destination": "$inputs.destination",
+              "keepImages": "$inputs.keepImages",
+              "source": "$inputs.source"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "source": "$response.body#/source",
+            "destination": "$response.body#/destination",
+            "keepImages": "$response.body#/keepImages"
+          }
+        },
+        {
+          "stepId": "list-forwarding-rules",
+          "description": "Retrieves a comprehensive list of all currently active forwarding rules configured in the system.",
+          "operationPath": "openapi_source#/paths/~1forwarding~1rules/get",
+          "parameters": [
+            {
+              "name": "startindex",
+              "in": "query",
+              "value": "$inputs.startindex"
+            },
+            {
+              "name": "count",
+              "in": "query",
+              "value": "$inputs.count"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "forwardingrule": "$response.body#/0/forwardingrule"
+          }
+        }
+      ],
+      "outputs": {
+        "source": "$steps.add-forwarding-rule.outputs.source",
+        "destination": "$steps.add-forwarding-rule.outputs.destination",
+        "id": "$steps.add-forwarding-rule.outputs.id",
+        "keepImages": "$steps.add-forwarding-rule.outputs.keepImages",
+        "forwardingrule": "$steps.list-forwarding-rules.outputs.forwardingrule"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

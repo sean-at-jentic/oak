@@ -1,0 +1,827 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/shipengine.com/main/1.1.202503282303/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "standard-shipping-label-creation",
+      "summary": "This workflow guides a user through validating a recipient's address, comparing shipping rates from various carriers, and then purchasing a shipping label for a single package based on the selected rate.",
+      "description": "This workflow guides a user through validating a recipient's address, comparing shipping rates from various carriers, and then purchasing a shipping label for a single package based on the selected rate.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "validate-recipient-address_body": {
+            "type": "object"
+          },
+          "rate_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "validate-recipient-address",
+          "description": "Validates the destination address to ensure deliverability and prevent surcharges. It takes an array of addresses, but for a single label, one address is sufficient.",
+          "operationId": "validate_address",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.validate-recipient-address_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "matched_address": "$response.body#/0/matched_address",
+            "status": "$response.body#/0/status"
+          }
+        },
+        {
+          "stepId": "get-shipping-rates",
+          "description": "Calculates and compares shipping rates from connected carriers for a given shipment, using the validated address.",
+          "operationId": "calculate_rates",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "shipment": "$steps.validate-recipient-address.outputs.matched_address[0]"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "rates": "$response.body#/rates",
+            "shipment_id": "$response.body#/shipment_id"
+          }
+        },
+        {
+          "stepId": "purchase-label-from-rate",
+          "description": "Purchases a shipping label using a previously obtained rate ID, typically the most cost-effective or preferred one.",
+          "operationId": "create_label_from_rate",
+          "parameters": [
+            {
+              "name": "rate_id",
+              "in": "path",
+              "value": "$steps.get-shipping-rates.outputs.rates.rate_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "rate_id": "$steps.get-shipping-rates.outputs.rates[0].rate_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "label_id": "$response.body#/label_id",
+            "tracking_number": "$response.body#/tracking_number",
+            "label_download": "$response.body#/label_download"
+          }
+        }
+      ],
+      "outputs": {
+        "matched_address": "$steps.validate-recipient-address.outputs.matched_address",
+        "status": "$steps.validate-recipient-address.outputs.status",
+        "rates": "$steps.get-shipping-rates.outputs.rates",
+        "shipment_id": "$steps.get-shipping-rates.outputs.shipment_id",
+        "label_id": "$steps.purchase-label-from-rate.outputs.label_id",
+        "tracking_number": "$steps.purchase-label-from-rate.outputs.tracking_number",
+        "label_download": "$steps.purchase-label-from-rate.outputs.label_download"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "batch-shipping-label-processing",
+      "summary": "This workflow enables users to create and process multiple shipping labels in a single batch operation, useful for high-volume shipping. It includes steps for creating shipments, adding them to a batch, processing the batch, and monitoring its status.",
+      "description": "This workflow enables users to create and process multiple shipping labels in a single batch operation, useful for high-volume shipping. It includes steps for creating shipments, adding them to a batch, processing the batch, and monitoring its status.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "shipments": {
+            "type": "string"
+          },
+          "batch_id": {
+            "type": "string"
+          },
+          "ship_date": {
+            "type": "string"
+          },
+          "label_layout": {
+            "type": "string"
+          },
+          "label_format": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-multiple-shipments",
+          "description": "Creates multiple shipment objects in ShipEngine, which can then be added to a batch. This step assumes shipment details are provided externally.",
+          "operationId": "create_shipments",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "shipments": "$inputs.shipments"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "shipments": "$response.body#/shipments"
+          }
+        },
+        {
+          "stepId": "create-new-batch",
+          "description": "Initializes a new batch for grouping shipments, using the IDs of the previously created shipments.",
+          "operationId": "create_batch",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "shipment_ids": "$steps.create-multiple-shipments.outputs.shipments[*].shipment_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "batch_id": "$response.body#/batch_id"
+          }
+        },
+        {
+          "stepId": "process-batch-labels",
+          "description": "Processes the batch to generate shipping labels for all included shipments. This operation is asynchronous.",
+          "operationId": "process_batch",
+          "parameters": [
+            {
+              "name": "batch_id",
+              "in": "path",
+              "value": "$steps.create-new-batch.outputs.batch_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "batch_id": "$steps.create-new-batch.outputs.batch_id",
+              "ship_date": "$inputs.ship_date",
+              "label_layout": "$inputs.label_layout",
+              "label_format": "$inputs.label_format"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "labels_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-batch-status",
+          "description": "Retrieves the current status of the batch, including label download links if processing is complete. This step can be polled until the batch status is 'completed'.",
+          "operationId": "get_batch_by_id",
+          "parameters": [
+            {
+              "name": "batch_id",
+              "in": "path",
+              "value": "$inputs.batch_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status",
+            "label_download": "$response.body#/label_download",
+            "errors": "$response.body#/errors",
+            "warnings": "$response.body#/warnings",
+            "completed": "$response.body#/completed"
+          }
+        }
+      ],
+      "outputs": {
+        "shipments": "$steps.create-multiple-shipments.outputs.shipments",
+        "batch_id": "$steps.create-new-batch.outputs.batch_id",
+        "labels_data": "$steps.process-batch-labels.outputs.labels_data",
+        "status": "$steps.get-batch-status.outputs.status",
+        "label_download": "$steps.get-batch-status.outputs.label_download",
+        "errors": "$steps.get-batch-status.outputs.errors",
+        "warnings": "$steps.get-batch-status.outputs.warnings",
+        "completed": "$steps.get-batch-status.outputs.completed"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "unstructured-address-processing-and-validation",
+      "summary": "This workflow takes unstructured text containing address information, parses it into structured data, and then validates the parsed address for accuracy and deliverability, reducing delivery errors.",
+      "description": "This workflow takes unstructured text containing address information, parses it into structured data, and then validates the parsed address for accuracy and deliverability, reducing delivery errors.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "parse-unstructured-address",
+          "description": "Extracts structured address data (like street, city, postal code) from a block of unstructured text.",
+          "operationId": "parse_address",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "text": "$inputs.text"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "address": "$response.body#/address",
+            "score": "$response.body#/score",
+            "entities": "$response.body#/entities"
+          }
+        },
+        {
+          "stepId": "validate-parsed-address",
+          "description": "Validates the extracted address against official databases to ensure it is a real and deliverable address.",
+          "operationId": "validate_address",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "address_line1": "$steps.parse-unstructured-address.outputs.address.address_line1",
+              "city_locality": "$steps.parse-unstructured-address.outputs.address.city_locality",
+              "state_province": "$steps.parse-unstructured-address.outputs.address.state_province",
+              "country_code": "$steps.parse-unstructured-address.outputs.address.country_code"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/0/status",
+            "matched_address": "$response.body#/0/matched_address",
+            "messages": "$response.body#/0/messages"
+          }
+        }
+      ],
+      "outputs": {
+        "address": "$steps.parse-unstructured-address.outputs.address",
+        "score": "$steps.parse-unstructured-address.outputs.score",
+        "entities": "$steps.parse-unstructured-address.outputs.entities",
+        "status": "$steps.validate-parsed-address.outputs.status",
+        "matched_address": "$steps.validate-parsed-address.outputs.matched_address",
+        "messages": "$steps.validate-parsed-address.outputs.messages"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "new-carrier-account-setup-and-funding",
+      "summary": "This workflow allows a user to connect a new shipping carrier account to ShipEngine, retrieve its details, and optionally add funds if required by the carrier, enabling immediate use of carrier services.",
+      "description": "This workflow allows a user to connect a new shipping carrier account to ShipEngine, retrieve its details, and optionally add funds if required by the carrier, enabling immediate use of carrier services.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "carrier_name": {
+            "type": "string"
+          },
+          "connect-new-carrier_body": {
+            "type": "object"
+          },
+          "carrier_id": {
+            "type": "string"
+          },
+          "add-funds-to-carrier-account_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "connect-new-carrier",
+          "description": "Connects a new carrier account to the ShipEngine platform using provided credentials. Specific inputs depend on the carrier.",
+          "operationId": "connect_carrier",
+          "parameters": [
+            {
+              "name": "carrier_name",
+              "in": "path",
+              "value": "$inputs.carrier_name"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.connect-new-carrier_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "carrier_id": "$response.body#/carrier_id"
+          }
+        },
+        {
+          "stepId": "get-connected-carrier-details",
+          "description": "Retrieves detailed information about the newly connected carrier account, including its balance and supported services.",
+          "operationId": "get_carrier_by_id",
+          "parameters": [
+            {
+              "name": "carrier_id",
+              "in": "path",
+              "value": "$steps.connect-new-carrier.outputs.carrier_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "carrier_code": "$response.body#/carrier_code",
+            "nickname": "$response.body#/nickname",
+            "balance": "$response.body#/balance",
+            "requires_funded_amount": "$response.body#/requires_funded_amount",
+            "services": "$response.body#/services",
+            "packages": "$response.body#/packages"
+          }
+        },
+        {
+          "stepId": "add-funds-to-carrier-account",
+          "description": "Adds funds to a carrier account if it requires pre-funding for services, ensuring labels can be purchased.",
+          "operationId": "add_funds_to_carrier",
+          "parameters": [
+            {
+              "name": "carrier_id",
+              "in": "path",
+              "value": "$inputs.carrier_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.add-funds-to-carrier-account_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "balance": "$response.body#/balance"
+          }
+        }
+      ],
+      "outputs": {
+        "carrier_id": "$steps.connect-new-carrier.outputs.carrier_id",
+        "carrier_code": "$steps.get-connected-carrier-details.outputs.carrier_code",
+        "nickname": "$steps.get-connected-carrier-details.outputs.nickname",
+        "balance": "$steps.add-funds-to-carrier-account.outputs.balance",
+        "requires_funded_amount": "$steps.get-connected-carrier-details.outputs.requires_funded_amount",
+        "services": "$steps.get-connected-carrier-details.outputs.services",
+        "packages": "$steps.get-connected-carrier-details.outputs.packages"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "schedule-package-pickup",
+      "summary": "This workflow facilitates scheduling a package pickup with a carrier after labels have been generated, and then allows for retrieval of the pickup details for confirmation.",
+      "description": "This workflow facilitates scheduling a package pickup with a carrier after labels have been generated, and then allows for retrieval of the pickup details for confirmation.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "label_status": {
+            "type": "string"
+          },
+          "service_code": {
+            "type": "string"
+          },
+          "carrier_id": {
+            "type": "string"
+          },
+          "tracking_number": {
+            "type": "string"
+          },
+          "batch_id": {
+            "type": "string"
+          },
+          "rate_id": {
+            "type": "string"
+          },
+          "shipment_id": {
+            "type": "string"
+          },
+          "warehouse_id": {
+            "type": "string"
+          },
+          "created_at_start": {
+            "type": "string"
+          },
+          "created_at_end": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "page_size": {
+            "type": "string"
+          },
+          "sort_dir": {
+            "type": "string"
+          },
+          "sort_by": {
+            "type": "string"
+          },
+          "pickup_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-labels-for-pickup",
+          "description": "Retrieves a list of completed labels that are ready for pickup, which can then be included in the pickup request.",
+          "operationId": "list_labels",
+          "parameters": [
+            {
+              "name": "label_status",
+              "in": "query",
+              "value": "$inputs.label_status"
+            },
+            {
+              "name": "service_code",
+              "in": "query",
+              "value": "$inputs.service_code"
+            },
+            {
+              "name": "carrier_id",
+              "in": "query",
+              "value": "$inputs.carrier_id"
+            },
+            {
+              "name": "tracking_number",
+              "in": "query",
+              "value": "$inputs.tracking_number"
+            },
+            {
+              "name": "batch_id",
+              "in": "query",
+              "value": "$inputs.batch_id"
+            },
+            {
+              "name": "rate_id",
+              "in": "query",
+              "value": "$inputs.rate_id"
+            },
+            {
+              "name": "shipment_id",
+              "in": "query",
+              "value": "$inputs.shipment_id"
+            },
+            {
+              "name": "warehouse_id",
+              "in": "query",
+              "value": "$inputs.warehouse_id"
+            },
+            {
+              "name": "created_at_start",
+              "in": "query",
+              "value": "$inputs.created_at_start"
+            },
+            {
+              "name": "created_at_end",
+              "in": "query",
+              "value": "$inputs.created_at_end"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "page_size",
+              "in": "query",
+              "value": "$inputs.page_size"
+            },
+            {
+              "name": "sort_dir",
+              "in": "query",
+              "value": "$inputs.sort_dir"
+            },
+            {
+              "name": "sort_by",
+              "in": "query",
+              "value": "$inputs.sort_by"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "labels": "$response.body#/labels"
+          }
+        },
+        {
+          "stepId": "schedule-carrier-pickup",
+          "description": "Schedules a package pickup with the chosen carrier for the specified labels and pickup window.",
+          "operationId": "schedule_pickup",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "label_ids": "$steps.list-labels-for-pickup.outputs.labels[*].label_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pickup_id": "$response.body#/pickup_id",
+            "confirmation_number": "$response.body#/confirmation_number"
+          }
+        },
+        {
+          "stepId": "get-pickup-confirmation",
+          "description": "Retrieves the details and confirmation status of the scheduled pickup.",
+          "operationId": "get_pickup_by_id",
+          "parameters": [
+            {
+              "name": "pickup_id",
+              "in": "path",
+              "value": "$steps.schedule-carrier-pickup.outputs.pickup_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pickup_id": "$response.body#/pickup_id",
+            "confirmation_number": "$response.body#/confirmation_number",
+            "status": "$response.body#/status",
+            "pickup_address": "$response.body#/pickup_address"
+          }
+        }
+      ],
+      "outputs": {
+        "labels": "$steps.list-labels-for-pickup.outputs.labels",
+        "pickup_id": "$steps.get-pickup-confirmation.outputs.pickup_id",
+        "confirmation_number": "$steps.get-pickup-confirmation.outputs.confirmation_number",
+        "status": "$steps.get-pickup-confirmation.outputs.status",
+        "pickup_address": "$steps.get-pickup-confirmation.outputs.pickup_address"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-label-branding-images",
+      "summary": "This workflow allows users to upload new images (e.g., company logos) for branding on shipping labels, set a default image, and view existing images, enhancing brand consistency.",
+      "description": "This workflow allows users to upload new images (e.g., company logos) for branding on shipping labels, set a default image, and view existing images, enhancing brand consistency.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "upload-account-image_body": {
+            "type": "object"
+          },
+          "label_image_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "upload-account-image",
+          "description": "Uploads a new image to be used for label branding, such as a company logo.",
+          "operationId": "create_account_image",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.upload-account-image_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "label_image_id": "$response.body#/label_image_id",
+            "name": "$response.body#/name"
+          }
+        },
+        {
+          "stepId": "set-default-label-image",
+          "description": "Sets a specific uploaded image as the default for all future labels, ensuring consistent branding.",
+          "operationId": "update_account_settings_images_by_id",
+          "parameters": [
+            {
+              "name": "label_image_id",
+              "in": "path",
+              "value": "$steps.upload-account-image.outputs.label_image_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "label_image_id": "$steps.upload-account-image.outputs.label_image_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "image_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "list-all-label-images",
+          "description": "Retrieves a list of all uploaded account images, allowing users to review their branding assets and their default status.",
+          "operationId": "list_account_images",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "images": "$response.body#/images"
+          }
+        }
+      ],
+      "outputs": {
+        "label_image_id": "$steps.upload-account-image.outputs.label_image_id",
+        "name": "$steps.upload-account-image.outputs.name",
+        "image_data": "$steps.set-default-label-image.outputs.image_data",
+        "images": "$steps.list-all-label-images.outputs.images"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

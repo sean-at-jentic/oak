@@ -1,0 +1,603 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/shorten.rest/main/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "retrieve-and-analyze-alias-click-statistics",
+      "summary": "Allows a user to retrieve detailed click statistics for a specific short URL, enabling performance analysis based on various filters like date range, country, or OS. This provides insights into how users interact with the shortened links.",
+      "description": "Allows a user to retrieve detailed click statistics for a specific short URL, enabling performance analysis based on various filters like date range, country, or OS. This provides insights into how users interact with the shortened links.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "domainName": {
+            "type": "string"
+          },
+          "aliasName": {
+            "type": "string"
+          },
+          "dateFrom": {
+            "type": "string"
+          },
+          "dateTo": {
+            "type": "string"
+          },
+          "lastId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-alias-id",
+          "description": "Retrieves the internal alias name and domain name for a given alias, which are required for filtering click statistics.",
+          "operationId": "GetAlias",
+          "parameters": [
+            {
+              "name": "domainName",
+              "in": "query",
+              "value": "$inputs.domainName"
+            },
+            {
+              "name": "aliasName",
+              "in": "query",
+              "value": "$inputs.aliasName"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "name": "$response.body#/name",
+            "domainName": "$response.body#/domainName"
+          }
+        },
+        {
+          "stepId": "get-filtered-click-statistics",
+          "description": "Retrieves click statistics filtered by the alias name, domain, and optionally by date range, providing detailed click data.",
+          "operationId": "GetStatistics",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "aliasId": "$steps.get-alias-id.outputs.name",
+              "domain": "$steps.get-alias-id.outputs.domainName",
+              "dateFrom": "$inputs.dateFrom",
+              "dateTo": "$inputs.dateTo",
+              "lastId": "$inputs.lastId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "accountId": "$response.body#/accountId",
+            "alias": "$response.body#/alias",
+            "aliasId": "$response.body#/aliasId",
+            "browser": "$response.body#/browser",
+            "country": "$response.body#/country",
+            "createdAt": "$response.body#/createdAt",
+            "destination": "$response.body#/destination",
+            "domain": "$response.body#/domain",
+            "id": "$response.body#/id",
+            "os": "$response.body#/os",
+            "referrer": "$response.body#/referrer",
+            "userAgent": "$response.body#/userAgent"
+          }
+        }
+      ],
+      "outputs": {
+        "name": "$steps.get-alias-id.outputs.name",
+        "domainName": "$steps.get-alias-id.outputs.domainName",
+        "accountId": "$steps.get-filtered-click-statistics.outputs.accountId",
+        "alias": "$steps.get-filtered-click-statistics.outputs.alias",
+        "aliasId": "$steps.get-filtered-click-statistics.outputs.aliasId",
+        "browser": "$steps.get-filtered-click-statistics.outputs.browser",
+        "country": "$steps.get-filtered-click-statistics.outputs.country",
+        "createdAt": "$steps.get-filtered-click-statistics.outputs.createdAt",
+        "destination": "$steps.get-filtered-click-statistics.outputs.destination",
+        "domain": "$steps.get-filtered-click-statistics.outputs.domain",
+        "id": "$steps.get-filtered-click-statistics.outputs.id",
+        "os": "$steps.get-filtered-click-statistics.outputs.os",
+        "referrer": "$steps.get-filtered-click-statistics.outputs.referrer",
+        "userAgent": "$steps.get-filtered-click-statistics.outputs.userAgent"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-and-retrieve-custom-short-url",
+      "summary": "Allows a user to programmatically create a new short URL with a custom alias and specific redirection rules (destinations, metatags, snippets), and then immediately retrieve its full details to confirm creation and inspect all properties. This workflow is valuable for verifying the setup of complex short URLs.",
+      "description": "Allows a user to programmatically create a new short URL with a custom alias and specific redirection rules (destinations, metatags, snippets), and then immediately retrieve its full details to confirm creation and inspect all properties. This workflow is valuable for verifying the setup of complex short URLs.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "domainName": {
+            "type": "string"
+          },
+          "aliasName": {
+            "type": "string"
+          },
+          "destinations": {
+            "type": "string"
+          },
+          "metatags": {
+            "type": "string"
+          },
+          "snippets": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-alias",
+          "description": "Creates a new short URL under a specified domain, with an optional custom alias name and detailed redirection configurations (destinations, metatags, snippets).",
+          "operationId": "CreateAlias",
+          "parameters": [
+            {
+              "name": "domainName",
+              "in": "query",
+              "value": "$inputs.domainName"
+            },
+            {
+              "name": "aliasName",
+              "in": "query",
+              "value": "$inputs.aliasName"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "destinations": "$inputs.destinations",
+              "metatags": "$inputs.metatags",
+              "snippets": "$inputs.snippets"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "aliasName": "$response.body#/aliasName",
+            "domainName": "$response.body#/domainName",
+            "shortUrl": "$response.body#/shortUrl"
+          }
+        },
+        {
+          "stepId": "get-alias-details",
+          "description": "Retrieves the detailed configuration and properties of the newly created short URL using its alias name and domain.",
+          "operationId": "GetAlias",
+          "parameters": [
+            {
+              "name": "domainName",
+              "in": "query",
+              "value": "$steps.create-alias.outputs.domainName"
+            },
+            {
+              "name": "aliasName",
+              "in": "query",
+              "value": "$steps.create-alias.outputs.aliasName"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "name": "$response.body#/name",
+            "domainName": "$response.body#/domainName",
+            "destinations": "$response.body#/destinations",
+            "metatags": "$response.body#/metatags",
+            "snippets": "$response.body#/snippets",
+            "createdAt": "$response.body#/createdAt",
+            "updatedAt": "$response.body#/updatedAt"
+          }
+        }
+      ],
+      "outputs": {
+        "aliasName": "$steps.create-alias.outputs.aliasName",
+        "domainName": "$steps.get-alias-details.outputs.domainName",
+        "shortUrl": "$steps.create-alias.outputs.shortUrl",
+        "name": "$steps.get-alias-details.outputs.name",
+        "destinations": "$steps.get-alias-details.outputs.destinations",
+        "metatags": "$steps.get-alias-details.outputs.metatags",
+        "snippets": "$steps.get-alias-details.outputs.snippets",
+        "createdAt": "$steps.get-alias-details.outputs.createdAt",
+        "updatedAt": "$steps.get-alias-details.outputs.updatedAt"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "update-alias-redirection-rules",
+      "summary": "Enables a user to modify the redirection behavior, metatags, or snippets of an existing short URL. This workflow first retrieves the current alias configuration to ensure that array properties (like destinations) are updated completely, preventing accidental data loss, and then applies the changes.",
+      "description": "Enables a user to modify the redirection behavior, metatags, or snippets of an existing short URL. This workflow first retrieves the current alias configuration to ensure that array properties (like destinations) are updated completely, preventing accidental data loss, and then applies the changes.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "domainName": {
+            "type": "string"
+          },
+          "aliasName": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-current-alias-details",
+          "description": "Fetches the current configuration of an alias, including all existing destinations, metatags, and snippets, which is essential for a complete update.",
+          "operationId": "GetAlias",
+          "parameters": [
+            {
+              "name": "domainName",
+              "in": "query",
+              "value": "$inputs.domainName"
+            },
+            {
+              "name": "aliasName",
+              "in": "query",
+              "value": "$inputs.aliasName"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "name": "$response.body#/name",
+            "domainName": "$response.body#/domainName",
+            "destinations": "$response.body#/destinations",
+            "metatags": "$response.body#/metatags",
+            "snippets": "$response.body#/snippets"
+          }
+        },
+        {
+          "stepId": "update-alias-configuration",
+          "description": "Updates the alias with new or modified redirection rules, metatags, or snippets. The request body should include all existing and new array elements (like destinations) to prevent accidental deletion.",
+          "operationId": "UpdateAlias",
+          "parameters": [
+            {
+              "name": "domainName",
+              "in": "query",
+              "value": "$steps.get-current-alias-details.outputs.domainName"
+            },
+            {
+              "name": "aliasName",
+              "in": "query",
+              "value": "$steps.get-current-alias-details.outputs.name"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "aliasName": "$steps.get-current-alias-details.outputs.name",
+              "domainName": "$steps.get-current-alias-details.outputs.domainName",
+              "destinations": "$steps.get-current-alias-details.outputs.destinations",
+              "metatags": "$steps.get-current-alias-details.outputs.metatags",
+              "snippets": "$steps.get-current-alias-details.outputs.snippets"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "configuration_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "name": "$steps.get-current-alias-details.outputs.name",
+        "domainName": "$steps.get-current-alias-details.outputs.domainName",
+        "destinations": "$steps.get-current-alias-details.outputs.destinations",
+        "metatags": "$steps.get-current-alias-details.outputs.metatags",
+        "snippets": "$steps.get-current-alias-details.outputs.snippets",
+        "configuration_data": "$steps.update-alias-configuration.outputs.configuration_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "paginated-retrieval-of-all-raw-click-data",
+      "summary": "Allows users to download all raw click data for their account, facilitating comprehensive analytics or data warehousing by efficiently handling large volumes of data through pagination.",
+      "description": "Allows users to download all raw click data for their account, facilitating comprehensive analytics or data warehousing by efficiently handling large volumes of data through pagination.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "continueFrom": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-first-batch-of-clicks",
+          "description": "Retrieves the initial set of raw click data for the account, up to the specified limit, along with a 'lastId' for pagination.",
+          "operationId": "GetClicks",
+          "parameters": [
+            {
+              "name": "continueFrom",
+              "in": "query",
+              "value": "$inputs.continueFrom"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "clicks": "$response.body#/clicks",
+            "lastId": "$response.body#/lastId"
+          }
+        },
+        {
+          "stepId": "get-next-batch-of-clicks",
+          "description": "Retrieves subsequent batches of raw click data using the 'lastId' from the previous response to continue the listing. This step would typically be repeated until 'lastId' is null, indicating no more records.",
+          "operationId": "GetClicks",
+          "parameters": [
+            {
+              "name": "continueFrom",
+              "in": "query",
+              "value": "$steps.get-first-batch-of-clicks.outputs.lastId"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "clicks": "$response.body#/clicks",
+            "lastId": "$response.body#/lastId"
+          }
+        }
+      ],
+      "outputs": {
+        "clicks": "$steps.get-next-batch-of-clicks.outputs.clicks",
+        "lastId": "$steps.get-next-batch-of-clicks.outputs.lastId"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "paginated-retrieval-of-all-aliases",
+      "summary": "Provides a mechanism to efficiently retrieve all short URLs associated with an account and a specific domain, handling large datasets through pagination. This is useful for bulk management, auditing, or migrating aliases.",
+      "description": "Provides a mechanism to efficiently retrieve all short URLs associated with an account and a specific domain, handling large datasets through pagination. This is useful for bulk management, auditing, or migrating aliases.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "domainName": {
+            "type": "string"
+          },
+          "continueFrom": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-first-batch-of-aliases",
+          "description": "Retrieves the initial set of alias names for a specified domain, up to the defined limit, along with a 'lastId' for subsequent pagination.",
+          "operationId": "GetAliases",
+          "parameters": [
+            {
+              "name": "domainName",
+              "in": "query",
+              "value": "$inputs.domainName"
+            },
+            {
+              "name": "continueFrom",
+              "in": "query",
+              "value": "$inputs.continueFrom"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "aliases": "$response.body#/aliases",
+            "lastId": "$response.body#/lastId"
+          }
+        },
+        {
+          "stepId": "get-next-batch-of-aliases",
+          "description": "Retrieves subsequent batches of alias names using the 'lastId' from the previous response to continue the listing. This step would typically be repeated until 'lastId' is null, indicating no more records.",
+          "operationId": "GetAliases",
+          "parameters": [
+            {
+              "name": "domainName",
+              "in": "query",
+              "value": "$inputs.domainName"
+            },
+            {
+              "name": "continueFrom",
+              "in": "query",
+              "value": "$steps.get-first-batch-of-aliases.outputs.lastId"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "aliases": "$response.body#/aliases",
+            "lastId": "$response.body#/lastId"
+          }
+        }
+      ],
+      "outputs": {
+        "aliases": "$steps.get-next-batch-of-aliases.outputs.aliases",
+        "lastId": "$steps.get-next-batch-of-aliases.outputs.lastId"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

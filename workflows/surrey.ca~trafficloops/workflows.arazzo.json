@@ -1,0 +1,159 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/surrey.ca/trafficloops/0.1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "comprehensive-traffic-data-analysis",
+      "summary": "This workflow enables a comprehensive analysis of traffic patterns by first retrieving the geographical locations of all traffic loops and then fetching the corresponding traffic count data for a specified time period. Although the API calls are independent, the common LOOP_ID field allows for client-side integration and visualization of traffic volumes at specific locations over time.",
+      "description": "This workflow enables a comprehensive analysis of traffic patterns by first retrieving the geographical locations of all traffic loops and then fetching the corresponding traffic count data for a specified time period. Although the API calls are independent, the common LOOP_ID field allows for client-side integration and visualization of traffic volumes at specific locations over time.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "proj_epsg": {
+            "type": "string"
+          },
+          "startdatetime": {
+            "type": "string"
+          },
+          "enddatetime": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-loop-locations-for-analysis",
+          "description": "Fetches all traffic loop locations in GeoJSON format. This provides the geographical context and unique LOOP_IDs necessary to understand where traffic data originates.",
+          "operationPath": "openapi_source#/paths/~1TrafficLoops.fmw/get",
+          "parameters": [
+            {
+              "name": "proj_epsg",
+              "in": "query",
+              "value": "$inputs.proj_epsg"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "traffic_loops_geojson": "$response.body#/traffic_loops_geojson"
+          }
+        },
+        {
+          "stepId": "get-loop-counts-for-analysis",
+          "description": "Fetches traffic loop counts for a specified time range. This data, containing LOOP_IDs and timestamps, can then be combined with the previously retrieved loop location data for a complete, location-aware traffic analysis.",
+          "operationPath": "openapi_source#/paths/~1TrafficLoopCounts.fmw/get",
+          "parameters": [
+            {
+              "name": "startdatetime",
+              "in": "query",
+              "value": "$inputs.startdatetime"
+            },
+            {
+              "name": "enddatetime",
+              "in": "query",
+              "value": "$inputs.enddatetime"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "traffic_loop_counts": "$response.body#/traffic_loop_counts"
+          }
+        }
+      ],
+      "outputs": {
+        "traffic_loops_geojson": "$steps.get-loop-locations-for-analysis.outputs.traffic_loops_geojson",
+        "traffic_loop_counts": "$steps.get-loop-counts-for-analysis.outputs.traffic_loop_counts"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
