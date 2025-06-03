@@ -1,0 +1,895 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/vimeo.com/main/3.4/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "on-demand-film-page-setup",
+      "summary": "This workflow guides a creator through setting up a new On Demand page for a film, including defining its content rating, description, and name, adding the main film video, and uploading a custom poster image.",
+      "description": "This workflow guides a creator through setting up a new On Demand page for a film, including defining its content rating, description, and name, adding the main film video, and uploading a custom poster image.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "content_rating": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "ondemand_id": {
+            "type": "string"
+          },
+          "video_id": {
+            "type": "string"
+          },
+          "poster_id": {
+            "type": "string"
+          },
+          "active": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-on-demand-page",
+          "description": "Creates a new On Demand page for a film with initial details.",
+          "operationId": "create_vod_alt1",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "content_rating": "$inputs.content_rating",
+              "description": "$inputs.description",
+              "name": "$inputs.name",
+              "type": "$inputs.type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ondemand_id": "$response.body#/ondemand_id"
+          }
+        },
+        {
+          "stepId": "add-main-video-to-ondemand",
+          "description": "Adds a specific video as the main film to the newly created On Demand page.",
+          "operationId": "add_video_to_vod",
+          "parameters": [
+            {
+              "name": "ondemand_id",
+              "in": "path",
+              "value": "$steps.create-on-demand-page.outputs.ondemand_id"
+            },
+            {
+              "name": "video_id",
+              "in": "path",
+              "value": "$inputs.video_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/vnd.vimeo.ondemand.video+json",
+            "payload": {
+              "ondemand_id": "$steps.create-on-demand-page.outputs.ondemand_id",
+              "type": "$inputs.type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "on_demand_video_details": "$response.body#/on_demand_video_details"
+          }
+        },
+        {
+          "stepId": "add-on-demand-poster",
+          "description": "Adds a new poster image to the On Demand page. The actual image data is uploaded to the returned link.",
+          "operationId": "add_vod_poster",
+          "parameters": [
+            {
+              "name": "ondemand_id",
+              "in": "path",
+              "value": "$steps.create-on-demand-page.outputs.ondemand_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "poster_id": "$response.body#/poster_id",
+            "upload_link": "$response.body#/upload_link"
+          }
+        },
+        {
+          "stepId": "set-active-on-demand-poster",
+          "description": "Sets the newly uploaded poster as the active poster for the On Demand page.",
+          "operationId": "edit_vod_poster",
+          "parameters": [
+            {
+              "name": "ondemand_id",
+              "in": "path",
+              "value": "$steps.create-on-demand-page.outputs.ondemand_id"
+            },
+            {
+              "name": "poster_id",
+              "in": "path",
+              "value": "$steps.add-on-demand-poster.outputs.poster_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/vnd.vimeo.picture+json",
+            "payload": {
+              "ondemand_id": "$steps.create-on-demand-page.outputs.ondemand_id",
+              "poster_id": "$steps.add-on-demand-poster.outputs.poster_id",
+              "active": "$inputs.active"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "poster_details": "$response.body#/poster_details"
+          }
+        }
+      ],
+      "outputs": {
+        "ondemand_id": "$steps.create-on-demand-page.outputs.ondemand_id",
+        "on_demand_video_details": "$steps.add-main-video-to-ondemand.outputs.on_demand_video_details",
+        "poster_id": "$steps.add-on-demand-poster.outputs.poster_id",
+        "upload_link": "$steps.add-on-demand-poster.outputs.upload_link",
+        "poster_details": "$steps.set-active-on-demand-poster.outputs.poster_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "video-upload-and-basic-metadata-setup",
+      "summary": "This workflow allows an authenticated user to upload a new video to their account and then immediately configure its essential metadata, privacy settings, and embed options. This is valuable for creators who want to quickly publish and customize their content.",
+      "description": "This workflow allows an authenticated user to upload a new video to their account and then immediately configure its essential metadata, privacy settings, and embed options. This is valuable for creators who want to quickly publish and customize their content.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "initiate-video-upload_body": {
+            "type": "object"
+          },
+          "upload_id": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "signature": {
+            "type": "string"
+          },
+          "video_file_id": {
+            "type": "string"
+          },
+          "video_id": {
+            "type": "string"
+          },
+          "content_rating": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "license": {
+            "type": "string"
+          },
+          "locale": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "initiate-video-upload",
+          "description": "Initiates the video upload process, providing a link for the actual file upload and returning initial video details.",
+          "operationId": "upload_video_alt1",
+          "requestBody": {
+            "contentType": "application/vnd.vimeo.video+json",
+            "payload": "$inputs.initiate-video-upload_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "video_id": "$response.body#/video_id",
+            "upload_link": "$response.body#/upload_link",
+            "complete_uri": "$response.body#/complete_uri"
+          }
+        },
+        {
+          "stepId": "complete-streaming-upload",
+          "description": "Completes the streaming upload process after the video file has been transferred.",
+          "operationId": "complete_streaming_upload",
+          "parameters": [
+            {
+              "name": "upload_id",
+              "in": "path",
+              "value": "$steps.initiate-video-upload.outputs.video_id"
+            },
+            {
+              "name": "user_id",
+              "in": "path",
+              "value": "$inputs.user_id"
+            },
+            {
+              "name": "signature",
+              "in": "query",
+              "value": "$inputs.signature"
+            },
+            {
+              "name": "video_file_id",
+              "in": "query",
+              "value": "$inputs.video_file_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "upload_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "edit-video-metadata",
+          "description": "Updates the video's title, description, privacy, and embed settings after upload.",
+          "operationId": "edit_video",
+          "parameters": [
+            {
+              "name": "video_id",
+              "in": "path",
+              "value": "$steps.initiate-video-upload.outputs.video_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/vnd.vimeo.video+json",
+            "payload": {
+              "video_id": "$steps.initiate-video-upload.outputs.video_id",
+              "content_rating": "$inputs.content_rating",
+              "description": "$inputs.description",
+              "license": "$inputs.license",
+              "locale": "$inputs.locale",
+              "name": "$inputs.name",
+              "password": "$inputs.password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "video_id": "$response.body#/video_id"
+          }
+        }
+      ],
+      "outputs": {
+        "video_id": "$steps.edit-video-metadata.outputs.video_id",
+        "upload_link": "$steps.initiate-video-upload.outputs.upload_link",
+        "complete_uri": "$steps.initiate-video-upload.outputs.complete_uri",
+        "upload_data": "$steps.complete-streaming-upload.outputs.upload_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "channel-creation-and-content-population",
+      "summary": "This workflow enables a user to create a new channel on Vimeo, define its basic properties, and then add multiple existing videos to it, effectively curating content for a specific theme or audience.",
+      "description": "This workflow enables a user to create a new channel on Vimeo, define its basic properties, and then add multiple existing videos to it, effectively curating content for a specific theme or audience.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "privacy": {
+            "type": "string"
+          },
+          "channel_id": {
+            "type": "string"
+          },
+          "video_uri": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-channel",
+          "description": "Creates a new channel with specified name and privacy settings.",
+          "operationId": "create_channel",
+          "requestBody": {
+            "contentType": "application/vnd.vimeo.channel+json",
+            "payload": {
+              "name": "$inputs.name",
+              "privacy": "$inputs.privacy"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "channel_id": "$response.body#/channel_id"
+          }
+        },
+        {
+          "stepId": "add-videos-to-channel",
+          "description": "Adds a list of videos to the newly created channel.",
+          "operationId": "add_videos_to_channel",
+          "parameters": [
+            {
+              "name": "channel_id",
+              "in": "path",
+              "value": "$steps.create-channel.outputs.channel_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "channel_id": "$steps.create-channel.outputs.channel_id",
+              "video_uri": "$inputs.video_uri"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "channel_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "channel_id": "$steps.create-channel.outputs.channel_id",
+        "channel_data": "$steps.add-videos-to-channel.outputs.channel_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "album-creation-and-video-organization",
+      "summary": "This workflow allows a user to create a new album, add specific videos to it, and then set one of those videos (or a specific frame from it) as the album's thumbnail, providing a custom visual identity for the collection.",
+      "description": "This workflow allows a user to create a new album, add specific videos to it, and then set one of those videos (or a specific frame from it) as the album's thumbnail, providing a custom visual identity for the collection.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "album_id": {
+            "type": "string"
+          },
+          "video_id": {
+            "type": "string"
+          },
+          "time_code": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-album",
+          "description": "Creates a new album for the authenticated user.",
+          "operationId": "create_album_alt1",
+          "requestBody": {
+            "contentType": "application/vnd.vimeo.album+json",
+            "payload": {
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "album_id": "$response.body#/album_id"
+          }
+        },
+        {
+          "stepId": "add-video-to-album",
+          "description": "Adds a specific video to the newly created album.",
+          "operationId": "add_video_to_album_alt1",
+          "parameters": [
+            {
+              "name": "album_id",
+              "in": "path",
+              "value": "$steps.create-album.outputs.album_id"
+            },
+            {
+              "name": "video_id",
+              "in": "path",
+              "value": "$inputs.video_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "album_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "set-album-thumbnail",
+          "description": "Sets a specific video within the album as its thumbnail, optionally at a given timecode.",
+          "operationId": "set_video_as_album_thumbnail_alt1",
+          "parameters": [
+            {
+              "name": "album_id",
+              "in": "path",
+              "value": "$steps.create-album.outputs.album_id"
+            },
+            {
+              "name": "video_id",
+              "in": "path",
+              "value": "$inputs.video_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "album_id": "$steps.create-album.outputs.album_id",
+              "time_code": "$inputs.time_code"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "album_details": "$response.body#/album_details"
+          }
+        }
+      ],
+      "outputs": {
+        "album_id": "$steps.create-album.outputs.album_id",
+        "album_data": "$steps.add-video-to-album.outputs.album_data",
+        "album_details": "$steps.set-album-thumbnail.outputs.album_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "video-comment-management",
+      "summary": "This workflow allows a user to view all comments on a specific video, add a new comment, and then edit or delete an existing comment they have made.",
+      "description": "This workflow allows a user to view all comments on a specific video, add a new comment, and then edit or delete an existing comment they have made.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "video_id": {
+            "type": "string"
+          },
+          "direction": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "per_page": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "comment_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-video-comments",
+          "description": "Retrieves all comments posted on a specified video.",
+          "operationId": "get_comments",
+          "parameters": [
+            {
+              "name": "video_id",
+              "in": "path",
+              "value": "$inputs.video_id"
+            },
+            {
+              "name": "direction",
+              "in": "query",
+              "value": "$inputs.direction"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "per_page",
+              "in": "query",
+              "value": "$inputs.per_page"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "comments": "$response.body#/comments",
+            "comment_id_list": "$response.body#/comment_id_list"
+          }
+        },
+        {
+          "stepId": "add-video-comment",
+          "description": "Adds a new comment to the specified video.",
+          "operationId": "create_comment",
+          "parameters": [
+            {
+              "name": "video_id",
+              "in": "path",
+              "value": "$inputs.video_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/vnd.vimeo.comment+json",
+            "payload": {
+              "text": "$inputs.text"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "new_comment_id": "$response.body#/new_comment_id",
+            "new_comment_text": "$response.body#/new_comment_text"
+          }
+        },
+        {
+          "stepId": "edit-video-comment",
+          "description": "Edits the text of a specific comment on a video.",
+          "operationId": "edit_comment",
+          "parameters": [
+            {
+              "name": "comment_id",
+              "in": "path",
+              "value": "$steps.add-video-comment.outputs.new_comment_id"
+            },
+            {
+              "name": "video_id",
+              "in": "path",
+              "value": "$inputs.video_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/vnd.vimeo.comment+json",
+            "payload": {
+              "comment_id": "$steps.add-video-comment.outputs.new_comment_id",
+              "text": "$inputs.text"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "edited_comment_details": "$response.body#/edited_comment_details"
+          }
+        },
+        {
+          "stepId": "delete-video-comment",
+          "description": "Deletes a specific comment from a video.",
+          "operationId": "delete_comment",
+          "parameters": [
+            {
+              "name": "comment_id",
+              "in": "path",
+              "value": "$steps.add-video-comment.outputs.new_comment_id"
+            },
+            {
+              "name": "video_id",
+              "in": "path",
+              "value": "$inputs.video_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "comment_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "comments": "$steps.get-video-comments.outputs.comments",
+        "comment_id_list": "$steps.get-video-comments.outputs.comment_id_list",
+        "new_comment_id": "$steps.add-video-comment.outputs.new_comment_id",
+        "new_comment_text": "$steps.add-video-comment.outputs.new_comment_text",
+        "edited_comment_details": "$steps.edit-video-comment.outputs.edited_comment_details",
+        "comment_data": "$steps.delete-video-comment.outputs.comment_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "user-profile-and-picture-management",
+      "summary": "This workflow allows an authenticated user to update their personal profile information and manage their profile picture, including uploading a new one and setting it as active.",
+      "description": "This workflow allows an authenticated user to update their personal profile information and manage their profile picture, including uploading a new one and setting it as active.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "bio": {
+            "type": "string"
+          },
+          "content_filter": {
+            "type": "string"
+          },
+          "link": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "portraitset_id": {
+            "type": "string"
+          },
+          "active": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "edit-user-profile",
+          "description": "Edits the authenticated user's profile details such as bio, location, and privacy preferences for their videos.",
+          "operationId": "edit_user_alt1",
+          "requestBody": {
+            "contentType": "application/vnd.vimeo.user+json",
+            "payload": {
+              "bio": "$inputs.bio",
+              "content_filter": "$inputs.content_filter",
+              "link": "$inputs.link",
+              "location": "$inputs.location",
+              "name": "$inputs.name",
+              "password": "$inputs.password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_profile": "$response.body#/user_profile"
+          }
+        },
+        {
+          "stepId": "add-user-picture",
+          "description": "Adds a new portrait image to the authenticated user's account. The actual image data is uploaded to the returned link.",
+          "operationId": "create_picture_alt1",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "picture_id": "$response.body#/picture_id",
+            "upload_link": "$response.body#/upload_link"
+          }
+        },
+        {
+          "stepId": "set-active-profile-picture",
+          "description": "Sets a specific uploaded picture as the authenticated user's active profile portrait.",
+          "operationId": "edit_picture_alt1",
+          "parameters": [
+            {
+              "name": "portraitset_id",
+              "in": "path",
+              "value": "$steps.add-user-picture.outputs.picture_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/vnd.vimeo.picture+json",
+            "payload": {
+              "portraitset_id": "$steps.add-user-picture.outputs.picture_id",
+              "active": "$inputs.active"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "picture_details": "$response.body#/picture_details"
+          }
+        }
+      ],
+      "outputs": {
+        "user_profile": "$steps.edit-user-profile.outputs.user_profile",
+        "picture_id": "$steps.add-user-picture.outputs.picture_id",
+        "upload_link": "$steps.add-user-picture.outputs.upload_link",
+        "picture_details": "$steps.set-active-profile-picture.outputs.picture_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
