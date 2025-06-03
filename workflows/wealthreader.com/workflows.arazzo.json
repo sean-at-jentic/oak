@@ -1,0 +1,312 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/wealthreader.com/main/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "retrieve-comprehensive-wealth-data",
+      "summary": "This workflow allows an application to dynamically discover supported financial entities, present the correct login form to the user, and then connect to the chosen entity to retrieve a comprehensive view of the user's financial assets, including investment portfolios, bank accounts, credit cards, and real estate properties. It accounts for potential multi-factor authentication (2FA) challenges where a session ID is returned for a subsequent OTP submission.",
+      "description": "This workflow allows an application to dynamically discover supported financial entities, present the correct login form to the user, and then connect to the chosen entity to retrieve a comprehensive view of the user's financial assets, including investment portfolios, bank accounts, credit cards, and real estate properties. It accounts for potential multi-factor authentication (2FA) challenges where a session ID is returned for a subsequent OTP submission.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "api_key": {
+            "type": "string"
+          },
+          "document_type": {
+            "type": "string"
+          },
+          "user": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "second_password": {
+            "type": "string"
+          },
+          "contract_code": {
+            "type": "string"
+          },
+          "SESSION": {
+            "type": "string"
+          },
+          "OTP": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-supported-entities",
+          "description": "Fetches a list of all financial institutions supported by Wealth Reader, along with the specific input fields (e.g., document type, username, password, second password) required for login to each entity. This allows the client application to build a dynamic login form.",
+          "operationPath": "openapi_source#/paths/~1entities/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "entity_list": "$response.body#/0/entity_list"
+          }
+        },
+        {
+          "stepId": "connect-to-entity-and-get-data",
+          "description": "Attempts to connect to a specified financial entity using the user's credentials. If successful, it retrieves detailed financial asset information. If the entity requires multi-factor authentication (e.g., OTP), the initial call will return a 'session_id', which must be used in a subsequent call along with the OTP to complete the login.",
+          "operationPath": "openapi_source#/paths/~1entities/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "code": "$steps.get-supported-entities.outputs.entity_list[].code",
+              "api_key": "$inputs.api_key",
+              "document_type": "$inputs.document_type",
+              "user": "$inputs.user",
+              "password": "$inputs.password",
+              "second_password": "$inputs.second_password",
+              "contract_code": "$inputs.contract_code",
+              "SESSION": "$inputs.SESSION",
+              "OTP": "$inputs.OTP"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_information": "$response.body#/0/payload/user_information",
+            "portfolios": "$response.body#/0/payload/portfolios",
+            "accounts": "$response.body#/0/payload/accounts",
+            "cards": "$response.body#/0/payload/cards",
+            "properties": "$response.body#/0/payload/properties",
+            "session_id": "$response.body#/0/session_id"
+          }
+        }
+      ],
+      "outputs": {
+        "entity_list": "$steps.get-supported-entities.outputs.entity_list",
+        "user_information": "$steps.connect-to-entity-and-get-data.outputs.user_information",
+        "portfolios": "$steps.connect-to-entity-and-get-data.outputs.portfolios",
+        "accounts": "$steps.connect-to-entity-and-get-data.outputs.accounts",
+        "cards": "$steps.connect-to-entity-and-get-data.outputs.cards",
+        "properties": "$steps.connect-to-entity-and-get-data.outputs.properties",
+        "session_id": "$steps.connect-to-entity-and-get-data.outputs.session_id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "secure-credential-tokenization-and-data-retrieval",
+      "summary": "This workflow enables an application to securely tokenize a user's financial institution credentials with Wealth Reader, receiving a unique token in return. This token can then be used for subsequent data retrieval requests, eliminating the need to store or re-enter sensitive credentials, thus enhancing security and user experience.",
+      "description": "This workflow enables an application to securely tokenize a user's financial institution credentials with Wealth Reader, receiving a unique token in return. This token can then be used for subsequent data retrieval requests, eliminating the need to store or re-enter sensitive credentials, thus enhancing security and user experience.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "api_key": {
+            "type": "string"
+          },
+          "document_type": {
+            "type": "string"
+          },
+          "user": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "second_password": {
+            "type": "string"
+          },
+          "contract_code": {
+            "type": "string"
+          },
+          "tokenize": {
+            "type": "string"
+          },
+          "SESSION": {
+            "type": "string"
+          },
+          "OTP": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-supported-entities",
+          "description": "Fetches a list of all financial institutions supported by Wealth Reader, along with the specific input fields required for login to each entity.",
+          "operationPath": "openapi_source#/paths/~1entities/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "entity_list": "$response.body#/0/entity_list"
+          }
+        },
+        {
+          "stepId": "tokenize-user-credentials",
+          "description": "Submits user credentials to the specified entity with the 'tokenize' flag set to 'true'. Wealth Reader processes and securely stores these credentials, returning a unique token that represents them. This token can be used for future data requests. This step may also return a 'session_id' if 2FA is required during the tokenization process.",
+          "operationPath": "openapi_source#/paths/~1entities/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "code": "$steps.get-supported-entities.outputs.entity_list[].code",
+              "api_key": "$inputs.api_key",
+              "document_type": "$inputs.document_type",
+              "user": "$inputs.user",
+              "password": "$inputs.password",
+              "second_password": "$inputs.second_password",
+              "contract_code": "$inputs.contract_code",
+              "tokenize": "$inputs.tokenize",
+              "SESSION": "$inputs.SESSION",
+              "OTP": "$inputs.OTP"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "token": "$response.body#/0/token",
+            "session_id": "$response.body#/0/session_id"
+          }
+        },
+        {
+          "stepId": "retrieve-wealth-data-with-token",
+          "description": "Uses the previously obtained token to connect to the financial entity and retrieve the user's comprehensive wealth data. This avoids the need to pass sensitive credentials directly. This step can also handle 2FA if required by the entity even with a token.",
+          "operationPath": "openapi_source#/paths/~1entities/post",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "code": "$steps.get-supported-entities.outputs.entity_list[].code",
+              "token": "$steps.tokenize-user-credentials.outputs.token",
+              "api_key": "$inputs.api_key",
+              "SESSION": "$inputs.SESSION",
+              "OTP": "$inputs.OTP"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_information": "$response.body#/0/payload/user_information",
+            "portfolios": "$response.body#/0/payload/portfolios",
+            "accounts": "$response.body#/0/payload/accounts",
+            "cards": "$response.body#/0/payload/cards",
+            "properties": "$response.body#/0/payload/properties",
+            "session_id": "$response.body#/0/session_id"
+          }
+        }
+      ],
+      "outputs": {
+        "entity_list": "$steps.get-supported-entities.outputs.entity_list",
+        "token": "$steps.tokenize-user-credentials.outputs.token",
+        "session_id": "$steps.retrieve-wealth-data-with-token.outputs.session_id",
+        "user_information": "$steps.retrieve-wealth-data-with-token.outputs.user_information",
+        "portfolios": "$steps.retrieve-wealth-data-with-token.outputs.portfolios",
+        "accounts": "$steps.retrieve-wealth-data-with-token.outputs.accounts",
+        "cards": "$steps.retrieve-wealth-data-with-token.outputs.cards",
+        "properties": "$steps.retrieve-wealth-data-with-token.outputs.properties"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

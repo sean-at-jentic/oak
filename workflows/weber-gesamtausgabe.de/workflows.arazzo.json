@@ -1,0 +1,676 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/weber-gesamtausgabe.de/main/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "search-and-retrieve-document-details",
+      "summary": "Allows users to search for documents by a general query string and then retrieve the full details of a specific document from the search results. This is a fundamental workflow for discovering content within the WeGA digital edition.",
+      "description": "Allows users to search for documents by a general query string and then retrieve the full details of a specific document from the search results. This is a fundamental workflow for discovering content within the WeGA digital edition.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "docType": {
+            "type": "string"
+          },
+          "q": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "docID": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-documents",
+          "description": "Searches for documents based on a query string, returning a list of matching documents (entities).",
+          "operationPath": "openapi_source#/paths/~1search~1entity/get",
+          "parameters": [
+            {
+              "name": "docType",
+              "in": "query",
+              "value": "$inputs.docType"
+            },
+            {
+              "name": "q",
+              "in": "query",
+              "value": "$inputs.q"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "totalrecordcount": "$response.headers.totalrecordcount",
+            "documents": "$response.body#/0/documents"
+          }
+        },
+        {
+          "stepId": "get-document-details",
+          "description": "Retrieves the full details of a specific document using its WeGA ID, typically selected from a previous search result.",
+          "operationPath": "openapi_source#/paths/~1documents~1{docID}/get",
+          "parameters": [
+            {
+              "name": "docID",
+              "in": "path",
+              "value": "$steps.search-documents.outputs.documents.docID"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "document_details": "$response.body#/0/document_details"
+          }
+        }
+      ],
+      "outputs": {
+        "totalrecordcount": "$steps.search-documents.outputs.totalrecordcount",
+        "documents": "$steps.search-documents.outputs.documents",
+        "document_details": "$steps.get-document-details.outputs.document_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "explore-documents-by-author",
+      "summary": "Enables users to discover authors (senders or addressees) through available facets, then find all documents associated with a selected author, and finally view the details of a specific document. This workflow is crucial for navigating the edition by person.",
+      "description": "Enables users to discover authors (senders or addressees) through available facets, then find all documents associated with a selected author, and finally view the details of a specific document. This workflow is crucial for navigating the edition by person.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "facet": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "term": {
+            "type": "string"
+          },
+          "docType": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "authorID": {
+            "type": "string"
+          },
+          "docID": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-author-facets",
+          "description": "Retrieves a list of authors (senders or addressees) as facets, which can be filtered by a term. The 'scope' parameter is set to 'indices' to get global author lists.",
+          "operationPath": "openapi_source#/paths/~1facets~1{facet}/get",
+          "parameters": [
+            {
+              "name": "facet",
+              "in": "path",
+              "value": "$inputs.facet"
+            },
+            {
+              "name": "scope",
+              "in": "query",
+              "value": "$inputs.scope"
+            },
+            {
+              "name": "term",
+              "in": "query",
+              "value": "$inputs.term"
+            },
+            {
+              "name": "docType",
+              "in": "query",
+              "value": "$inputs.docType"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "totalrecordcount": "$response.headers.totalrecordcount",
+            "facets": "$response.body#/0/facets"
+          }
+        },
+        {
+          "stepId": "find-documents-by-author",
+          "description": "Finds documents associated with a specific author ID obtained from the facets list.",
+          "operationPath": "openapi_source#/paths/~1documents~1findByAuthor~1{authorID}/get",
+          "parameters": [
+            {
+              "name": "authorID",
+              "in": "path",
+              "value": "$steps.list-author-facets.outputs.facets.value"
+            },
+            {
+              "name": "docType",
+              "in": "query",
+              "value": "$inputs.docType"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "totalrecordcount": "$response.headers.totalrecordcount",
+            "documents": "$response.body#/0/documents"
+          }
+        },
+        {
+          "stepId": "get-document-details",
+          "description": "Retrieves the full details of a specific document found by author.",
+          "operationPath": "openapi_source#/paths/~1documents~1{docID}/get",
+          "parameters": [
+            {
+              "name": "docID",
+              "in": "path",
+              "value": "$steps.find-documents-by-author.outputs.documents.docID"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "document_details": "$response.body#/0/document_details"
+          }
+        }
+      ],
+      "outputs": {
+        "totalrecordcount": "$steps.find-documents-by-author.outputs.totalrecordcount",
+        "facets": "$steps.list-author-facets.outputs.facets",
+        "documents": "$steps.find-documents-by-author.outputs.documents",
+        "document_details": "$steps.get-document-details.outputs.document_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "explore-documents-by-date-range",
+      "summary": "Allows users to find documents published within a specified date range and then retrieve the full details of a selected document from the results. This is useful for chronological exploration of the digital edition.",
+      "description": "Allows users to find documents published within a specified date range and then retrieve the full details of a selected document from the results. This is useful for chronological exploration of the digital edition.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "fromDate": {
+            "type": "string"
+          },
+          "toDate": {
+            "type": "string"
+          },
+          "docType": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "docID": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-documents-by-date",
+          "description": "Searches for documents published within a given date range (from 'fromDate' to 'toDate').",
+          "operationPath": "openapi_source#/paths/~1documents~1findByDate/get",
+          "parameters": [
+            {
+              "name": "fromDate",
+              "in": "query",
+              "value": "$inputs.fromDate"
+            },
+            {
+              "name": "toDate",
+              "in": "query",
+              "value": "$inputs.toDate"
+            },
+            {
+              "name": "docType",
+              "in": "query",
+              "value": "$inputs.docType"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "totalrecordcount": "$response.headers.totalrecordcount",
+            "documents": "$response.body#/0/documents"
+          }
+        },
+        {
+          "stepId": "get-document-details",
+          "description": "Retrieves the full details of a specific document found by date.",
+          "operationPath": "openapi_source#/paths/~1documents~1{docID}/get",
+          "parameters": [
+            {
+              "name": "docID",
+              "in": "path",
+              "value": "$steps.find-documents-by-date.outputs.documents.docID"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "document_details": "$response.body#/0/document_details"
+          }
+        }
+      ],
+      "outputs": {
+        "totalrecordcount": "$steps.find-documents-by-date.outputs.totalrecordcount",
+        "documents": "$steps.find-documents-by-date.outputs.documents",
+        "document_details": "$steps.get-document-details.outputs.document_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "find-documents-referencing-a-specific-document",
+      "summary": "Enables users to find documents that mention or reference a particular document (identified by its WeGA ID) and then view the details of one of the referencing documents. This workflow helps in understanding interconnections within the digital edition.",
+      "description": "Enables users to find documents that mention or reference a particular document (identified by its WeGA ID) and then view the details of one of the referencing documents. This workflow helps in understanding interconnections within the digital edition.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "docID": {
+            "type": "string"
+          },
+          "docType": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-initial-document-details",
+          "description": "Retrieves the details of an initial document, whose ID will be used to find other documents referencing it. This step assumes the user provides an initial docID.",
+          "operationPath": "openapi_source#/paths/~1documents~1{docID}/get",
+          "parameters": [
+            {
+              "name": "docID",
+              "in": "path",
+              "value": "$inputs.docID"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "document_details": "$response.body#/0/document_details",
+            "docID": "$response.body#/0/docID"
+          }
+        },
+        {
+          "stepId": "find-documents-by-mention",
+          "description": "Finds documents that contain a reference to the specified document ID.",
+          "operationPath": "openapi_source#/paths/~1documents~1findByMention~1{docID}/get",
+          "parameters": [
+            {
+              "name": "docID",
+              "in": "path",
+              "value": "$steps.get-initial-document-details.outputs.docID"
+            },
+            {
+              "name": "docType",
+              "in": "query",
+              "value": "$inputs.docType"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "totalrecordcount": "$response.headers.totalrecordcount",
+            "referencing_documents": "$response.body#/0/referencing_documents"
+          }
+        },
+        {
+          "stepId": "get-referenced-document-details",
+          "description": "Retrieves the full details of a specific document that was found to be referencing the initial document.",
+          "operationPath": "openapi_source#/paths/~1documents~1{docID}/get",
+          "parameters": [
+            {
+              "name": "docID",
+              "in": "path",
+              "value": "$steps.find-documents-by-mention.outputs.referencing_documents.docID"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "document_details": "$response.body#/0/document_details"
+          }
+        }
+      ],
+      "outputs": {
+        "document_details": "$steps.get-referenced-document-details.outputs.document_details",
+        "docID": "$steps.get-initial-document-details.outputs.docID",
+        "totalrecordcount": "$steps.find-documents-by-mention.outputs.totalrecordcount",
+        "referencing_documents": "$steps.find-documents-by-mention.outputs.referencing_documents"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "explore-code-samples-and-related-documents",
+      "summary": "Allows users to search for XML code samples by element name, and then retrieve the full document from which a selected code sample originated. This workflow is valuable for developers or researchers interested in the underlying XML structure and its context.",
+      "description": "Allows users to search for XML code samples by element name, and then retrieve the full document from which a selected code sample originated. This workflow is valuable for developers or researchers interested in the underlying XML structure and its context.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "element": {
+            "type": "string"
+          },
+          "namespace": {
+            "type": "string"
+          },
+          "docType": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "docID": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-code-samples-by-element",
+          "description": "Searches for code samples that contain a specific XML element, optionally filtered by namespace or document type.",
+          "operationPath": "openapi_source#/paths/~1code~1findByElement~1{element}/get",
+          "parameters": [
+            {
+              "name": "element",
+              "in": "path",
+              "value": "$inputs.element"
+            },
+            {
+              "name": "namespace",
+              "in": "query",
+              "value": "$inputs.namespace"
+            },
+            {
+              "name": "docType",
+              "in": "query",
+              "value": "$inputs.docType"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "totalrecordcount": "$response.headers.totalrecordcount",
+            "code_samples": "$response.body#/0/codeSample"
+          }
+        },
+        {
+          "stepId": "get-document-from-code-sample",
+          "description": "Retrieves the full document associated with a selected code sample, providing the broader context for the snippet.",
+          "operationPath": "openapi_source#/paths/~1documents~1{docID}/get",
+          "parameters": [
+            {
+              "name": "docID",
+              "in": "path",
+              "value": "$steps.find-code-samples-by-element.outputs.code_samples.docID"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "document_details": "$response.body#/0/document_details"
+          }
+        }
+      ],
+      "outputs": {
+        "totalrecordcount": "$steps.find-code-samples-by-element.outputs.totalrecordcount",
+        "code_samples": "$steps.find-code-samples-by-element.outputs.code_samples",
+        "document_details": "$steps.get-document-from-code-sample.outputs.document_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
