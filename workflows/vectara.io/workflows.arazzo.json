@@ -1,0 +1,820 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/vectara.io/main/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "create-and-populate-a-vectara-corpus",
+      "summary": "This workflow guides a user through the essential steps of setting up a new Vectara application: creating a dedicated data container (corpus), ingesting documents into it, and then creating an API key to enable querying. This is a foundational process for any GenAI application built on Vectara.",
+      "description": "This workflow guides a user through the essential steps of setting up a new Vectara application: creating a dedicated data container (corpus), ingesting documents into it, and then creating an API key to enable querying. This is a foundational process for any GenAI application built on Vectara.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "customer-id": {
+            "type": "string"
+          },
+          "timeout": {
+            "type": "string"
+          },
+          "create-corpus_body": {
+            "type": "object"
+          },
+          "c": {
+            "type": "string"
+          },
+          "o": {
+            "type": "string"
+          },
+          "d": {
+            "type": "string"
+          },
+          "file": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-corpus",
+          "description": "Creates a new corpus, which is a container for data. The corpus name is a required input.",
+          "operationId": "CreateCorpus",
+          "parameters": [
+            {
+              "name": "customer-id",
+              "in": "header",
+              "value": "$inputs.customer-id"
+            },
+            {
+              "name": "timeout",
+              "in": "header",
+              "value": "$inputs.timeout"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-corpus_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "corpusId": "$response.body#/corpusId"
+          }
+        },
+        {
+          "stepId": "upload-document",
+          "description": "Uploads a binary file (e.g., PDF) to be indexed into the newly created corpus. Additional metadata can be attached.",
+          "operationId": "FileUpload",
+          "parameters": [
+            {
+              "name": "c",
+              "in": "query",
+              "value": "$inputs.c"
+            },
+            {
+              "name": "o",
+              "in": "query",
+              "value": "$inputs.o"
+            },
+            {
+              "name": "d",
+              "in": "query",
+              "value": "$inputs.d"
+            }
+          ],
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "corpusId": "$steps.create-corpus.outputs.corpusId",
+              "file": "$inputs.file"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "quotaConsumed": "$response.body#/response/quotaConsumed"
+          }
+        },
+        {
+          "stepId": "create-query-api-key",
+          "description": "Creates a read-only API key specifically for querying the corpus. This key will be used for subsequent query operations.",
+          "operationId": "CreateApiKey",
+          "parameters": [
+            {
+              "name": "customer-id",
+              "in": "header",
+              "value": "$inputs.customer-id"
+            },
+            {
+              "name": "timeout",
+              "in": "header",
+              "value": "$inputs.timeout"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "corpusId": "$steps.create-corpus.outputs.corpusId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "keyId": "$response.body#/keyId"
+          }
+        },
+        {
+          "stepId": "perform-query",
+          "description": "Executes a search query against the corpus using the newly created API key, potentially with Retrieval Augmented Generation (RAG).",
+          "operationId": "Query",
+          "parameters": [
+            {
+              "name": "customer-id",
+              "in": "header",
+              "value": "$inputs.customer-id"
+            },
+            {
+              "name": "timeout",
+              "in": "header",
+              "value": "$inputs.timeout"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "corpusId": "$steps.create-corpus.outputs.corpusId",
+              "api_key": "$steps.create-query-api-key.outputs.keyId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "responseSet": "$response.body#/responseSet",
+            "summary": "$response.body#/summary"
+          }
+        }
+      ],
+      "outputs": {
+        "corpusId": "$steps.create-corpus.outputs.corpusId",
+        "quotaConsumed": "$steps.upload-document.outputs.quotaConsumed",
+        "keyId": "$steps.create-query-api-key.outputs.keyId",
+        "responseSet": "$steps.perform-query.outputs.responseSet",
+        "summary": "$steps.perform-query.outputs.summary"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "corpus-data-and-usage-monitoring",
+      "summary": "This workflow allows administrators to manage the data within a specific corpus, including listing documents, deleting them, and monitoring the corpus's size and usage metrics. This is crucial for maintaining data hygiene and understanding resource consumption.",
+      "description": "This workflow allows administrators to manage the data within a specific corpus, including listing documents, deleting them, and monitoring the corpus's size and usage metrics. This is crucial for maintaining data hygiene and understanding resource consumption.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "customer-id": {
+            "type": "string"
+          },
+          "timeout": {
+            "type": "string"
+          },
+          "numResults": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-corpora",
+          "description": "Lists all corpora accessible to the account to identify the target corpus for management.",
+          "operationId": "ListCorpora",
+          "parameters": [
+            {
+              "name": "customer-id",
+              "in": "header",
+              "value": "$inputs.customer-id"
+            },
+            {
+              "name": "timeout",
+              "in": "header",
+              "value": "$inputs.timeout"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "numResults": "$inputs.numResults"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "corpus": "$response.body#/corpus"
+          }
+        },
+        {
+          "stepId": "list-documents-in-corpus",
+          "description": "Lists all documents within a selected corpus, providing their IDs and metadata for review or deletion.",
+          "operationId": "ListDocuments",
+          "parameters": [
+            {
+              "name": "customer-id",
+              "in": "header",
+              "value": "$inputs.customer-id"
+            },
+            {
+              "name": "timeout",
+              "in": "header",
+              "value": "$inputs.timeout"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "corpusId": "$steps.list-corpora.outputs.corpus[0].id",
+              "numResults": "$inputs.numResults"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "document": "$response.body#/document"
+          }
+        },
+        {
+          "stepId": "delete-specific-document",
+          "description": "Deletes a specific document from the corpus using its document ID, typically after reviewing the list of documents.",
+          "operationId": "Delete",
+          "parameters": [
+            {
+              "name": "customer-id",
+              "in": "header",
+              "value": "$inputs.customer-id"
+            },
+            {
+              "name": "timeout",
+              "in": "header",
+              "value": "$inputs.timeout"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "corpusId": "$steps.list-corpora.outputs.corpus[0].id",
+              "documentId": "$steps.list-documents-in-corpus.outputs.document[0].id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "document_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "compute-corpus-size",
+          "description": "Computes the amount of quota consumed by the corpus, helping administrators track resource usage.",
+          "operationId": "ComputeCorpusSize",
+          "parameters": [
+            {
+              "name": "customer-id",
+              "in": "header",
+              "value": "$inputs.customer-id"
+            },
+            {
+              "name": "timeout",
+              "in": "header",
+              "value": "$inputs.timeout"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "corpusId": "$steps.list-corpora.outputs.corpus[0].id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "size": "$response.body#/size"
+          }
+        },
+        {
+          "stepId": "get-corpus-usage-metrics",
+          "description": "Displays usage information about indexing and query operations in the corpus over a specified time window.",
+          "operationId": "GetUsageMetrics",
+          "parameters": [
+            {
+              "name": "customer-id",
+              "in": "header",
+              "value": "$inputs.customer-id"
+            },
+            {
+              "name": "timeout",
+              "in": "header",
+              "value": "$inputs.timeout"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "corpusId": "$steps.list-corpora.outputs.corpus[0].id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "values": "$response.body#/values"
+          }
+        }
+      ],
+      "outputs": {
+        "corpus": "$steps.list-corpora.outputs.corpus",
+        "document": "$steps.list-documents-in-corpus.outputs.document",
+        "document_data": "$steps.delete-specific-document.outputs.document_data",
+        "size": "$steps.compute-corpus-size.outputs.size",
+        "values": "$steps.get-corpus-usage-metrics.outputs.values"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "chat-conversation-review-and-moderation",
+      "summary": "This workflow enables developers and administrators to review, moderate, and clean up chat conversation histories by listing conversations, reading their full details, and then selectively disabling or deleting specific turns or entire conversations. This is vital for maintaining data quality and compliance in GenAI chat applications.",
+      "description": "This workflow enables developers and administrators to review, moderate, and clean up chat conversation histories by listing conversations, reading their full details, and then selectively disabling or deleting specific turns or entire conversations. This is vital for maintaining data quality and compliance in GenAI chat applications.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "customer-id": {
+            "type": "string"
+          },
+          "timeout": {
+            "type": "string"
+          },
+          "numResults": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-chat-conversations",
+          "description": "Lists the first turn of all conversations in a specific chat history corpus, providing an overview.",
+          "operationId": "ListConversations",
+          "parameters": [
+            {
+              "name": "customer-id",
+              "in": "header",
+              "value": "$inputs.customer-id"
+            },
+            {
+              "name": "timeout",
+              "in": "header",
+              "value": "$inputs.timeout"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "numResults": "$inputs.numResults"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "conversation": "$response.body#/conversation"
+          }
+        },
+        {
+          "stepId": "read-full-conversation",
+          "description": "Retrieves detailed information for specific conversations, including all turns, to understand the full context.",
+          "operationId": "ReadConversations",
+          "parameters": [
+            {
+              "name": "customer-id",
+              "in": "header",
+              "value": "$inputs.customer-id"
+            },
+            {
+              "name": "timeout",
+              "in": "header",
+              "value": "$inputs.timeout"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "conversationId": "$steps.list-chat-conversations.outputs.conversation[0].conversationId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Conversation": "$response.body#/Conversation"
+          }
+        },
+        {
+          "stepId": "disable-conversation-turn",
+          "description": "Disables specific turns within a conversation, effectively hiding them from future processing or display without permanent deletion.",
+          "operationId": "DisableTurns",
+          "parameters": [
+            {
+              "name": "customer-id",
+              "in": "header",
+              "value": "$inputs.customer-id"
+            },
+            {
+              "name": "timeout",
+              "in": "header",
+              "value": "$inputs.timeout"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "conversationId": "$steps.read-full-conversation.outputs.Conversation[0].id",
+              "turnId": "$steps.read-full-conversation.outputs.Conversation[0].turn[0].id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "turn_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "delete-conversation-turn",
+          "description": "Deletes specific turns from a conversation, removing them permanently from the history.",
+          "operationId": "DeleteTurns",
+          "parameters": [
+            {
+              "name": "customer-id",
+              "in": "header",
+              "value": "$inputs.customer-id"
+            },
+            {
+              "name": "timeout",
+              "in": "header",
+              "value": "$inputs.timeout"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "conversationId": "$steps.read-full-conversation.outputs.Conversation[0].id",
+              "turnId": "$steps.read-full-conversation.outputs.Conversation[0].turn[0].id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "turn_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "delete-full-conversation",
+          "description": "Deletes entire conversations from the chat history, useful for bulk cleanup or compliance.",
+          "operationId": "DeleteConversations",
+          "parameters": [
+            {
+              "name": "customer-id",
+              "in": "header",
+              "value": "$inputs.customer-id"
+            },
+            {
+              "name": "timeout",
+              "in": "header",
+              "value": "$inputs.timeout"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "conversationId": "$steps.list-chat-conversations.outputs.conversation[0].conversationId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "conversation_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "conversation": "$steps.list-chat-conversations.outputs.conversation",
+        "Conversation": "$steps.read-full-conversation.outputs.Conversation",
+        "turn_data": "$steps.delete-conversation-turn.outputs.turn_data",
+        "conversation_data": "$steps.delete-full-conversation.outputs.conversation_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "comprehensive-api-key-lifecycle-management",
+      "summary": "This workflow provides a complete process for managing API keys, from listing existing ones, creating new keys with specific access types, to enabling/disabling and ultimately deleting them. This is essential for security and access control within Vectara.",
+      "description": "This workflow provides a complete process for managing API keys, from listing existing ones, creating new keys with specific access types, to enabling/disabling and ultimately deleting them. This is essential for security and access control within Vectara.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "customer-id": {
+            "type": "string"
+          },
+          "timeout": {
+            "type": "string"
+          },
+          "numResults": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-api-keys",
+          "description": "Lists all API keys and their associated corpora to understand the current access configuration.",
+          "operationId": "ListApiKeys",
+          "parameters": [
+            {
+              "name": "customer-id",
+              "in": "header",
+              "value": "$inputs.customer-id"
+            },
+            {
+              "name": "timeout",
+              "in": "header",
+              "value": "$inputs.timeout"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "numResults": "$inputs.numResults"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "keyData": "$response.body#/keyData"
+          }
+        },
+        {
+          "stepId": "create-new-api-key",
+          "description": "Creates a new API key, specifying its type (e.g., serving, indexing) and the corpora it can access.",
+          "operationId": "CreateApiKey",
+          "parameters": [
+            {
+              "name": "customer-id",
+              "in": "header",
+              "value": "$inputs.customer-id"
+            },
+            {
+              "name": "timeout",
+              "in": "header",
+              "value": "$inputs.timeout"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "corpusId": "$steps.list-api-keys.outputs.keyData[0].corpus[0].id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "keyId": "$response.body#/keyId"
+          }
+        },
+        {
+          "stepId": "enable-disable-api-key",
+          "description": "Changes the enablement status of a specific API key (enables or disables it) for temporary access control.",
+          "operationId": "EnableApiKey",
+          "parameters": [
+            {
+              "name": "customer-id",
+              "in": "header",
+              "value": "$inputs.customer-id"
+            },
+            {
+              "name": "timeout",
+              "in": "header",
+              "value": "$inputs.timeout"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "keyId": "$steps.create-new-api-key.outputs.keyId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "key_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "delete-api-key",
+          "description": "Deletes one or more API keys, permanently revoking their access.",
+          "operationId": "DeleteApiKey",
+          "parameters": [
+            {
+              "name": "customer-id",
+              "in": "header",
+              "value": "$inputs.customer-id"
+            },
+            {
+              "name": "timeout",
+              "in": "header",
+              "value": "$inputs.timeout"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "keyId": "$steps.create-new-api-key.outputs.keyId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "key_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "keyData": "$steps.list-api-keys.outputs.keyData",
+        "keyId": "$steps.create-new-api-key.outputs.keyId",
+        "key_data": "$steps.delete-api-key.outputs.key_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
