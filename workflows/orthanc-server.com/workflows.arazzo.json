@@ -1,0 +1,841 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/orthanc-server.com/main/1.12.6/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "query-and-retrieve-dicom-studies-from-remote-modality",
+      "summary": "This workflow enables a user to search for medical imaging studies on a remote DICOM modality (e.g., a PACS system) and then retrieve selected studies into the local Orthanc server. This is a fundamental operation for data acquisition in a medical imaging environment.",
+      "description": "This workflow enables a user to search for medical imaging studies on a remote DICOM modality (e.g., a PACS system) and then retrieve selected studies into the local Orthanc server. This is a fundamental operation for data acquisition in a medical imaging environment.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "Level": {
+            "type": "string"
+          },
+          "LocalAet": {
+            "type": "string"
+          },
+          "Normalize": {
+            "type": "string"
+          },
+          "Query": {
+            "type": "string"
+          },
+          "Timeout": {
+            "type": "string"
+          },
+          "expand": {
+            "type": "string"
+          },
+          "short": {
+            "type": "string"
+          },
+          "simplify": {
+            "type": "string"
+          },
+          "index": {
+            "type": "string"
+          },
+          "Asynchronous": {
+            "type": "string"
+          },
+          "Full": {
+            "type": "string"
+          },
+          "Permissive": {
+            "type": "string"
+          },
+          "Priority": {
+            "type": "string"
+          },
+          "RetrieveMethod": {
+            "type": "string"
+          },
+          "Simplify": {
+            "type": "string"
+          },
+          "Synchronous": {
+            "type": "string"
+          },
+          "TargetAet": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "query-remote-modality",
+          "description": "Initiates a C-FIND query against a configured remote DICOM modality to discover studies based on provided DICOM tag criteria. Returns a query identifier.",
+          "operationPath": "openapi_source#/paths/~1modalities~1{id}~1query/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "Level": "$inputs.Level",
+              "LocalAet": "$inputs.LocalAet",
+              "Normalize": "$inputs.Normalize",
+              "Query": "$inputs.Query",
+              "Timeout": "$inputs.Timeout"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ID": "$response.body#/ID",
+            "Path": "$response.body#/Path"
+          }
+        },
+        {
+          "stepId": "list-query-answers",
+          "description": "Retrieves the list of answers (matching studies) that resulted from the C-FIND query.",
+          "operationPath": "openapi_source#/paths/~1queries~1{id}~1answers/get",
+          "parameters": [
+            {
+              "name": "expand",
+              "in": "query",
+              "value": "$inputs.expand"
+            },
+            {
+              "name": "short",
+              "in": "query",
+              "value": "$inputs.short"
+            },
+            {
+              "name": "simplify",
+              "in": "query",
+              "value": "$inputs.simplify"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "answers": "$response.body#/answers"
+          }
+        },
+        {
+          "stepId": "retrieve-query-answer",
+          "description": "Starts an asynchronous C-MOVE or C-GET job to retrieve a specific study (identified by its index in the query answers) from the remote modality into the local Orthanc server.",
+          "operationPath": "openapi_source#/paths/~1queries~1{id}~1answers~1{index}~1retrieve/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "index",
+              "in": "path",
+              "value": "$inputs.index"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "Asynchronous": "$inputs.Asynchronous",
+              "Full": "$inputs.Full",
+              "Permissive": "$inputs.Permissive",
+              "Priority": "$inputs.Priority",
+              "RetrieveMethod": "$inputs.RetrieveMethod",
+              "Simplify": "$inputs.Simplify",
+              "Synchronous": "$inputs.Synchronous",
+              "TargetAet": "$inputs.TargetAet",
+              "Timeout": "$inputs.Timeout"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ID": "$response.body#/ID",
+            "Path": "$response.body#/Path"
+          }
+        },
+        {
+          "stepId": "monitor-retrieve-job",
+          "description": "Monitors the status of the DICOM retrieval job to track its progress and completion.",
+          "operationPath": "openapi_source#/paths/~1jobs~1{id}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "CompletionTime": "$response.body#/CompletionTime",
+            "Content": "$response.body#/Content",
+            "CreationTime": "$response.body#/CreationTime",
+            "EffectiveRuntime": "$response.body#/EffectiveRuntime",
+            "ErrorCode": "$response.body#/ErrorCode",
+            "ErrorDescription": "$response.body#/ErrorDescription",
+            "ID": "$response.body#/ID",
+            "Priority": "$response.body#/Priority",
+            "Progress": "$response.body#/Progress",
+            "State": "$response.body#/State",
+            "Timestamp": "$response.body#/Timestamp",
+            "Type": "$response.body#/Type"
+          }
+        }
+      ],
+      "outputs": {
+        "ID": "$steps.monitor-retrieve-job.outputs.ID",
+        "Path": "$steps.retrieve-query-answer.outputs.Path",
+        "answers": "$steps.list-query-answers.outputs.answers",
+        "CompletionTime": "$steps.monitor-retrieve-job.outputs.CompletionTime",
+        "Content": "$steps.monitor-retrieve-job.outputs.Content",
+        "CreationTime": "$steps.monitor-retrieve-job.outputs.CreationTime",
+        "EffectiveRuntime": "$steps.monitor-retrieve-job.outputs.EffectiveRuntime",
+        "ErrorCode": "$steps.monitor-retrieve-job.outputs.ErrorCode",
+        "ErrorDescription": "$steps.monitor-retrieve-job.outputs.ErrorDescription",
+        "Priority": "$steps.monitor-retrieve-job.outputs.Priority",
+        "Progress": "$steps.monitor-retrieve-job.outputs.Progress",
+        "State": "$steps.monitor-retrieve-job.outputs.State",
+        "Timestamp": "$steps.monitor-retrieve-job.outputs.Timestamp",
+        "Type": "$steps.monitor-retrieve-job.outputs.Type"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "anonymize-and-archive-patient-data",
+      "summary": "This workflow enables the de-identification of all DICOM instances associated with a specific patient and subsequently creates a portable ZIP archive of the anonymized data. This is crucial for privacy-preserving data sharing and research.",
+      "description": "This workflow enables the de-identification of all DICOM instances associated with a specific patient and subsequently creates a portable ZIP archive of the anonymized data. This is crucial for privacy-preserving data sharing and research.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "Asynchronous": {
+            "type": "string"
+          },
+          "DicomVersion": {
+            "type": "string"
+          },
+          "Force": {
+            "type": "string"
+          },
+          "Keep": {
+            "type": "string"
+          },
+          "KeepLabels": {
+            "type": "string"
+          },
+          "KeepPrivateTags": {
+            "type": "string"
+          },
+          "KeepSource": {
+            "type": "string"
+          },
+          "Permissive": {
+            "type": "string"
+          },
+          "Priority": {
+            "type": "string"
+          },
+          "PrivateCreator": {
+            "type": "string"
+          },
+          "Remove": {
+            "type": "string"
+          },
+          "Replace": {
+            "type": "string"
+          },
+          "Synchronous": {
+            "type": "string"
+          },
+          "Transcode": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "anonymize-patient-data",
+          "description": "Initiates an asynchronous job to anonymize all DICOM instances belonging to a specified patient. A new patient resource is created with de-identified data.",
+          "operationPath": "openapi_source#/paths/~1patients~1{id}~1anonymize/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "Asynchronous": "$inputs.Asynchronous",
+              "DicomVersion": "$inputs.DicomVersion",
+              "Force": "$inputs.Force",
+              "Keep": "$inputs.Keep",
+              "KeepLabels": "$inputs.KeepLabels",
+              "KeepPrivateTags": "$inputs.KeepPrivateTags",
+              "KeepSource": "$inputs.KeepSource",
+              "Permissive": "$inputs.Permissive",
+              "Priority": "$inputs.Priority",
+              "PrivateCreator": "$inputs.PrivateCreator",
+              "Remove": "$inputs.Remove",
+              "Replace": "$inputs.Replace",
+              "Synchronous": "$inputs.Synchronous",
+              "Transcode": "$inputs.Transcode"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ID": "$response.body#/ID",
+            "Path": "$response.body#/Path"
+          }
+        },
+        {
+          "stepId": "monitor-anonymization-job",
+          "description": "Monitors the status of the anonymization job. Upon completion, the job's content is expected to contain the Orthanc ID of the newly created anonymized patient.",
+          "operationPath": "openapi_source#/paths/~1jobs~1{id}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "CompletionTime": "$response.body#/CompletionTime",
+            "Content": "$response.body#/Content",
+            "CreationTime": "$response.body#/CreationTime",
+            "EffectiveRuntime": "$response.body#/EffectiveRuntime",
+            "ErrorCode": "$response.body#/ErrorCode",
+            "ErrorDescription": "$response.body#/ErrorDescription",
+            "ID": "$response.body#/ID",
+            "Priority": "$response.body#/Priority",
+            "Progress": "$response.body#/Progress",
+            "State": "$response.body#/State",
+            "Timestamp": "$response.body#/Timestamp",
+            "Type": "$response.body#/Type"
+          }
+        },
+        {
+          "stepId": "create-patient-archive",
+          "description": "Initiates an asynchronous job to create a ZIP archive containing all DICOM instances of the anonymized patient.",
+          "operationPath": "openapi_source#/paths/~1patients~1{id}~1archive/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "Asynchronous": "$inputs.Asynchronous",
+              "Priority": "$inputs.Priority",
+              "Synchronous": "$inputs.Synchronous",
+              "Transcode": "$inputs.Transcode"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ID": "$response.body#/ID",
+            "Path": "$response.body#/Path"
+          }
+        },
+        {
+          "stepId": "monitor-archive-job",
+          "description": "Monitors the status of the ZIP archive creation job.",
+          "operationPath": "openapi_source#/paths/~1jobs~1{id}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "CompletionTime": "$response.body#/CompletionTime",
+            "Content": "$response.body#/Content",
+            "CreationTime": "$response.body#/CreationTime",
+            "EffectiveRuntime": "$response.body#/EffectiveRuntime",
+            "ErrorCode": "$response.body#/ErrorCode",
+            "ErrorDescription": "$response.body#/ErrorDescription",
+            "ID": "$response.body#/ID",
+            "Priority": "$response.body#/Priority",
+            "Progress": "$response.body#/Progress",
+            "State": "$response.body#/State",
+            "Timestamp": "$response.body#/Timestamp",
+            "Type": "$response.body#/Type"
+          }
+        },
+        {
+          "stepId": "download-archive",
+          "description": "Downloads the generated ZIP archive file from the completed job.",
+          "operationPath": "openapi_source#/paths/~1jobs~1{id}~1{key}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "key",
+              "in": "path",
+              "value": "$inputs.key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "archive_data": "$response.body#/archive_data"
+          }
+        }
+      ],
+      "outputs": {
+        "ID": "$steps.monitor-archive-job.outputs.ID",
+        "Path": "$steps.create-patient-archive.outputs.Path",
+        "CompletionTime": "$steps.monitor-archive-job.outputs.CompletionTime",
+        "Content": "$steps.monitor-archive-job.outputs.Content",
+        "CreationTime": "$steps.monitor-archive-job.outputs.CreationTime",
+        "EffectiveRuntime": "$steps.monitor-archive-job.outputs.EffectiveRuntime",
+        "ErrorCode": "$steps.monitor-archive-job.outputs.ErrorCode",
+        "ErrorDescription": "$steps.monitor-archive-job.outputs.ErrorDescription",
+        "Priority": "$steps.monitor-archive-job.outputs.Priority",
+        "Progress": "$steps.monitor-archive-job.outputs.Progress",
+        "State": "$steps.monitor-archive-job.outputs.State",
+        "Timestamp": "$steps.monitor-archive-job.outputs.Timestamp",
+        "Type": "$steps.monitor-archive-job.outputs.Type",
+        "archive_data": "$steps.download-archive.outputs.archive_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "upload-and-render-dicom-instance",
+      "summary": "This workflow allows a user to upload a new DICOM instance to the Orthanc server and then retrieve a rendered image of its first frame for immediate visualization. This is valuable for quickly inspecting medical images after ingestion.",
+      "description": "This workflow allows a user to upload a new DICOM instance to the Orthanc server and then retrieve a rendered image of its first frame for immediate visualization. This is valuable for quickly inspecting medical images after ingestion.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "upload-dicom-instance_body": {
+            "type": "object"
+          },
+          "height": {
+            "type": "string"
+          },
+          "quality": {
+            "type": "string"
+          },
+          "returnUnsupportedImage": {
+            "type": "string"
+          },
+          "smooth": {
+            "type": "string"
+          },
+          "width": {
+            "type": "string"
+          },
+          "window-center": {
+            "type": "string"
+          },
+          "window-width": {
+            "type": "string"
+          },
+          "Accept": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "upload-dicom-instance",
+          "description": "Uploads a DICOM file (binary data) to the Orthanc server. Upon successful upload, Orthanc assigns a unique ID to the instance.",
+          "operationPath": "openapi_source#/paths/~1instances/post",
+          "requestBody": {
+            "contentType": "application/dicom",
+            "payload": "$inputs.upload-dicom-instance_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ID": "$response.body#/ID",
+            "ParentPatient": "$response.body#/ParentPatient",
+            "ParentSeries": "$response.body#/ParentSeries",
+            "ParentStudy": "$response.body#/ParentStudy",
+            "Path": "$response.body#/Path",
+            "Status": "$response.body#/Status"
+          }
+        },
+        {
+          "stepId": "render-instance-image",
+          "description": "Renders the first frame of the newly uploaded DICOM instance into a viewable image format (e.g., JPEG), applying default windowing and scaling.",
+          "operationPath": "openapi_source#/paths/~1instances~1{id}~1rendered/get",
+          "parameters": [
+            {
+              "name": "height",
+              "in": "query",
+              "value": "$inputs.height"
+            },
+            {
+              "name": "quality",
+              "in": "query",
+              "value": "$inputs.quality"
+            },
+            {
+              "name": "returnUnsupportedImage",
+              "in": "query",
+              "value": "$inputs.returnUnsupportedImage"
+            },
+            {
+              "name": "smooth",
+              "in": "query",
+              "value": "$inputs.smooth"
+            },
+            {
+              "name": "width",
+              "in": "query",
+              "value": "$inputs.width"
+            },
+            {
+              "name": "window-center",
+              "in": "query",
+              "value": "$inputs.window-center"
+            },
+            {
+              "name": "window-width",
+              "in": "query",
+              "value": "$inputs.window-width"
+            },
+            {
+              "name": "Accept",
+              "in": "header",
+              "value": "$inputs.Accept"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "image_data": "$response.body#/image_data"
+          }
+        }
+      ],
+      "outputs": {
+        "ID": "$steps.upload-dicom-instance.outputs.ID",
+        "ParentPatient": "$steps.upload-dicom-instance.outputs.ParentPatient",
+        "ParentSeries": "$steps.upload-dicom-instance.outputs.ParentSeries",
+        "ParentStudy": "$steps.upload-dicom-instance.outputs.ParentStudy",
+        "Path": "$steps.upload-dicom-instance.outputs.Path",
+        "Status": "$steps.upload-dicom-instance.outputs.Status",
+        "image_data": "$steps.render-instance-image.outputs.image_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-custom-study-metadata",
+      "summary": "This workflow demonstrates how to add, retrieve, and remove custom metadata associated with a DICOM study. This is valuable for extending DICOM data with application-specific information or internal tracking purposes.",
+      "description": "This workflow demonstrates how to add, retrieve, and remove custom metadata associated with a DICOM study. This is valuable for extending DICOM data with application-specific information or internal tracking purposes.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "If-Match": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "set-study-metadata_body": {
+            "type": "object"
+          },
+          "If-None-Match": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "set-study-metadata",
+          "description": "Sets a custom metadata key-value pair for a specific DICOM study. This metadata is stored alongside the study.",
+          "operationPath": "openapi_source#/paths/~1studies~1{id}~1metadata~1{name}/put",
+          "parameters": [
+            {
+              "name": "If-Match",
+              "in": "header",
+              "value": "$inputs.If-Match"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "name",
+              "in": "path",
+              "value": "$inputs.name"
+            }
+          ],
+          "requestBody": {
+            "contentType": "text/plain",
+            "payload": "$inputs.set-study-metadata_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "metadata_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-study-metadata",
+          "description": "Retrieves the value of a previously set custom metadata associated with a DICOM study.",
+          "operationPath": "openapi_source#/paths/~1studies~1{id}~1metadata~1{name}/get",
+          "parameters": [
+            {
+              "name": "If-None-Match",
+              "in": "header",
+              "value": "$inputs.If-None-Match"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "name",
+              "in": "path",
+              "value": "$inputs.name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "metadata_value": "$response.body#/metadata_value"
+          }
+        },
+        {
+          "stepId": "delete-study-metadata",
+          "description": "Removes a custom metadata entry from a DICOM study.",
+          "operationPath": "openapi_source#/paths/~1studies~1{id}~1metadata~1{name}/delete",
+          "parameters": [
+            {
+              "name": "If-Match",
+              "in": "header",
+              "value": "$inputs.If-Match"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "name",
+              "in": "path",
+              "value": "$inputs.name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "metadata_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "metadata_data": "$steps.delete-study-metadata.outputs.metadata_data",
+        "metadata_value": "$steps.get-study-metadata.outputs.metadata_value"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

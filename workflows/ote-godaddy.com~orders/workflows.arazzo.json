@@ -1,0 +1,468 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/ote-godaddy.com/orders/0.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "retrieve-and-inspect-specific-order-details",
+      "summary": "Allows a shopper to list their orders, optionally filtered by various criteria, and then retrieve the full details of a chosen order. This is useful for reviewing past purchases, checking product details, billing information, and payment methods.",
+      "description": "Allows a shopper to list their orders, optionally filtered by various criteria, and then retrieve the full details of a chosen order. This is useful for reviewing past purchases, checking product details, billing information, and payment methods.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "periodStart": {
+            "type": "string"
+          },
+          "periodEnd": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "productGroupId": {
+            "type": "string"
+          },
+          "paymentProfileId": {
+            "type": "string"
+          },
+          "parentOrderId": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "string"
+          },
+          "X-Shopper-Id": {
+            "type": "string"
+          },
+          "X-App-Key": {
+            "type": "string"
+          },
+          "orderId": {
+            "type": "string"
+          },
+          "X-Market-Id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-shopper-orders",
+          "description": "Retrieves a paginated list of orders for the authenticated shopper. Can be filtered by time range, domain, product group, payment profile, or parent order ID.",
+          "operationId": "list",
+          "parameters": [
+            {
+              "name": "periodStart",
+              "in": "query",
+              "value": "$inputs.periodStart"
+            },
+            {
+              "name": "periodEnd",
+              "in": "query",
+              "value": "$inputs.periodEnd"
+            },
+            {
+              "name": "domain",
+              "in": "query",
+              "value": "$inputs.domain"
+            },
+            {
+              "name": "productGroupId",
+              "in": "query",
+              "value": "$inputs.productGroupId"
+            },
+            {
+              "name": "paymentProfileId",
+              "in": "query",
+              "value": "$inputs.paymentProfileId"
+            },
+            {
+              "name": "parentOrderId",
+              "in": "query",
+              "value": "$inputs.parentOrderId"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "sort",
+              "in": "query",
+              "value": "$inputs.sort"
+            },
+            {
+              "name": "X-Shopper-Id",
+              "in": "header",
+              "value": "$inputs.X-Shopper-Id"
+            },
+            {
+              "name": "X-App-Key",
+              "in": "header",
+              "value": "$inputs.X-App-Key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "orders": "$response.body#/orders",
+            "pagination": "$response.body#/pagination"
+          }
+        },
+        {
+          "stepId": "get-order-details",
+          "description": "Retrieves comprehensive details for a specific order, including line items, pricing, billing contact, and payment information.",
+          "operationId": "get",
+          "parameters": [
+            {
+              "name": "orderId",
+              "in": "path",
+              "value": "$steps.list-shopper-orders.outputs.orders.orderId"
+            },
+            {
+              "name": "X-Shopper-Id",
+              "in": "header",
+              "value": "$inputs.X-Shopper-Id"
+            },
+            {
+              "name": "X-Market-Id",
+              "in": "header",
+              "value": "$inputs.X-Market-Id"
+            },
+            {
+              "name": "X-App-Key",
+              "in": "header",
+              "value": "$inputs.X-App-Key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "orderId": "$response.body#/orderId",
+            "currency": "$response.body#/currency",
+            "createdAt": "$response.body#/createdAt",
+            "pricing": "$response.body#/pricing",
+            "billTo": "$response.body#/billTo",
+            "payments": "$response.body#/payments",
+            "items": "$response.body#/items"
+          }
+        }
+      ],
+      "outputs": {
+        "orders": "$steps.list-shopper-orders.outputs.orders",
+        "pagination": "$steps.list-shopper-orders.outputs.pagination",
+        "orderId": "$steps.get-order-details.outputs.orderId",
+        "currency": "$steps.get-order-details.outputs.currency",
+        "createdAt": "$steps.get-order-details.outputs.createdAt",
+        "pricing": "$steps.get-order-details.outputs.pricing",
+        "billTo": "$steps.get-order-details.outputs.billTo",
+        "payments": "$steps.get-order-details.outputs.payments",
+        "items": "$steps.get-order-details.outputs.items"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "paginate-through-shopper-orders",
+      "summary": "Enables a shopper to navigate through their order history page by page, useful for managing a large number of past transactions. This workflow demonstrates how to fetch subsequent pages of orders by utilizing the pagination links provided in the API response.",
+      "description": "Enables a shopper to navigate through their order history page by page, useful for managing a large number of past transactions. This workflow demonstrates how to fetch subsequent pages of orders by utilizing the pagination links provided in the API response.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "periodStart": {
+            "type": "string"
+          },
+          "periodEnd": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "productGroupId": {
+            "type": "string"
+          },
+          "paymentProfileId": {
+            "type": "string"
+          },
+          "parentOrderId": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "string"
+          },
+          "X-Shopper-Id": {
+            "type": "string"
+          },
+          "X-App-Key": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-first-page-orders",
+          "description": "Retrieves the initial page of orders for the authenticated shopper, with an optional limit.",
+          "operationId": "list",
+          "parameters": [
+            {
+              "name": "periodStart",
+              "in": "query",
+              "value": "$inputs.periodStart"
+            },
+            {
+              "name": "periodEnd",
+              "in": "query",
+              "value": "$inputs.periodEnd"
+            },
+            {
+              "name": "domain",
+              "in": "query",
+              "value": "$inputs.domain"
+            },
+            {
+              "name": "productGroupId",
+              "in": "query",
+              "value": "$inputs.productGroupId"
+            },
+            {
+              "name": "paymentProfileId",
+              "in": "query",
+              "value": "$inputs.paymentProfileId"
+            },
+            {
+              "name": "parentOrderId",
+              "in": "query",
+              "value": "$inputs.parentOrderId"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "sort",
+              "in": "query",
+              "value": "$inputs.sort"
+            },
+            {
+              "name": "X-Shopper-Id",
+              "in": "header",
+              "value": "$inputs.X-Shopper-Id"
+            },
+            {
+              "name": "X-App-Key",
+              "in": "header",
+              "value": "$inputs.X-App-Key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "orders": "$response.body#/orders",
+            "pagination": "$response.body#/pagination"
+          }
+        },
+        {
+          "stepId": "get-next-page-orders",
+          "description": "Retrieves the next page of orders by extracting the `offset` and `limit` query parameters from the `pagination.next` URI obtained from the previous response.",
+          "operationId": "list",
+          "parameters": [
+            {
+              "name": "periodStart",
+              "in": "query",
+              "value": "$inputs.periodStart"
+            },
+            {
+              "name": "periodEnd",
+              "in": "query",
+              "value": "$inputs.periodEnd"
+            },
+            {
+              "name": "domain",
+              "in": "query",
+              "value": "$inputs.domain"
+            },
+            {
+              "name": "productGroupId",
+              "in": "query",
+              "value": "$inputs.productGroupId"
+            },
+            {
+              "name": "paymentProfileId",
+              "in": "query",
+              "value": "$inputs.paymentProfileId"
+            },
+            {
+              "name": "parentOrderId",
+              "in": "query",
+              "value": "$inputs.parentOrderId"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$steps.get-first-page-orders.outputs.pagination.next"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$steps.get-first-page-orders.outputs.pagination.next"
+            },
+            {
+              "name": "sort",
+              "in": "query",
+              "value": "$inputs.sort"
+            },
+            {
+              "name": "X-Shopper-Id",
+              "in": "header",
+              "value": "$inputs.X-Shopper-Id"
+            },
+            {
+              "name": "X-App-Key",
+              "in": "header",
+              "value": "$inputs.X-App-Key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "orders": "$response.body#/orders",
+            "pagination": "$response.body#/pagination"
+          }
+        }
+      ],
+      "outputs": {
+        "orders": "$steps.get-next-page-orders.outputs.orders",
+        "pagination": "$steps.get-next-page-orders.outputs.pagination"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

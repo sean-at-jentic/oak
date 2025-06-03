@@ -1,0 +1,2142 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/ote-godaddy.com/domains/0.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "renew-an-expiring-domain-v2",
+      "summary": "Enables a user to identify domains eligible for renewal and then renew a specific domain for a chosen period using the V2 asynchronous renewal process.",
+      "description": "Enables a user to identify domains eligible for renewal and then renew a specific domain for a chosen period using the V2 asynchronous renewal process.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-Shopper-Id": {
+            "type": "string"
+          },
+          "statuses": {
+            "type": "string"
+          },
+          "statusGroups": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "marker": {
+            "type": "string"
+          },
+          "includes": {
+            "type": "string"
+          },
+          "modifiedDate": {
+            "type": "string"
+          },
+          "X-Request-Id": {
+            "type": "string"
+          },
+          "customerId": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "consent": {
+            "type": "string"
+          },
+          "expires": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-renewable-domains",
+          "description": "Retrieves a list of domains for the specified Shopper, filtered to show only renewable domains.",
+          "operationId": "list",
+          "parameters": [
+            {
+              "name": "X-Shopper-Id",
+              "in": "header",
+              "value": "$inputs.X-Shopper-Id"
+            },
+            {
+              "name": "statuses",
+              "in": "query",
+              "value": "$inputs.statuses"
+            },
+            {
+              "name": "statusGroups",
+              "in": "query",
+              "value": "$inputs.statusGroups"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "marker",
+              "in": "query",
+              "value": "$inputs.marker"
+            },
+            {
+              "name": "includes",
+              "in": "query",
+              "value": "$inputs.includes"
+            },
+            {
+              "name": "modifiedDate",
+              "in": "query",
+              "value": "$inputs.modifiedDate"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "domains": "$response.body#/0/domain"
+          }
+        },
+        {
+          "stepId": "get-domain-details-for-renewal",
+          "description": "Retrieves detailed information for a specific domain, including its current expiration date and renewal pricing.",
+          "operationPath": "openapi_source#/paths/~1v2~1customers~1{customerId}~1domains~1{domain}/get",
+          "parameters": [
+            {
+              "name": "X-Request-Id",
+              "in": "header",
+              "value": "$inputs.X-Request-Id"
+            },
+            {
+              "name": "customerId",
+              "in": "path",
+              "value": "$inputs.customerId"
+            },
+            {
+              "name": "domain",
+              "in": "path",
+              "value": "$inputs.domain"
+            },
+            {
+              "name": "includes",
+              "in": "query",
+              "value": "$inputs.includes"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "domain": "$response.body#/domain",
+            "expiresAt": "$response.body#/expiresAt",
+            "renewal": "$response.body#/renewal"
+          }
+        },
+        {
+          "stepId": "renew-domain-v2",
+          "description": "Initiates the asynchronous renewal of the specified domain for a given period.",
+          "operationPath": "openapi_source#/paths/~1v2~1customers~1{customerId}~1domains~1{domain}~1renew/post",
+          "parameters": [
+            {
+              "name": "X-Request-Id",
+              "in": "header",
+              "value": "$inputs.X-Request-Id"
+            },
+            {
+              "name": "customerId",
+              "in": "path",
+              "value": "$inputs.customerId"
+            },
+            {
+              "name": "domain",
+              "in": "path",
+              "value": "$inputs.domain"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "consent": "$inputs.consent",
+              "expires": "$inputs.expires"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "v2_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "poll-renewal-status",
+          "description": "Polls for the status of the domain renewal action.",
+          "operationPath": "openapi_source#/paths/~1v2~1customers~1{customerId}~1domains~1{domain}~1actions~1{type}/get",
+          "parameters": [
+            {
+              "name": "X-Request-Id",
+              "in": "header",
+              "value": "$inputs.X-Request-Id"
+            },
+            {
+              "name": "customerId",
+              "in": "path",
+              "value": "$inputs.customerId"
+            },
+            {
+              "name": "domain",
+              "in": "path",
+              "value": "$inputs.domain"
+            },
+            {
+              "name": "type",
+              "in": "path",
+              "value": "$inputs.type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status",
+            "type": "$response.body#/type",
+            "origination": "$response.body#/origination",
+            "createdAt": "$response.body#/createdAt",
+            "completedAt": "$response.body#/completedAt",
+            "reason": "$response.body#/reason"
+          }
+        }
+      ],
+      "outputs": {
+        "domains": "$steps.list-renewable-domains.outputs.domains",
+        "domain": "$steps.get-domain-details-for-renewal.outputs.domain",
+        "expiresAt": "$steps.get-domain-details-for-renewal.outputs.expiresAt",
+        "renewal": "$steps.get-domain-details-for-renewal.outputs.renewal",
+        "v2_data": "$steps.renew-domain-v2.outputs.v2_data",
+        "status": "$steps.poll-renewal-status.outputs.status",
+        "type": "$steps.poll-renewal-status.outputs.type",
+        "origination": "$steps.poll-renewal-status.outputs.origination",
+        "createdAt": "$steps.poll-renewal-status.outputs.createdAt",
+        "completedAt": "$steps.poll-renewal-status.outputs.completedAt",
+        "reason": "$steps.poll-renewal-status.outputs.reason"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "domain-search-and-purchase-v1",
+      "summary": "Allows a user to search for available domain names, review legal agreements, and complete the purchase process using the V1 endpoints. This workflow is suitable for direct, synchronous domain registration.",
+      "description": "Allows a user to search for available domain names, review legal agreements, and complete the purchase process using the V1 endpoints. This workflow is suitable for direct, synchronous domain registration.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-Shopper-Id": {
+            "type": "string"
+          },
+          "query": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "sources": {
+            "type": "string"
+          },
+          "tlds": {
+            "type": "string"
+          },
+          "lengthMax": {
+            "type": "string"
+          },
+          "lengthMin": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "waitMs": {
+            "type": "string"
+          },
+          "checkType": {
+            "type": "string"
+          },
+          "check-domain-availability-bulk_body": {
+            "type": "object"
+          },
+          "X-Market-Id": {
+            "type": "string"
+          },
+          "privacy": {
+            "type": "string"
+          },
+          "forTransfer": {
+            "type": "string"
+          },
+          "tld": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "suggest-domain-names",
+          "description": "Suggests alternative domain names based on a query or keywords.",
+          "operationId": "suggest",
+          "parameters": [
+            {
+              "name": "X-Shopper-Id",
+              "in": "header",
+              "value": "$inputs.X-Shopper-Id"
+            },
+            {
+              "name": "query",
+              "in": "query",
+              "value": "$inputs.query"
+            },
+            {
+              "name": "country",
+              "in": "query",
+              "value": "$inputs.country"
+            },
+            {
+              "name": "city",
+              "in": "query",
+              "value": "$inputs.city"
+            },
+            {
+              "name": "sources",
+              "in": "query",
+              "value": "$inputs.sources"
+            },
+            {
+              "name": "tlds",
+              "in": "query",
+              "value": "$inputs.tlds"
+            },
+            {
+              "name": "lengthMax",
+              "in": "query",
+              "value": "$inputs.lengthMax"
+            },
+            {
+              "name": "lengthMin",
+              "in": "query",
+              "value": "$inputs.lengthMin"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "waitMs",
+              "in": "query",
+              "value": "$inputs.waitMs"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "domains": "$response.body#/0/domain"
+          }
+        },
+        {
+          "stepId": "check-domain-availability-bulk",
+          "description": "Determines whether or not a list of specified domains are available for purchase, including pricing information.",
+          "operationId": "availableBulk",
+          "parameters": [
+            {
+              "name": "checkType",
+              "in": "query",
+              "value": "$inputs.checkType"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.check-domain-availability-bulk_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "availableDomains": "$response.body#/availableDomains"
+          }
+        },
+        {
+          "stepId": "retrieve-legal-agreements",
+          "description": "Retrieves the legal agreement(s) required to purchase the specified TLD and add-ons (e.g., privacy).",
+          "operationId": "getAgreement",
+          "parameters": [
+            {
+              "name": "X-Market-Id",
+              "in": "header",
+              "value": "$inputs.X-Market-Id"
+            },
+            {
+              "name": "tlds",
+              "in": "query",
+              "value": "$inputs.tlds"
+            },
+            {
+              "name": "privacy",
+              "in": "query",
+              "value": "$inputs.privacy"
+            },
+            {
+              "name": "forTransfer",
+              "in": "query",
+              "value": "$inputs.forTransfer"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "agreements": "$response.body#/0/agreementKey"
+          }
+        },
+        {
+          "stepId": "get-domain-purchase-schema",
+          "description": "Retrieves the JSON schema required for submitting a domain registration request for a specific TLD.",
+          "operationId": "schema",
+          "parameters": [
+            {
+              "name": "tld",
+              "in": "path",
+              "value": "$inputs.tld"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "schema": "$response.body#/schema"
+          }
+        },
+        {
+          "stepId": "validate-domain-purchase",
+          "description": "Validates the domain purchase request body against the TLD-specific schema and legal agreements.",
+          "operationId": "validate",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "purchase_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "purchase-domain",
+          "description": "Purchases and registers the specified domain after successful validation.",
+          "operationId": "purchase",
+          "parameters": [
+            {
+              "name": "X-Shopper-Id",
+              "in": "header",
+              "value": "$inputs.X-Shopper-Id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "orderId": "$response.body#/orderId",
+            "itemCount": "$response.body#/itemCount",
+            "total": "$response.body#/total",
+            "currency": "$response.body#/currency"
+          }
+        }
+      ],
+      "outputs": {
+        "domains": "$steps.suggest-domain-names.outputs.domains",
+        "availableDomains": "$steps.check-domain-availability-bulk.outputs.availableDomains",
+        "agreements": "$steps.retrieve-legal-agreements.outputs.agreements",
+        "schema": "$steps.get-domain-purchase-schema.outputs.schema",
+        "purchase_data": "$steps.validate-domain-purchase.outputs.purchase_data",
+        "orderId": "$steps.purchase-domain.outputs.orderId",
+        "itemCount": "$steps.purchase-domain.outputs.itemCount",
+        "total": "$steps.purchase-domain.outputs.total",
+        "currency": "$steps.purchase-domain.outputs.currency"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "domain-search-and-purchase-v2-asynchronous",
+      "summary": "Enables a user to search for available domain names and register them using the V2 asynchronous API, allowing for status polling of the registration action.",
+      "description": "Enables a user to search for available domain names and register them using the V2 asynchronous API, allowing for status polling of the registration action.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "checkType": {
+            "type": "string"
+          },
+          "check-domain-availability-bulk-v2_body": {
+            "type": "object"
+          },
+          "X-Market-Id": {
+            "type": "string"
+          },
+          "tlds": {
+            "type": "string"
+          },
+          "privacy": {
+            "type": "string"
+          },
+          "forTransfer": {
+            "type": "string"
+          },
+          "X-Request-Id": {
+            "type": "string"
+          },
+          "customerId": {
+            "type": "string"
+          },
+          "tld": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "consent": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "check-domain-availability-bulk-v2",
+          "description": "Determines whether or not a list of specified domains are available for purchase, including pricing information.",
+          "operationId": "availableBulk",
+          "parameters": [
+            {
+              "name": "checkType",
+              "in": "query",
+              "value": "$inputs.checkType"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.check-domain-availability-bulk-v2_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "availableDomains": "$response.body#/availableDomains"
+          }
+        },
+        {
+          "stepId": "retrieve-legal-agreements-v2",
+          "description": "Retrieves the legal agreement(s) required to purchase the specified TLD and add-ons.",
+          "operationId": "getAgreement",
+          "parameters": [
+            {
+              "name": "X-Market-Id",
+              "in": "header",
+              "value": "$inputs.X-Market-Id"
+            },
+            {
+              "name": "tlds",
+              "in": "query",
+              "value": "$inputs.tlds"
+            },
+            {
+              "name": "privacy",
+              "in": "query",
+              "value": "$inputs.privacy"
+            },
+            {
+              "name": "forTransfer",
+              "in": "query",
+              "value": "$inputs.forTransfer"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "agreements": "$response.body#/0/agreementKey"
+          }
+        },
+        {
+          "stepId": "get-domain-registration-schema-v2",
+          "description": "Retrieves the JSON schema required for submitting a domain registration request for a specific TLD in V2.",
+          "operationPath": "openapi_source#/paths/~1v2~1customers~1{customerId}~1domains~1register~1schema~1{tld}/get",
+          "parameters": [
+            {
+              "name": "X-Request-Id",
+              "in": "header",
+              "value": "$inputs.X-Request-Id"
+            },
+            {
+              "name": "customerId",
+              "in": "path",
+              "value": "$inputs.customerId"
+            },
+            {
+              "name": "tld",
+              "in": "path",
+              "value": "$inputs.tld"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "schema": "$response.body#/schema"
+          }
+        },
+        {
+          "stepId": "validate-domain-registration-v2",
+          "description": "Validates the domain registration request body against the TLD-specific schema and legal agreements for V2.",
+          "operationPath": "openapi_source#/paths/~1v2~1customers~1{customerId}~1domains~1register~1validate/post",
+          "parameters": [
+            {
+              "name": "X-Request-Id",
+              "in": "header",
+              "value": "$inputs.X-Request-Id"
+            },
+            {
+              "name": "customerId",
+              "in": "path",
+              "value": "$inputs.customerId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "domain": "$inputs.domain",
+              "consent": "$inputs.consent"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "v2_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "register-domain-v2",
+          "description": "Initiates the asynchronous purchase and registration of the specified domain.",
+          "operationPath": "openapi_source#/paths/~1v2~1customers~1{customerId}~1domains~1register/post",
+          "parameters": [
+            {
+              "name": "X-Request-Id",
+              "in": "header",
+              "value": "$inputs.X-Request-Id"
+            },
+            {
+              "name": "customerId",
+              "in": "path",
+              "value": "$inputs.customerId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "domain": "$inputs.domain",
+              "consent": "$inputs.consent"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "v2_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "poll-registration-status",
+          "description": "Polls for the status of the domain registration action until it completes or fails.",
+          "operationPath": "openapi_source#/paths/~1v2~1customers~1{customerId}~1domains~1{domain}~1actions~1{type}/get",
+          "parameters": [
+            {
+              "name": "X-Request-Id",
+              "in": "header",
+              "value": "$inputs.X-Request-Id"
+            },
+            {
+              "name": "customerId",
+              "in": "path",
+              "value": "$inputs.customerId"
+            },
+            {
+              "name": "domain",
+              "in": "path",
+              "value": "$inputs.domain"
+            },
+            {
+              "name": "type",
+              "in": "path",
+              "value": "$inputs.type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status",
+            "type": "$response.body#/type",
+            "origination": "$response.body#/origination",
+            "createdAt": "$response.body#/createdAt",
+            "completedAt": "$response.body#/completedAt",
+            "reason": "$response.body#/reason"
+          }
+        }
+      ],
+      "outputs": {
+        "availableDomains": "$steps.check-domain-availability-bulk-v2.outputs.availableDomains",
+        "agreements": "$steps.retrieve-legal-agreements-v2.outputs.agreements",
+        "schema": "$steps.get-domain-registration-schema-v2.outputs.schema",
+        "v2_data": "$steps.register-domain-v2.outputs.v2_data",
+        "status": "$steps.poll-registration-status.outputs.status",
+        "type": "$steps.poll-registration-status.outputs.type",
+        "origination": "$steps.poll-registration-status.outputs.origination",
+        "createdAt": "$steps.poll-registration-status.outputs.createdAt",
+        "completedAt": "$steps.poll-registration-status.outputs.completedAt",
+        "reason": "$steps.poll-registration-status.outputs.reason"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "transfer-a-domain-in-v2",
+      "summary": "Facilitates the process of transferring a domain from another registrar to GoDaddy, including checking eligibility, agreeing to terms, initiating the transfer, and monitoring its progress.",
+      "description": "Facilitates the process of transferring a domain from another registrar to GoDaddy, including checking eligibility, agreeing to terms, initiating the transfer, and monitoring its progress.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "domain": {
+            "type": "string"
+          },
+          "checkType": {
+            "type": "string"
+          },
+          "forTransfer": {
+            "type": "string"
+          },
+          "X-Market-Id": {
+            "type": "string"
+          },
+          "tlds": {
+            "type": "string"
+          },
+          "privacy": {
+            "type": "string"
+          },
+          "X-Request-Id": {
+            "type": "string"
+          },
+          "customerId": {
+            "type": "string"
+          },
+          "authCode": {
+            "type": "string"
+          },
+          "consent": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "check-domain-for-transfer",
+          "description": "Determines whether or not the specified domain is available for transfer to GoDaddy.",
+          "operationId": "available",
+          "parameters": [
+            {
+              "name": "domain",
+              "in": "query",
+              "value": "$inputs.domain"
+            },
+            {
+              "name": "checkType",
+              "in": "query",
+              "value": "$inputs.checkType"
+            },
+            {
+              "name": "forTransfer",
+              "in": "query",
+              "value": "$inputs.forTransfer"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "domain": "$response.body#/domain",
+            "available": "$response.body#/available",
+            "definitive": "$response.body#/definitive",
+            "price": "$response.body#/price",
+            "currency": "$response.body#/currency",
+            "period": "$response.body#/period"
+          }
+        },
+        {
+          "stepId": "retrieve-transfer-agreements",
+          "description": "Retrieves the legal agreement(s) required to transfer the specified TLD.",
+          "operationId": "getAgreement",
+          "parameters": [
+            {
+              "name": "X-Market-Id",
+              "in": "header",
+              "value": "$inputs.X-Market-Id"
+            },
+            {
+              "name": "tlds",
+              "in": "query",
+              "value": "$inputs.tlds"
+            },
+            {
+              "name": "privacy",
+              "in": "query",
+              "value": "$inputs.privacy"
+            },
+            {
+              "name": "forTransfer",
+              "in": "query",
+              "value": "$inputs.forTransfer"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "agreements": "$response.body#/0/agreementKey"
+          }
+        },
+        {
+          "stepId": "initiate-transfer-in-v2",
+          "description": "Purchases and initiates the asynchronous domain transfer-in process.",
+          "operationPath": "openapi_source#/paths/~1v2~1customers~1{customerId}~1domains~1{domain}~1transfer/post",
+          "parameters": [
+            {
+              "name": "X-Request-Id",
+              "in": "header",
+              "value": "$inputs.X-Request-Id"
+            },
+            {
+              "name": "customerId",
+              "in": "path",
+              "value": "$inputs.customerId"
+            },
+            {
+              "name": "domain",
+              "in": "path",
+              "value": "$inputs.domain"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "authCode": "$inputs.authCode",
+              "consent": "$inputs.consent"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "v2_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "poll-transfer-in-status",
+          "description": "Polls for the status of the domain transfer-in action.",
+          "operationPath": "openapi_source#/paths/~1v2~1customers~1{customerId}~1domains~1{domain}~1actions~1{type}/get",
+          "parameters": [
+            {
+              "name": "X-Request-Id",
+              "in": "header",
+              "value": "$inputs.X-Request-Id"
+            },
+            {
+              "name": "customerId",
+              "in": "path",
+              "value": "$inputs.customerId"
+            },
+            {
+              "name": "domain",
+              "in": "path",
+              "value": "$inputs.domain"
+            },
+            {
+              "name": "type",
+              "in": "path",
+              "value": "$inputs.type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status",
+            "type": "$response.body#/type",
+            "origination": "$response.body#/origination",
+            "createdAt": "$response.body#/createdAt",
+            "completedAt": "$response.body#/completedAt",
+            "reason": "$response.body#/reason"
+          }
+        },
+        {
+          "stepId": "accept-transfer-in",
+          "description": "Accepts the transfer in for the domain, typically when the action status is AWAITING.",
+          "operationPath": "openapi_source#/paths/~1v2~1customers~1{customerId}~1domains~1{domain}~1transferInAccept/post",
+          "parameters": [
+            {
+              "name": "X-Request-Id",
+              "in": "header",
+              "value": "$inputs.X-Request-Id"
+            },
+            {
+              "name": "customerId",
+              "in": "path",
+              "value": "$inputs.customerId"
+            },
+            {
+              "name": "domain",
+              "in": "path",
+              "value": "$inputs.domain"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "authCode": "$inputs.authCode"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "in_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "domain": "$steps.check-domain-for-transfer.outputs.domain",
+        "available": "$steps.check-domain-for-transfer.outputs.available",
+        "definitive": "$steps.check-domain-for-transfer.outputs.definitive",
+        "price": "$steps.check-domain-for-transfer.outputs.price",
+        "currency": "$steps.check-domain-for-transfer.outputs.currency",
+        "period": "$steps.check-domain-for-transfer.outputs.period",
+        "agreements": "$steps.retrieve-transfer-agreements.outputs.agreements",
+        "v2_data": "$steps.initiate-transfer-in-v2.outputs.v2_data",
+        "status": "$steps.poll-transfer-in-status.outputs.status",
+        "type": "$steps.poll-transfer-in-status.outputs.type",
+        "origination": "$steps.poll-transfer-in-status.outputs.origination",
+        "createdAt": "$steps.poll-transfer-in-status.outputs.createdAt",
+        "completedAt": "$steps.poll-transfer-in-status.outputs.completedAt",
+        "reason": "$steps.poll-transfer-in-status.outputs.reason",
+        "in_data": "$steps.accept-transfer-in.outputs.in_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "monitor-domain-actions-and-notifications-v2",
+      "summary": "Allows API consumers (e.g., resellers) to subscribe to and retrieve real-time notifications about domain-related events and actions for their customers, and acknowledge them.",
+      "description": "Allows API consumers (e.g., resellers) to subscribe to and retrieve real-time notifications about domain-related events and actions for their customers, and acknowledge them.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-Request-Id": {
+            "type": "string"
+          },
+          "customerId": {
+            "type": "string"
+          },
+          "types": {
+            "type": "string"
+          },
+          "notificationId": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "opt-in-notifications",
+          "description": "Opts in to receive notifications for specified domain event types.",
+          "operationPath": "openapi_source#/paths/~1v2~1customers~1{customerId}~1domains~1notifications~1optIn/put",
+          "parameters": [
+            {
+              "name": "X-Request-Id",
+              "in": "header",
+              "value": "$inputs.X-Request-Id"
+            },
+            {
+              "name": "customerId",
+              "in": "path",
+              "value": "$inputs.customerId"
+            },
+            {
+              "name": "types",
+              "in": "query",
+              "value": "$inputs.types"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "notifications_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "retrieve-next-notification",
+          "description": "Retrieves the next available domain notification for the customer.",
+          "operationPath": "openapi_source#/paths/~1v2~1customers~1{customerId}~1domains~1notifications/get",
+          "parameters": [
+            {
+              "name": "X-Request-Id",
+              "in": "header",
+              "value": "$inputs.X-Request-Id"
+            },
+            {
+              "name": "customerId",
+              "in": "path",
+              "value": "$inputs.customerId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "notificationId": "$response.body#/notificationId",
+            "type": "$response.body#/type",
+            "resource": "$response.body#/resource",
+            "resourceType": "$response.body#/resourceType",
+            "status": "$response.body#/status",
+            "addedAt": "$response.body#/addedAt",
+            "metadata": "$response.body#/metadata",
+            "requestId": "$response.body#/requestId"
+          }
+        },
+        {
+          "stepId": "acknowledge-notification",
+          "description": "Acknowledges a domain notification, removing it from the queue after processing.",
+          "operationPath": "openapi_source#/paths/~1v2~1customers~1{customerId}~1domains~1notifications~1{notificationId}~1acknowledge/post",
+          "parameters": [
+            {
+              "name": "X-Request-Id",
+              "in": "header",
+              "value": "$inputs.X-Request-Id"
+            },
+            {
+              "name": "customerId",
+              "in": "path",
+              "value": "$inputs.customerId"
+            },
+            {
+              "name": "notificationId",
+              "in": "path",
+              "value": "$inputs.notificationId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "notification_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-notification-schema",
+          "description": "Retrieves the schema for the data contained within a specific notification type, useful for parsing notification payloads.",
+          "operationPath": "openapi_source#/paths/~1v2~1customers~1{customerId}~1domains~1notifications~1schemas~1{type}/get",
+          "parameters": [
+            {
+              "name": "X-Request-Id",
+              "in": "header",
+              "value": "$inputs.X-Request-Id"
+            },
+            {
+              "name": "customerId",
+              "in": "path",
+              "value": "$inputs.customerId"
+            },
+            {
+              "name": "type",
+              "in": "path",
+              "value": "$inputs.type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "schema": "$response.body#/schema"
+          }
+        }
+      ],
+      "outputs": {
+        "notifications_data": "$steps.opt-in-notifications.outputs.notifications_data",
+        "notificationId": "$steps.retrieve-next-notification.outputs.notificationId",
+        "type": "$steps.retrieve-next-notification.outputs.type",
+        "resource": "$steps.retrieve-next-notification.outputs.resource",
+        "resourceType": "$steps.retrieve-next-notification.outputs.resourceType",
+        "status": "$steps.retrieve-next-notification.outputs.status",
+        "addedAt": "$steps.retrieve-next-notification.outputs.addedAt",
+        "metadata": "$steps.retrieve-next-notification.outputs.metadata",
+        "requestId": "$steps.retrieve-next-notification.outputs.requestId",
+        "notification_data": "$steps.acknowledge-notification.outputs.notification_data",
+        "schema": "$steps.get-notification-schema.outputs.schema"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-existing-domain-dns-records",
+      "summary": "Allows a user to retrieve, replace, add, or delete DNS records for a specific domain they own, enabling full control over domain resolution.",
+      "description": "Allows a user to retrieve, replace, add, or delete DNS records for a specific domain they own, enabling full control over domain resolution.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-Shopper-Id": {
+            "type": "string"
+          },
+          "statuses": {
+            "type": "string"
+          },
+          "statusGroups": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "marker": {
+            "type": "string"
+          },
+          "includes": {
+            "type": "string"
+          },
+          "modifiedDate": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "replace-all-dns-records_body": {
+            "type": "object"
+          },
+          "add-dns-records_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-domains",
+          "description": "Retrieves a list of domains owned by the specified Shopper.",
+          "operationId": "list",
+          "parameters": [
+            {
+              "name": "X-Shopper-Id",
+              "in": "header",
+              "value": "$inputs.X-Shopper-Id"
+            },
+            {
+              "name": "statuses",
+              "in": "query",
+              "value": "$inputs.statuses"
+            },
+            {
+              "name": "statusGroups",
+              "in": "query",
+              "value": "$inputs.statusGroups"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "marker",
+              "in": "query",
+              "value": "$inputs.marker"
+            },
+            {
+              "name": "includes",
+              "in": "query",
+              "value": "$inputs.includes"
+            },
+            {
+              "name": "modifiedDate",
+              "in": "query",
+              "value": "$inputs.modifiedDate"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "domains": "$response.body#/0/domain"
+          }
+        },
+        {
+          "stepId": "get-domain-details",
+          "description": "Retrieves comprehensive details for a specified domain, including current nameservers and contacts.",
+          "operationId": "get",
+          "parameters": [
+            {
+              "name": "X-Shopper-Id",
+              "in": "header",
+              "value": "$inputs.X-Shopper-Id"
+            },
+            {
+              "name": "domain",
+              "in": "path",
+              "value": "$inputs.domain"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "domain": "$response.body#/domain",
+            "nameServers": "$response.body#/nameServers",
+            "contacts": "$response.body#/contacts",
+            "status": "$response.body#/status"
+          }
+        },
+        {
+          "stepId": "retrieve-dns-records",
+          "description": "Retrieves specific DNS Records for the specified Domain, Type, and Name.",
+          "operationId": "recordGet",
+          "parameters": [
+            {
+              "name": "X-Shopper-Id",
+              "in": "header",
+              "value": "$inputs.X-Shopper-Id"
+            },
+            {
+              "name": "domain",
+              "in": "path",
+              "value": "$inputs.domain"
+            },
+            {
+              "name": "type",
+              "in": "path",
+              "value": "$inputs.type"
+            },
+            {
+              "name": "name",
+              "in": "path",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "records": "$response.body#/0/records"
+          }
+        },
+        {
+          "stepId": "replace-all-dns-records",
+          "description": "Replaces all existing DNS Records for the specified Domain with a new set of records.",
+          "operationId": "recordReplace",
+          "parameters": [
+            {
+              "name": "X-Shopper-Id",
+              "in": "header",
+              "value": "$inputs.X-Shopper-Id"
+            },
+            {
+              "name": "domain",
+              "in": "path",
+              "value": "$inputs.domain"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.replace-all-dns-records_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "records_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "add-dns-records",
+          "description": "Adds new DNS Records to the specified Domain without replacing existing ones.",
+          "operationId": "recordAdd",
+          "parameters": [
+            {
+              "name": "X-Shopper-Id",
+              "in": "header",
+              "value": "$inputs.X-Shopper-Id"
+            },
+            {
+              "name": "domain",
+              "in": "path",
+              "value": "$inputs.domain"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.add-dns-records_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "records_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "delete-specific-dns-records",
+          "description": "Deletes all DNS Records for the specified Domain with the given Type and Name.",
+          "operationId": "recordDeleteTypeName",
+          "parameters": [
+            {
+              "name": "X-Shopper-Id",
+              "in": "header",
+              "value": "$inputs.X-Shopper-Id"
+            },
+            {
+              "name": "domain",
+              "in": "path",
+              "value": "$inputs.domain"
+            },
+            {
+              "name": "type",
+              "in": "path",
+              "value": "$inputs.type"
+            },
+            {
+              "name": "name",
+              "in": "path",
+              "value": "$inputs.name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "records_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "domains": "$steps.list-domains.outputs.domains",
+        "domain": "$steps.get-domain-details.outputs.domain",
+        "nameServers": "$steps.get-domain-details.outputs.nameServers",
+        "contacts": "$steps.get-domain-details.outputs.contacts",
+        "status": "$steps.get-domain-details.outputs.status",
+        "records": "$steps.retrieve-dns-records.outputs.records",
+        "records_data": "$steps.delete-specific-dns-records.outputs.records_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-domain-forwarding-v2",
+      "summary": "Allows a customer to retrieve, create, update, and delete domain forwarding configurations for their domains, providing control over how domain traffic is redirected.",
+      "description": "Allows a customer to retrieve, create, update, and delete domain forwarding configurations for their domains, providing control over how domain traffic is redirected.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-Request-Id": {
+            "type": "string"
+          },
+          "customerId": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "includes": {
+            "type": "string"
+          },
+          "fqdn": {
+            "type": "string"
+          },
+          "includeSubs": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-domain-details-for-forwarding",
+          "description": "Retrieves comprehensive details for a specified domain, useful for confirming ownership and FQDN.",
+          "operationPath": "openapi_source#/paths/~1v2~1customers~1{customerId}~1domains~1{domain}/get",
+          "parameters": [
+            {
+              "name": "X-Request-Id",
+              "in": "header",
+              "value": "$inputs.X-Request-Id"
+            },
+            {
+              "name": "customerId",
+              "in": "path",
+              "value": "$inputs.customerId"
+            },
+            {
+              "name": "domain",
+              "in": "path",
+              "value": "$inputs.domain"
+            },
+            {
+              "name": "includes",
+              "in": "query",
+              "value": "$inputs.includes"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "domain": "$response.body#/domain",
+            "domainId": "$response.body#/domainId"
+          }
+        },
+        {
+          "stepId": "retrieve-forwarding-info",
+          "description": "Retrieves the current forwarding information for the given FQDN (domain or subdomain).",
+          "operationId": "domainsForwardsGet",
+          "parameters": [
+            {
+              "name": "customerId",
+              "in": "path",
+              "value": "$inputs.customerId"
+            },
+            {
+              "name": "fqdn",
+              "in": "path",
+              "value": "$inputs.fqdn"
+            },
+            {
+              "name": "includeSubs",
+              "in": "query",
+              "value": "$inputs.includeSubs"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "forwardingDetails": "$response.body#/0/forwardingDetails"
+          }
+        },
+        {
+          "stepId": "create-or-modify-forwarding",
+          "description": "Creates a new or modifies an existing forwarding configuration for the specified FQDN.",
+          "operationId": "domainsForwardsPut",
+          "parameters": [
+            {
+              "name": "customerId",
+              "in": "path",
+              "value": "$inputs.customerId"
+            },
+            {
+              "name": "fqdn",
+              "in": "path",
+              "value": "$inputs.fqdn"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "type": "$inputs.type",
+              "url": "$inputs.url"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "forwarding_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "delete-forwarding",
+          "description": "Submits a request to cancel the forwarding configuration for the given FQDN.",
+          "operationId": "domainsForwardsDelete",
+          "parameters": [
+            {
+              "name": "customerId",
+              "in": "path",
+              "value": "$inputs.customerId"
+            },
+            {
+              "name": "fqdn",
+              "in": "path",
+              "value": "$inputs.fqdn"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "forwarding_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "domain": "$steps.get-domain-details-for-forwarding.outputs.domain",
+        "domainId": "$steps.get-domain-details-for-forwarding.outputs.domainId",
+        "forwardingDetails": "$steps.retrieve-forwarding-info.outputs.forwardingDetails",
+        "forwarding_data": "$steps.delete-forwarding.outputs.forwarding_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "update-domain-contacts-v2",
+      "summary": "Allows a user to update the administrative, billing, registrant, or technical contacts for a domain, with asynchronous status polling for the update action.",
+      "description": "Allows a user to update the administrative, billing, registrant, or technical contacts for a domain, with asynchronous status polling for the update action.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-Request-Id": {
+            "type": "string"
+          },
+          "customerId": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "includes": {
+            "type": "string"
+          },
+          "X-Private-Label-Id": {
+            "type": "string"
+          },
+          "marketId": {
+            "type": "string"
+          },
+          "domains": {
+            "type": "string"
+          },
+          "contacts": {
+            "type": "string"
+          },
+          "identityDocumentId": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-domain-details-for-contacts",
+          "description": "Retrieves current contact information for a specified domain.",
+          "operationPath": "openapi_source#/paths/~1v2~1customers~1{customerId}~1domains~1{domain}/get",
+          "parameters": [
+            {
+              "name": "X-Request-Id",
+              "in": "header",
+              "value": "$inputs.X-Request-Id"
+            },
+            {
+              "name": "customerId",
+              "in": "path",
+              "value": "$inputs.customerId"
+            },
+            {
+              "name": "domain",
+              "in": "path",
+              "value": "$inputs.domain"
+            },
+            {
+              "name": "includes",
+              "in": "query",
+              "value": "$inputs.includes"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "domain": "$response.body#/domain",
+            "contacts": "$response.body#/contacts"
+          }
+        },
+        {
+          "stepId": "validate-domain-contacts",
+          "description": "Validates the provided contact details against the domain contact validation schema.",
+          "operationId": "ContactsValidate",
+          "parameters": [
+            {
+              "name": "X-Private-Label-Id",
+              "in": "header",
+              "value": "$inputs.X-Private-Label-Id"
+            },
+            {
+              "name": "marketId",
+              "in": "query",
+              "value": "$inputs.marketId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "domains": "$inputs.domains"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "contacts_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-domain-contacts-v2",
+          "description": "Initiates the asynchronous update of the contacts for the specified domain.",
+          "operationPath": "openapi_source#/paths/~1v2~1customers~1{customerId}~1domains~1{domain}~1contacts/patch",
+          "parameters": [
+            {
+              "name": "X-Request-Id",
+              "in": "header",
+              "value": "$inputs.X-Request-Id"
+            },
+            {
+              "name": "customerId",
+              "in": "path",
+              "value": "$inputs.customerId"
+            },
+            {
+              "name": "domain",
+              "in": "path",
+              "value": "$inputs.domain"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "contacts": "$inputs.contacts",
+              "identityDocumentId": "$inputs.identityDocumentId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "v2_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "poll-contact-update-status",
+          "description": "Polls for the status of the domain contact update action.",
+          "operationPath": "openapi_source#/paths/~1v2~1customers~1{customerId}~1domains~1{domain}~1actions~1{type}/get",
+          "parameters": [
+            {
+              "name": "X-Request-Id",
+              "in": "header",
+              "value": "$inputs.X-Request-Id"
+            },
+            {
+              "name": "customerId",
+              "in": "path",
+              "value": "$inputs.customerId"
+            },
+            {
+              "name": "domain",
+              "in": "path",
+              "value": "$inputs.domain"
+            },
+            {
+              "name": "type",
+              "in": "path",
+              "value": "$inputs.type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status",
+            "type": "$response.body#/type",
+            "origination": "$response.body#/origination",
+            "createdAt": "$response.body#/createdAt",
+            "completedAt": "$response.body#/completedAt",
+            "reason": "$response.body#/reason"
+          }
+        }
+      ],
+      "outputs": {
+        "domain": "$steps.get-domain-details-for-contacts.outputs.domain",
+        "contacts": "$steps.get-domain-details-for-contacts.outputs.contacts",
+        "contacts_data": "$steps.validate-domain-contacts.outputs.contacts_data",
+        "v2_data": "$steps.update-domain-contacts-v2.outputs.v2_data",
+        "status": "$steps.poll-contact-update-status.outputs.status",
+        "type": "$steps.poll-contact-update-status.outputs.type",
+        "origination": "$steps.poll-contact-update-status.outputs.origination",
+        "createdAt": "$steps.poll-contact-update-status.outputs.createdAt",
+        "completedAt": "$steps.poll-contact-update-status.outputs.completedAt",
+        "reason": "$steps.poll-contact-update-status.outputs.reason"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-domain-privacy",
+      "summary": "Allows a user to purchase privacy protection for a domain or cancel existing privacy protection, controlling the visibility of their WHOIS information.",
+      "description": "Allows a user to purchase privacy protection for a domain or cancel existing privacy protection, controlling the visibility of their WHOIS information.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-Shopper-Id": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "X-Market-Id": {
+            "type": "string"
+          },
+          "tlds": {
+            "type": "string"
+          },
+          "privacy": {
+            "type": "string"
+          },
+          "forTransfer": {
+            "type": "string"
+          },
+          "consent": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-domain-details-for-privacy",
+          "description": "Retrieves details for a specified domain to check its current privacy status.",
+          "operationId": "get",
+          "parameters": [
+            {
+              "name": "X-Shopper-Id",
+              "in": "header",
+              "value": "$inputs.X-Shopper-Id"
+            },
+            {
+              "name": "domain",
+              "in": "path",
+              "value": "$inputs.domain"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "domain": "$response.body#/domain",
+            "privacy": "$response.body#/privacy"
+          }
+        },
+        {
+          "stepId": "retrieve-privacy-agreements",
+          "description": "Retrieves the legal agreement(s) required to purchase privacy for a domain.",
+          "operationId": "getAgreement",
+          "parameters": [
+            {
+              "name": "X-Market-Id",
+              "in": "header",
+              "value": "$inputs.X-Market-Id"
+            },
+            {
+              "name": "tlds",
+              "in": "query",
+              "value": "$inputs.tlds"
+            },
+            {
+              "name": "privacy",
+              "in": "query",
+              "value": "$inputs.privacy"
+            },
+            {
+              "name": "forTransfer",
+              "in": "query",
+              "value": "$inputs.forTransfer"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "agreements": "$response.body#/0/agreementKey"
+          }
+        },
+        {
+          "stepId": "purchase-privacy",
+          "description": "Purchases privacy protection for the specified domain.",
+          "operationId": "purchasePrivacy",
+          "parameters": [
+            {
+              "name": "X-Shopper-Id",
+              "in": "header",
+              "value": "$inputs.X-Shopper-Id"
+            },
+            {
+              "name": "domain",
+              "in": "path",
+              "value": "$inputs.domain"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "consent": "$inputs.consent"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "orderId": "$response.body#/orderId",
+            "itemCount": "$response.body#/itemCount",
+            "total": "$response.body#/total",
+            "currency": "$response.body#/currency"
+          }
+        },
+        {
+          "stepId": "cancel-privacy",
+          "description": "Submits a privacy cancellation request for the given domain.",
+          "operationId": "cancelPrivacy",
+          "parameters": [
+            {
+              "name": "X-Shopper-Id",
+              "in": "header",
+              "value": "$inputs.X-Shopper-Id"
+            },
+            {
+              "name": "domain",
+              "in": "path",
+              "value": "$inputs.domain"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "privacy_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "domain": "$steps.get-domain-details-for-privacy.outputs.domain",
+        "privacy": "$steps.get-domain-details-for-privacy.outputs.privacy",
+        "agreements": "$steps.retrieve-privacy-agreements.outputs.agreements",
+        "orderId": "$steps.purchase-privacy.outputs.orderId",
+        "itemCount": "$steps.purchase-privacy.outputs.itemCount",
+        "total": "$steps.purchase-privacy.outputs.total",
+        "currency": "$steps.purchase-privacy.outputs.currency",
+        "privacy_data": "$steps.cancel-privacy.outputs.privacy_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

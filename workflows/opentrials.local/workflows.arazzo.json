@@ -1,0 +1,459 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/opentrials.local/main/0.0.1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "search-and-explore-clinical-trials",
+      "summary": "Allows a user to search for clinical trials based on a query and then retrieve comprehensive details for a specific trial of interest, including its related entities like conditions, interventions, and organizations.",
+      "description": "Allows a user to search for clinical trials based on a query and then retrieve comprehensive details for a specific trial of interest, including its related entities like conditions, interventions, and organizations.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "per_page": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-trials",
+          "description": "Searches for clinical trials using a specified query string, returning a list of matching trials.",
+          "operationId": "searchTrials",
+          "parameters": [
+            {
+              "name": "q",
+              "in": "query",
+              "value": "$inputs.q"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "per_page",
+              "in": "query",
+              "value": "$inputs.per_page"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "items": "$response.body#/items",
+            "total_count": "$response.body#/total_count"
+          }
+        },
+        {
+          "stepId": "get-trial-details",
+          "description": "Retrieves the full details of a specific clinical trial using its ID, including all associated data like conditions, interventions, and related documents.",
+          "operationId": "getTrial",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.search-trials.outputs.items.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Trial": "$response.body#/Trial"
+          }
+        }
+      ],
+      "outputs": {
+        "items": "$steps.search-trials.outputs.items",
+        "total_count": "$steps.search-trials.outputs.total_count",
+        "Trial": "$steps.get-trial-details.outputs.Trial"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "investigate-fda-documents-and-content",
+      "summary": "Enables a user to search for FDA documents by keyword or text content, and then retrieve the detailed information of a specific document, including its associated file data.",
+      "description": "Enables a user to search for FDA documents by keyword or text content, and then retrieve the detailed information of a specific document, including its associated file data.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "per_page": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "search-fda-documents",
+          "description": "Searches for FDA documents based on a general query or specific text within the document files.",
+          "operationId": "searchFDADocuments",
+          "parameters": [
+            {
+              "name": "q",
+              "in": "query",
+              "value": "$inputs.q"
+            },
+            {
+              "name": "text",
+              "in": "query",
+              "value": "$inputs.text"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "per_page",
+              "in": "query",
+              "value": "$inputs.per_page"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "items": "$response.body#/items",
+            "total_count": "$response.body#/total_count"
+          }
+        },
+        {
+          "stepId": "get-document-details",
+          "description": "Retrieves the complete details of a specific document, including its category, associated FDA application, and file information.",
+          "operationId": "getDocument",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.search-fda-documents.outputs.items.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Document": "$response.body#/Document"
+          }
+        }
+      ],
+      "outputs": {
+        "items": "$steps.search-fda-documents.outputs.items",
+        "total_count": "$steps.search-fda-documents.outputs.total_count",
+        "Document": "$steps.get-document-details.outputs.Document"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "explore-trial-raw-records",
+      "summary": "Allows a user to retrieve all raw records associated with a specific clinical trial from its various sources, and then drill down to view the details of an individual record.",
+      "description": "Allows a user to retrieve all raw records associated with a specific clinical trial from its various sources, and then drill down to view the details of an individual record.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "trialId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-trial-summary",
+          "description": "Retrieves the summary details of a specific clinical trial, which is a prerequisite for fetching its raw records.",
+          "operationId": "getTrial",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Trial": "$response.body#/Trial"
+          }
+        },
+        {
+          "stepId": "list-trial-records",
+          "description": "Lists all raw records associated with a given clinical trial, providing an overview of its data from different sources.",
+          "operationId": "getRecords",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "RecordList": "$response.body#/0/RecordList"
+          }
+        },
+        {
+          "stepId": "get-specific-record",
+          "description": "Retrieves the full details of a specific raw record belonging to a clinical trial, allowing for in-depth examination of source data.",
+          "operationId": "getRecord",
+          "parameters": [
+            {
+              "name": "trialId",
+              "in": "path",
+              "value": "$inputs.trialId"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Record": "$response.body#/Record"
+          }
+        }
+      ],
+      "outputs": {
+        "Trial": "$steps.get-trial-summary.outputs.Trial",
+        "RecordList": "$steps.list-trial-records.outputs.RecordList",
+        "Record": "$steps.get-specific-record.outputs.Record"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "browse-and-detail-fda-applications",
+      "summary": "Enables a user to browse a paginated list of FDA applications and then retrieve the complete details for a selected application, including its drug name, active ingredients, and associated organization.",
+      "description": "Enables a user to browse a paginated list of FDA applications and then retrieve the complete details for a selected application, including its drug name, active ingredients, and associated organization.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "string"
+          },
+          "per_page": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-fda-applications",
+          "description": "Retrieves a paginated list of all available FDA applications.",
+          "operationId": "listFDAApplications",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "per_page",
+              "in": "query",
+              "value": "$inputs.per_page"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "items": "$response.body#/items",
+            "total_count": "$response.body#/total_count"
+          }
+        },
+        {
+          "stepId": "get-fda-application-details",
+          "description": "Fetches the detailed information for a specific FDA application using its unique ID.",
+          "operationId": "getFDAApplication",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.list-fda-applications.outputs.items.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "FDAApplication": "$response.body#/FDAApplication"
+          }
+        }
+      ],
+      "outputs": {
+        "items": "$steps.list-fda-applications.outputs.items",
+        "total_count": "$steps.list-fda-applications.outputs.total_count",
+        "FDAApplication": "$steps.get-fda-application-details.outputs.FDAApplication"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

@@ -1,0 +1,149 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/ote-godaddy.com/aftermarket/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "manage-expiry-domain-auction-listings",
+      "summary": "Allows Registrar Partners to add domains that are nearing expiry to the GoDaddy Auction platform and subsequently remove specific domains from auction listings if their status changes (e.g., renewed by original owner, or partner decides not to auction). This workflow supports the dynamic management of auction inventory for registrar partners.",
+      "description": "Allows Registrar Partners to add domains that are nearing expiry to the GoDaddy Auction platform and subsequently remove specific domains from auction listings if their status changes (e.g., renewed by original owner, or partner decides not to auction). This workflow supports the dynamic management of auction inventory for registrar partners.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "add-expiry-listings_body": {
+            "type": "object"
+          },
+          "domains": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-expiry-listings",
+          "description": "Submit a batch of expiring domains to be listed for auction. Each listing includes domain name, expiry date, and losing registrar ID, with optional traffic and revenue data.",
+          "operationId": "addExpiryListings",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.add-expiry-listings_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "listingActionId": "$response.body#/listingActionId",
+            "submittedDomains": "$response.body#/submittedDomains"
+          }
+        },
+        {
+          "stepId": "remove-auction-listings",
+          "description": "Remove one or more previously added domains from the auction listings. This is typically done if a domain is renewed by its original owner, or if the partner decides not to auction it.",
+          "operationId": "deleteListings",
+          "parameters": [
+            {
+              "name": "domains",
+              "in": "query",
+              "value": "$steps.add-expiry-listings.outputs.submittedDomains"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "listingActionId": "$response.body#/listingActionId"
+          }
+        }
+      ],
+      "outputs": {
+        "listingActionId": "$steps.remove-auction-listings.outputs.listingActionId",
+        "submittedDomains": "$steps.add-expiry-listings.outputs.submittedDomains"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

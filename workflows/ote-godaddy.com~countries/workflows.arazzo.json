@@ -1,0 +1,156 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/ote-godaddy.com/countries/0.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "retrieve-detailed-country-information",
+      "summary": "This workflow allows an API consumer to first retrieve a summary list of countries available for a specific market, and then select a country from that list to fetch its detailed information, including associated states or provinces. This is highly valuable for applications requiring localized address forms, internationalization settings, or displaying geographic data based on user selection.",
+      "description": "This workflow allows an API consumer to first retrieve a summary list of countries available for a specific market, and then select a country from that list to fetch its detailed information, including associated states or provinces. This is highly valuable for applications requiring localized address forms, internationalization settings, or displaying geographic data based on user selection.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "marketId": {
+            "type": "string"
+          },
+          "countryKey": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-countries",
+          "description": "Retrieves a summary list of countries, including their keys, labels, and calling codes, for a specified market. This step provides the initial set of countries from which a user can choose.",
+          "operationId": "getCountries",
+          "parameters": [
+            {
+              "name": "marketId",
+              "in": "query",
+              "value": "$inputs.marketId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "countries": "$response.body#/0/countries"
+          }
+        },
+        {
+          "stepId": "get-country-details",
+          "description": "Retrieves comprehensive details for a specific country, including its states/provinces, using a country key obtained from the 'list-countries' operation. This allows for deeper localization and data presentation.",
+          "operationId": "getCountry",
+          "parameters": [
+            {
+              "name": "countryKey",
+              "in": "path",
+              "value": "$steps.list-countries.outputs.countries.countryKey"
+            },
+            {
+              "name": "marketId",
+              "in": "query",
+              "value": "$inputs.marketId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "countryDetails": "$response.body#/0/countryDetails"
+          }
+        }
+      ],
+      "outputs": {
+        "countries": "$steps.list-countries.outputs.countries",
+        "countryDetails": "$steps.get-country-details.outputs.countryDetails"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
