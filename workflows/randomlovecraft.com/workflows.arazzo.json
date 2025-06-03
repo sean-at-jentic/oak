@@ -1,0 +1,232 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/randomlovecraft.com/main/1.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "explore-book-sentences",
+      "summary": "Allows a user to first list all available Lovecraft books, then select one by its ID, and finally retrieve a set of random sentences from that chosen book. This workflow is useful for users who want to explore content from a specific work by H.P. Lovecraft.",
+      "description": "Allows a user to first list all available Lovecraft books, then select one by its ID, and finally retrieve a set of random sentences from that chosen book. This workflow is useful for users who want to explore content from a specific work by H.P. Lovecraft.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-all-books",
+          "description": "Retrieves a list of all books by H.P. Lovecraft available in the API, providing their IDs, names, and publication years. This step serves as a discovery mechanism for available content.",
+          "operationId": "get-books",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "all_books": "$response.body#/all_books"
+          }
+        },
+        {
+          "stepId": "get-sentences-from-selected-book",
+          "description": "Retrieves a specified number of random sentences from a book identified by its ID. The book ID is selected from the list obtained in the previous step, allowing the user to dive into a specific work.",
+          "operationId": "get-sentences-from-book",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "book_sentences": "$response.body#/book_sentences"
+          }
+        }
+      ],
+      "outputs": {
+        "all_books": "$steps.list-all-books.outputs.all_books",
+        "book_sentences": "$steps.get-sentences-from-selected-book.outputs.book_sentences"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "deep-dive-from-sentence",
+      "summary": "Starts by retrieving a specific Lovecraft sentence using its ID. Once the sentence is retrieved, it extracts the associated book's ID and then fetches more random sentences from that same book, allowing for a deeper exploration of the source material related to the initial sentence.",
+      "description": "Starts by retrieving a specific Lovecraft sentence using its ID. Once the sentence is retrieved, it extracts the associated book's ID and then fetches more random sentences from that same book, allowing for a deeper exploration of the source material related to the initial sentence.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-specific-sentence",
+          "description": "Retrieves a single, specific sentence by its unique ID. This operation also returns the details of the book from which the sentence originated.",
+          "operationId": "get-specific-sentence",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sentence_details": "$response.body#/sentence_details",
+            "book_id": "$response.body#/book_id"
+          }
+        },
+        {
+          "stepId": "get-more-sentences-from-book",
+          "description": "Fetches additional random sentences from the book identified in the previous step (the source book of the specific sentence), allowing the user to continue exploring the context or other quotes from that work.",
+          "operationId": "get-sentences-from-book",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-specific-sentence.outputs.book_id"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "additional_book_sentences": "$response.body#/additional_book_sentences"
+          }
+        }
+      ],
+      "outputs": {
+        "sentence_details": "$steps.get-specific-sentence.outputs.sentence_details",
+        "book_id": "$steps.get-specific-sentence.outputs.book_id",
+        "additional_book_sentences": "$steps.get-more-sentences-from-book.outputs.additional_book_sentences"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

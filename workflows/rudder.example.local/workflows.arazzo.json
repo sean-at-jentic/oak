@@ -1,0 +1,972 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/rudder.example.local/main/20/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "node-onboarding-and-initial-policy-application",
+      "summary": "Automate the process of accepting a new node into Rudder management, applying its initial configuration policy, and then verifying its compliance status.",
+      "description": "Automate the process of accepting a new node into Rudder management, applying its initial configuration policy, and then verifying its compliance status.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "include": {
+            "type": "string"
+          },
+          "query": {
+            "type": "string"
+          },
+          "where": {
+            "type": "string"
+          },
+          "composition": {
+            "type": "string"
+          },
+          "select": {
+            "type": "string"
+          },
+          "nodeId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "level": {
+            "type": "string"
+          },
+          "precision": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-pending-nodes",
+          "description": "Retrieve a list of nodes that are currently awaiting acceptance into Rudder management.",
+          "operationId": "listPendingNodes",
+          "parameters": [
+            {
+              "name": "include",
+              "in": "query",
+              "value": "$inputs.include"
+            },
+            {
+              "name": "query",
+              "in": "query",
+              "value": "$inputs.query"
+            },
+            {
+              "name": "where",
+              "in": "query",
+              "value": "$inputs.where"
+            },
+            {
+              "name": "composition",
+              "in": "query",
+              "value": "$inputs.composition"
+            },
+            {
+              "name": "select",
+              "in": "query",
+              "value": "$inputs.select"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pendingNodes": "$response.body#/pendingNodes"
+          }
+        },
+        {
+          "stepId": "accept-node",
+          "description": "Accept a specific pending node, changing its status to 'accepted' and bringing it under Rudder's management.",
+          "operationId": "changePendingNodeStatus",
+          "parameters": [
+            {
+              "name": "nodeId",
+              "in": "path",
+              "value": "$steps.list-pending-nodes.outputs.pendingNodes.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "nodeId": "$steps.list-pending-nodes.outputs.pendingNodes[0].id",
+              "status": "$inputs.status"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "acceptedNodeResult": "$response.body#/acceptedNodeResult"
+          }
+        },
+        {
+          "stepId": "apply-policy-to-node",
+          "description": "Trigger an agent run on the newly accepted node to apply its assigned configuration policies.",
+          "operationId": "applyPolicy",
+          "parameters": [
+            {
+              "name": "nodeId",
+              "in": "path",
+              "value": "$steps.accept-node.outputs.acceptedNodeResult.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "agentOutput": "$response.body#/agentOutput"
+          }
+        },
+        {
+          "stepId": "get-node-compliance",
+          "description": "Retrieve the detailed compliance status of the node after policy application to ensure it is configured correctly.",
+          "operationId": "getNodeCompliance",
+          "parameters": [
+            {
+              "name": "level",
+              "in": "query",
+              "value": "$inputs.level"
+            },
+            {
+              "name": "precision",
+              "in": "query",
+              "value": "$inputs.precision"
+            },
+            {
+              "name": "nodeId",
+              "in": "path",
+              "value": "$inputs.nodeId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "nodeCompliance": "$response.body#/data/nodes/0/compliance"
+          }
+        }
+      ],
+      "outputs": {
+        "pendingNodes": "$steps.list-pending-nodes.outputs.pendingNodes",
+        "acceptedNodeResult": "$steps.accept-node.outputs.acceptedNodeResult",
+        "agentOutput": "$steps.apply-policy-to-node.outputs.agentOutput",
+        "nodeCompliance": "$steps.get-node-compliance.outputs.nodeCompliance"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "scheduled-system-update-campaign-management",
+      "summary": "Define, schedule, and monitor a system-wide software or system update campaign, including retrieving detailed results per node.",
+      "description": "Define, schedule, and monitor a system-wide software or system update campaign, including retrieving detailed results per node.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "save-campaign_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          },
+          "campaignType": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "campaignId": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "before": {
+            "type": "string"
+          },
+          "after": {
+            "type": "string"
+          },
+          "order": {
+            "type": "string"
+          },
+          "asc": {
+            "type": "string"
+          },
+          "nodeId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "save-campaign",
+          "description": "Define the details of a new system update campaign, including its type, targets, and reboot behavior.",
+          "operationId": "saveCampaign",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.save-campaign_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "createdCampaigns": "$response.body#/createdCampaigns"
+          }
+        },
+        {
+          "stepId": "schedule-campaign",
+          "description": "Schedule a specific campaign to run, creating a campaign event.",
+          "operationId": "scheduleCampaign",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "scheduledCampaignEvents": "$response.body#/scheduledCampaignEvents"
+          }
+        },
+        {
+          "stepId": "get-all-campaign-events",
+          "description": "Retrieve a list of all campaign events to monitor their status and progress.",
+          "operationId": "getAllCampaignEvents",
+          "parameters": [
+            {
+              "name": "campaignType",
+              "in": "query",
+              "value": "$inputs.campaignType"
+            },
+            {
+              "name": "state",
+              "in": "query",
+              "value": "$inputs.state"
+            },
+            {
+              "name": "campaignId",
+              "in": "query",
+              "value": "$steps.save-campaign.outputs.createdCampaigns.info.id"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "before",
+              "in": "query",
+              "value": "$inputs.before"
+            },
+            {
+              "name": "after",
+              "in": "query",
+              "value": "$inputs.after"
+            },
+            {
+              "name": "order",
+              "in": "query",
+              "value": "$inputs.order"
+            },
+            {
+              "name": "asc",
+              "in": "query",
+              "value": "$inputs.asc"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "allCampaignEvents": "$response.body#/data/campaignEvents"
+          }
+        },
+        {
+          "stepId": "get-campaign-event-result",
+          "description": "Get the overall results and status for a specific campaign event.",
+          "operationId": "getCampaignEventResult",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "campaignEventResults": "$response.body#/campaignEventResults"
+          }
+        },
+        {
+          "stepId": "get-system-update-result-for-node",
+          "description": "Retrieve detailed campaign event results for a particular node involved in the campaign.",
+          "operationId": "getSystemUpdateResultForNode",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "nodeId",
+              "in": "path",
+              "value": "$steps.get-campaign-event-result.outputs.campaignEventResults.nodes[0].nodeId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "nodeCampaignResult": "$response.body#/nodeCampaignResult"
+          }
+        }
+      ],
+      "outputs": {
+        "createdCampaigns": "$steps.save-campaign.outputs.createdCampaigns",
+        "scheduledCampaignEvents": "$steps.schedule-campaign.outputs.scheduledCampaignEvents",
+        "allCampaignEvents": "$steps.get-all-campaign-events.outputs.allCampaignEvents",
+        "campaignEventResults": "$steps.get-campaign-event-result.outputs.campaignEventResults",
+        "nodeCampaignResult": "$steps.get-system-update-result-for-node.outputs.nodeCampaignResult"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "full-configuration-backup",
+      "summary": "Create a complete backup of the Rudder server's configuration (rules, directives, groups, parameters) and download the resulting ZIP archive for disaster recovery or version control.",
+      "description": "Create a complete backup of the Rudder server's configuration (rules, directives, groups, parameters) and download the resulting ZIP archive for disaster recovery or version control.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "archiveKind": {
+            "type": "string"
+          },
+          "commitId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-full-archive",
+          "description": "Create a new full configuration archive of the Rudder server's current state.",
+          "operationId": "createArchive",
+          "parameters": [
+            {
+              "name": "archiveKind",
+              "in": "path",
+              "value": "$inputs.archiveKind"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "createdArchiveInfo": "$response.body#/createdArchiveInfo"
+          }
+        },
+        {
+          "stepId": "list-full-archives",
+          "description": "List all available full configuration archives to identify the latest or a specific archive's commit ID.",
+          "operationId": "listArchives",
+          "parameters": [
+            {
+              "name": "archiveKind",
+              "in": "path",
+              "value": "$inputs.archiveKind"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "fullArchivesList": "$response.body#/fullArchivesList"
+          }
+        },
+        {
+          "stepId": "download-archive-zip",
+          "description": "Download the specified configuration archive as a ZIP file using its commit ID.",
+          "operationId": "getZipArchive",
+          "parameters": [
+            {
+              "name": "archiveKind",
+              "in": "path",
+              "value": "$inputs.archiveKind"
+            },
+            {
+              "name": "commitId",
+              "in": "path",
+              "value": "$steps.create-full-archive.outputs.createdArchiveInfo.gitCommit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "archiveZip": "$response.body#/archiveZip"
+          }
+        }
+      ],
+      "outputs": {
+        "createdArchiveInfo": "$steps.create-full-archive.outputs.createdArchiveInfo",
+        "fullArchivesList": "$steps.list-full-archives.outputs.fullArchivesList",
+        "archiveZip": "$steps.download-archive-zip.outputs.archiveZip"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "cve-vulnerability-scan-and-reporting",
+      "summary": "Keep the internal CVE database updated, trigger a vulnerability scan across managed nodes, and retrieve the latest findings for analysis and remediation planning.",
+      "description": "Keep the internal CVE database updated, trigger a vulnerability scan across managed nodes, and retrieve the latest findings for analysis and remediation planning.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "years": {
+            "type": "string"
+          },
+          "groupId": {
+            "type": "string"
+          },
+          "nodeId": {
+            "type": "string"
+          },
+          "cveId": {
+            "type": "string"
+          },
+          "package": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "update-cve-database",
+          "description": "Update the internal CVE database by fetching the latest vulnerability data from a remote source.",
+          "operationId": "updateCVE",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "url": "$inputs.url",
+              "years": "$inputs.years"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updatedCveCount": "$response.body#/updatedCveCount"
+          }
+        },
+        {
+          "stepId": "trigger-cve-check",
+          "description": "Initiate a CVE check across the managed infrastructure to identify vulnerable nodes and packages.",
+          "operationId": "checkCVE",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "cveCheckResults": "$response.body#/cveCheckResults"
+          }
+        },
+        {
+          "stepId": "get-last-cve-check-summary",
+          "description": "Retrieve a summary of the latest CVE check results, showing affected CVEs, nodes, and packages.",
+          "operationId": "getLastCVECheck",
+          "parameters": [
+            {
+              "name": "groupId",
+              "in": "query",
+              "value": "$inputs.groupId"
+            },
+            {
+              "name": "nodeId",
+              "in": "query",
+              "value": "$inputs.nodeId"
+            },
+            {
+              "name": "cveId",
+              "in": "query",
+              "value": "$inputs.cveId"
+            },
+            {
+              "name": "package",
+              "in": "query",
+              "value": "$inputs.package"
+            },
+            {
+              "name": "severity",
+              "in": "query",
+              "value": "$inputs.severity"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "lastCveChecks": "$response.body#/lastCveChecks"
+          }
+        },
+        {
+          "stepId": "get-detailed-cve-list",
+          "description": "Get detailed information for specific CVEs identified in the scan, including descriptions and severity scores.",
+          "operationId": "getCVEList",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "cveIds": "$steps.get-last-cve-check-summary.outputs.lastCveChecks[*].cveId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "detailedCveInfo": "$response.body#/detailedCveInfo"
+          }
+        }
+      ],
+      "outputs": {
+        "updatedCveCount": "$steps.update-cve-database.outputs.updatedCveCount",
+        "cveCheckResults": "$steps.trigger-cve-check.outputs.cveCheckResults",
+        "lastCveChecks": "$steps.get-last-cve-check-summary.outputs.lastCveChecks",
+        "detailedCveInfo": "$steps.get-detailed-cve-list.outputs.detailedCveInfo"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "automated-policy-deployment",
+      "summary": "Automate the deployment of configuration changes by updating an existing rule, triggering a full policy generation, applying it to all managed nodes, and then monitoring global compliance.",
+      "description": "Automate the deployment of configuration changes by updating an existing rule, triggering a full policy generation, applying it to all managed nodes, and then monitoring global compliance.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "ruleId": {
+            "type": "string"
+          },
+          "update-rule_body": {
+            "type": "object"
+          },
+          "precision": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "update-rule",
+          "description": "Update an existing rule with new directives, targets, or other configuration details.",
+          "operationId": "updateRule",
+          "parameters": [
+            {
+              "name": "ruleId",
+              "in": "path",
+              "value": "$inputs.ruleId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.update-rule_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updatedRule": "$response.body#/updatedRule"
+          }
+        },
+        {
+          "stepId": "regenerate-policies",
+          "description": "Trigger a full policy generation across the Rudder server to compile all new and updated configurations.",
+          "operationId": "regeneratePolicies",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "policyGenerationStatus": "$response.body#/policyGenerationStatus"
+          }
+        },
+        {
+          "stepId": "apply-policy-all-nodes",
+          "description": "Trigger an agent run on all managed nodes to ensure they fetch and apply the latest policies.",
+          "operationId": "applyPolicyAllNodes",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "policyApplicationResults": "$response.body#/policyApplicationResults"
+          }
+        },
+        {
+          "stepId": "get-global-compliance",
+          "description": "Retrieve the overall global compliance status of the Rudder server to assess the impact of the policy deployment.",
+          "operationId": "getGlobalCompliance",
+          "parameters": [
+            {
+              "name": "precision",
+              "in": "query",
+              "value": "$inputs.precision"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "globalCompliance": "$response.body#/data/globalCompliance"
+          }
+        }
+      ],
+      "outputs": {
+        "updatedRule": "$steps.update-rule.outputs.updatedRule",
+        "policyGenerationStatus": "$steps.regenerate-policies.outputs.policyGenerationStatus",
+        "policyApplicationResults": "$steps.apply-policy-all-nodes.outputs.policyApplicationResults",
+        "globalCompliance": "$steps.get-global-compliance.outputs.globalCompliance"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "promote-node-to-relay",
+      "summary": "Change a standard Rudder node to a relay server, expanding the management infrastructure by allowing it to manage other nodes.",
+      "description": "Change a standard Rudder node to a relay server, expanding the management infrastructure by allowing it to manage other nodes.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "nodeId": {
+            "type": "string"
+          },
+          "include": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-node-details",
+          "description": "Retrieve detailed information about the target node to confirm its current status and ensure it's suitable for promotion.",
+          "operationId": "nodeDetails",
+          "parameters": [
+            {
+              "name": "nodeId",
+              "in": "path",
+              "value": "$inputs.nodeId"
+            },
+            {
+              "name": "include",
+              "in": "query",
+              "value": "$inputs.include"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "nodeDetails": "$response.body#/nodeDetails"
+          }
+        },
+        {
+          "stepId": "promote-to-relay",
+          "description": "Promote the specified node to a relay server, enabling it to act as a policy distribution point.",
+          "operationId": "promoteToRelay",
+          "parameters": [
+            {
+              "name": "nodeId",
+              "in": "path",
+              "value": "$steps.get-node-details.outputs.nodeDetails.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "promotionStatus": "$response.body#/promotionStatus"
+          }
+        }
+      ],
+      "outputs": {
+        "nodeDetails": "$steps.get-node-details.outputs.nodeDetails",
+        "promotionStatus": "$steps.promote-to-relay.outputs.promotionStatus"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "user-workflow-validation-management",
+      "summary": "Manage which users are exempt from the change request workflow, allowing their actions to be automatically validated without requiring manual approval.",
+      "description": "Manage which users are exempt from the change request workflow, allowing their actions to be automatically validated without requiring manual approval.",
+      "steps": [
+        {
+          "stepId": "list-users-validation-status",
+          "description": "Retrieve a list of all users and their current workflow validation status (whether their actions require change requests).",
+          "operationId": "getUserInfo",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "allUsers": "$response.body#/allUsers"
+          }
+        },
+        {
+          "stepId": "add-user-to-validated-list",
+          "description": "Add one or more users to the list of validated users, exempting their actions from the change request workflow.",
+          "operationId": "saveWorkflowUser",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "validatedUsers": "$steps.list-users-validation-status.outputs.allUsers[0].login"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "validatedUserStatus": "$response.body#/validatedUserStatus"
+          }
+        },
+        {
+          "stepId": "verify-user-validation-status",
+          "description": "Re-list users to confirm that the validation status has been updated as expected.",
+          "operationId": "getUserInfo",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updatedUsersList": "$response.body#/updatedUsersList"
+          }
+        }
+      ],
+      "outputs": {
+        "allUsers": "$steps.list-users-validation-status.outputs.allUsers",
+        "validatedUserStatus": "$steps.add-user-to-validated-list.outputs.validatedUserStatus",
+        "updatedUsersList": "$steps.verify-user-validation-status.outputs.updatedUsersList"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

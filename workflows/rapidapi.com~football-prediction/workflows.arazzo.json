@@ -1,0 +1,242 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/rapidapi.com/football-prediction/2/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "get-detailed-match-predictions",
+      "summary": "First retrieves a list of general football predictions (e.g., upcoming matches), then allows the user to select a specific match ID from that list to fetch all available predictions specifically for that particular match.",
+      "description": "First retrieves a list of general football predictions (e.g., upcoming matches), then allows the user to select a specific match ID from that list to fetch all available predictions specifically for that particular match.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-RapidApi-Key": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-general-predictions",
+          "description": "Retrieves a list of general football predictions, typically the next non-expired ones.",
+          "operationPath": "openapi_source#/paths/~1api~1v2~1predictions/get",
+          "parameters": [
+            {
+              "name": "X-RapidApi-Key",
+              "in": "header",
+              "value": "$inputs.X-RapidApi-Key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "data": "$response.body#/data"
+          }
+        },
+        {
+          "stepId": "get-predictions-by-match-id",
+          "description": "Retrieves all available predictions for a specific football match identified by its ID.",
+          "operationPath": "openapi_source#/paths/~1api~1v2~1predictions~1{id}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "data": "$response.body#/data"
+          }
+        }
+      ],
+      "outputs": {
+        "data": "$steps.get-predictions-by-match-id.outputs.data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "explore-filtered-predictions",
+      "summary": "Allows users to first discover available football federations and prediction markets, and then use this information to retrieve a filtered list of upcoming or past match predictions.",
+      "description": "Allows users to first discover available football federations and prediction markets, and then use this information to retrieve a filtered list of upcoming or past match predictions.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "X-RapidApi-Key": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-available-federations",
+          "description": "Retrieves a list of all available football federations.",
+          "operationPath": "openapi_source#/paths/~1api~1v2~1list-federations/get",
+          "parameters": [
+            {
+              "name": "X-RapidApi-Key",
+              "in": "header",
+              "value": "$inputs.X-RapidApi-Key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "data": "$response.body#/data"
+          }
+        },
+        {
+          "stepId": "list-available-markets",
+          "description": "Retrieves a list of all supported prediction markets, including those allowed for the current subscription.",
+          "operationPath": "openapi_source#/paths/~1api~1v2~1list-markets/get",
+          "parameters": [
+            {
+              "name": "X-RapidApi-Key",
+              "in": "header",
+              "value": "$inputs.X-RapidApi-Key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "data": "$response.body#/data"
+          }
+        },
+        {
+          "stepId": "get-filtered-predictions",
+          "description": "Retrieves football predictions, optionally filtered by a specific date, federation, or prediction market name.",
+          "operationPath": "openapi_source#/paths/~1api~1v2~1predictions/get",
+          "parameters": [
+            {
+              "name": "X-RapidApi-Key",
+              "in": "header",
+              "value": "$inputs.X-RapidApi-Key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "data": "$response.body#/data"
+          }
+        }
+      ],
+      "outputs": {
+        "data": "$steps.get-filtered-predictions.outputs.data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
