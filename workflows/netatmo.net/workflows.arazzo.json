@@ -1,0 +1,750 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/netatmo.net/main/1.1.5/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "monitor-personal-weather-station-data",
+      "summary": "This workflow allows a user to retrieve a list of their owned weather stations and then fetch detailed historical or current measurements for a specific station or its modules. This is valuable for users who want to track environmental conditions.",
+      "description": "This workflow allows a user to retrieve a list of their owned weather stations and then fetch detailed historical or current measurements for a specific station or its modules. This is valuable for users who want to track environmental conditions.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "device_id": {
+            "type": "string"
+          },
+          "get_favorites": {
+            "type": "string"
+          },
+          "module_id": {
+            "type": "string"
+          },
+          "scale": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "date_begin": {
+            "type": "string"
+          },
+          "date_end": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "optimize": {
+            "type": "string"
+          },
+          "real_time": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-user-stations",
+          "description": "Retrieves a list of the user's weather stations and their associated modules, along with their current dashboard data.",
+          "operationId": "getstationsdata",
+          "parameters": [
+            {
+              "name": "device_id",
+              "in": "query",
+              "value": "$inputs.device_id"
+            },
+            {
+              "name": "get_favorites",
+              "in": "query",
+              "value": "$inputs.get_favorites"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "devices": "$response.body#/devices",
+            "user": "$response.body#/user"
+          }
+        },
+        {
+          "stepId": "get-station-measurements",
+          "description": "Fetches specific measurements (e.g., temperature, humidity, CO2) for a chosen weather station or one of its modules over a defined period and scale.",
+          "operationId": "getmeasure",
+          "parameters": [
+            {
+              "name": "device_id",
+              "in": "query",
+              "value": "$steps.get-user-stations.outputs.devices._id"
+            },
+            {
+              "name": "module_id",
+              "in": "query",
+              "value": "$steps.get-user-stations.outputs.devices.modules[0]._id"
+            },
+            {
+              "name": "scale",
+              "in": "query",
+              "value": "$inputs.scale"
+            },
+            {
+              "name": "type",
+              "in": "query",
+              "value": "$inputs.type"
+            },
+            {
+              "name": "date_begin",
+              "in": "query",
+              "value": "$inputs.date_begin"
+            },
+            {
+              "name": "date_end",
+              "in": "query",
+              "value": "$inputs.date_end"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "optimize",
+              "in": "query",
+              "value": "$inputs.optimize"
+            },
+            {
+              "name": "real_time",
+              "in": "query",
+              "value": "$inputs.real_time"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "measurements": "$response.body#/measurements"
+          }
+        }
+      ],
+      "outputs": {
+        "devices": "$steps.get-user-stations.outputs.devices",
+        "user": "$steps.get-user-stations.outputs.user",
+        "measurements": "$steps.get-station-measurements.outputs.measurements"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "monitor-home-security-events-and-view-snapshots",
+      "summary": "This workflow enables a user to retrieve recent security events detected by their Netatmo Welcome cameras and then fetch the associated snapshot images for visual verification. This is essential for home security monitoring.",
+      "description": "This workflow enables a user to retrieve recent security events detected by their Netatmo Welcome cameras and then fetch the associated snapshot images for visual verification. This is essential for home security monitoring.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "home_id": {
+            "type": "string"
+          },
+          "size": {
+            "type": "string"
+          },
+          "image_id": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-home-security-data",
+          "description": "Retrieves comprehensive data about the user's homes, including cameras, recent events, and detected persons. This provides event IDs and snapshot keys.",
+          "operationId": "gethomedata",
+          "parameters": [
+            {
+              "name": "home_id",
+              "in": "query",
+              "value": "$inputs.home_id"
+            },
+            {
+              "name": "size",
+              "in": "query",
+              "value": "$inputs.size"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "home_id": "$response.body#/home_id",
+            "event_id": "$response.body#/event_id",
+            "snapshot_id": "$response.body#/snapshot_id",
+            "snapshot_key": "$response.body#/snapshot_key"
+          }
+        },
+        {
+          "stepId": "retrieve-event-snapshot",
+          "description": "Fetches the actual image data for a specific snapshot associated with a security event.",
+          "operationId": "getcamerapicture",
+          "parameters": [
+            {
+              "name": "image_id",
+              "in": "query",
+              "value": "$steps.get-home-security-data.outputs.snapshot_id"
+            },
+            {
+              "name": "key",
+              "in": "query",
+              "value": "$steps.get-home-security-data.outputs.snapshot_key"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "image_data": "$response.body#/image_data"
+          }
+        }
+      ],
+      "outputs": {
+        "home_id": "$steps.get-home-security-data.outputs.home_id",
+        "event_id": "$steps.get-home-security-data.outputs.event_id",
+        "snapshot_id": "$steps.get-home-security-data.outputs.snapshot_id",
+        "snapshot_key": "$steps.get-home-security-data.outputs.snapshot_key",
+        "image_data": "$steps.retrieve-event-snapshot.outputs.image_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-thermostat-heating-schedule",
+      "summary": "This workflow enables a user to create a new custom heating schedule and then activate it on their Netatmo Thermostat. This is crucial for users who want to optimize their home heating based on their lifestyle.",
+      "description": "This workflow enables a user to create a new custom heating schedule and then activate it on their Netatmo Thermostat. This is crucial for users who want to optimize their home heating based on their lifestyle.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "device_id": {
+            "type": "string"
+          },
+          "module_id": {
+            "type": "string"
+          },
+          "schedule_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-thermostat-info",
+          "description": "Retrieves information about the user's thermostats, including their relay and thermostat module IDs, and existing schedules.",
+          "operationId": "getthermostatsdata",
+          "parameters": [
+            {
+              "name": "device_id",
+              "in": "query",
+              "value": "$inputs.device_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "relay_id": "$response.body#/relay_id",
+            "thermostat_module_id": "$response.body#/thermostat_module_id"
+          }
+        },
+        {
+          "stepId": "create-new-schedule",
+          "description": "Creates a new heating schedule for the thermostat, storing it in the backup list.",
+          "operationId": "createnewschedule",
+          "parameters": [
+            {
+              "name": "device_id",
+              "in": "query",
+              "value": "$steps.get-thermostat-info.outputs.relay_id"
+            },
+            {
+              "name": "module_id",
+              "in": "query",
+              "value": "$steps.get-thermostat-info.outputs.thermostat_module_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "text/plain",
+            "payload": {
+              "device_id": "$steps.get-thermostat-info.outputs.relay_id",
+              "module_id": "$steps.get-thermostat-info.outputs.thermostat_module_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "new_schedule_id": "$response.body#/new_schedule_id"
+          }
+        },
+        {
+          "stepId": "activate-new-schedule",
+          "description": "Switches the thermostat's active schedule to a previously created or existing schedule.",
+          "operationId": "switchschedule",
+          "parameters": [
+            {
+              "name": "device_id",
+              "in": "query",
+              "value": "$steps.get-thermostat-info.outputs.relay_id"
+            },
+            {
+              "name": "module_id",
+              "in": "query",
+              "value": "$steps.get-thermostat-info.outputs.thermostat_module_id"
+            },
+            {
+              "name": "schedule_id",
+              "in": "query",
+              "value": "$steps.create-new-schedule.outputs.new_schedule_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status"
+          }
+        }
+      ],
+      "outputs": {
+        "relay_id": "$steps.get-thermostat-info.outputs.relay_id",
+        "thermostat_module_id": "$steps.get-thermostat-info.outputs.thermostat_module_id",
+        "new_schedule_id": "$steps.create-new-schedule.outputs.new_schedule_id",
+        "status": "$steps.activate-new-schedule.outputs.status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-welcome-webhooks",
+      "summary": "This workflow allows an application to register a callback URL to receive real-time notifications for Welcome camera events and to subsequently remove that webhook when no longer needed. This is vital for integrating Netatmo events into external systems.",
+      "description": "This workflow allows an application to register a callback URL to receive real-time notifications for Welcome camera events and to subsequently remove that webhook when no longer needed. This is vital for integrating Netatmo events into external systems.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "app_type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-welcome-webhook",
+          "description": "Registers a specified URL as a webhook to receive notifications for Welcome camera events.",
+          "operationId": "addwebhook",
+          "parameters": [
+            {
+              "name": "url",
+              "in": "query",
+              "value": "$inputs.url"
+            },
+            {
+              "name": "app_type",
+              "in": "query",
+              "value": "$inputs.app_type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status"
+          }
+        },
+        {
+          "stepId": "drop-welcome-webhook",
+          "description": "Removes an existing webhook associated with the user for Welcome camera events.",
+          "operationId": "dropwebhook",
+          "parameters": [
+            {
+              "name": "app_type",
+              "in": "query",
+              "value": "$inputs.app_type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status"
+          }
+        }
+      ],
+      "outputs": {
+        "status": "$steps.drop-welcome-webhook.outputs.status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "set-manual-thermostat-temperature",
+      "summary": "This workflow allows a user to temporarily override the thermostat's programmed schedule by setting a manual temperature setpoint for a specified duration. This is useful for immediate temperature adjustments.",
+      "description": "This workflow allows a user to temporarily override the thermostat's programmed schedule by setting a manual temperature setpoint for a specified duration. This is useful for immediate temperature adjustments.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "device_id": {
+            "type": "string"
+          },
+          "module_id": {
+            "type": "string"
+          },
+          "setpoint_mode": {
+            "type": "string"
+          },
+          "setpoint_endtime": {
+            "type": "string"
+          },
+          "setpoint_temp": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-thermostat-details",
+          "description": "Retrieves the necessary device and module IDs for the thermostat to be controlled.",
+          "operationId": "getthermostatsdata",
+          "parameters": [
+            {
+              "name": "device_id",
+              "in": "query",
+              "value": "$inputs.device_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "relay_id": "$response.body#/relay_id",
+            "thermostat_module_id": "$response.body#/thermostat_module_id"
+          }
+        },
+        {
+          "stepId": "set-manual-temperature",
+          "description": "Sets a manual temperature setpoint for the thermostat, optionally with an expiration time.",
+          "operationId": "setthermpoint",
+          "parameters": [
+            {
+              "name": "device_id",
+              "in": "query",
+              "value": "$steps.get-thermostat-details.outputs.relay_id"
+            },
+            {
+              "name": "module_id",
+              "in": "query",
+              "value": "$steps.get-thermostat-details.outputs.thermostat_module_id"
+            },
+            {
+              "name": "setpoint_mode",
+              "in": "query",
+              "value": "$inputs.setpoint_mode"
+            },
+            {
+              "name": "setpoint_endtime",
+              "in": "query",
+              "value": "$inputs.setpoint_endtime"
+            },
+            {
+              "name": "setpoint_temp",
+              "in": "query",
+              "value": "$inputs.setpoint_temp"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status"
+          }
+        }
+      ],
+      "outputs": {
+        "relay_id": "$steps.get-thermostat-details.outputs.relay_id",
+        "thermostat_module_id": "$steps.get-thermostat-details.outputs.thermostat_module_id",
+        "status": "$steps.set-manual-temperature.outputs.status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-home-occupancy-status",
+      "summary": "This workflow allows a user to manually update the occupancy status of their home or specific individuals detected by Netatmo Welcome cameras. This can be used to correct detection errors or manually set home/away states.",
+      "description": "This workflow allows a user to manually update the occupancy status of their home or specific individuals detected by Netatmo Welcome cameras. This can be used to correct detection errors or manually set home/away states.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "home_id": {
+            "type": "string"
+          },
+          "size": {
+            "type": "string"
+          },
+          "person_id": {
+            "type": "string"
+          },
+          "person_ids": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-home-and-person-ids",
+          "description": "Retrieves the home ID and IDs of recognized persons within the home, which are necessary for setting occupancy status.",
+          "operationId": "gethomedata",
+          "parameters": [
+            {
+              "name": "home_id",
+              "in": "query",
+              "value": "$inputs.home_id"
+            },
+            {
+              "name": "size",
+              "in": "query",
+              "value": "$inputs.size"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "home_id": "$response.body#/home_id",
+            "person_id": "$response.body#/person_id"
+          }
+        },
+        {
+          "stepId": "set-person-away-or-home-empty",
+          "description": "Sets a specific person as 'Away' or, if no person ID is provided, sets the entire Home as 'Empty'.",
+          "operationId": "setpersonsaway",
+          "parameters": [
+            {
+              "name": "home_id",
+              "in": "query",
+              "value": "$steps.get-home-and-person-ids.outputs.home_id"
+            },
+            {
+              "name": "person_id",
+              "in": "query",
+              "value": "$steps.get-home-and-person-ids.outputs.person_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status"
+          }
+        },
+        {
+          "stepId": "set-person-at-home",
+          "description": "Sets one or more specified persons as 'At home'.",
+          "operationId": "setpersonshome",
+          "parameters": [
+            {
+              "name": "home_id",
+              "in": "query",
+              "value": "$steps.get-home-and-person-ids.outputs.home_id"
+            },
+            {
+              "name": "person_ids",
+              "in": "query",
+              "value": "$steps.get-home-and-person-ids.outputs.person_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status"
+          }
+        }
+      ],
+      "outputs": {
+        "home_id": "$steps.get-home-and-person-ids.outputs.home_id",
+        "person_id": "$steps.get-home-and-person-ids.outputs.person_id",
+        "status": "$steps.set-person-at-home.outputs.status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
