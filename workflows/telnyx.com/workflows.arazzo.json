@@ -1,0 +1,1132 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/telnyx.com/main/2.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "automated-messaging-with-opt-inopt-out",
+      "summary": "This workflow demonstrates how to set up a messaging profile with automated responses for opt-in and opt-out keywords, and then send a message using this configured profile. This is crucial for managing compliant messaging campaigns and handling subscriber preferences.",
+      "description": "This workflow demonstrates how to set up a messaging profile with automated responses for opt-in and opt-out keywords, and then send a message using this configured profile. This is crucial for managing compliant messaging campaigns and handling subscriber preferences.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "whitelisted_destinations": {
+            "type": "string"
+          },
+          "profile_id": {
+            "type": "string"
+          },
+          "op": {
+            "type": "string"
+          },
+          "keywords": {
+            "type": "string"
+          },
+          "country_code": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-messaging-profile",
+          "description": "Creates a new messaging profile to manage message sending and receiving settings, including webhooks and whitelisted destinations.",
+          "operationId": "CreateMessagingProfile",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name",
+              "whitelisted_destinations": "$inputs.whitelisted_destinations"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "messaging_profile_id": "$response.body#/messaging_profile_id"
+          }
+        },
+        {
+          "stepId": "configure-opt-in-auto-response",
+          "description": "Configures an automatic response for opt-in keywords (e.g., 'START', 'UNSTOP') for the messaging profile. This ensures compliance and user engagement.",
+          "operationId": "CreateAutorespConfig",
+          "parameters": [
+            {
+              "name": "profile_id",
+              "in": "path",
+              "value": "$steps.create-messaging-profile.outputs.messaging_profile_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "profile_id": "$steps.create-messaging-profile.outputs.messaging_profile_id",
+              "op": "$inputs.op",
+              "keywords": "$inputs.keywords",
+              "country_code": "$inputs.country_code"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "opt_in_config_id": "$response.body#/opt_in_config_id"
+          }
+        },
+        {
+          "stepId": "configure-opt-out-auto-response",
+          "description": "Configures an automatic response for opt-out keywords (e.g., 'STOP') for the messaging profile. This is essential for maintaining messaging compliance.",
+          "operationId": "CreateAutorespConfig",
+          "parameters": [
+            {
+              "name": "profile_id",
+              "in": "path",
+              "value": "$steps.create-messaging-profile.outputs.messaging_profile_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "profile_id": "$steps.create-messaging-profile.outputs.messaging_profile_id",
+              "op": "$inputs.op",
+              "keywords": "$inputs.keywords",
+              "country_code": "$inputs.country_code"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "opt_out_config_id": "$response.body#/opt_out_config_id"
+          }
+        },
+        {
+          "stepId": "send-sms-message",
+          "description": "Sends an SMS message to a recipient using the configured messaging profile. The message will adhere to the profile's settings, including auto-responses.",
+          "operationId": "SendMessage",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "messaging_profile_id": "$steps.create-messaging-profile.outputs.messaging_profile_id",
+              "to": "$inputs.to"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "message_id": "$response.body#/message_id"
+          }
+        }
+      ],
+      "outputs": {
+        "messaging_profile_id": "$steps.create-messaging-profile.outputs.messaging_profile_id",
+        "opt_in_config_id": "$steps.configure-opt-in-auto-response.outputs.opt_in_config_id",
+        "opt_out_config_id": "$steps.configure-opt-out-auto-response.outputs.opt_out_config_id",
+        "message_id": "$steps.send-sms-message.outputs.message_id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "end-to-end-voice-call-setup-and-management",
+      "summary": "This workflow enables a user to fully set up voice communication. It involves creating a Call Control application, assigning a phone number to it, initiating an outbound call, and then demonstrating basic call control actions like playing audio and recording the conversation.",
+      "description": "This workflow enables a user to fully set up voice communication. It involves creating a Call Control application, assigning a phone number to it, initiating an outbound call, and then demonstrating basic call control actions like playing audio and recording the conversation.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "application_name": {
+            "type": "string"
+          },
+          "webhook_event_url": {
+            "type": "string"
+          },
+          "page[number]": {
+            "type": "string"
+          },
+          "page[size]": {
+            "type": "string"
+          },
+          "filter[tag]": {
+            "type": "string"
+          },
+          "filter[phone_number]": {
+            "type": "string"
+          },
+          "filter[status]": {
+            "type": "string"
+          },
+          "filter[country_iso_alpha2]": {
+            "type": "string"
+          },
+          "filter[connection_id]": {
+            "type": "string"
+          },
+          "filter[voice.connection_name][contains]": {
+            "type": "string"
+          },
+          "filter[voice.connection_name][starts_with]": {
+            "type": "string"
+          },
+          "filter[voice.connection_name][ends_with]": {
+            "type": "string"
+          },
+          "filter[voice.connection_name][eq]": {
+            "type": "string"
+          },
+          "filter[voice.usage_payment_method]": {
+            "type": "string"
+          },
+          "filter[billing_group_id]": {
+            "type": "string"
+          },
+          "filter[emergency_address_id]": {
+            "type": "string"
+          },
+          "filter[customer_reference]": {
+            "type": "string"
+          },
+          "filter[number_type][eq]": {
+            "type": "string"
+          },
+          "filter[source]": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "call_control_id": {
+            "type": "string"
+          },
+          "audio_url": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "channels": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-call-control-application",
+          "description": "Creates a new Call Control application to define how calls are handled. Requires a unique application name and a webhook URL for event notifications.",
+          "operationId": "CreateCallControlApplication",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "application_name": "$inputs.application_name",
+              "webhook_event_url": "$inputs.webhook_event_url"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "application_id": "$response.body#/application_id"
+          }
+        },
+        {
+          "stepId": "list-active-phone-numbers",
+          "description": "Retrieves a list of active phone numbers owned by the user to select one for configuration. Filters by 'active' status.",
+          "operationId": "ListPhoneNumbers",
+          "parameters": [
+            {
+              "name": "page[number]",
+              "in": "query",
+              "value": "$inputs.page[number]"
+            },
+            {
+              "name": "page[size]",
+              "in": "query",
+              "value": "$inputs.page[size]"
+            },
+            {
+              "name": "filter[tag]",
+              "in": "query",
+              "value": "$inputs.filter[tag]"
+            },
+            {
+              "name": "filter[phone_number]",
+              "in": "query",
+              "value": "$inputs.filter[phone_number]"
+            },
+            {
+              "name": "filter[status]",
+              "in": "query",
+              "value": "$inputs.filter[status]"
+            },
+            {
+              "name": "filter[country_iso_alpha2]",
+              "in": "query",
+              "value": "$inputs.filter[country_iso_alpha2]"
+            },
+            {
+              "name": "filter[connection_id]",
+              "in": "query",
+              "value": "$inputs.filter[connection_id]"
+            },
+            {
+              "name": "filter[voice.connection_name][contains]",
+              "in": "query",
+              "value": "$inputs.filter[voice.connection_name][contains]"
+            },
+            {
+              "name": "filter[voice.connection_name][starts_with]",
+              "in": "query",
+              "value": "$inputs.filter[voice.connection_name][starts_with]"
+            },
+            {
+              "name": "filter[voice.connection_name][ends_with]",
+              "in": "query",
+              "value": "$inputs.filter[voice.connection_name][ends_with]"
+            },
+            {
+              "name": "filter[voice.connection_name][eq]",
+              "in": "query",
+              "value": "$inputs.filter[voice.connection_name][eq]"
+            },
+            {
+              "name": "filter[voice.usage_payment_method]",
+              "in": "query",
+              "value": "$inputs.filter[voice.usage_payment_method]"
+            },
+            {
+              "name": "filter[billing_group_id]",
+              "in": "query",
+              "value": "$inputs.filter[billing_group_id]"
+            },
+            {
+              "name": "filter[emergency_address_id]",
+              "in": "query",
+              "value": "$inputs.filter[emergency_address_id]"
+            },
+            {
+              "name": "filter[customer_reference]",
+              "in": "query",
+              "value": "$inputs.filter[customer_reference]"
+            },
+            {
+              "name": "filter[number_type][eq]",
+              "in": "query",
+              "value": "$inputs.filter[number_type][eq]"
+            },
+            {
+              "name": "filter[source]",
+              "in": "query",
+              "value": "$inputs.filter[source]"
+            },
+            {
+              "name": "sort",
+              "in": "query",
+              "value": "$inputs.sort"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "phone_number_id": "$response.body#/phone_number_id",
+            "phone_number_e164": "$response.body#/phone_number_e164"
+          }
+        },
+        {
+          "stepId": "update-phone-number-voice-settings",
+          "description": "Assigns the selected phone number to the newly created Call Control application by updating its voice settings.",
+          "operationId": "UpdatePhoneNumberVoiceSettings",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.list-active-phone-numbers.outputs.phone_number_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.list-active-phone-numbers.outputs.phone_number_id",
+              "connection_id": "$steps.create-call-control-application.outputs.application_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_phone_number_id": "$response.body#/updated_phone_number_id"
+          }
+        },
+        {
+          "stepId": "dial-outbound-call",
+          "description": "Initiates an outbound call from the configured phone number to a specified destination. This is an asynchronous operation.",
+          "operationId": "DialCall",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "connection_id": "$steps.create-call-control-application.outputs.application_id",
+              "from": "$steps.list-active-phone-numbers.outputs.phone_number_e164",
+              "to": "$inputs.to"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "call_control_id": "$response.body#/call_control_id"
+          }
+        },
+        {
+          "stepId": "play-audio-on-call",
+          "description": "Plays an audio file (e.g., a greeting or message) to the active call. Requires a URL to the audio file.",
+          "operationId": "StartCallPlayback",
+          "parameters": [
+            {
+              "name": "call_control_id",
+              "in": "path",
+              "value": "$steps.dial-outbound-call.outputs.call_control_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "call_control_id": "$steps.dial-outbound-call.outputs.call_control_id",
+              "audio_url": "$inputs.audio_url"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "playback_status": "$response.body#/playback_status"
+          }
+        },
+        {
+          "stepId": "start-call-recording",
+          "description": "Starts recording the active call. The recording format and channels can be specified.",
+          "operationId": "StartCallRecord",
+          "parameters": [
+            {
+              "name": "call_control_id",
+              "in": "path",
+              "value": "$steps.dial-outbound-call.outputs.call_control_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "call_control_id": "$steps.dial-outbound-call.outputs.call_control_id",
+              "format": "$inputs.format",
+              "channels": "$inputs.channels"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "recording_status": "$response.body#/recording_status"
+          }
+        },
+        {
+          "stepId": "hangup-call",
+          "description": "Terminates the active call. This is typically the final action in a call flow.",
+          "operationId": "HangupCall",
+          "parameters": [
+            {
+              "name": "call_control_id",
+              "in": "path",
+              "value": "$steps.dial-outbound-call.outputs.call_control_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "call_control_id": "$steps.dial-outbound-call.outputs.call_control_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "hangup_status": "$response.body#/hangup_status"
+          }
+        }
+      ],
+      "outputs": {
+        "application_id": "$steps.create-call-control-application.outputs.application_id",
+        "phone_number_id": "$steps.list-active-phone-numbers.outputs.phone_number_id",
+        "phone_number_e164": "$steps.list-active-phone-numbers.outputs.phone_number_e164",
+        "updated_phone_number_id": "$steps.update-phone-number-voice-settings.outputs.updated_phone_number_id",
+        "call_control_id": "$steps.dial-outbound-call.outputs.call_control_id",
+        "playback_status": "$steps.play-audio-on-call.outputs.playback_status",
+        "recording_status": "$steps.start-call-recording.outputs.recording_status",
+        "hangup_status": "$steps.hangup-call.outputs.hangup_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "sim-card-provisioning-and-network-configuration",
+      "summary": "This workflow outlines the process of ordering new physical SIM cards, creating a SIM card group, setting up a private network with a wireless gateway, and then assigning that gateway to the SIM card group for custom network routing. This is valuable for IoT/M2M deployments requiring specialized network control.",
+      "description": "This workflow outlines the process of ordering new physical SIM cards, creating a SIM card group, setting up a private network with a wireless gateway, and then assigning that gateway to the SIM card group for custom network routing. This is valuable for IoT/M2M deployments requiring specialized network control.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "first_name": {
+            "type": "string"
+          },
+          "last_name": {
+            "type": "string"
+          },
+          "business_name": {
+            "type": "string"
+          },
+          "street_address": {
+            "type": "string"
+          },
+          "locality": {
+            "type": "string"
+          },
+          "country_code": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "create-network_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-user-address",
+          "description": "Creates a user address, which is required for shipping physical SIM cards.",
+          "operationId": "CreateUserAddress",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "first_name": "$inputs.first_name",
+              "last_name": "$inputs.last_name",
+              "business_name": "$inputs.business_name",
+              "street_address": "$inputs.street_address",
+              "locality": "$inputs.locality",
+              "country_code": "$inputs.country_code"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_address_id": "$response.body#/user_address_id"
+          }
+        },
+        {
+          "stepId": "create-sim-card-order",
+          "description": "Places an order for a specified quantity of SIM cards to be shipped to the created user address.",
+          "operationId": "CreateSimCardOrder",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "address_id": "$steps.create-user-address.outputs.user_address_id",
+              "quantity": "$inputs.quantity"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sim_card_order_id": "$response.body#/sim_card_order_id"
+          }
+        },
+        {
+          "stepId": "create-sim-card-group",
+          "description": "Creates a new group to organize SIM cards and apply common settings, such as data limits or network preferences.",
+          "operationId": "CreateSimCardGroup",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sim_card_group_id": "$response.body#/sim_card_group_id"
+          }
+        },
+        {
+          "stepId": "create-network",
+          "description": "Creates a new private network, which serves as the foundation for private wireless gateways.",
+          "operationId": "CreateNetwork",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-network_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "network_id": "$response.body#/network_id"
+          }
+        },
+        {
+          "stepId": "create-private-wireless-gateway",
+          "description": "Provisions a private wireless gateway within the created network, enabling custom traffic control for associated SIMs.",
+          "operationId": "CreatePrivateWirelessGateway",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "network_id": "$steps.create-network.outputs.network_id",
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "private_wireless_gateway_id": "$response.body#/private_wireless_gateway_id"
+          }
+        },
+        {
+          "stepId": "set-private-wireless-gateway-for-sim-card-group",
+          "description": "Assigns the provisioned private wireless gateway to the SIM card group, directing all group traffic through it.",
+          "operationId": "SetPrivateWirelessGatewayForSimCardGroup",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-sim-card-group.outputs.sim_card_group_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.create-sim-card-group.outputs.sim_card_group_id",
+              "private_wireless_gateway_id": "$steps.create-private-wireless-gateway.outputs.private_wireless_gateway_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sim_group_action_id": "$response.body#/sim_group_action_id"
+          }
+        }
+      ],
+      "outputs": {
+        "user_address_id": "$steps.create-user-address.outputs.user_address_id",
+        "sim_card_order_id": "$steps.create-sim-card-order.outputs.sim_card_order_id",
+        "sim_card_group_id": "$steps.create-sim-card-group.outputs.sim_card_group_id",
+        "network_id": "$steps.create-network.outputs.network_id",
+        "private_wireless_gateway_id": "$steps.create-private-wireless-gateway.outputs.private_wireless_gateway_id",
+        "sim_group_action_id": "$steps.set-private-wireless-gateway-for-sim-card-group.outputs.sim_group_action_id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "ai-powered-document-search",
+      "summary": "This workflow demonstrates how to leverage Telnyx's AI capabilities to upload documents to cloud storage, process them into embeddings for semantic understanding, and then perform a similarity search to find relevant document chunks based on a query. This is useful for building intelligent knowledge bases or search functionalities.",
+      "description": "This workflow demonstrates how to leverage Telnyx's AI capabilities to upload documents to cloud storage, process them into embeddings for semantic understanding, and then perform a similarity search to find relevant document chunks based on a query. This is useful for building intelligent knowledge bases or search functionalities.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "bucketName": {
+            "type": "string"
+          },
+          "create-storage-bucket_body": {
+            "type": "object"
+          },
+          "objectName": {
+            "type": "string"
+          },
+          "Content-type": {
+            "type": "string"
+          },
+          "partNumber": {
+            "type": "string"
+          },
+          "uploadId": {
+            "type": "string"
+          },
+          "task_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-storage-bucket",
+          "description": "Creates a new storage bucket to host documents that will be processed for embeddings.",
+          "operationId": "CreateBucket",
+          "parameters": [
+            {
+              "name": "bucketName",
+              "in": "path",
+              "value": "$inputs.bucketName"
+            }
+          ],
+          "requestBody": {
+            "contentType": "text/xml",
+            "payload": "$inputs.create-storage-bucket_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "bucket_name": "$response.body#/bucket_name"
+          }
+        },
+        {
+          "stepId": "upload-document-to-bucket",
+          "description": "Uploads a document (e.g., PDF, TXT, HTML) to the newly created storage bucket. This document will later be embedded.",
+          "operationId": "PutObject",
+          "parameters": [
+            {
+              "name": "bucketName",
+              "in": "path",
+              "value": "$inputs.bucketName"
+            },
+            {
+              "name": "objectName",
+              "in": "path",
+              "value": "$inputs.objectName"
+            },
+            {
+              "name": "Content-type",
+              "in": "header",
+              "value": "$inputs.Content-type"
+            },
+            {
+              "name": "partNumber",
+              "in": "query",
+              "value": "$inputs.partNumber"
+            },
+            {
+              "name": "uploadId",
+              "in": "query",
+              "value": "$inputs.uploadId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "*/*",
+            "payload": {
+              "bucket_name": "$steps.create-storage-bucket.outputs.bucket_name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "uploaded_object_name": "$response.body#/uploaded_object_name"
+          }
+        },
+        {
+          "stepId": "embed-documents",
+          "description": "Initiates the asynchronous process of converting documents in the specified bucket into embeddings, making them searchable by semantic similarity.",
+          "operationId": "PostEmbedding",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "bucket_name": "$steps.create-storage-bucket.outputs.bucket_name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "embedding_task_id": "$response.body#/embedding_task_id"
+          }
+        },
+        {
+          "stepId": "get-embedding-task-status",
+          "description": "Checks the status of the embedding task. This step would typically be polled until the status indicates completion ('success' or 'partial_success') before proceeding to search.",
+          "operationId": "GetEmbeddingTask",
+          "parameters": [
+            {
+              "name": "task_id",
+              "in": "path",
+              "value": "$steps.embed-documents.outputs.embedding_task_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "embedding_status": "$response.body#/embedding_status"
+          }
+        },
+        {
+          "stepId": "search-embedded-documents",
+          "description": "Performs a similarity search on the embedded documents in the bucket based on a user-provided query, returning the most relevant document chunks.",
+          "operationId": "PostEmbeddingSimilaritySearch",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "bucket_name": "$steps.create-storage-bucket.outputs.bucket_name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "search_results": "$response.body#/search_results"
+          }
+        }
+      ],
+      "outputs": {
+        "bucket_name": "$steps.create-storage-bucket.outputs.bucket_name",
+        "uploaded_object_name": "$steps.upload-document-to-bucket.outputs.uploaded_object_name",
+        "embedding_task_id": "$steps.embed-documents.outputs.embedding_task_id",
+        "embedding_status": "$steps.get-embedding-task-status.outputs.embedding_status",
+        "search_results": "$steps.search-embedded-documents.outputs.search_results"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "number-porting-process",
+      "summary": "This workflow guides a user through the essential steps required to port existing phone numbers to Telnyx, including checking their portability, initiating a porting order, uploading necessary documentation, and finally confirming the order for submission to the losing carrier.",
+      "description": "This workflow guides a user through the essential steps required to port existing phone numbers to Telnyx, including checking their portability, initiating a porting order, uploading necessary documentation, and finally confirming the order for submission to the losing carrier.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "run-portability-check_body": {
+            "type": "object"
+          },
+          "upload-loa-document_body": {
+            "type": "object"
+          },
+          "upload-invoice-document_body": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "run-portability-check",
+          "description": "Initiates a check to determine if a list of phone numbers can be ported to Telnyx. This is a crucial first step to ensure a smooth porting process.",
+          "operationId": "PostPortabilityCheck",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.run-portability-check_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "portability_results": "$response.body#/portability_results"
+          }
+        },
+        {
+          "stepId": "create-porting-order",
+          "description": "Creates a new porting order for the phone numbers identified as portable. This sets up the initial request for number transfer.",
+          "operationId": "CreatePortingOrder",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "phone_numbers": "$steps.run-portability-check.outputs.portability_results[*].phone_number"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "porting_order_id": "$response.body#/porting_order_id"
+          }
+        },
+        {
+          "stepId": "upload-loa-document",
+          "description": "Uploads the Letter of Authorization (LOA) document, a legal requirement for porting numbers, to Telnyx's document storage.",
+          "operationId": "CreateDocument",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.upload-loa-document_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "loa_document_id": "$response.body#/loa_document_id"
+          }
+        },
+        {
+          "stepId": "upload-invoice-document",
+          "description": "Uploads the latest phone bill or invoice, often required as proof of ownership for porting, to Telnyx's document storage.",
+          "operationId": "CreateDocument",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.upload-invoice-document_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "invoice_document_id": "$response.body#/invoice_document_id"
+          }
+        },
+        {
+          "stepId": "update-porting-order-with-documents",
+          "description": "Associates the uploaded LOA and invoice documents with the specific porting order, fulfilling documentation requirements.",
+          "operationId": "UpdatePortingOrder",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-porting-order.outputs.porting_order_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.create-porting-order.outputs.porting_order_id",
+              "documents.loa": "$steps.upload-loa-document.outputs.loa_document_id",
+              "documents.invoice": "$steps.upload-invoice-document.outputs.invoice_document_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_porting_order_status": "$response.body#/updated_porting_order_status"
+          }
+        },
+        {
+          "stepId": "confirm-porting-order",
+          "description": "Confirms and formally submits the porting order to Telnyx for processing with the losing carrier.",
+          "operationId": "ConfirmPortingOrder",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-porting-order.outputs.porting_order_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "final_porting_order_status": "$response.body#/final_porting_order_status"
+          }
+        }
+      ],
+      "outputs": {
+        "portability_results": "$steps.run-portability-check.outputs.portability_results",
+        "porting_order_id": "$steps.create-porting-order.outputs.porting_order_id",
+        "loa_document_id": "$steps.upload-loa-document.outputs.loa_document_id",
+        "invoice_document_id": "$steps.upload-invoice-document.outputs.invoice_document_id",
+        "updated_porting_order_status": "$steps.update-porting-order-with-documents.outputs.updated_porting_order_status",
+        "final_porting_order_status": "$steps.confirm-porting-order.outputs.final_porting_order_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
