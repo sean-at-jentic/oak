@@ -1,0 +1,308 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/seldon.local/wrapper/0.1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "advanced-model-prediction-with-data-transformation",
+      "summary": "A common machine learning pipeline workflow that involves pre-processing raw input data, sending it for prediction, and then post-processing the model's output before consumption. This allows for flexible data handling and model integration.",
+      "description": "A common machine learning pipeline workflow that involves pre-processing raw input data, sending it for prediction, and then post-processing the model's output before consumption. This allows for flexible data handling and model integration.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "json": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "transform-input-data",
+          "description": "Transforms raw input data (SeldonMessage) into a format suitable for the model.",
+          "operationId": "TransformInput",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "json": "$inputs.json"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "transformed_input_message": "$response.body#/transformed_input_message"
+          }
+        },
+        {
+          "stepId": "make-prediction-with-transformed-input",
+          "description": "Performs a prediction using the pre-processed input data.",
+          "operationId": "TransformInput3",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "json": "$steps.transform-input-data.outputs.transformed_input_message"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "raw_prediction_output": "$response.body#/raw_prediction_output"
+          }
+        },
+        {
+          "stepId": "transform-output-data",
+          "description": "Transforms the raw prediction output into a more consumable format.",
+          "operationId": "TransformOutput",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "json": "$steps.make-prediction-with-transformed-input.outputs.raw_prediction_output"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "transformed_prediction_output": "$response.body#/transformed_prediction_output"
+          }
+        }
+      ],
+      "outputs": {
+        "transformed_input_message": "$steps.transform-input-data.outputs.transformed_input_message",
+        "raw_prediction_output": "$steps.make-prediction-with-transformed-input.outputs.raw_prediction_output",
+        "transformed_prediction_output": "$steps.transform-output-data.outputs.transformed_prediction_output"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "capture-model-feedback",
+      "summary": "Records feedback on a model's prediction, including the original request, the model's response, a reward signal, and the ground truth. This workflow is essential for model monitoring, drift detection, and continuous improvement through retraining.",
+      "description": "Records feedback on a model's prediction, including the original request, the model's response, a reward signal, and the ground truth. This workflow is essential for model monitoring, drift detection, and continuous improvement through retraining.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "json": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "make-prediction-for-feedback",
+          "description": "Performs a prediction using the provided input message, generating a response that will be part of the feedback.",
+          "operationId": "TransformInput3",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "json": "$inputs.json"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "prediction_response_message": "$response.body#/prediction_response_message"
+          }
+        },
+        {
+          "stepId": "send-prediction-feedback",
+          "description": "Submits a Feedback object containing the original request, the model's response, a reward value, and the ground truth for the prediction.",
+          "operationId": "SendFeedback",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "response_message": "$steps.make-prediction-for-feedback.outputs.prediction_response_message"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "feedback_submission_status": "$response.body#/feedback_submission_status"
+          }
+        }
+      ],
+      "outputs": {
+        "prediction_response_message": "$steps.make-prediction-for-feedback.outputs.prediction_response_message",
+        "feedback_submission_status": "$steps.send-prediction-feedback.outputs.feedback_submission_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "model-prediction-with-dynamic-routing",
+      "summary": "Routes an incoming prediction request to a specific model or model version based on internal logic (e.g., A/B testing, multi-armed bandit), then performs the prediction. This is crucial for managing complex model deployments.",
+      "description": "Routes an incoming prediction request to a specific model or model version based on internal logic (e.g., A/B testing, multi-armed bandit), then performs the prediction. This is crucial for managing complex model deployments.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "json": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "route-prediction-request",
+          "description": "Determines the appropriate model or route for the incoming SeldonMessage request.",
+          "operationId": "Route",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "json": "$inputs.json"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "routed_request_message": "$response.body#/routed_request_message"
+          }
+        },
+        {
+          "stepId": "make-routed-prediction",
+          "description": "Executes the prediction using the SeldonMessage that has been routed to the correct model.",
+          "operationId": "TransformInput3",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "json": "$steps.route-prediction-request.outputs.routed_request_message"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "prediction_output_message": "$response.body#/prediction_output_message"
+          }
+        }
+      ],
+      "outputs": {
+        "routed_request_message": "$steps.route-prediction-request.outputs.routed_request_message",
+        "prediction_output_message": "$steps.make-routed-prediction.outputs.prediction_output_message"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

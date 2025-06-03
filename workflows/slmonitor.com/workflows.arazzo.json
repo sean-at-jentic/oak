@@ -1,0 +1,739 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/slmonitor.com/main/2.1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "worker-check-in-process",
+      "summary": "Allows a worker to regularly check in, updating their safety status and optionally providing a text report. This workflow demonstrates a common user journey for a worker using the SafetyLine system.",
+      "description": "Allows a worker to regularly check in, updating their safety status and optionally providing a text report. This workflow demonstrates a common user journey for a worker using the SafetyLine system.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "companyId": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "get-check-in-text-suggestion_body": {
+            "type": "object"
+          },
+          "uniqueUserId": {
+            "type": "string"
+          },
+          "interval": {
+            "type": "string"
+          },
+          "deviceType": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-authenticated-user-id",
+          "description": "Retrieves the uniqueUserId of the currently authenticated user. This is crucial for subsequent user-specific operations.",
+          "operationId": "Api_GetUser",
+          "parameters": [
+            {
+              "name": "companyId",
+              "in": "path",
+              "value": "$inputs.companyId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "uniqueUserId": "$response.body#/uniqueUserId"
+          }
+        },
+        {
+          "stepId": "get-check-in-text-suggestion",
+          "description": "Obtains a suggested check-in message based on provided surroundings data (e.g., location, environment sensors).",
+          "operationId": "Api_GetCheckInTextSuggestion",
+          "parameters": [
+            {
+              "name": "language",
+              "in": "query",
+              "value": "$inputs.language"
+            },
+            {
+              "name": "companyId",
+              "in": "path",
+              "value": "$inputs.companyId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/octet-stream",
+            "payload": "$inputs.get-check-in-text-suggestion_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "suggestedMessage": "$response.body#/suggestedMessage"
+          }
+        },
+        {
+          "stepId": "perform-text-check-in",
+          "description": "Performs a check-in with a text report, using the user's unique ID and optionally a suggested message.",
+          "operationId": "Api_CheckInWithText",
+          "parameters": [
+            {
+              "name": "uniqueUserId",
+              "in": "path",
+              "value": "$steps.get-authenticated-user-id.outputs.uniqueUserId"
+            },
+            {
+              "name": "interval",
+              "in": "query",
+              "value": "$inputs.interval"
+            },
+            {
+              "name": "deviceType",
+              "in": "query",
+              "value": "$inputs.deviceType"
+            },
+            {
+              "name": "companyId",
+              "in": "path",
+              "value": "$inputs.companyId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/*+json",
+            "payload": {
+              "uniqueUserId": "$steps.get-authenticated-user-id.outputs.uniqueUserId",
+              "textReport": "$steps.get-check-in-text-suggestion.outputs.suggestedMessage"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updatedUser": "$response.body#/updatedUser"
+          }
+        }
+      ],
+      "outputs": {
+        "uniqueUserId": "$steps.get-authenticated-user-id.outputs.uniqueUserId",
+        "suggestedMessage": "$steps.get-check-in-text-suggestion.outputs.suggestedMessage",
+        "updatedUser": "$steps.perform-text-check-in.outputs.updatedUser"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "emergency-response-and-monitoring",
+      "summary": "A workflow for a worker to declare an emergency, followed by a monitor retrieving relevant notifications and event history to assess the situation.",
+      "description": "A workflow for a worker to declare an emergency, followed by a monitor retrieving relevant notifications and event history to assess the situation.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "companyId": {
+            "type": "string"
+          },
+          "uniqueUserId": {
+            "type": "string"
+          },
+          "deviceType": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string"
+          },
+          "end": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-authenticated-user-id",
+          "description": "Retrieves the uniqueUserId of the currently authenticated user (the worker) to initiate an emergency.",
+          "operationId": "Api_GetUser",
+          "parameters": [
+            {
+              "name": "companyId",
+              "in": "path",
+              "value": "$inputs.companyId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "uniqueUserId": "$response.body#/uniqueUserId"
+          }
+        },
+        {
+          "stepId": "declare-emergency-with-audio",
+          "description": "The worker declares an emergency, including an audio recording for additional context, updating their status to emergency.",
+          "operationId": "Api_EmergencyWithAudio",
+          "parameters": [
+            {
+              "name": "uniqueUserId",
+              "in": "path",
+              "value": "$steps.get-authenticated-user-id.outputs.uniqueUserId"
+            },
+            {
+              "name": "deviceType",
+              "in": "query",
+              "value": "$inputs.deviceType"
+            },
+            {
+              "name": "companyId",
+              "in": "path",
+              "value": "$inputs.companyId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/octet-stream",
+            "payload": {
+              "uniqueUserId": "$steps.get-authenticated-user-id.outputs.uniqueUserId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updatedUser": "$response.body#/updatedUser"
+          }
+        },
+        {
+          "stepId": "get-monitor-notifications",
+          "description": "A monitor retrieves notifications specifically for the user who declared the emergency, alerting monitoring personnel.",
+          "operationId": "Api_GetMonitorNotificationsForUser",
+          "parameters": [
+            {
+              "name": "uniqueUserId",
+              "in": "path",
+              "value": "$steps.get-authenticated-user-id.outputs.uniqueUserId"
+            },
+            {
+              "name": "companyId",
+              "in": "path",
+              "value": "$inputs.companyId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "monitorNotifications": "$response.body#/0/monitorNotifications"
+          }
+        },
+        {
+          "stepId": "get-user-events-for-emergency",
+          "description": "Retrieves the event history for the user, focusing on events from the emergency declaration time onwards, to review the incident.",
+          "operationId": "Api_GetUserEvents",
+          "parameters": [
+            {
+              "name": "start",
+              "in": "query",
+              "value": "$steps.declare-emergency-with-audio.outputs.updatedUser.workerInformation.status.stateChangedUTC"
+            },
+            {
+              "name": "end",
+              "in": "query",
+              "value": "$inputs.end"
+            },
+            {
+              "name": "companyId",
+              "in": "path",
+              "value": "$inputs.companyId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "userEvents": "$response.body#/0/userEvents"
+          }
+        }
+      ],
+      "outputs": {
+        "uniqueUserId": "$steps.get-authenticated-user-id.outputs.uniqueUserId",
+        "updatedUser": "$steps.declare-emergency-with-audio.outputs.updatedUser",
+        "monitorNotifications": "$steps.get-monitor-notifications.outputs.monitorNotifications",
+        "userEvents": "$steps.get-user-events-for-emergency.outputs.userEvents"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "comprehensive-worker-monitoring-dashboard",
+      "summary": "Provides a complete overview for a monitoring agent or administrator to view all workers, their profiles, and their recent activities and notifications, suitable for a dashboard application.",
+      "description": "Provides a complete overview for a monitoring agent or administrator to view all workers, their profiles, and their recent activities and notifications, suitable for a dashboard application.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "companyId": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string"
+          },
+          "end": {
+            "type": "string"
+          },
+          "uniqueUserId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-all-users",
+          "description": "Retrieves a list of all users within the company to populate a worker list in a monitoring dashboard.",
+          "operationId": "Api_GetUsers",
+          "parameters": [
+            {
+              "name": "companyId",
+              "in": "path",
+              "value": "$inputs.companyId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "allUsers": "$response.body#/0/allUsers"
+          }
+        },
+        {
+          "stepId": "get-recent-company-events",
+          "description": "Fetches recent user events across the company for a general activity log or timeline view.",
+          "operationId": "Api_GetUserEvents",
+          "parameters": [
+            {
+              "name": "start",
+              "in": "query",
+              "value": "$inputs.start"
+            },
+            {
+              "name": "end",
+              "in": "query",
+              "value": "$inputs.end"
+            },
+            {
+              "name": "companyId",
+              "in": "path",
+              "value": "$inputs.companyId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "recentCompanyEvents": "$response.body#/0/recentCompanyEvents"
+          }
+        },
+        {
+          "stepId": "get-selected-user-profile",
+          "description": "Retrieves the detailed profile for a specific user, typically selected from the list obtained in the first step.",
+          "operationId": "Api_GetUser2",
+          "parameters": [
+            {
+              "name": "uniqueUserId",
+              "in": "path",
+              "value": "$steps.get-all-users.outputs.allUsers.uniqueUserId"
+            },
+            {
+              "name": "companyId",
+              "in": "path",
+              "value": "$inputs.companyId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "selectedUserProfile": "$response.body#/selectedUserProfile"
+          }
+        },
+        {
+          "stepId": "get-selected-user-monitor-notifications",
+          "description": "Retrieves specific monitor notifications for the selected user, providing alerts relevant to them.",
+          "operationId": "Api_GetMonitorNotificationsForUser",
+          "parameters": [
+            {
+              "name": "uniqueUserId",
+              "in": "path",
+              "value": "$steps.get-all-users.outputs.allUsers.uniqueUserId"
+            },
+            {
+              "name": "companyId",
+              "in": "path",
+              "value": "$inputs.companyId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "selectedUserMonitorNotifications": "$response.body#/0/selectedUserMonitorNotifications"
+          }
+        }
+      ],
+      "outputs": {
+        "allUsers": "$steps.get-all-users.outputs.allUsers",
+        "recentCompanyEvents": "$steps.get-recent-company-events.outputs.recentCompanyEvents",
+        "selectedUserProfile": "$steps.get-selected-user-profile.outputs.selectedUserProfile",
+        "selectedUserMonitorNotifications": "$steps.get-selected-user-monitor-notifications.outputs.selectedUserMonitorNotifications"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "end-monitoring-with-report",
+      "summary": "Allows a worker to formally end their monitoring session, optionally including a text report about their completed work or status.",
+      "description": "Allows a worker to formally end their monitoring session, optionally including a text report about their completed work or status.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "companyId": {
+            "type": "string"
+          },
+          "uniqueUserId": {
+            "type": "string"
+          },
+          "deviceType": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-authenticated-user-id",
+          "description": "Retrieves the uniqueUserId of the currently authenticated user to end their monitoring session.",
+          "operationId": "Api_GetUser",
+          "parameters": [
+            {
+              "name": "companyId",
+              "in": "path",
+              "value": "$inputs.companyId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "uniqueUserId": "$response.body#/uniqueUserId"
+          }
+        },
+        {
+          "stepId": "end-monitoring-with-text",
+          "description": "Ends the worker's monitoring period and provides a final text report.",
+          "operationId": "Api_EndWithText",
+          "parameters": [
+            {
+              "name": "uniqueUserId",
+              "in": "path",
+              "value": "$steps.get-authenticated-user-id.outputs.uniqueUserId"
+            },
+            {
+              "name": "deviceType",
+              "in": "query",
+              "value": "$inputs.deviceType"
+            },
+            {
+              "name": "companyId",
+              "in": "path",
+              "value": "$inputs.companyId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/*+json",
+            "payload": {
+              "uniqueUserId": "$steps.get-authenticated-user-id.outputs.uniqueUserId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updatedUser": "$response.body#/updatedUser"
+          }
+        }
+      ],
+      "outputs": {
+        "uniqueUserId": "$steps.get-authenticated-user-id.outputs.uniqueUserId",
+        "updatedUser": "$steps.end-monitoring-with-text.outputs.updatedUser"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "worker-itinerary-and-location-update",
+      "summary": "Allows a worker to update their planned itinerary and report their current location, providing critical context for monitoring personnel.",
+      "description": "Allows a worker to update their planned itinerary and report their current location, providing critical context for monitoring personnel.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "companyId": {
+            "type": "string"
+          },
+          "uniqueUserId": {
+            "type": "string"
+          },
+          "deviceType": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-authenticated-user-id",
+          "description": "Retrieves the uniqueUserId of the currently authenticated user to perform itinerary and location updates.",
+          "operationId": "Api_GetUser",
+          "parameters": [
+            {
+              "name": "companyId",
+              "in": "path",
+              "value": "$inputs.companyId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "uniqueUserId": "$response.body#/uniqueUserId"
+          }
+        },
+        {
+          "stepId": "update-worker-itinerary",
+          "description": "Updates the worker's planned itinerary with a text description.",
+          "operationId": "Api_UpdateItinerary",
+          "parameters": [
+            {
+              "name": "uniqueUserId",
+              "in": "path",
+              "value": "$steps.get-authenticated-user-id.outputs.uniqueUserId"
+            },
+            {
+              "name": "companyId",
+              "in": "path",
+              "value": "$inputs.companyId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/*+json",
+            "payload": {
+              "uniqueUserId": "$steps.get-authenticated-user-id.outputs.uniqueUserId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updatedUserWithItinerary": "$response.body#/updatedUserWithItinerary"
+          }
+        },
+        {
+          "stepId": "report-current-location",
+          "description": "Sends the worker's current geographical location to the system, adding it to their event history.",
+          "operationId": "Api_ReportLocation",
+          "parameters": [
+            {
+              "name": "uniqueUserId",
+              "in": "path",
+              "value": "$steps.get-authenticated-user-id.outputs.uniqueUserId"
+            },
+            {
+              "name": "deviceType",
+              "in": "query",
+              "value": "$inputs.deviceType"
+            },
+            {
+              "name": "companyId",
+              "in": "path",
+              "value": "$inputs.companyId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/*+json",
+            "payload": {
+              "uniqueUserId": "$steps.get-authenticated-user-id.outputs.uniqueUserId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updatedUserWithLocation": "$response.body#/updatedUserWithLocation"
+          }
+        }
+      ],
+      "outputs": {
+        "uniqueUserId": "$steps.get-authenticated-user-id.outputs.uniqueUserId",
+        "updatedUserWithItinerary": "$steps.update-worker-itinerary.outputs.updatedUserWithItinerary",
+        "updatedUserWithLocation": "$steps.report-current-location.outputs.updatedUserWithLocation"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

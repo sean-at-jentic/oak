@@ -1,0 +1,655 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/sms77.io/main/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "send-sms-and-monitor-delivery-status",
+      "summary": "This workflow allows users to send an SMS message and then retrieve its delivery status. This is crucial for tracking message success and troubleshooting.",
+      "description": "This workflow allows users to send an SMS message and then retrieve its delivery status. This is crucial for tracking message success and troubleshooting.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "msg_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "send-sms",
+          "description": "Sends one or multiple SMS messages to specified recipients. This step initiates the communication.",
+          "operationId": "SmsDispatch",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "text": "$inputs.text",
+              "to": "$inputs.to"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "message_id": "$response.body#/messages/0/id",
+            "balance": "$response.body#/balance",
+            "total_price": "$response.body#/total_price"
+          }
+        },
+        {
+          "stepId": "get-sms-status",
+          "description": "Retrieves the dispatch status for the previously sent SMS message(s) using their IDs.",
+          "operationId": "Status",
+          "parameters": [
+            {
+              "name": "msg_id",
+              "in": "query",
+              "value": "$steps.send-sms.outputs.message_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sms_status_reports": "$response.body#/sms_status_reports"
+          }
+        }
+      ],
+      "outputs": {
+        "message_id": "$steps.send-sms.outputs.message_id",
+        "balance": "$steps.send-sms.outputs.balance",
+        "total_price": "$steps.send-sms.outputs.total_price",
+        "sms_status_reports": "$steps.get-sms-status.outputs.sms_status_reports"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "send-voice-call-with-caller-id-validation",
+      "summary": "This workflow ensures that a caller ID is validated for use with the Voice API before initiating a text-to-speech voice call. This prevents calls from invalid or unverified numbers.",
+      "description": "This workflow ensures that a caller ID is validated for use with the Voice API before initiating a text-to-speech voice call. This prevents calls from invalid or unverified numbers.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "number": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "validate-caller-id",
+          "description": "Validates a given phone number to confirm its usability as a caller ID for the Voice API.",
+          "operationId": "ValidateForVoice",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "number": "$inputs.number"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "validation_success": "$response.body#/validation_success"
+          }
+        },
+        {
+          "stepId": "dispatch-voice-call",
+          "description": "Sends a text-to-speech message to a recipient number, using the previously validated caller ID.",
+          "operationId": "VoiceDispatch",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "to": "$inputs.to",
+              "text": "$inputs.text"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "voice_call_status": "$response.body#/voice_call_status"
+          }
+        }
+      ],
+      "outputs": {
+        "validation_success": "$steps.validate-caller-id.outputs.validation_success",
+        "voice_call_status": "$steps.dispatch-voice-call.outputs.voice_call_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "account-monitoring-and-usage-review",
+      "summary": "This workflow provides a comprehensive overview of an account's financial status and communication usage, allowing users to track costs, message volumes, and detailed outbound history.",
+      "description": "This workflow provides a comprehensive overview of an account's financial status and communication usage, allowing users to track costs, message volumes, and detailed outbound history.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "end": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "subaccounts": {
+            "type": "string"
+          },
+          "group_by": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "date_from": {
+            "type": "string"
+          },
+          "date_to": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-account-balance",
+          "description": "Retrieves the current credit balance for the associated API key.",
+          "operationId": "Balance",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "amount": "$response.body#/amount",
+            "currency": "$response.body#/currency"
+          }
+        },
+        {
+          "stepId": "get-analytics",
+          "description": "Retrieves aggregated analytics data for the API key, showing usage statistics for SMS, voice, and lookups over a specified period.",
+          "operationId": "Analytics",
+          "parameters": [
+            {
+              "name": "end",
+              "in": "query",
+              "value": "$inputs.end"
+            },
+            {
+              "name": "start",
+              "in": "query",
+              "value": "$inputs.start"
+            },
+            {
+              "name": "label",
+              "in": "query",
+              "value": "$inputs.label"
+            },
+            {
+              "name": "subaccounts",
+              "in": "query",
+              "value": "$inputs.subaccounts"
+            },
+            {
+              "name": "group_by",
+              "in": "query",
+              "value": "$inputs.group_by"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "analytics_data": "$response.body#/analytics_data"
+          }
+        },
+        {
+          "stepId": "get-outbound-journal",
+          "description": "Retrieves detailed outbound message journals, providing a history of all sent communications.",
+          "operationId": "JournalOutbound",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "query",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "date_from",
+              "in": "query",
+              "value": "$inputs.date_from"
+            },
+            {
+              "name": "date_to",
+              "in": "query",
+              "value": "$inputs.date_to"
+            },
+            {
+              "name": "to",
+              "in": "query",
+              "value": "$inputs.to"
+            },
+            {
+              "name": "state",
+              "in": "query",
+              "value": "$inputs.state"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "outbound_messages": "$response.body#/outbound_messages"
+          }
+        }
+      ],
+      "outputs": {
+        "amount": "$steps.get-account-balance.outputs.amount",
+        "currency": "$steps.get-account-balance.outputs.currency",
+        "analytics_data": "$steps.get-analytics.outputs.analytics_data",
+        "outbound_messages": "$steps.get-outbound-journal.outputs.outbound_messages"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "pre-dispatch-number-information-lookup",
+      "summary": "Before sending messages or making calls, this workflow gathers critical information about a recipient's phone number, including its validity, current carrier, and portability status. This helps optimize routing, prevent failed deliveries, and tailor communication strategies.",
+      "description": "Before sending messages or making calls, this workflow gathers critical information about a recipient's phone number, including its validity, current carrier, and portability status. This helps optimize routing, prevent failed deliveries, and tailor communication strategies.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "number": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "lookup-hlr",
+          "description": "Retrieves Home Location Register (HLR) information for a given phone number, including validity, current carrier, and roaming status.",
+          "operationId": "LookupHLR",
+          "parameters": [
+            {
+              "name": "number",
+              "in": "query",
+              "value": "$inputs.number"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "international_formatted": "$response.body#/international_formatted",
+            "country_name": "$response.body#/country_name",
+            "current_carrier": "$response.body#/current_carrier",
+            "valid_number": "$response.body#/valid_number",
+            "reachable": "$response.body#/reachable",
+            "roaming": "$response.body#/roaming"
+          }
+        },
+        {
+          "stepId": "lookup-mnp",
+          "description": "Retrieves Mobile Number Portability (MNP) information, indicating if a number has been ported to a different network.",
+          "operationId": "LookupMNP",
+          "parameters": [
+            {
+              "name": "number",
+              "in": "query",
+              "value": "$steps.lookup-hlr.outputs.international_formatted"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "mnp_info": "$response.body#/mnp_info"
+          }
+        }
+      ],
+      "outputs": {
+        "international_formatted": "$steps.lookup-hlr.outputs.international_formatted",
+        "country_name": "$steps.lookup-hlr.outputs.country_name",
+        "current_carrier": "$steps.lookup-hlr.outputs.current_carrier",
+        "valid_number": "$steps.lookup-hlr.outputs.valid_number",
+        "reachable": "$steps.lookup-hlr.outputs.reachable",
+        "roaming": "$steps.lookup-hlr.outputs.roaming",
+        "mnp_info": "$steps.lookup-mnp.outputs.mnp_info"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "send-rcs-message-and-trigger-event",
+      "summary": "This workflow enables sending a Rich Content Message (RCS) and subsequently triggering an event (like 'IS_TYPING' or 'READ') related to that message. This enhances the interactive experience of RCS communication.",
+      "description": "This workflow enables sending a Rich Content Message (RCS) and subsequently triggering an event (like 'IS_TYPING' or 'READ') related to that message. This enhances the interactive experience of RCS communication.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "event": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "send-rcs-message",
+          "description": "Sends a Rich Content Message to a specified recipient.",
+          "operationId": "RcsDispatch",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "text": "$inputs.text",
+              "to": "$inputs.to"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "rcs_message_id": "$response.body#/messages/0/id",
+            "balance": "$response.body#/balance",
+            "total_price": "$response.body#/total_price"
+          }
+        },
+        {
+          "stepId": "trigger-rcs-event",
+          "description": "Triggers a specific event (e.g., 'IS_TYPING', 'READ') for a sent RCS message, enhancing real-time communication feedback.",
+          "operationId": "RcsEvent",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "msg_id": "$steps.send-rcs-message.outputs.rcs_message_id",
+              "event": "$inputs.event"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "success": "$response.body#/success"
+          }
+        }
+      ],
+      "outputs": {
+        "rcs_message_id": "$steps.send-rcs-message.outputs.rcs_message_id",
+        "balance": "$steps.send-rcs-message.outputs.balance",
+        "total_price": "$steps.send-rcs-message.outputs.total_price",
+        "success": "$steps.trigger-rcs-event.outputs.success"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-scheduled-sms-messages",
+      "summary": "This workflow allows users to schedule an SMS message for future delivery and then, if needed, delete it before it is sent. This is useful for managing time-sensitive campaigns or correcting errors.",
+      "description": "This workflow allows users to schedule an SMS message for future delivery and then, if needed, delete it before it is sent. This is useful for managing time-sensitive campaigns or correcting errors.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "schedule-sms",
+          "description": "Schedules an SMS message for delayed dispatch using the 'delay' parameter. The message is not sent immediately.",
+          "operationId": "SmsDispatch",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "text": "$inputs.text",
+              "to": "$inputs.to"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "message_id": "$response.body#/messages/0/id",
+            "balance": "$response.body#/balance",
+            "total_price": "$response.body#/total_price"
+          }
+        },
+        {
+          "stepId": "delete-scheduled-sms",
+          "description": "Deletes one or more scheduled SMS messages using their IDs, preventing them from being sent.",
+          "operationId": "SmsDelete",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "ids": "$steps.schedule-sms.outputs.message_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "deleted_ids": "$response.body#/deleted_ids",
+            "success": "$response.body#/success"
+          }
+        }
+      ],
+      "outputs": {
+        "message_id": "$steps.schedule-sms.outputs.message_id",
+        "balance": "$steps.schedule-sms.outputs.balance",
+        "total_price": "$steps.schedule-sms.outputs.total_price",
+        "deleted_ids": "$steps.delete-scheduled-sms.outputs.deleted_ids",
+        "success": "$steps.delete-scheduled-sms.outputs.success"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
