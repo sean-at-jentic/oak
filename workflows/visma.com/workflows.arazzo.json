@@ -1,0 +1,1688 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/visma.com/main/1.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "api-authentication-and-token-refresh",
+      "summary": "This workflow handles the initial authentication using client credentials to obtain an access token and a refresh token, and subsequently demonstrates how to refresh the access token using the refresh token. This is a foundational workflow for interacting with the API.",
+      "description": "This workflow handles the initial authentication using client credentials to obtain an access token and a refresh token, and subsequently demonstrates how to refresh the access token using the refresh token. This is a foundational workflow for interacting with the API.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "client_id": {
+            "type": "string"
+          },
+          "client_secret": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-initial-access-token",
+          "description": "Obtain an access token and refresh token using client_id and client_secret.",
+          "operationId": "PublicBearerAuthentication_GetLoginToken",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "client_id": "$inputs.client_id",
+              "client_secret": "$inputs.client_secret"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "access_token": "$response.body#/access_token",
+            "refresh_token": "$response.body#/refresh_token",
+            "access_token_expires_in": "$response.body#/access_token_expires_in"
+          }
+        },
+        {
+          "stepId": "refresh-access-token",
+          "description": "Use the refresh token to obtain a new access token without re-authenticating with client credentials.",
+          "operationId": "PublicBearerAuthentication_GetAccessTokenTokenFromRefreshToken",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "refresh_token": "$steps.get-initial-access-token.outputs.refresh_token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "new_access_token": "$response.body#/access_token",
+            "new_refresh_token": "$response.body#/refresh_token",
+            "new_access_token_expires_in": "$response.body#/access_token_expires_in"
+          }
+        }
+      ],
+      "outputs": {
+        "access_token": "$steps.get-initial-access-token.outputs.access_token",
+        "refresh_token": "$steps.get-initial-access-token.outputs.refresh_token",
+        "access_token_expires_in": "$steps.get-initial-access-token.outputs.access_token_expires_in",
+        "new_access_token": "$steps.refresh-access-token.outputs.new_access_token",
+        "new_refresh_token": "$steps.refresh-access-token.outputs.new_refresh_token",
+        "new_access_token_expires_in": "$steps.refresh-access-token.outputs.new_access_token_expires_in"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "customer-onboarding-and-contact-setup",
+      "summary": "This workflow facilitates the complete onboarding of a new customer, including creating the customer record, adding their primary address, and setting up a key contact person with communication details.",
+      "description": "This workflow facilitates the complete onboarding of a new customer, including creating the customer record, adding their primary address, and setting up a key contact person with communication details.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "customerGuid": {
+            "type": "string"
+          },
+          "addressline": {
+            "type": "string"
+          },
+          "postalCode": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "isBillingAddress": {
+            "type": "string"
+          },
+          "isPostalAddress": {
+            "type": "string"
+          },
+          "isVisitAddress": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "fax": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "countryRegion": {
+            "type": "string"
+          },
+          "contacts": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "communicationType": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-customer",
+          "description": "Create a new customer record in the system.",
+          "operationId": "Customers_PostCustomer",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "customer_guid": "$response.body#/customer_guid",
+            "customer_name": "$response.body#/customer_name"
+          }
+        },
+        {
+          "stepId": "add-customer-address",
+          "description": "Add a primary address for the newly created customer.",
+          "operationId": "Addresses_PostCustomerAddress",
+          "parameters": [
+            {
+              "name": "customerGuid",
+              "in": "path",
+              "value": "$steps.create-customer.outputs.customer_guid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "customerGuid": "$steps.create-customer.outputs.customer_guid",
+              "addressline": "$inputs.addressline",
+              "postalCode": "$inputs.postalCode",
+              "city": "$inputs.city",
+              "isBillingAddress": "$inputs.isBillingAddress",
+              "isPostalAddress": "$inputs.isPostalAddress",
+              "isVisitAddress": "$inputs.isVisitAddress",
+              "phone": "$inputs.phone",
+              "fax": "$inputs.fax",
+              "country": "$inputs.country",
+              "countryRegion": "$inputs.countryRegion",
+              "contacts": "$inputs.contacts"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "address_guid": "$response.body#/address_guid"
+          }
+        },
+        {
+          "stepId": "create-customer-contact",
+          "description": "Create a new contact person associated with the customer.",
+          "operationId": "Contacts_PostContact",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "customer": "$steps.create-customer.outputs.customer_guid",
+              "addressGuid": "$steps.add-customer-address.outputs.address_guid",
+              "firstName": "$inputs.firstName",
+              "lastName": "$inputs.lastName"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "contact_guid": "$response.body#/contact_guid",
+            "contact_name": "$response.body#/contact_name"
+          }
+        },
+        {
+          "stepId": "add-contact-communication",
+          "description": "Add communication details (e.g., email, phone) for the new contact person.",
+          "operationId": "ContactCommunications_PostContactCommunication",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "contact": "$steps.create-customer-contact.outputs.contact_guid",
+              "value": "$inputs.value",
+              "communicationType": "$inputs.communicationType"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "contact_communication_guid": "$response.body#/contact_communication_guid"
+          }
+        }
+      ],
+      "outputs": {
+        "customer_guid": "$steps.create-customer.outputs.customer_guid",
+        "customer_name": "$steps.create-customer.outputs.customer_name",
+        "address_guid": "$steps.add-customer-address.outputs.address_guid",
+        "contact_guid": "$steps.create-customer-contact.outputs.contact_guid",
+        "contact_name": "$steps.create-customer-contact.outputs.contact_name",
+        "contact_communication_guid": "$steps.add-contact-communication.outputs.contact_communication_guid"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "project-creation-and-team-assignment",
+      "summary": "This workflow outlines the process of creating a new project for an existing customer, defining its initial phase, and assigning a team member to that phase.",
+      "description": "This workflow outlines the process of creating a new project for an existing customer, defining its initial phase, and assigning a team member to that phase.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "pageToken": {
+            "type": "string"
+          },
+          "rowCount": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "string"
+          },
+          "customerOwnerGuids": {
+            "type": "string"
+          },
+          "isInternal": {
+            "type": "string"
+          },
+          "numbers": {
+            "type": "string"
+          },
+          "changedSince": {
+            "type": "string"
+          },
+          "emailAddresses": {
+            "type": "string"
+          },
+          "customerNames": {
+            "type": "string"
+          },
+          "vatNumber": {
+            "type": "string"
+          },
+          "kvkNumber": {
+            "type": "string"
+          },
+          "changedSinceOptions": {
+            "type": "string"
+          },
+          "businessUnitGuids": {
+            "type": "string"
+          },
+          "keywordGuids": {
+            "type": "string"
+          },
+          "supervisorUserGuids": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "purpose": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "addToAllSubPhases": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-existing-customer",
+          "description": "Retrieve an existing customer by name to link to the new project.",
+          "operationId": "Customers_GetCustomers",
+          "parameters": [
+            {
+              "name": "pageToken",
+              "in": "query",
+              "value": "$inputs.pageToken"
+            },
+            {
+              "name": "rowCount",
+              "in": "query",
+              "value": "$inputs.rowCount"
+            },
+            {
+              "name": "isActive",
+              "in": "query",
+              "value": "$inputs.isActive"
+            },
+            {
+              "name": "customerOwnerGuids",
+              "in": "query",
+              "value": "$inputs.customerOwnerGuids"
+            },
+            {
+              "name": "isInternal",
+              "in": "query",
+              "value": "$inputs.isInternal"
+            },
+            {
+              "name": "numbers",
+              "in": "query",
+              "value": "$inputs.numbers"
+            },
+            {
+              "name": "changedSince",
+              "in": "query",
+              "value": "$inputs.changedSince"
+            },
+            {
+              "name": "emailAddresses",
+              "in": "query",
+              "value": "$inputs.emailAddresses"
+            },
+            {
+              "name": "customerNames",
+              "in": "query",
+              "value": "$inputs.customerNames"
+            },
+            {
+              "name": "vatNumber",
+              "in": "query",
+              "value": "$inputs.vatNumber"
+            },
+            {
+              "name": "kvkNumber",
+              "in": "query",
+              "value": "$inputs.kvkNumber"
+            },
+            {
+              "name": "changedSinceOptions",
+              "in": "query",
+              "value": "$inputs.changedSinceOptions"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "customer_guid": "$response.body#/0/customer_guid"
+          }
+        },
+        {
+          "stepId": "get-project-owner-user",
+          "description": "Retrieve a user to be assigned as the project owner.",
+          "operationId": "Users_GetUsers",
+          "parameters": [
+            {
+              "name": "pageToken",
+              "in": "query",
+              "value": "$inputs.pageToken"
+            },
+            {
+              "name": "rowCount",
+              "in": "query",
+              "value": "$inputs.rowCount"
+            },
+            {
+              "name": "isActive",
+              "in": "query",
+              "value": "$inputs.isActive"
+            },
+            {
+              "name": "businessUnitGuids",
+              "in": "query",
+              "value": "$inputs.businessUnitGuids"
+            },
+            {
+              "name": "keywordGuids",
+              "in": "query",
+              "value": "$inputs.keywordGuids"
+            },
+            {
+              "name": "changedSince",
+              "in": "query",
+              "value": "$inputs.changedSince"
+            },
+            {
+              "name": "supervisorUserGuids",
+              "in": "query",
+              "value": "$inputs.supervisorUserGuids"
+            },
+            {
+              "name": "code",
+              "in": "query",
+              "value": "$inputs.code"
+            },
+            {
+              "name": "email",
+              "in": "query",
+              "value": "$inputs.email"
+            },
+            {
+              "name": "purpose",
+              "in": "query",
+              "value": "$inputs.purpose"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "project_owner_guid": "$response.body#/0/project_owner_guid"
+          }
+        },
+        {
+          "stepId": "create-project",
+          "description": "Create the new project linked to the customer and project owner.",
+          "operationId": "Projects_PostProject",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "customer": "$steps.get-existing-customer.outputs.customer_guid",
+              "projectOwner": "$steps.get-project-owner-user.outputs.project_owner_guid",
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "project_guid": "$response.body#/project_guid",
+            "project_name": "$response.body#/project_name"
+          }
+        },
+        {
+          "stepId": "create-project-root-phase",
+          "description": "Create the initial (root) phase for the new project.",
+          "operationId": "Phases_PostPhase",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "project": "$steps.create-project.outputs.project_guid",
+              "parentPhase": "$steps.create-project.outputs.project_guid",
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "phase_guid": "$response.body#/phase_guid"
+          }
+        },
+        {
+          "stepId": "add-project-member",
+          "description": "Add a user as a member to the project's root phase.",
+          "operationId": "PhaseMembers_PostPhaseMember",
+          "parameters": [
+            {
+              "name": "addToAllSubPhases",
+              "in": "query",
+              "value": "$inputs.addToAllSubPhases"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "phaseGuid": "$steps.create-project-root-phase.outputs.phase_guid",
+              "user": "$steps.get-project-owner-user.outputs.project_owner_guid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "phase_member_guid": "$response.body#/phase_member_guid"
+          }
+        }
+      ],
+      "outputs": {
+        "customer_guid": "$steps.get-existing-customer.outputs.customer_guid",
+        "project_owner_guid": "$steps.get-project-owner-user.outputs.project_owner_guid",
+        "project_guid": "$steps.create-project.outputs.project_guid",
+        "project_name": "$steps.create-project.outputs.project_name",
+        "phase_guid": "$steps.create-project-root-phase.outputs.phase_guid",
+        "phase_member_guid": "$steps.add-project-member.outputs.phase_member_guid"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "project-invoicing-and-pdf-generation",
+      "summary": "This workflow automates the process of identifying billable items for a project, creating an invoice, and generating a PDF version of the invoice.",
+      "description": "This workflow automates the process of identifying billable items for a project, creating an invoice, and generating a PDF version of the invoice.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "projectGuid": {
+            "type": "string"
+          },
+          "isBillable": {
+            "type": "string"
+          },
+          "isBilled": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string"
+          },
+          "endDate": {
+            "type": "string"
+          },
+          "pageToken": {
+            "type": "string"
+          },
+          "rowCount": {
+            "type": "string"
+          },
+          "productType": {
+            "type": "string"
+          },
+          "invoiceableDate": {
+            "type": "string"
+          },
+          "includeRecurringRules": {
+            "type": "string"
+          },
+          "isBillablePeriodInFuture": {
+            "type": "string"
+          },
+          "expenseClass": {
+            "type": "string"
+          },
+          "projects": {
+            "type": "string"
+          },
+          "guid": {
+            "type": "string"
+          },
+          "invoiceType": {
+            "type": "string"
+          },
+          "pdfGetOptions": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-billable-project-hours",
+          "description": "Retrieve all billable work hours for a specific project.",
+          "operationId": "WorkHours_GetProjectWorkHours",
+          "parameters": [
+            {
+              "name": "projectGuid",
+              "in": "path",
+              "value": "$inputs.projectGuid"
+            },
+            {
+              "name": "isBillable",
+              "in": "query",
+              "value": "$inputs.isBillable"
+            },
+            {
+              "name": "isBilled",
+              "in": "query",
+              "value": "$inputs.isBilled"
+            },
+            {
+              "name": "startDate",
+              "in": "query",
+              "value": "$inputs.startDate"
+            },
+            {
+              "name": "endDate",
+              "in": "query",
+              "value": "$inputs.endDate"
+            },
+            {
+              "name": "pageToken",
+              "in": "query",
+              "value": "$inputs.pageToken"
+            },
+            {
+              "name": "rowCount",
+              "in": "query",
+              "value": "$inputs.rowCount"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "billable_work_hours": "$response.body#/0/billable_work_hours"
+          }
+        },
+        {
+          "stepId": "get-billable-project-fees",
+          "description": "Retrieve all billable project fees for a specific project.",
+          "operationId": "ProjectFees_GetProjectFeesForProject",
+          "parameters": [
+            {
+              "name": "projectGuid",
+              "in": "path",
+              "value": "$inputs.projectGuid"
+            },
+            {
+              "name": "pageToken",
+              "in": "query",
+              "value": "$inputs.pageToken"
+            },
+            {
+              "name": "rowCount",
+              "in": "query",
+              "value": "$inputs.rowCount"
+            },
+            {
+              "name": "productType",
+              "in": "query",
+              "value": "$inputs.productType"
+            },
+            {
+              "name": "isBillable",
+              "in": "query",
+              "value": "$inputs.isBillable"
+            },
+            {
+              "name": "isBilled",
+              "in": "query",
+              "value": "$inputs.isBilled"
+            },
+            {
+              "name": "invoiceableDate",
+              "in": "query",
+              "value": "$inputs.invoiceableDate"
+            },
+            {
+              "name": "includeRecurringRules",
+              "in": "query",
+              "value": "$inputs.includeRecurringRules"
+            },
+            {
+              "name": "isBillablePeriodInFuture",
+              "in": "query",
+              "value": "$inputs.isBillablePeriodInFuture"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "billable_project_fees": "$response.body#/0/billable_project_fees"
+          }
+        },
+        {
+          "stepId": "get-billable-travel-expenses",
+          "description": "Retrieve all billable travel expenses for a specific project.",
+          "operationId": "ProjectTravelExpenses_GetProjectTravelExpensesForProject",
+          "parameters": [
+            {
+              "name": "projectGuid",
+              "in": "path",
+              "value": "$inputs.projectGuid"
+            },
+            {
+              "name": "isBillable",
+              "in": "query",
+              "value": "$inputs.isBillable"
+            },
+            {
+              "name": "isBilled",
+              "in": "query",
+              "value": "$inputs.isBilled"
+            },
+            {
+              "name": "invoiceableDate",
+              "in": "query",
+              "value": "$inputs.invoiceableDate"
+            },
+            {
+              "name": "pageToken",
+              "in": "query",
+              "value": "$inputs.pageToken"
+            },
+            {
+              "name": "rowCount",
+              "in": "query",
+              "value": "$inputs.rowCount"
+            },
+            {
+              "name": "isBillablePeriodInFuture",
+              "in": "query",
+              "value": "$inputs.isBillablePeriodInFuture"
+            },
+            {
+              "name": "expenseClass",
+              "in": "query",
+              "value": "$inputs.expenseClass"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "billable_travel_expenses": "$response.body#/0/billable_travel_expenses"
+          }
+        },
+        {
+          "stepId": "create-invoice-from-project",
+          "description": "Create an invoice for the project, including all identified billable items.",
+          "operationId": "Invoices_PostInvoiceCreation",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "projects": "$inputs.projects"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "invoice_guid": "$response.body#/0/invoice_guid",
+            "invoice_number": "$response.body#/0/invoice_number"
+          }
+        },
+        {
+          "stepId": "get-invoice-pdf",
+          "description": "Generate and retrieve the PDF document for the newly created invoice.",
+          "operationId": "Pdf_GetInvoicePdf",
+          "parameters": [
+            {
+              "name": "guid",
+              "in": "path",
+              "value": "$steps.create-invoice-from-project.outputs.invoice_guid"
+            },
+            {
+              "name": "invoiceType",
+              "in": "query",
+              "value": "$inputs.invoiceType"
+            },
+            {
+              "name": "pdfGetOptions",
+              "in": "query",
+              "value": "$inputs.pdfGetOptions"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "invoice_pdf_data": "$response.body#/invoice_pdf_data"
+          }
+        }
+      ],
+      "outputs": {
+        "billable_work_hours": "$steps.get-billable-project-hours.outputs.billable_work_hours",
+        "billable_project_fees": "$steps.get-billable-project-fees.outputs.billable_project_fees",
+        "billable_travel_expenses": "$steps.get-billable-travel-expenses.outputs.billable_travel_expenses",
+        "invoice_guid": "$steps.create-invoice-from-project.outputs.invoice_guid",
+        "invoice_number": "$steps.create-invoice-from-project.outputs.invoice_number",
+        "invoice_pdf_data": "$steps.get-invoice-pdf.outputs.invoice_pdf_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "daily-time-and-expense-entry",
+      "summary": "This workflow enables a user to log their daily work hours and travel expenses against a specific project and phase.",
+      "description": "This workflow enables a user to log their daily work hours and travel expenses against a specific project and phase.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "guid": {
+            "type": "string"
+          },
+          "phaseGuid": {
+            "type": "string"
+          },
+          "pageToken": {
+            "type": "string"
+          },
+          "rowCount": {
+            "type": "string"
+          },
+          "userGuid": {
+            "type": "string"
+          },
+          "eventDate": {
+            "type": "string"
+          },
+          "projectGuid": {
+            "type": "string"
+          },
+          "textToSearch": {
+            "type": "string"
+          },
+          "firstRow": {
+            "type": "string"
+          },
+          "expenseClass": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-user-details",
+          "description": "Retrieve the current user's details to confirm their GUID.",
+          "operationId": "Users_GetUser",
+          "parameters": [
+            {
+              "name": "guid",
+              "in": "path",
+              "value": "$inputs.guid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_guid": "$response.body#/user_guid"
+          }
+        },
+        {
+          "stepId": "get-project-phase",
+          "description": "Retrieve a specific project phase where time and expenses will be logged.",
+          "operationId": "Phases_GetPhase",
+          "parameters": [
+            {
+              "name": "guid",
+              "in": "path",
+              "value": "$inputs.guid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "phase_guid": "$response.body#/phase_guid",
+            "project_guid": "$response.body#/project_guid"
+          }
+        },
+        {
+          "stepId": "get-available-work-types",
+          "description": "Fetch work types available for the selected phase and user.",
+          "operationId": "WorkTypes_GetPhaseWorkTypes",
+          "parameters": [
+            {
+              "name": "phaseGuid",
+              "in": "path",
+              "value": "$steps.get-project-phase.outputs.phase_guid"
+            },
+            {
+              "name": "pageToken",
+              "in": "query",
+              "value": "$inputs.pageToken"
+            },
+            {
+              "name": "rowCount",
+              "in": "query",
+              "value": "$inputs.rowCount"
+            },
+            {
+              "name": "userGuid",
+              "in": "query",
+              "value": "$steps.get-user-details.outputs.user_guid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "work_type_guid": "$response.body#/0/work_type_guid"
+          }
+        },
+        {
+          "stepId": "log-work-hour",
+          "description": "Log work hours for the user against the project phase.",
+          "operationId": "WorkHours_PostWorkHour",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "phase": "$steps.get-project-phase.outputs.phase_guid",
+              "user": "$steps.get-user-details.outputs.user_guid",
+              "workType": "$steps.get-available-work-types.outputs.work_type_guid",
+              "eventDate": "$inputs.eventDate"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "work_hour_guid": "$response.body#/work_hour_guid"
+          }
+        },
+        {
+          "stepId": "get-available-travel-expense-types",
+          "description": "Fetch travel expense types available for the selected project and user.",
+          "operationId": "TravelExpenseTypes_GetSearchedTravelExpenseTypes",
+          "parameters": [
+            {
+              "name": "projectGuid",
+              "in": "path",
+              "value": "$steps.get-project-phase.outputs.project_guid"
+            },
+            {
+              "name": "textToSearch",
+              "in": "query",
+              "value": "$inputs.textToSearch"
+            },
+            {
+              "name": "firstRow",
+              "in": "query",
+              "value": "$inputs.firstRow"
+            },
+            {
+              "name": "rowCount",
+              "in": "query",
+              "value": "$inputs.rowCount"
+            },
+            {
+              "name": "userGuid",
+              "in": "query",
+              "value": "$steps.get-user-details.outputs.user_guid"
+            },
+            {
+              "name": "expenseClass",
+              "in": "query",
+              "value": "$inputs.expenseClass"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "travel_expense_type_guid": "$response.body#/0/travel_expense_type_guid"
+          }
+        },
+        {
+          "stepId": "log-travel-expense",
+          "description": "Log a travel expense for the user against the project phase.",
+          "operationId": "ProjectTravelExpenses_PostProjectTravelExpense",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "phase": "$steps.get-project-phase.outputs.phase_guid",
+              "project": "$steps.get-project-phase.outputs.project_guid",
+              "user": "$steps.get-user-details.outputs.user_guid",
+              "travelExpense": "$steps.get-available-travel-expense-types.outputs.travel_expense_type_guid",
+              "quantity": "$inputs.quantity"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "travel_expense_guid": "$response.body#/travel_expense_guid"
+          }
+        }
+      ],
+      "outputs": {
+        "user_guid": "$steps.get-user-details.outputs.user_guid",
+        "phase_guid": "$steps.get-project-phase.outputs.phase_guid",
+        "project_guid": "$steps.get-project-phase.outputs.project_guid",
+        "work_type_guid": "$steps.get-available-work-types.outputs.work_type_guid",
+        "work_hour_guid": "$steps.log-work-hour.outputs.work_hour_guid",
+        "travel_expense_type_guid": "$steps.get-available-travel-expense-types.outputs.travel_expense_type_guid",
+        "travel_expense_guid": "$steps.log-travel-expense.outputs.travel_expense_guid"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-project-forecasts",
+      "summary": "This workflow allows for the retrieval, creation, and deletion of financial forecasts (billing, expense, revenue, labor expense) for a specific project over a given period.",
+      "description": "This workflow allows for the retrieval, creation, and deletion of financial forecasts (billing, expense, revenue, labor expense) for a specific project over a given period.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "projectGuid": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string"
+          },
+          "endDate": {
+            "type": "string"
+          },
+          "project": {
+            "type": "string"
+          },
+          "month": {
+            "type": "string"
+          },
+          "year": {
+            "type": "string"
+          },
+          "guid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-project-forecasts",
+          "description": "Retrieve existing forecasts for a project within a specified date range.",
+          "operationId": "ProjectForecasts_GetForecasts",
+          "parameters": [
+            {
+              "name": "projectGuid",
+              "in": "path",
+              "value": "$inputs.projectGuid"
+            },
+            {
+              "name": "startDate",
+              "in": "query",
+              "value": "$inputs.startDate"
+            },
+            {
+              "name": "endDate",
+              "in": "query",
+              "value": "$inputs.endDate"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "project_forecasts": "$response.body#/0/project_forecasts"
+          }
+        },
+        {
+          "stepId": "create-project-forecast",
+          "description": "Create a new financial forecast entry for a project for a specific month and year.",
+          "operationId": "ProjectForecasts_PostForecast",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "project": "$inputs.project",
+              "month": "$inputs.month",
+              "year": "$inputs.year"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "new_forecast_guid": "$response.body#/new_forecast_guid"
+          }
+        },
+        {
+          "stepId": "update-project-forecast",
+          "description": "Update an existing project forecast.",
+          "operationId": "ProjectForecasts_PatchForecast",
+          "parameters": [
+            {
+              "name": "guid",
+              "in": "path",
+              "value": "$steps.create-project-forecast.outputs.new_forecast_guid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "guid": "$steps.create-project-forecast.outputs.new_forecast_guid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_forecast": "$response.body#/0/updated_forecast"
+          }
+        },
+        {
+          "stepId": "delete-project-forecasts-from-month",
+          "description": "Delete all project forecasts from a specified month onwards.",
+          "operationId": "ProjectForecasts_DeleteForecasts",
+          "parameters": [
+            {
+              "name": "projectGuid",
+              "in": "path",
+              "value": "$inputs.projectGuid"
+            },
+            {
+              "name": "year",
+              "in": "query",
+              "value": "$inputs.year"
+            },
+            {
+              "name": "month",
+              "in": "query",
+              "value": "$inputs.month"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "month_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "project_forecasts": "$steps.get-project-forecasts.outputs.project_forecasts",
+        "new_forecast_guid": "$steps.create-project-forecast.outputs.new_forecast_guid",
+        "updated_forecast": "$steps.update-project-forecast.outputs.updated_forecast",
+        "month_data": "$steps.delete-project-forecasts-from-month.outputs.month_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-organizational-settings-business-units",
+      "summary": "This workflow demonstrates how to manage business units within the organization, including retrieving, creating, updating, and deleting them. Business units are fundamental organizational structures.",
+      "description": "This workflow demonstrates how to manage business units within the organization, including retrieving, creating, updating, and deleting them. Business units are fundamental organizational structures.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "active": {
+            "type": "string"
+          },
+          "companyGuid": {
+            "type": "string"
+          },
+          "companyCountryGuid": {
+            "type": "string"
+          },
+          "firstRow": {
+            "type": "string"
+          },
+          "rowCount": {
+            "type": "string"
+          },
+          "textToSearch": {
+            "type": "string"
+          },
+          "changedSince": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "guid": {
+            "type": "string"
+          },
+          "moveUsagesToGuid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-all-business-units",
+          "description": "Retrieve a list of all business units in the organization, with optional filtering.",
+          "operationId": "BusinessUnits_GetBusinessUnits",
+          "parameters": [
+            {
+              "name": "active",
+              "in": "query",
+              "value": "$inputs.active"
+            },
+            {
+              "name": "companyGuid",
+              "in": "query",
+              "value": "$inputs.companyGuid"
+            },
+            {
+              "name": "companyCountryGuid",
+              "in": "query",
+              "value": "$inputs.companyCountryGuid"
+            },
+            {
+              "name": "firstRow",
+              "in": "query",
+              "value": "$inputs.firstRow"
+            },
+            {
+              "name": "rowCount",
+              "in": "query",
+              "value": "$inputs.rowCount"
+            },
+            {
+              "name": "textToSearch",
+              "in": "query",
+              "value": "$inputs.textToSearch"
+            },
+            {
+              "name": "changedSince",
+              "in": "query",
+              "value": "$inputs.changedSince"
+            },
+            {
+              "name": "code",
+              "in": "query",
+              "value": "$inputs.code"
+            },
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "business_units": "$response.body#/0/business_units",
+            "first_business_unit_guid": "$response.body#/0/first_business_unit_guid"
+          }
+        },
+        {
+          "stepId": "create-business-unit",
+          "description": "Create a new business unit.",
+          "operationId": "BusinessUnits_PostBusinessUnit",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "new_business_unit_guid": "$response.body#/new_business_unit_guid"
+          }
+        },
+        {
+          "stepId": "update-business-unit",
+          "description": "Update an existing business unit's details.",
+          "operationId": "BusinessUnits_PatchBusinessUnit",
+          "parameters": [
+            {
+              "name": "guid",
+              "in": "path",
+              "value": "$steps.create-business-unit.outputs.new_business_unit_guid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "guid": "$steps.create-business-unit.outputs.new_business_unit_guid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_business_unit": "$response.body#/0/updated_business_unit"
+          }
+        },
+        {
+          "stepId": "delete-business-unit",
+          "description": "Delete a business unit, optionally moving its usages to another unit.",
+          "operationId": "BusinessUnits_DeleteBusinessUnit",
+          "parameters": [
+            {
+              "name": "guid",
+              "in": "path",
+              "value": "$steps.create-business-unit.outputs.new_business_unit_guid"
+            },
+            {
+              "name": "moveUsagesToGuid",
+              "in": "query",
+              "value": "$inputs.moveUsagesToGuid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "unit_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "business_units": "$steps.get-all-business-units.outputs.business_units",
+        "first_business_unit_guid": "$steps.get-all-business-units.outputs.first_business_unit_guid",
+        "new_business_unit_guid": "$steps.create-business-unit.outputs.new_business_unit_guid",
+        "updated_business_unit": "$steps.update-business-unit.outputs.updated_business_unit",
+        "unit_data": "$steps.delete-business-unit.outputs.unit_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-project-files",
+      "summary": "This workflow allows users to upload, retrieve, and delete files associated with a specific project, supporting document management for projects.",
+      "description": "This workflow allows users to upload, retrieve, and delete files associated with a specific project, supporting document management for projects.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "projectGuid": {
+            "type": "string"
+          },
+          "firstRow": {
+            "type": "string"
+          },
+          "rowCount": {
+            "type": "string"
+          },
+          "sortings": {
+            "type": "string"
+          },
+          "includeDataInResponse": {
+            "type": "string"
+          },
+          "guid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-project-files",
+          "description": "Retrieve all files associated with a given project.",
+          "operationId": "Files_GetProjectFiles",
+          "parameters": [
+            {
+              "name": "projectGuid",
+              "in": "path",
+              "value": "$inputs.projectGuid"
+            },
+            {
+              "name": "firstRow",
+              "in": "query",
+              "value": "$inputs.firstRow"
+            },
+            {
+              "name": "rowCount",
+              "in": "query",
+              "value": "$inputs.rowCount"
+            },
+            {
+              "name": "sortings",
+              "in": "query",
+              "value": "$inputs.sortings"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "project_files": "$response.body#/0/project_files",
+            "first_file_guid": "$response.body#/0/first_file_guid"
+          }
+        },
+        {
+          "stepId": "upload-project-file",
+          "description": "Upload a new file to a project, including its metadata.",
+          "operationId": "Files_PostProjectFile",
+          "parameters": [
+            {
+              "name": "projectGuid",
+              "in": "path",
+              "value": "$inputs.projectGuid"
+            },
+            {
+              "name": "includeDataInResponse",
+              "in": "query",
+              "value": "$inputs.includeDataInResponse"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "uploaded_file_guid": "$response.body#/0/uploaded_file_guid"
+          }
+        },
+        {
+          "stepId": "get-file-data",
+          "description": "Retrieve the binary data of a specific file by its ID.",
+          "operationId": "FileData_GetDataForFile",
+          "parameters": [
+            {
+              "name": "guid",
+              "in": "path",
+              "value": "$steps.upload-project-file.outputs.uploaded_file_guid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "file_binary_data": "$response.body#/file_binary_data"
+          }
+        },
+        {
+          "stepId": "delete-project-file",
+          "description": "Delete a specific project file and its associated data.",
+          "operationId": "Files_DeleteProjectFile",
+          "parameters": [
+            {
+              "name": "guid",
+              "in": "path",
+              "value": "$steps.upload-project-file.outputs.uploaded_file_guid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "file_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "project_files": "$steps.get-project-files.outputs.project_files",
+        "first_file_guid": "$steps.get-project-files.outputs.first_file_guid",
+        "uploaded_file_guid": "$steps.upload-project-file.outputs.uploaded_file_guid",
+        "file_binary_data": "$steps.get-file-data.outputs.file_binary_data",
+        "file_data": "$steps.delete-project-file.outputs.file_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
