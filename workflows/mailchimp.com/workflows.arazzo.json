@@ -1,0 +1,1520 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/mailchimp.com/main/3.0.55/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "create-and-send-a-regular-campaign",
+      "summary": "This workflow allows a user to create a new regular email campaign, define its content, check if it's ready to send, and then send it to the target audience. Finally, it retrieves the campaign's performance report.",
+      "description": "This workflow allows a user to create a new regular email campaign, define its content, check if it's ready to send, and then send it to the target audience. Finally, it retrieves the campaign's performance report.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "campaign_id": {
+            "type": "string"
+          },
+          "html": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "string"
+          },
+          "exclude_fields": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-campaign",
+          "description": "Create a new regular campaign.",
+          "operationId": "postCampaigns",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "type": "$inputs.type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/variate_settings/combinations/0/id"
+          }
+        },
+        {
+          "stepId": "set-campaign-content",
+          "description": "Set the HTML content for the newly created campaign.",
+          "operationId": "putCampaignsIdContent",
+          "parameters": [
+            {
+              "name": "campaign_id",
+              "in": "path",
+              "value": "$steps.create-campaign.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "campaign_id": "$steps.create-campaign.outputs.id",
+              "html": "$inputs.html"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "html": "$response.body#/variate_contents/0/html"
+          }
+        },
+        {
+          "stepId": "check-campaign-readiness",
+          "description": "Review the send checklist to ensure the campaign is ready.",
+          "operationId": "getCampaignsIdSendChecklist",
+          "parameters": [
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            },
+            {
+              "name": "exclude_fields",
+              "in": "query",
+              "value": "$inputs.exclude_fields"
+            },
+            {
+              "name": "campaign_id",
+              "in": "path",
+              "value": "$steps.create-campaign.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "is_ready": "$response.body#/is_ready"
+          }
+        },
+        {
+          "stepId": "send-campaign",
+          "description": "Send the campaign immediately.",
+          "operationId": "postCampaignsIdActionsSend",
+          "parameters": [
+            {
+              "name": "campaign_id",
+              "in": "path",
+              "value": "$steps.create-campaign.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "campaign_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-campaign-report",
+          "description": "Retrieve the performance report for the sent campaign.",
+          "operationId": "getReportsId",
+          "parameters": [
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            },
+            {
+              "name": "exclude_fields",
+              "in": "query",
+              "value": "$inputs.exclude_fields"
+            },
+            {
+              "name": "campaign_id",
+              "in": "path",
+              "value": "$steps.create-campaign.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "clicks": "$response.body#/timewarp/0/clicks",
+            "opens": "$response.body#/timewarp/0/opens",
+            "ecommerce": "$response.body#/ecommerce"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-campaign.outputs.id",
+        "html": "$steps.set-campaign-content.outputs.html",
+        "is_ready": "$steps.check-campaign-readiness.outputs.is_ready",
+        "campaign_data": "$steps.send-campaign.outputs.campaign_data",
+        "clicks": "$steps.get-campaign-report.outputs.clicks",
+        "opens": "$steps.get-campaign-report.outputs.opens",
+        "ecommerce": "$steps.get-campaign-report.outputs.ecommerce"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-audience-list-and-members",
+      "summary": "This workflow demonstrates the lifecycle management of an audience list and its members, including creating a list, adding/updating members, managing member tags, and archiving/deleting members.",
+      "description": "This workflow demonstrates the lifecycle management of an audience list and its members, including creating a list, adding/updating members, managing member tags, and archiving/deleting members.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "permission_reminder": {
+            "type": "string"
+          },
+          "email_type_option": {
+            "type": "string"
+          },
+          "list_id": {
+            "type": "string"
+          },
+          "skip_merge_validation": {
+            "type": "string"
+          },
+          "skip_duplicate_check": {
+            "type": "string"
+          },
+          "members": {
+            "type": "string"
+          },
+          "subscriber_hash": {
+            "type": "string"
+          },
+          "email_type": {
+            "type": "string"
+          },
+          "interests": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "marketing_permissions": {
+            "type": "string"
+          },
+          "merge_fields": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "vip": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-list",
+          "description": "Create a new audience list.",
+          "operationId": "postLists",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name",
+              "permission_reminder": "$inputs.permission_reminder",
+              "email_type_option": "$inputs.email_type_option"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "add-or-update-list-members-batch",
+          "description": "Add or update multiple members to the list in a batch operation.",
+          "operationId": "postListsId",
+          "parameters": [
+            {
+              "name": "list_id",
+              "in": "path",
+              "value": "$steps.create-list.outputs.id"
+            },
+            {
+              "name": "skip_merge_validation",
+              "in": "query",
+              "value": "$inputs.skip_merge_validation"
+            },
+            {
+              "name": "skip_duplicate_check",
+              "in": "query",
+              "value": "$inputs.skip_duplicate_check"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "list_id": "$steps.create-list.outputs.id",
+              "members": "$inputs.members"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "new_members": "$response.body#/new_members",
+            "updated_members": "$response.body#/updated_members",
+            "error_count": "$response.body#/error_count"
+          }
+        },
+        {
+          "stepId": "update-list-member",
+          "description": "Update information for a specific list member.",
+          "operationId": "patchListsIdMembersId",
+          "parameters": [
+            {
+              "name": "list_id",
+              "in": "path",
+              "value": "$steps.create-list.outputs.id"
+            },
+            {
+              "name": "subscriber_hash",
+              "in": "path",
+              "value": "$inputs.subscriber_hash"
+            },
+            {
+              "name": "skip_merge_validation",
+              "in": "query",
+              "value": "$inputs.skip_merge_validation"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "list_id": "$steps.create-list.outputs.id",
+              "email_type": "$inputs.email_type",
+              "interests": "$inputs.interests",
+              "language": "$inputs.language",
+              "location": "$inputs.location",
+              "marketing_permissions": "$inputs.marketing_permissions",
+              "merge_fields": "$inputs.merge_fields",
+              "status": "$inputs.status",
+              "vip": "$inputs.vip"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "email_address": "$response.body#/email_address"
+          }
+        },
+        {
+          "stepId": "add-or-remove-member-tags",
+          "description": "Add or remove tags from a specific list member.",
+          "operationId": "postListMemberTags",
+          "parameters": [
+            {
+              "name": "list_id",
+              "in": "path",
+              "value": "$steps.create-list.outputs.id"
+            },
+            {
+              "name": "subscriber_hash",
+              "in": "path",
+              "value": "$steps.update-list-member.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "list_id": "$steps.create-list.outputs.id",
+              "subscriber_hash": "$steps.update-list-member.outputs.id",
+              "tags": "$inputs.tags"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tags_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "archive-list-member",
+          "description": "Archive a specific list member.",
+          "operationId": "deleteListsIdMembersId",
+          "parameters": [
+            {
+              "name": "list_id",
+              "in": "path",
+              "value": "$steps.create-list.outputs.id"
+            },
+            {
+              "name": "subscriber_hash",
+              "in": "path",
+              "value": "$steps.update-list-member.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "member_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.update-list-member.outputs.id",
+        "new_members": "$steps.add-or-update-list-members-batch.outputs.new_members",
+        "updated_members": "$steps.add-or-update-list-members-batch.outputs.updated_members",
+        "error_count": "$steps.add-or-update-list-members-batch.outputs.error_count",
+        "email_address": "$steps.update-list-member.outputs.email_address",
+        "tags_data": "$steps.add-or-remove-member-tags.outputs.tags_data",
+        "member_data": "$steps.archive-list-member.outputs.member_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "e-commerce-store-and-order-processing",
+      "summary": "This workflow simulates the process of setting up an e-commerce store in Mailchimp, adding products and customers, and then creating an order with line items.",
+      "description": "This workflow simulates the process of setting up an e-commerce store in Mailchimp, adding products and customers, and then creating an order with line items.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "list_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "currency_code": {
+            "type": "string"
+          },
+          "store_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "variants": {
+            "type": "string"
+          },
+          "opt_in_status": {
+            "type": "string"
+          },
+          "order_total": {
+            "type": "string"
+          },
+          "lines": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-store",
+          "description": "Create a new e-commerce store.",
+          "operationId": "postEcommerceStores",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$inputs.id",
+              "list_id": "$inputs.list_id",
+              "name": "$inputs.name",
+              "currency_code": "$inputs.currency_code"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "add-product",
+          "description": "Add a new product to the store.",
+          "operationId": "postEcommerceStoresIdProducts",
+          "parameters": [
+            {
+              "name": "store_id",
+              "in": "path",
+              "value": "$steps.create-store.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "store_id": "$steps.create-store.outputs.id",
+              "id": "$inputs.id",
+              "title": "$inputs.title",
+              "variants": "$inputs.variants"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/variants/0/id"
+          }
+        },
+        {
+          "stepId": "add-customer",
+          "description": "Add a new customer to the store.",
+          "operationId": "postEcommerceStoresIdCustomers",
+          "parameters": [
+            {
+              "name": "store_id",
+              "in": "path",
+              "value": "$steps.create-store.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "store_id": "$steps.create-store.outputs.id",
+              "id": "$inputs.id",
+              "opt_in_status": "$inputs.opt_in_status"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "add-cart",
+          "description": "Add a new shopping cart for the customer.",
+          "operationId": "postEcommerceStoresIdCarts",
+          "parameters": [
+            {
+              "name": "store_id",
+              "in": "path",
+              "value": "$steps.create-store.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "store_id": "$steps.create-store.outputs.id",
+              "customer.id": "$steps.add-customer.outputs.id",
+              "id": "$inputs.id",
+              "currency_code": "$inputs.currency_code",
+              "order_total": "$inputs.order_total",
+              "lines": "$inputs.lines"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/lines/0/id"
+          }
+        },
+        {
+          "stepId": "add-order",
+          "description": "Create a new order from the cart.",
+          "operationId": "postEcommerceStoresIdOrders",
+          "parameters": [
+            {
+              "name": "store_id",
+              "in": "path",
+              "value": "$steps.create-store.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "store_id": "$steps.create-store.outputs.id",
+              "customer.id": "$steps.add-customer.outputs.id",
+              "id": "$inputs.id",
+              "currency_code": "$inputs.currency_code",
+              "order_total": "$inputs.order_total",
+              "lines": "$inputs.lines"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/outreach/id"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.add-order.outputs.id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-automation-workflow-lifecycle",
+      "summary": "This workflow demonstrates the creation, activation, pausing, and archiving of a classic automation workflow.",
+      "description": "This workflow demonstrates the creation, activation, pausing, and archiving of a classic automation workflow.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create-automation_body": {
+            "type": "object"
+          },
+          "workflow_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-automation",
+          "description": "Create a new classic automation workflow.",
+          "operationId": "postAutomations",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-automation_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "start-automation",
+          "description": "Start all emails in the automation workflow.",
+          "operationId": "postAutomationsIdActionsStartAllEmails",
+          "parameters": [
+            {
+              "name": "workflow_id",
+              "in": "path",
+              "value": "$steps.create-automation.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "automation_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "pause-automation",
+          "description": "Pause all emails in the automation workflow.",
+          "operationId": "postAutomationsIdActionsPauseAllEmails",
+          "parameters": [
+            {
+              "name": "workflow_id",
+              "in": "path",
+              "value": "$steps.create-automation.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "automation_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "archive-automation",
+          "description": "Archive the automation workflow, permanently ending it while keeping report data.",
+          "operationId": "archiveAutomations",
+          "parameters": [
+            {
+              "name": "workflow_id",
+              "in": "path",
+              "value": "$steps.create-automation.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "automation_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-automation.outputs.id",
+        "automation_data": "$steps.archive-automation.outputs.automation_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-list-segments",
+      "summary": "This workflow demonstrates how to create and manage segments within an audience list, including adding and removing members from static segments.",
+      "description": "This workflow demonstrates how to create and manage segments within an audience list, including adding and removing members from static segments.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "string"
+          },
+          "exclude_fields": {
+            "type": "string"
+          },
+          "count": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "before_date_created": {
+            "type": "string"
+          },
+          "since_date_created": {
+            "type": "string"
+          },
+          "before_campaign_last_sent": {
+            "type": "string"
+          },
+          "since_campaign_last_sent": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "sort_field": {
+            "type": "string"
+          },
+          "sort_dir": {
+            "type": "string"
+          },
+          "has_ecommerce_store": {
+            "type": "string"
+          },
+          "include_total_contacts": {
+            "type": "string"
+          },
+          "list_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "segment_id": {
+            "type": "string"
+          },
+          "members_to_add": {
+            "type": "string"
+          },
+          "members_to_remove": {
+            "type": "string"
+          },
+          "include_cleaned": {
+            "type": "string"
+          },
+          "include_transactional": {
+            "type": "string"
+          },
+          "include_unsubscribed": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-lists",
+          "description": "Retrieve existing lists to select one for segment creation.",
+          "operationId": "getLists",
+          "parameters": [
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            },
+            {
+              "name": "exclude_fields",
+              "in": "query",
+              "value": "$inputs.exclude_fields"
+            },
+            {
+              "name": "count",
+              "in": "query",
+              "value": "$inputs.count"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "before_date_created",
+              "in": "query",
+              "value": "$inputs.before_date_created"
+            },
+            {
+              "name": "since_date_created",
+              "in": "query",
+              "value": "$inputs.since_date_created"
+            },
+            {
+              "name": "before_campaign_last_sent",
+              "in": "query",
+              "value": "$inputs.before_campaign_last_sent"
+            },
+            {
+              "name": "since_campaign_last_sent",
+              "in": "query",
+              "value": "$inputs.since_campaign_last_sent"
+            },
+            {
+              "name": "email",
+              "in": "query",
+              "value": "$inputs.email"
+            },
+            {
+              "name": "sort_field",
+              "in": "query",
+              "value": "$inputs.sort_field"
+            },
+            {
+              "name": "sort_dir",
+              "in": "query",
+              "value": "$inputs.sort_dir"
+            },
+            {
+              "name": "has_ecommerce_store",
+              "in": "query",
+              "value": "$inputs.has_ecommerce_store"
+            },
+            {
+              "name": "include_total_contacts",
+              "in": "query",
+              "value": "$inputs.include_total_contacts"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "lists[0].id": "$response.body#/lists[0].id"
+          }
+        },
+        {
+          "stepId": "create-segment",
+          "description": "Create a new segment in a specific list.",
+          "operationId": "postListsIdSegments",
+          "parameters": [
+            {
+              "name": "list_id",
+              "in": "path",
+              "value": "$inputs.list_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "batch-add-remove-segment-members",
+          "description": "Batch add or remove members to/from a static segment.",
+          "operationId": "postListsIdSegmentsId",
+          "parameters": [
+            {
+              "name": "list_id",
+              "in": "path",
+              "value": "$inputs.list_id"
+            },
+            {
+              "name": "segment_id",
+              "in": "path",
+              "value": "$steps.create-segment.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "segment_id": "$steps.create-segment.outputs.id",
+              "members_to_add": "$inputs.members_to_add",
+              "members_to_remove": "$inputs.members_to_remove"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "members_added": "$response.body#/members_added",
+            "members_removed": "$response.body#/members_removed"
+          }
+        },
+        {
+          "stepId": "list-members-in-segment",
+          "description": "Get information about members currently in a saved segment.",
+          "operationId": "getListsIdSegmentsIdMembers",
+          "parameters": [
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            },
+            {
+              "name": "exclude_fields",
+              "in": "query",
+              "value": "$inputs.exclude_fields"
+            },
+            {
+              "name": "count",
+              "in": "query",
+              "value": "$inputs.count"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "list_id",
+              "in": "path",
+              "value": "$inputs.list_id"
+            },
+            {
+              "name": "segment_id",
+              "in": "path",
+              "value": "$steps.create-segment.outputs.id"
+            },
+            {
+              "name": "include_cleaned",
+              "in": "query",
+              "value": "$inputs.include_cleaned"
+            },
+            {
+              "name": "include_transactional",
+              "in": "query",
+              "value": "$inputs.include_transactional"
+            },
+            {
+              "name": "include_unsubscribed",
+              "in": "query",
+              "value": "$inputs.include_unsubscribed"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "members": "$response.body#/members"
+          }
+        },
+        {
+          "stepId": "delete-segment",
+          "description": "Delete a specific segment from a list.",
+          "operationId": "deleteListsIdSegmentsId",
+          "parameters": [
+            {
+              "name": "list_id",
+              "in": "path",
+              "value": "$inputs.list_id"
+            },
+            {
+              "name": "segment_id",
+              "in": "path",
+              "value": "$steps.create-segment.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "segment_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "lists[0].id": "$steps.get-lists.outputs.lists[0].id",
+        "id": "$steps.create-segment.outputs.id",
+        "members_added": "$steps.batch-add-remove-segment-members.outputs.members_added",
+        "members_removed": "$steps.batch-add-remove-segment-members.outputs.members_removed",
+        "members": "$steps.list-members-in-segment.outputs.members",
+        "segment_data": "$steps.delete-segment.outputs.segment_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-and-publish-a-landing-page",
+      "summary": "This workflow enables a user to create a new landing page, update its details, publish it, and then unpublish it if necessary.",
+      "description": "This workflow enables a user to create a new landing page, update its details, publish it, and then unpublish it if necessary.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "use_default_list": {
+            "type": "string"
+          },
+          "list_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "page_id": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-landing-page",
+          "description": "Create a new Mailchimp landing page.",
+          "operationId": "postAllLandingPages",
+          "parameters": [
+            {
+              "name": "use_default_list",
+              "in": "query",
+              "value": "$inputs.use_default_list"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "list_id": "$inputs.list_id",
+              "name": "$inputs.name",
+              "type": "$inputs.type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "update-landing-page-details",
+          "description": "Update the title and description of the landing page.",
+          "operationId": "patchLandingPageId",
+          "parameters": [
+            {
+              "name": "page_id",
+              "in": "path",
+              "value": "$steps.create-landing-page.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "page_id": "$steps.create-landing-page.outputs.id",
+              "description": "$inputs.description",
+              "title": "$inputs.title"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "title": "$response.body#/title",
+            "description": "$response.body#/description"
+          }
+        },
+        {
+          "stepId": "publish-landing-page",
+          "description": "Publish the landing page to make it live.",
+          "operationId": "postLandingPageIdActionsPublish",
+          "parameters": [
+            {
+              "name": "page_id",
+              "in": "path",
+              "value": "$steps.create-landing-page.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "page_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "unpublish-landing-page",
+          "description": "Unpublish the landing page.",
+          "operationId": "postLandingPageIdActionsUnpublish",
+          "parameters": [
+            {
+              "name": "page_id",
+              "in": "path",
+              "value": "$steps.create-landing-page.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "page_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-landing-page.outputs.id",
+        "title": "$steps.update-landing-page-details.outputs.title",
+        "description": "$steps.update-landing-page-details.outputs.description",
+        "page_data": "$steps.unpublish-landing-page.outputs.page_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-file-manager-assets",
+      "summary": "This workflow covers the process of creating a folder, uploading a file to it, and then managing that file (renaming/moving, deleting).",
+      "description": "This workflow covers the process of creating a folder, uploading a file to it, and then managing that file (renaming/moving, deleting).",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "file_data": {
+            "type": "string"
+          },
+          "file_id": {
+            "type": "string"
+          },
+          "folder_id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-file-folder",
+          "description": "Create a new folder in the File Manager.",
+          "operationId": "postFileManagerFolders",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "upload-file-to-folder",
+          "description": "Upload a new file to the specified folder in the File Manager.",
+          "operationId": "postFileManagerFiles",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "folder_id": "$steps.create-file-folder.outputs.id",
+              "name": "$inputs.name",
+              "file_data": "$inputs.file_data"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "update-file-details",
+          "description": "Update the name or move a file to a different folder.",
+          "operationId": "patchFileManagerFilesId",
+          "parameters": [
+            {
+              "name": "file_id",
+              "in": "path",
+              "value": "$steps.upload-file-to-folder.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "file_id": "$steps.upload-file-to-folder.outputs.id",
+              "folder_id": "$inputs.folder_id",
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "name": "$response.body#/name",
+            "folder_id": "$response.body#/folder_id"
+          }
+        },
+        {
+          "stepId": "delete-file",
+          "description": "Remove a specific file from the File Manager.",
+          "operationId": "deleteFileManagerFilesId",
+          "parameters": [
+            {
+              "name": "file_id",
+              "in": "path",
+              "value": "$steps.upload-file-to-folder.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "file_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.upload-file-to-folder.outputs.id",
+        "name": "$steps.update-file-details.outputs.name",
+        "folder_id": "$steps.update-file-details.outputs.folder_id",
+        "file_data": "$steps.delete-file.outputs.file_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-sending-domains",
+      "summary": "This workflow allows a user to add a new domain for sending emails, verify it using a provided code, and then delete it if no longer needed.",
+      "description": "This workflow allows a user to add a new domain for sending emails, verify it using a provided code, and then delete it if no longer needed.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "verification_email": {
+            "type": "string"
+          },
+          "domain_name": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-domain-to-account",
+          "description": "Add a new domain to the Mailchimp account for sending emails.",
+          "operationId": "createVerifiedDomain",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "verification_email": "$inputs.verification_email"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "domain": "$response.body#/domain"
+          }
+        },
+        {
+          "stepId": "verify-domain",
+          "description": "Verify the added domain using a code sent to the verification email.",
+          "operationId": "verifyDomain",
+          "parameters": [
+            {
+              "name": "domain_name",
+              "in": "path",
+              "value": "$steps.add-domain-to-account.outputs.domain"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "domain_name": "$steps.add-domain-to-account.outputs.domain",
+              "code": "$inputs.code"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "verified": "$response.body#/verified"
+          }
+        },
+        {
+          "stepId": "delete-domain",
+          "description": "Delete a verified domain from the account.",
+          "operationId": "deleteVerifiedDomain",
+          "parameters": [
+            {
+              "name": "domain_name",
+              "in": "path",
+              "value": "$steps.add-domain-to-account.outputs.domain"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "domain_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "domain": "$steps.add-domain-to-account.outputs.domain",
+        "verified": "$steps.verify-domain.outputs.verified",
+        "domain_data": "$steps.delete-domain.outputs.domain_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
