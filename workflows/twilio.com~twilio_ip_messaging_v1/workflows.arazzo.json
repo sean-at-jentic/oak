@@ -1,0 +1,837 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/twilio.com/twilio_ip_messaging_v1/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "create-and-populate-chat-channel",
+      "summary": "Creates a new chat channel within a service, onboards a user by creating their profile and adding them as a member to the channel, and then sends the first message. This workflow is fundamental for initiating communication channels and user engagement.",
+      "description": "Creates a new chat channel within a service, onboards a user by creating their profile and adding them as a member to the channel, and then sends the first message. This workflow is fundamental for initiating communication channels and user engagement.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "ServiceSid": {
+            "type": "string"
+          },
+          "FriendlyName": {
+            "type": "string"
+          },
+          "UniqueName": {
+            "type": "string"
+          },
+          "Type": {
+            "type": "string"
+          },
+          "Identity": {
+            "type": "string"
+          },
+          "ChannelSid": {
+            "type": "string"
+          },
+          "Body": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-channel",
+          "description": "Creates a new channel within the specified service, optionally setting its friendly name, unique name, and type (public/private).",
+          "operationId": "CreateChannel",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "FriendlyName": "$inputs.FriendlyName",
+              "UniqueName": "$inputs.UniqueName",
+              "Type": "$inputs.Type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "service_sid": "$response.body#/service_sid"
+          }
+        },
+        {
+          "stepId": "create-user-for-channel",
+          "description": "Creates a new user profile within the service, which can then be added to channels.",
+          "operationId": "CreateUser",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Identity": "$inputs.Identity"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "identity": "$response.body#/identity"
+          }
+        },
+        {
+          "stepId": "add-member-to-channel",
+          "description": "Adds the newly created user as a member to the channel, allowing them to participate in conversations.",
+          "operationId": "CreateMember",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "ChannelSid",
+              "in": "path",
+              "value": "$inputs.ChannelSid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Identity": "$inputs.Identity"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        },
+        {
+          "stepId": "send-first-message",
+          "description": "Sends the initial message to the channel, starting the conversation.",
+          "operationId": "CreateMessage",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "ChannelSid",
+              "in": "path",
+              "value": "$inputs.ChannelSid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Body": "$inputs.Body"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "body": "$response.body#/body"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.send-first-message.outputs.sid",
+        "service_sid": "$steps.create-channel.outputs.service_sid",
+        "identity": "$steps.create-user-for-channel.outputs.identity",
+        "body": "$steps.send-first-message.outputs.body"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-and-configure-messaging-service",
+      "summary": "Establishes a new Twilio IP Messaging Service and configures its default roles and settings. This workflow is valuable for the initial setup of a messaging application, ensuring proper permissions and service behavior from the start.",
+      "description": "Establishes a new Twilio IP Messaging Service and configures its default roles and settings. This workflow is valuable for the initial setup of a messaging application, ensuring proper permissions and service behavior from the start.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "FriendlyName": {
+            "type": "string"
+          },
+          "ServiceSid": {
+            "type": "string"
+          },
+          "Type": {
+            "type": "string"
+          },
+          "Permission": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "DefaultChannelRoleSid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-service",
+          "description": "Creates a new IP Messaging Service with a friendly name.",
+          "operationId": "CreateService",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "FriendlyName": "$inputs.FriendlyName"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "friendly_name": "$response.body#/friendly_name"
+          }
+        },
+        {
+          "stepId": "create-default-channel-role",
+          "description": "Creates a custom role (e.g., 'channel user') with specific permissions for channel members within the new service.",
+          "operationId": "CreateRole",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "FriendlyName": "$inputs.FriendlyName",
+              "Type": "$inputs.Type",
+              "Permission": "$inputs.Permission"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "friendly_name": "$response.body#/friendly_name"
+          }
+        },
+        {
+          "stepId": "update-service-with-roles",
+          "description": "Updates the newly created service to set the default channel role, ensuring new channels automatically assign this role to members.",
+          "operationId": "UpdateService",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$inputs.Sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "DefaultChannelRoleSid": "$inputs.DefaultChannelRoleSid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.update-service-with-roles.outputs.sid",
+        "friendly_name": "$steps.create-default-channel-role.outputs.friendly_name"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-channel-messages-and-update-read-status",
+      "summary": "Enables a user to view the channels they are part of, fetch the messages within a selected channel, and then update their read status to reflect the last message they consumed. This simulates a user's interaction with a chat application.",
+      "description": "Enables a user to view the channels they are part of, fetch the messages within a selected channel, and then update their read status to reflect the last message they consumed. This simulates a user's interaction with a chat application.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "ServiceSid": {
+            "type": "string"
+          },
+          "UserSid": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "ChannelSid": {
+            "type": "string"
+          },
+          "Order": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "LastConsumedMessageIndex": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-user-channels",
+          "description": "Lists all channels a specific user is a member of, providing an overview of their active conversations.",
+          "operationId": "ListUserChannel",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "UserSid",
+              "in": "path",
+              "value": "$inputs.UserSid"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "channels": "$response.body#/channels"
+          }
+        },
+        {
+          "stepId": "list-channel-messages",
+          "description": "Retrieves the messages from a selected channel, allowing the user to view the conversation history.",
+          "operationId": "ListMessage",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "ChannelSid",
+              "in": "path",
+              "value": "$inputs.ChannelSid"
+            },
+            {
+              "name": "Order",
+              "in": "query",
+              "value": "$inputs.Order"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "messages": "$response.body#/messages"
+          }
+        },
+        {
+          "stepId": "update-member-read-status",
+          "description": "Updates the member's last consumed message index for the channel, marking messages as read up to a certain point.",
+          "operationId": "UpdateMember",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "ChannelSid",
+              "in": "path",
+              "value": "$inputs.ChannelSid"
+            },
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$inputs.Sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "LastConsumedMessageIndex": "$inputs.LastConsumedMessageIndex"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "last_consumed_message_index": "$response.body#/last_consumed_message_index"
+          }
+        }
+      ],
+      "outputs": {
+        "channels": "$steps.list-user-channels.outputs.channels",
+        "messages": "$steps.list-channel-messages.outputs.messages",
+        "last_consumed_message_index": "$steps.update-member-read-status.outputs.last_consumed_message_index"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "channel-member-role-management",
+      "summary": "Provides a workflow for administrators to manage permissions within a specific chat channel. It allows listing current members, reviewing available roles, and then updating a member's assigned role.",
+      "description": "Provides a workflow for administrators to manage permissions within a specific chat channel. It allows listing current members, reviewing available roles, and then updating a member's assigned role.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "ServiceSid": {
+            "type": "string"
+          },
+          "ChannelSid": {
+            "type": "string"
+          },
+          "Identity": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "RoleSid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-channel-members",
+          "description": "Lists all members currently associated with a given channel, including their current roles.",
+          "operationId": "ListMember",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "ChannelSid",
+              "in": "path",
+              "value": "$inputs.ChannelSid"
+            },
+            {
+              "name": "Identity",
+              "in": "query",
+              "value": "$inputs.Identity"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "members": "$response.body#/members"
+          }
+        },
+        {
+          "stepId": "list-available-roles",
+          "description": "Retrieves a list of all defined roles within the service, which can be assigned to members.",
+          "operationId": "ListRole",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "roles": "$response.body#/roles"
+          }
+        },
+        {
+          "stepId": "update-member-role",
+          "description": "Updates the role of a specific channel member, changing their permissions within that channel.",
+          "operationId": "UpdateMember",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "ChannelSid",
+              "in": "path",
+              "value": "$inputs.ChannelSid"
+            },
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$inputs.Sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "RoleSid": "$inputs.RoleSid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "role_sid": "$response.body#/role_sid"
+          }
+        }
+      ],
+      "outputs": {
+        "members": "$steps.list-channel-members.outputs.members",
+        "roles": "$steps.list-available-roles.outputs.roles",
+        "role_sid": "$steps.update-member-role.outputs.role_sid"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-push-notification-credentials",
+      "summary": "Facilitates the management of push notification credentials, allowing for the creation of new credentials, listing existing ones for review, and then deleting a specific credential. This is crucial for maintaining and updating notification infrastructure for mobile applications.",
+      "description": "Facilitates the management of push notification credentials, allowing for the creation of new credentials, listing existing ones for review, and then deleting a specific credential. This is crucial for maintaining and updating notification infrastructure for mobile applications.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Type": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-credential",
+          "description": "Creates a new push notification credential (e.g., APN, GCM, FCM) for sending messages to devices.",
+          "operationId": "CreateCredential",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Type": "$inputs.Type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "friendly_name": "$response.body#/friendly_name"
+          }
+        },
+        {
+          "stepId": "list-credentials",
+          "description": "Retrieves a list of all configured push notification credentials.",
+          "operationId": "ListCredential",
+          "parameters": [
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "credentials": "$response.body#/credentials"
+          }
+        },
+        {
+          "stepId": "delete-credential",
+          "description": "Deletes a specific push notification credential, typically for cleanup or replacement.",
+          "operationId": "DeleteCredential",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$inputs.Sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "credential_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.create-credential.outputs.sid",
+        "friendly_name": "$steps.create-credential.outputs.friendly_name",
+        "credentials": "$steps.list-credentials.outputs.credentials",
+        "credential_data": "$steps.delete-credential.outputs.credential_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

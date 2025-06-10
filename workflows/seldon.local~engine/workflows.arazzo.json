@@ -1,0 +1,187 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/seldon.local/engine/0.1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "model-prediction-and-feedback-loop",
+      "summary": "Perform a machine learning prediction and then provide feedback on the prediction's outcome. This workflow is crucial for model monitoring, A/B testing, and continuous improvement, allowing the system to learn from real-world performance.",
+      "description": "Perform a machine learning prediction and then provide feedback on the prediction's outcome. This workflow is crucial for model monitoring, A/B testing, and continuous improvement, allowing the system to learn from real-world performance.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "namespace": {
+            "type": "string"
+          },
+          "deployment": {
+            "type": "string"
+          },
+          "make-prediction_body": {
+            "type": "object"
+          },
+          "reward": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "make-prediction",
+          "description": "Submits input features (as a SeldonMessage) to the specified Seldon deployment for inference, capturing both the request and response for later feedback.",
+          "operationId": "Predict",
+          "parameters": [
+            {
+              "name": "namespace",
+              "in": "path",
+              "value": "$inputs.namespace"
+            },
+            {
+              "name": "deployment",
+              "in": "path",
+              "value": "$inputs.deployment"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.make-prediction_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "prediction_output_seldon_message": "$response.body#/prediction_output_seldon_message",
+            "namespace": "$response.body#/namespace",
+            "deployment": "$response.body#/deployment",
+            "original_prediction_input_seldon_message": "$response.body#/original_prediction_input_seldon_message"
+          }
+        },
+        {
+          "stepId": "send-prediction-feedback",
+          "description": "Sends feedback on a previous prediction, including the original request, the model's response, the ground truth, and an optional reward.",
+          "operationId": "SendFeedback",
+          "parameters": [
+            {
+              "name": "namespace",
+              "in": "path",
+              "value": "$steps.make-prediction.outputs.namespace"
+            },
+            {
+              "name": "deployment",
+              "in": "path",
+              "value": "$steps.make-prediction.outputs.deployment"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "namespace": "$steps.make-prediction.outputs.namespace",
+              "deployment": "$steps.make-prediction.outputs.deployment",
+              "request_seldon_message_for_feedback": "$steps.make-prediction.outputs.original_prediction_input_seldon_message",
+              "response_seldon_message_for_feedback": "$steps.make-prediction.outputs.prediction_output_seldon_message",
+              "reward": "$inputs.reward"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "feedback_acknowledgement_seldon_message": "$response.body#/feedback_acknowledgement_seldon_message"
+          }
+        }
+      ],
+      "outputs": {
+        "prediction_output_seldon_message": "$steps.make-prediction.outputs.prediction_output_seldon_message",
+        "namespace": "$steps.make-prediction.outputs.namespace",
+        "deployment": "$steps.make-prediction.outputs.deployment",
+        "original_prediction_input_seldon_message": "$steps.make-prediction.outputs.original_prediction_input_seldon_message",
+        "feedback_acknowledgement_seldon_message": "$steps.send-prediction-feedback.outputs.feedback_acknowledgement_seldon_message"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

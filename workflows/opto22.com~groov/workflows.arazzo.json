@@ -1,0 +1,292 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/opto22.com/groov/R4.2a/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "discover-and-read-data-store-tags",
+      "summary": "Allows an API consumer to first list all available data store tags within the groov View project and then read the current values of multiple selected tags. This workflow is crucial for building monitoring applications, dashboards, or data logging systems.",
+      "description": "Allows an API consumer to first list all available data store tags within the groov View project and then read the current values of multiple selected tags. This workflow is crucial for building monitoring applications, dashboards, or data logging systems.",
+      "steps": [
+        {
+          "stepId": "list-all-tags",
+          "description": "Retrieve a comprehensive list of all defined data store tags in the project, including their IDs, names, data types, and associated device IDs.",
+          "operationId": "listAllTags",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tagDefinitions": "$response.body#/0/tagDefinitions"
+          }
+        },
+        {
+          "stepId": "batch-read-selected-tags",
+          "description": "Read the current values of multiple tags by providing an array of tag IDs. This is efficient for retrieving data for several points simultaneously.",
+          "operationId": "batchReadTags",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tagValues": "$response.body#/0/tagValues"
+          }
+        }
+      ],
+      "outputs": {
+        "tagDefinitions": "$steps.list-all-tags.outputs.tagDefinitions",
+        "tagValues": "$steps.batch-read-selected-tags.outputs.tagValues"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "discover-and-control-data-store-tag",
+      "summary": "Enables an API consumer to find a specific tag, read its current value, and then write a new value to it. This workflow facilitates remote control, configuration, or testing of industrial processes by interacting with individual data points.",
+      "description": "Enables an API consumer to find a specific tag, read its current value, and then write a new value to it. This workflow facilitates remote control, configuration, or testing of industrial processes by interacting with individual data points.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "index": {
+            "type": "string"
+          },
+          "count": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-all-tags",
+          "description": "Retrieve a comprehensive list of all defined data store tags in the project to identify the target tag for reading and writing.",
+          "operationId": "listAllTags",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tagDefinitions": "$response.body#/0/tagDefinitions"
+          }
+        },
+        {
+          "stepId": "read-single-tag-value",
+          "description": "Read the current value of a specific tag identified by its ID, optionally specifying an index and count for array tags.",
+          "operationId": "readTag",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.list-all-tags.outputs.tagDefinitions"
+            },
+            {
+              "name": "index",
+              "in": "query",
+              "value": "$inputs.index"
+            },
+            {
+              "name": "count",
+              "in": "query",
+              "value": "$inputs.count"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tagValue": "$response.body#/tagValue"
+          }
+        },
+        {
+          "stepId": "write-single-tag-value",
+          "description": "Write a new value to the specified tag, identified by its ID. This operation can be used to control or update process variables.",
+          "operationId": "writeTag",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "value",
+              "in": "query",
+              "value": "$inputs.value"
+            },
+            {
+              "name": "index",
+              "in": "query",
+              "value": "$inputs.index"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tagValue": "$response.body#/tagValue"
+          }
+        }
+      ],
+      "outputs": {
+        "tagDefinitions": "$steps.list-all-tags.outputs.tagDefinitions",
+        "tagValue": "$steps.write-single-tag-value.outputs.tagValue"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "system-status-and-user-role-check",
+      "summary": "Retrieves general information about the groov View system and details about the currently authenticated user, including their role and permissions. This workflow is useful for initial setup verification, monitoring system health, and understanding user access levels.",
+      "description": "Retrieves general information about the groov View system and details about the currently authenticated user, including their role and permissions. This workflow is useful for initial setup verification, monitoring system health, and understanding user access levels.",
+      "steps": [
+        {
+          "stepId": "get-groov-info",
+          "description": "Get general information about the groov View instance, such as API versions, license status, and system timezone.",
+          "operationId": "groovInfo",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "groovInfo": "$response.body#/groovInfo"
+          }
+        },
+        {
+          "stepId": "get-user-info",
+          "description": "Get details about the authenticated user, including their username, email, ID, groups, and assigned role.",
+          "operationId": "whoAmI",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "User": "$response.body#/User"
+          }
+        }
+      ],
+      "outputs": {
+        "groovInfo": "$steps.get-groov-info.outputs.groovInfo",
+        "User": "$steps.get-user-info.outputs.User"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

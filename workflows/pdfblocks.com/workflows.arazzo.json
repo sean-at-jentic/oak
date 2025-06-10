@@ -1,0 +1,514 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/pdfblocks.com/main/1.5.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "clean-and-re-secure-pdf",
+      "summary": "Removes any existing password, restrictions, and digital signatures from a PDF document, then applies new, updated restrictions and an owner password, useful for re-issuing documents with revised security policies.",
+      "description": "Removes any existing password, restrictions, and digital signatures from a PDF document, then applies new, updated restrictions and an owner password, useful for re-issuing documents with revised security policies.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "owner_password": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "remove-document-password",
+          "description": "Removes the existing password from the PDF document.",
+          "operationId": "removePasswordV1",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "file": "$inputs.file",
+              "password": "$inputs.password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "output_pdf_document": "$response.body#/output_pdf_document"
+          }
+        },
+        {
+          "stepId": "remove-document-restrictions",
+          "description": "Removes all existing content restrictions from the PDF document.",
+          "operationId": "removeRestrictionsV1",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "file": "$steps.remove-document-password.outputs.output_pdf_document"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "output_pdf_document": "$response.body#/output_pdf_document"
+          }
+        },
+        {
+          "stepId": "remove-document-signatures",
+          "description": "Removes any cryptographic signatures and timestamps from the PDF document.",
+          "operationId": "removeSignaturesV1",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "file": "$steps.remove-document-restrictions.outputs.output_pdf_document"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "output_pdf_document": "$response.body#/output_pdf_document"
+          }
+        },
+        {
+          "stepId": "add-document-restrictions",
+          "description": "Applies new owner password and desired content restrictions to the cleaned PDF document.",
+          "operationId": "addRestrictionsV1",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "file": "$steps.remove-document-signatures.outputs.output_pdf_document",
+              "owner_password": "$inputs.owner_password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "output_pdf_document": "$response.body#/output_pdf_document"
+          }
+        }
+      ],
+      "outputs": {
+        "output_pdf_document": "$steps.add-document-restrictions.outputs.output_pdf_document"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "secure-and-brand-document",
+      "summary": "Applies a text watermark to a PDF document and then adds password protection and content restrictions, ensuring the document is both branded and secure for distribution.",
+      "description": "Applies a text watermark to a PDF document and then adds password protection and content restrictions, ensuring the document is both branded and secure for distribution.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "line_1": {
+            "type": "string"
+          },
+          "owner_password": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-text-watermark",
+          "description": "Adds a customizable text watermark to each page of the PDF document.",
+          "operationId": "addTextWatermarkV1",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "file": "$inputs.file",
+              "line_1": "$inputs.line_1"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "output_pdf_document": "$response.body#/output_pdf_document"
+          }
+        },
+        {
+          "stepId": "add-document-restrictions",
+          "description": "Applies an owner password and various content restrictions (e.g., prevent copying, printing) to the watermarked PDF.",
+          "operationId": "addRestrictionsV1",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "file": "$steps.add-text-watermark.outputs.output_pdf_document",
+              "owner_password": "$inputs.owner_password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "output_pdf_document": "$response.body#/output_pdf_document"
+          }
+        }
+      ],
+      "outputs": {
+        "output_pdf_document": "$steps.add-document-restrictions.outputs.output_pdf_document"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "extract-and-secure-confidential-pages",
+      "summary": "Extracts a specific range of pages from a larger PDF document and then applies strong restrictions and password protection to the extracted confidential document, ideal for creating secure excerpts.",
+      "description": "Extracts a specific range of pages from a larger PDF document and then applies strong restrictions and password protection to the extracted confidential document, ideal for creating secure excerpts.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "owner_password": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "extract-pages",
+          "description": "Extracts a specified range of pages from the input PDF document.",
+          "operationId": "extractPagesV1",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "file": "$inputs.file"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "output_pdf_document": "$response.body#/output_pdf_document"
+          }
+        },
+        {
+          "stepId": "add-document-restrictions",
+          "description": "Applies an owner password and various content restrictions to the extracted PDF document, securing its content.",
+          "operationId": "addRestrictionsV1",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "file": "$steps.extract-pages.outputs.output_pdf_document",
+              "owner_password": "$inputs.owner_password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "output_pdf_document": "$response.body#/output_pdf_document"
+          }
+        }
+      ],
+      "outputs": {
+        "output_pdf_document": "$steps.add-document-restrictions.outputs.output_pdf_document"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "consolidate-and-protect-documents",
+      "summary": "Combines multiple PDF documents into a single file and then applies a password to protect the newly created combined document, suitable for secure archiving or sharing.",
+      "description": "Combines multiple PDF documents into a single file and then applies a password to protect the newly created combined document, suitable for secure archiving or sharing.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "merge-documents",
+          "description": "Merges an array of PDF documents into one cohesive PDF.",
+          "operationId": "mergeDocumentsV1",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "file": "$inputs.file"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "output_pdf_document": "$response.body#/output_pdf_document"
+          }
+        },
+        {
+          "stepId": "add-document-password",
+          "description": "Adds a password to the merged PDF document, encrypting it to prevent unauthorized access.",
+          "operationId": "addPasswordV1",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "file": "$steps.merge-documents.outputs.output_pdf_document",
+              "password": "$inputs.password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "output_pdf_document": "$response.body#/output_pdf_document"
+          }
+        }
+      ],
+      "outputs": {
+        "output_pdf_document": "$steps.add-document-password.outputs.output_pdf_document"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "reorganize-and-protect-document-pages",
+      "summary": "Reverses the order of pages in a PDF document, then applies an image watermark and password protection to the modified document, useful for preparing documents for specific presentation or security needs.",
+      "description": "Reverses the order of pages in a PDF document, then applies an image watermark and password protection to the modified document, useful for preparing documents for specific presentation or security needs.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "image": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "reverse-pages",
+          "description": "Reverses the order of all pages within the PDF document.",
+          "operationId": "reversePagesV1",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "file": "$inputs.file"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "output_pdf_document": "$response.body#/output_pdf_document"
+          }
+        },
+        {
+          "stepId": "add-image-watermark",
+          "description": "Adds an image watermark to each page of the reordered PDF document.",
+          "operationId": "addImageWatermarkV1",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "file": "$steps.reverse-pages.outputs.output_pdf_document",
+              "image": "$inputs.image"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "output_pdf_document": "$response.body#/output_pdf_document"
+          }
+        },
+        {
+          "stepId": "add-document-password",
+          "description": "Adds a password to the watermarked and reordered PDF document for security.",
+          "operationId": "addPasswordV1",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "file": "$steps.add-image-watermark.outputs.output_pdf_document",
+              "password": "$inputs.password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "output_pdf_document": "$response.body#/output_pdf_document"
+          }
+        }
+      ],
+      "outputs": {
+        "output_pdf_document": "$steps.add-document-password.outputs.output_pdf_document"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

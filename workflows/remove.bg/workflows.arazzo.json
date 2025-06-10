@@ -1,0 +1,368 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/remove.bg/main/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "credit-aware-image-processing",
+      "summary": "A workflow for users who want to manage their API credit usage. It allows checking the current credit balance and free API calls before initiating an image background removal, helping to prevent operations when credits are insufficient.",
+      "description": "A workflow for users who want to manage their API credit usage. It allows checking the current credit balance and free API calls before initiating an image background removal, helping to prevent operations when credits are insufficient.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "image_file_b64": {
+            "type": "string"
+          },
+          "image_url": {
+            "type": "string"
+          },
+          "size": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "type_level": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "roi": {
+            "type": "string"
+          },
+          "crop": {
+            "type": "string"
+          },
+          "crop_margin": {
+            "type": "string"
+          },
+          "scale": {
+            "type": "string"
+          },
+          "position": {
+            "type": "string"
+          },
+          "channels": {
+            "type": "string"
+          },
+          "add_shadow": {
+            "type": "string"
+          },
+          "shadow_type": {
+            "type": "string"
+          },
+          "shadow_opacity": {
+            "type": "string"
+          },
+          "semitransparency": {
+            "type": "string"
+          },
+          "bg_color": {
+            "type": "string"
+          },
+          "bg_image_url": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-account-balance",
+          "description": "Retrieves the current credit balance (total, subscription, pay-as-you-go, enterprise) and the number of free API calls available for the authenticated account.",
+          "operationPath": "openapi_source#/paths/~1account/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "credits.total": "$response.body#/credits.total",
+            "credits.subscription": "$response.body#/credits.subscription",
+            "credits.payg": "$response.body#/credits.payg",
+            "credits.enterprise": "$response.body#/credits.enterprise",
+            "api.free_calls": "$response.body#/data/attributes/api/free_calls"
+          }
+        },
+        {
+          "stepId": "process-image-after-credit-check",
+          "description": "Performs background removal on an image. This step is typically executed after the user has verified they have sufficient credits from the 'get-account-balance' step.",
+          "operationPath": "openapi_source#/paths/~1removebg/post",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "image_file_b64": "$inputs.image_file_b64",
+              "image_url": "$inputs.image_url",
+              "size": "$inputs.size",
+              "type": "$inputs.type",
+              "type_level": "$inputs.type_level",
+              "format": "$inputs.format",
+              "roi": "$inputs.roi",
+              "crop": "$inputs.crop",
+              "crop_margin": "$inputs.crop_margin",
+              "scale": "$inputs.scale",
+              "position": "$inputs.position",
+              "channels": "$inputs.channels",
+              "add_shadow": "$inputs.add_shadow",
+              "shadow_type": "$inputs.shadow_type",
+              "shadow_opacity": "$inputs.shadow_opacity",
+              "semitransparency": "$inputs.semitransparency",
+              "bg_color": "$inputs.bg_color",
+              "bg_image_url": "$inputs.bg_image_url"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "result_b64": "$response.body#/data/result_b64",
+            "X-Credits-Charged": "$response.headers.X-Credits-Charged"
+          }
+        }
+      ],
+      "outputs": {
+        "credits.total": "$steps.get-account-balance.outputs.credits.total",
+        "credits.subscription": "$steps.get-account-balance.outputs.credits.subscription",
+        "credits.payg": "$steps.get-account-balance.outputs.credits.payg",
+        "credits.enterprise": "$steps.get-account-balance.outputs.credits.enterprise",
+        "api.free_calls": "$steps.get-account-balance.outputs.api.free_calls",
+        "result_b64": "$steps.process-image-after-credit-check.outputs.result_b64",
+        "X-Credits-Charged": "$steps.process-image-after-credit-check.outputs.X-Credits-Charged"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "ai-model-improvement-submission",
+      "summary": "This workflow enables users to contribute images that the API might have struggled to process correctly. By submitting such images, users help improve the underlying AI model, leading to better background removal results for similar images in the future.",
+      "description": "This workflow enables users to contribute images that the API might have struggled to process correctly. By submitting such images, users help improve the underlying AI model, leading to better background removal results for similar images in the future.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "image_file_b64": {
+            "type": "string"
+          },
+          "image_url": {
+            "type": "string"
+          },
+          "size": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "type_level": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "roi": {
+            "type": "string"
+          },
+          "crop": {
+            "type": "string"
+          },
+          "crop_margin": {
+            "type": "string"
+          },
+          "scale": {
+            "type": "string"
+          },
+          "position": {
+            "type": "string"
+          },
+          "channels": {
+            "type": "string"
+          },
+          "add_shadow": {
+            "type": "string"
+          },
+          "shadow_type": {
+            "type": "string"
+          },
+          "shadow_opacity": {
+            "type": "string"
+          },
+          "semitransparency": {
+            "type": "string"
+          },
+          "bg_color": {
+            "type": "string"
+          },
+          "bg_image_url": {
+            "type": "string"
+          },
+          "image_filename": {
+            "type": "string"
+          },
+          "tag": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "try-background-removal",
+          "description": "Attempts to remove the background from an image. This step is often performed to identify cases where the AI model might not produce satisfactory results (e.g., due to complex foregrounds or backgrounds).",
+          "operationPath": "openapi_source#/paths/~1removebg/post",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "image_file_b64": "$inputs.image_file_b64",
+              "image_url": "$inputs.image_url",
+              "size": "$inputs.size",
+              "type": "$inputs.type",
+              "type_level": "$inputs.type_level",
+              "format": "$inputs.format",
+              "roi": "$inputs.roi",
+              "crop": "$inputs.crop",
+              "crop_margin": "$inputs.crop_margin",
+              "scale": "$inputs.scale",
+              "position": "$inputs.position",
+              "channels": "$inputs.channels",
+              "add_shadow": "$inputs.add_shadow",
+              "shadow_type": "$inputs.shadow_type",
+              "shadow_opacity": "$inputs.shadow_opacity",
+              "semitransparency": "$inputs.semitransparency",
+              "bg_color": "$inputs.bg_color",
+              "bg_image_url": "$inputs.bg_image_url"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "result_b64": "$response.body#/data/result_b64",
+            "X-Credits-Charged": "$response.headers.X-Credits-Charged"
+          }
+        },
+        {
+          "stepId": "submit-image-to-improvement-program",
+          "description": "Submits the original image (which might have yielded unsatisfactory results in the previous step) to the remove.bg Improvement program, along with an optional filename and tag for grouping.",
+          "operationPath": "openapi_source#/paths/~1improve/post",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "image_file_b64": "$inputs.image_file_b64",
+              "image_url": "$inputs.image_url",
+              "image_filename": "$inputs.image_filename",
+              "tag": "$inputs.tag"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        }
+      ],
+      "outputs": {
+        "result_b64": "$steps.try-background-removal.outputs.result_b64",
+        "X-Credits-Charged": "$steps.try-background-removal.outputs.X-Credits-Charged",
+        "id": "$steps.submit-image-to-improvement-program.outputs.id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

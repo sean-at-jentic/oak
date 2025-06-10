@@ -1,0 +1,552 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/appveyor.com/main/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "project-setup-and-initial-build",
+      "summary": "Creates a new AppVeyor project from a source repository and then immediately triggers a build for it. This workflow streamlines the onboarding of new projects into the CI/CD pipeline.",
+      "description": "Creates a new AppVeyor project from a source repository and then immediately triggers a build for it. This workflow streamlines the onboarding of new projects into the CI/CD pipeline.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "repositoryProvider": {
+            "type": "string"
+          },
+          "repositoryName": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-project",
+          "description": "Adds a new project to AppVeyor, linking it to a specified source code repository.",
+          "operationId": "addProject",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "repositoryProvider": "$inputs.repositoryProvider",
+              "repositoryName": "$inputs.repositoryName"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "projectId": "$response.body#/projectId",
+            "name": "$response.body#/name",
+            "slug": "$response.body#/slug",
+            "accountName": "$response.body#/accountName"
+          }
+        },
+        {
+          "stepId": "start-project-build",
+          "description": "Triggers a build for the newly created project, typically for its default branch or a specified commit/branch.",
+          "operationId": "startBuild",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "accountName": "$steps.add-project.outputs.accountName",
+              "projectSlug": "$steps.add-project.outputs.slug"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "buildId": "$response.body#/buildId",
+            "version": "$response.body#/version",
+            "status": "$response.body#/status",
+            "jobs": "$response.body#/jobs"
+          }
+        }
+      ],
+      "outputs": {
+        "projectId": "$steps.add-project.outputs.projectId",
+        "name": "$steps.add-project.outputs.name",
+        "slug": "$steps.add-project.outputs.slug",
+        "accountName": "$steps.add-project.outputs.accountName",
+        "buildId": "$steps.start-project-build.outputs.buildId",
+        "version": "$steps.start-project-build.outputs.version",
+        "status": "$steps.start-project-build.outputs.status",
+        "jobs": "$steps.start-project-build.outputs.jobs"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "trigger-and-monitor-deployment",
+      "summary": "Initiates a new deployment for a specific project build to a target environment and then retrieves the status of that deployment. This workflow automates the release process.",
+      "description": "Initiates a new deployment for a specific project build to a target environment and then retrieves the status of that deployment. This workflow automates the release process.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "environmentName": {
+            "type": "string"
+          },
+          "accountName": {
+            "type": "string"
+          },
+          "projectSlug": {
+            "type": "string"
+          },
+          "buildVersion": {
+            "type": "string"
+          },
+          "deploymentId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "start-deployment",
+          "description": "Starts a new deployment for a specified build version to a designated environment.",
+          "operationId": "startDeployment",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "environmentName": "$inputs.environmentName",
+              "accountName": "$inputs.accountName",
+              "projectSlug": "$inputs.projectSlug",
+              "buildVersion": "$inputs.buildVersion"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "deploymentId": "$response.body#/deploymentId",
+            "status": "$response.body#/status",
+            "build": "$response.body#/build"
+          }
+        },
+        {
+          "stepId": "get-deployment-status",
+          "description": "Retrieves the current status and detailed information of a specific deployment.",
+          "operationId": "getDeployment",
+          "parameters": [
+            {
+              "name": "deploymentId",
+              "in": "path",
+              "value": "$steps.start-deployment.outputs.deploymentId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "deployment": "$response.body#/deployment",
+            "project": "$response.body#/project"
+          }
+        }
+      ],
+      "outputs": {
+        "deploymentId": "$steps.start-deployment.outputs.deploymentId",
+        "status": "$steps.start-deployment.outputs.status",
+        "build": "$steps.start-deployment.outputs.build",
+        "deployment": "$steps.get-deployment-status.outputs.deployment",
+        "project": "$steps.get-deployment-status.outputs.project"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "monitor-and-retrieve-build-artifacts",
+      "summary": "Retrieves the status of the latest build for a given project, and if successful, lists and downloads its artifacts. This is crucial for accessing compiled binaries, packages, or test reports.",
+      "description": "Retrieves the status of the latest build for a given project, and if successful, lists and downloads its artifacts. This is crucial for accessing compiled binaries, packages, or test reports.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "accountName": {
+            "type": "string"
+          },
+          "projectSlug": {
+            "type": "string"
+          },
+          "jobId": {
+            "type": "string"
+          },
+          "artifactFileName": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-project-last-build",
+          "description": "Gets the details of the last build for a specified project, including its status and associated build jobs.",
+          "operationId": "getProjectLastBuild",
+          "parameters": [
+            {
+              "name": "accountName",
+              "in": "path",
+              "value": "$inputs.accountName"
+            },
+            {
+              "name": "projectSlug",
+              "in": "path",
+              "value": "$inputs.projectSlug"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "build": "$response.body#/build",
+            "project": "$response.body#/project"
+          }
+        },
+        {
+          "stepId": "get-build-artifacts",
+          "description": "Lists all artifacts produced by a specific build job. A build can consist of multiple jobs.",
+          "operationId": "getBuildArtifacts",
+          "parameters": [
+            {
+              "name": "jobId",
+              "in": "path",
+              "value": "$steps.get-project-last-build.outputs.build.jobs[0].jobId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "artifacts": "$response.body#/0/artifacts"
+          }
+        },
+        {
+          "stepId": "download-build-artifact",
+          "description": "Downloads a specific artifact file from a build job.",
+          "operationId": "getBuildArtifact",
+          "parameters": [
+            {
+              "name": "jobId",
+              "in": "path",
+              "value": "$inputs.jobId"
+            },
+            {
+              "name": "artifactFileName",
+              "in": "path",
+              "value": "$inputs.artifactFileName"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "artifactContent": "$response.body#/artifactContent"
+          }
+        }
+      ],
+      "outputs": {
+        "build": "$steps.get-project-last-build.outputs.build",
+        "project": "$steps.get-project-last-build.outputs.project",
+        "artifacts": "$steps.get-build-artifacts.outputs.artifacts",
+        "artifactContent": "$steps.download-build-artifact.outputs.artifactContent"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "secure-project-environment-variable-configuration",
+      "summary": "Encrypts a sensitive value and then updates a project's environment variables to include this new secure variable. This workflow is useful for securely managing credentials or other sensitive data within AppVeyor project settings.",
+      "description": "Encrypts a sensitive value and then updates a project's environment variables to include this new secure variable. This workflow is useful for securely managing credentials or other sensitive data within AppVeyor project settings.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "plainValue": {
+            "type": "string"
+          },
+          "accountName": {
+            "type": "string"
+          },
+          "projectSlug": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "encrypt-sensitive-value",
+          "description": "Encrypts a plain text value, making it suitable for secure storage in AppVeyor environment variables.",
+          "operationId": "encryptValue",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "plainValue": "$inputs.plainValue"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "encryptedValue": "$response.body#/encryptedValue"
+          }
+        },
+        {
+          "stepId": "update-project-environment-variables",
+          "description": "Updates the project's environment variables. The 'environmentVariables' input (request body) should be an array of StoredNameValue objects, where one of these objects will contain the 'encryptedValue' from the previous step. The client is responsible for constructing the full array, including the new secure variable and any existing ones.",
+          "operationId": "updateProjectEnvironmentVariables",
+          "parameters": [
+            {
+              "name": "accountName",
+              "in": "path",
+              "value": "$inputs.accountName"
+            },
+            {
+              "name": "projectSlug",
+              "in": "path",
+              "value": "$inputs.projectSlug"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "environmentVariables": "$steps.encrypt-sensitive-value.outputs.encryptedValue"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "variables_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "encryptedValue": "$steps.encrypt-sensitive-value.outputs.encryptedValue",
+        "variables_data": "$steps.update-project-environment-variables.outputs.variables_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "user-invitation-and-account-joining",
+      "summary": "Invites a new user to an AppVeyor account and then simulates the invited user accepting the invitation and joining the account. This workflow facilitates team collaboration and access management.",
+      "description": "Invites a new user to an AppVeyor account and then simulates the invited user accepting the invitation and joining the account. This workflow facilitates team collaboration and access management.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "roleId": {
+            "type": "string"
+          },
+          "invitationId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "invite-new-user",
+          "description": "Sends an invitation to a new user's email address to join the AppVeyor account with a specific role.",
+          "operationId": "inviteUser",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "email": "$inputs.email",
+              "roleId": "$inputs.roleId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-user-invitations",
+          "description": "Retrieves a list of all pending user invitations. This step is used to obtain the 'userInvitationId' which is needed for the 'joinAccount' operation, as 'inviteUser' does not return it directly.",
+          "operationId": "getUserInvitations",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "userInvitations": "$response.body#/0/userInvitationId"
+          }
+        },
+        {
+          "stepId": "join-account-with-invitation",
+          "description": "Allows a user to accept a pending invitation and join an AppVeyor account, typically using the 'userInvitationId' received via email or retrieved from pending invitations.",
+          "operationId": "joinAccount",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "invitationId": "$inputs.invitationId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sessionModel": "$response.body#/sessionModel"
+          }
+        }
+      ],
+      "outputs": {
+        "user_data": "$steps.invite-new-user.outputs.user_data",
+        "userInvitations": "$steps.get-user-invitations.outputs.userInvitations",
+        "sessionModel": "$steps.join-account-with-invitation.outputs.sessionModel"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

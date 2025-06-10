@@ -1,0 +1,797 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/configcat.com/main/v1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "configure-feature-flag-rollout-with-targeting-rules-v2",
+      "summary": "This workflow demonstrates how to programmatically update a feature flag's evaluation logic in a specific environment using Config V2. It allows setting a default value and adding complex targeting rules based on user attributes, segments, or prerequisite flags. This is crucial for A/B testing, phased rollouts, and personalized experiences.",
+      "description": "This workflow demonstrates how to programmatically update a feature flag's evaluation logic in a specific environment using Config V2. It allows setting a default value and adding complex targeting rules based on user attributes, segments, or prerequisite flags. This is crucial for A/B testing, phased rollouts, and personalized experiences.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string"
+          },
+          "configId": {
+            "type": "string"
+          },
+          "environmentId": {
+            "type": "string"
+          },
+          "settingId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-products",
+          "description": "Retrieves a list of available products.",
+          "operationId": "get-products",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "productId": "$response.body#/0/productId"
+          }
+        },
+        {
+          "stepId": "get-configs",
+          "description": "Retrieves configurations within the selected product.",
+          "operationId": "get-configs",
+          "parameters": [
+            {
+              "name": "productId",
+              "in": "path",
+              "value": "$steps.get-products.outputs.productId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "configId": "$response.body#/0/configId"
+          }
+        },
+        {
+          "stepId": "get-environments",
+          "description": "Retrieves environments within the selected product.",
+          "operationId": "get-environments",
+          "parameters": [
+            {
+              "name": "productId",
+              "in": "path",
+              "value": "$steps.get-products.outputs.productId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "environmentId": "$response.body#/0/environmentId"
+          }
+        },
+        {
+          "stepId": "get-settings",
+          "description": "Retrieves feature flags and settings within the selected config.",
+          "operationId": "get-settings",
+          "parameters": [
+            {
+              "name": "configId",
+              "in": "path",
+              "value": "$steps.get-configs.outputs.configId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "settingId": "$response.body#/0/settingId"
+          }
+        },
+        {
+          "stepId": "update-setting-value-v2",
+          "description": "Updates the feature flag's default value and adds a targeting rule (e.g., based on user email).",
+          "operationId": "update-setting-value-v2",
+          "parameters": [
+            {
+              "name": "environmentId",
+              "in": "path",
+              "value": "$steps.get-environments.outputs.environmentId"
+            },
+            {
+              "name": "settingId",
+              "in": "path",
+              "value": "$steps.get-settings.outputs.settingId"
+            },
+            {
+              "name": "reason",
+              "in": "query",
+              "value": "$inputs.reason"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "environmentId": "$steps.get-environments.outputs.environmentId",
+              "settingId": "$steps.get-settings.outputs.settingId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "defaultValue": "$response.body#/defaultValue",
+            "targetingRules": "$response.body#/targetingRules"
+          }
+        }
+      ],
+      "outputs": {
+        "productId": "$steps.get-products.outputs.productId",
+        "configId": "$steps.get-configs.outputs.configId",
+        "environmentId": "$steps.get-environments.outputs.environmentId",
+        "settingId": "$steps.get-settings.outputs.settingId",
+        "defaultValue": "$steps.update-setting-value-v2.outputs.defaultValue",
+        "targetingRules": "$steps.update-setting-value-v2.outputs.targetingRules"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "initial-product-and-feature-flag-setup",
+      "summary": "This workflow automates the complete initial setup for a new project within ConfigCat. It creates a new Product, a default Config, a default Environment, a new Feature Flag, and then sets its initial value in the newly created environment. This is valuable for quickly provisioning new projects or development streams.",
+      "description": "This workflow automates the complete initial setup for a new project within ConfigCat. It creates a new Product, a default Config, a default Environment, a new Feature Flag, and then sets its initial value in the newly created environment. This is valuable for quickly provisioning new projects or development streams.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "organizationId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "configId": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "settingType": {
+            "type": "string"
+          },
+          "environmentId": {
+            "type": "string"
+          },
+          "settingId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-organizations",
+          "description": "Retrieves the list of organizations the user belongs to.",
+          "operationId": "get-organizations",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "organizationId": "$response.body#/0/organizationId"
+          }
+        },
+        {
+          "stepId": "create-product",
+          "description": "Creates a new product within the selected organization.",
+          "operationId": "create-product",
+          "parameters": [
+            {
+              "name": "organizationId",
+              "in": "path",
+              "value": "$steps.get-organizations.outputs.organizationId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "organizationId": "$steps.get-organizations.outputs.organizationId",
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "productId": "$response.body#/productId"
+          }
+        },
+        {
+          "stepId": "create-config",
+          "description": "Creates a new configuration within the newly created product.",
+          "operationId": "create-config",
+          "parameters": [
+            {
+              "name": "productId",
+              "in": "path",
+              "value": "$steps.create-product.outputs.productId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "productId": "$steps.create-product.outputs.productId",
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "configId": "$response.body#/configId"
+          }
+        },
+        {
+          "stepId": "create-environment",
+          "description": "Creates a new environment within the newly created product.",
+          "operationId": "create-environment",
+          "parameters": [
+            {
+              "name": "productId",
+              "in": "path",
+              "value": "$steps.create-product.outputs.productId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "productId": "$steps.create-product.outputs.productId",
+              "name": "$inputs.name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "environmentId": "$response.body#/environmentId"
+          }
+        },
+        {
+          "stepId": "create-setting",
+          "description": "Creates a new feature flag or setting within the new config.",
+          "operationId": "create-setting",
+          "parameters": [
+            {
+              "name": "configId",
+              "in": "path",
+              "value": "$steps.create-config.outputs.configId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "configId": "$steps.create-config.outputs.configId",
+              "key": "$inputs.key",
+              "name": "$inputs.name",
+              "settingType": "$inputs.settingType"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "settingId": "$response.body#/settingId"
+          }
+        },
+        {
+          "stepId": "update-setting-value-v2",
+          "description": "Updates the value of the newly created feature flag in the new environment, e.g., turning it on.",
+          "operationId": "update-setting-value-v2",
+          "parameters": [
+            {
+              "name": "environmentId",
+              "in": "path",
+              "value": "$steps.create-environment.outputs.environmentId"
+            },
+            {
+              "name": "settingId",
+              "in": "path",
+              "value": "$steps.create-setting.outputs.settingId"
+            },
+            {
+              "name": "reason",
+              "in": "query",
+              "value": "$inputs.reason"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "environmentId": "$steps.create-environment.outputs.environmentId",
+              "settingId": "$steps.create-setting.outputs.settingId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "defaultValue": "$response.body#/defaultValue"
+          }
+        }
+      ],
+      "outputs": {
+        "organizationId": "$steps.get-organizations.outputs.organizationId",
+        "productId": "$steps.create-product.outputs.productId",
+        "configId": "$steps.create-config.outputs.configId",
+        "environmentId": "$steps.create-environment.outputs.environmentId",
+        "settingId": "$steps.create-setting.outputs.settingId",
+        "defaultValue": "$steps.update-setting-value-v2.outputs.defaultValue"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "onboard-team-member-to-product",
+      "summary": "This workflow streamlines the process of inviting a new team member to a specific product and assigning them to a predefined permission group, ensuring they have the correct access from the start.",
+      "description": "This workflow streamlines the process of inviting a new team member to a specific product and assigning them to a predefined permission group, ensuring they have the correct access from the start.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string"
+          },
+          "emails": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-products",
+          "description": "Retrieves a list of available products.",
+          "operationId": "get-products",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "productId": "$response.body#/0/productId"
+          }
+        },
+        {
+          "stepId": "get-permission-groups",
+          "description": "Retrieves available permission groups for the selected product.",
+          "operationId": "get-permission-groups",
+          "parameters": [
+            {
+              "name": "productId",
+              "in": "path",
+              "value": "$steps.get-products.outputs.productId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "permissionGroupId": "$response.body#/0/permissionGroupId"
+          }
+        },
+        {
+          "stepId": "invite-member",
+          "description": "Invites a new member to the product and assigns them to a permission group.",
+          "operationId": "invite-member",
+          "parameters": [
+            {
+              "name": "productId",
+              "in": "path",
+              "value": "$steps.get-products.outputs.productId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "productId": "$steps.get-products.outputs.productId",
+              "permissionGroupId": "$steps.get-permission-groups.outputs.permissionGroupId",
+              "emails": "$inputs.emails"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "member_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-pending-invitations",
+          "description": "Verifies the invitation by listing pending invitations for the product.",
+          "operationId": "get-pending-invitations",
+          "parameters": [
+            {
+              "name": "productId",
+              "in": "path",
+              "value": "$steps.get-products.outputs.productId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pendingInvitations": "$response.body#/0/pendingInvitations"
+          }
+        }
+      ],
+      "outputs": {
+        "productId": "$steps.get-products.outputs.productId",
+        "permissionGroupId": "$steps.get-permission-groups.outputs.permissionGroupId",
+        "member_data": "$steps.invite-member.outputs.member_data",
+        "pendingInvitations": "$steps.get-pending-invitations.outputs.pendingInvitations"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "configure-slack-integration-for-product",
+      "summary": "This workflow automates the setup of a Slack integration for a specific product, allowing ConfigCat to send notifications to a designated Slack channel via an incoming webhook.",
+      "description": "This workflow automates the setup of a Slack integration for a specific product, allowing ConfigCat to send notifications to a designated Slack channel via an incoming webhook.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string"
+          },
+          "configIds": {
+            "type": "string"
+          },
+          "environmentIds": {
+            "type": "string"
+          },
+          "integrationType": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "parameters": {
+            "type": "string"
+          },
+          "integrationId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-products",
+          "description": "Retrieves a list of available products.",
+          "operationId": "get-products",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "productId": "$response.body#/0/productId"
+          }
+        },
+        {
+          "stepId": "create-integration",
+          "description": "Creates a new Slack integration for the product.",
+          "operationId": "create-integration",
+          "parameters": [
+            {
+              "name": "productId",
+              "in": "path",
+              "value": "$steps.get-products.outputs.productId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "productId": "$steps.get-products.outputs.productId",
+              "configIds": "$inputs.configIds",
+              "environmentIds": "$inputs.environmentIds",
+              "integrationType": "$inputs.integrationType",
+              "name": "$inputs.name",
+              "parameters": "$inputs.parameters"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "integrationId": "$response.body#/integrationId"
+          }
+        },
+        {
+          "stepId": "get-integration",
+          "description": "Retrieves the details of the newly created integration to verify its setup.",
+          "operationId": "get-integration",
+          "parameters": [
+            {
+              "name": "integrationId",
+              "in": "path",
+              "value": "$steps.create-integration.outputs.integrationId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "integrationDetails": "$response.body#/integrationDetails"
+          }
+        }
+      ],
+      "outputs": {
+        "productId": "$steps.get-products.outputs.productId",
+        "integrationId": "$steps.create-integration.outputs.integrationId",
+        "integrationDetails": "$steps.get-integration.outputs.integrationDetails"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-product-audit-logs",
+      "summary": "This workflow allows users to retrieve a comprehensive list of audit log entries for a specific product, with optional filtering by config, environment, or audit log type. This is essential for compliance, debugging, and monitoring changes within the ConfigCat platform.",
+      "description": "This workflow allows users to retrieve a comprehensive list of audit log entries for a specific product, with optional filtering by config, environment, or audit log type. This is essential for compliance, debugging, and monitoring changes within the ConfigCat platform.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string"
+          },
+          "configId": {
+            "type": "string"
+          },
+          "environmentId": {
+            "type": "string"
+          },
+          "auditLogType": {
+            "type": "string"
+          },
+          "fromUtcDateTime": {
+            "type": "string"
+          },
+          "toUtcDateTime": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-products",
+          "description": "Retrieves a list of available products.",
+          "operationId": "get-products",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "productId": "$response.body#/0/productId"
+          }
+        },
+        {
+          "stepId": "get-auditlogs",
+          "description": "Fetches audit log entries for the selected product, optionally filtered by config, environment, or audit log type.",
+          "operationId": "get-auditlogs",
+          "parameters": [
+            {
+              "name": "productId",
+              "in": "path",
+              "value": "$steps.get-products.outputs.productId"
+            },
+            {
+              "name": "configId",
+              "in": "query",
+              "value": "$inputs.configId"
+            },
+            {
+              "name": "environmentId",
+              "in": "query",
+              "value": "$inputs.environmentId"
+            },
+            {
+              "name": "auditLogType",
+              "in": "query",
+              "value": "$inputs.auditLogType"
+            },
+            {
+              "name": "fromUtcDateTime",
+              "in": "query",
+              "value": "$inputs.fromUtcDateTime"
+            },
+            {
+              "name": "toUtcDateTime",
+              "in": "query",
+              "value": "$inputs.toUtcDateTime"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "auditLogItems": "$response.body#/0/auditLogItems"
+          }
+        }
+      ],
+      "outputs": {
+        "productId": "$steps.get-products.outputs.productId",
+        "auditLogItems": "$steps.get-auditlogs.outputs.auditLogItems"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

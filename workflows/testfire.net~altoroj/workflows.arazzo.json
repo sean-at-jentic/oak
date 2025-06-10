@@ -1,0 +1,792 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/testfire.net/altoroj/1.0.2/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "user-authentication--session-management",
+      "summary": "Allows a user to log in to the AltoroJ banking system, verify their current login status, and securely log out. This is a foundational workflow for accessing protected resources and managing user sessions.",
+      "description": "Allows a user to log in to the AltoroJ banking system, verify their current login status, and securely log out. This is a foundational workflow for accessing protected resources and managing user sessions.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "Authorization": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "login-user",
+          "description": "Authenticates a user with provided credentials and returns an authorization token for subsequent API calls.",
+          "operationId": "login",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "username": "$inputs.username",
+              "password": "$inputs.password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "auth_token": "$response.body#/auth_token"
+          }
+        },
+        {
+          "stepId": "check-login-status",
+          "description": "Checks if a user is currently logged in and returns their username if a session is active.",
+          "operationId": "checkLogin",
+          "parameters": [
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$steps.login-user.outputs.auth_token"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "username": "$response.body#/username"
+          }
+        },
+        {
+          "stepId": "logout-user",
+          "description": "Logs out the current user, invalidating their session.",
+          "operationId": "doLogOut",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "logout_status": "$response.body#/logout_status"
+          }
+        }
+      ],
+      "outputs": {
+        "auth_token": "$steps.login-user.outputs.auth_token",
+        "username": "$steps.check-login-status.outputs.username",
+        "logout_status": "$steps.logout-user.outputs.logout_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-account-transactions",
+      "summary": "Allows a logged-in user to fetch transaction history for a specific account. This includes options to view the most recent ten transactions or to retrieve transactions within a custom date range.",
+      "description": "Allows a logged-in user to fetch transaction history for a specific account. This includes options to view the most recent ten transactions or to retrieve transactions within a custom date range.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "Authorization": {
+            "type": "string"
+          },
+          "accountNo": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string"
+          },
+          "endDate": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "login-user",
+          "description": "Authenticates the user to obtain an authorization token.",
+          "operationId": "login",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "username": "$inputs.username",
+              "password": "$inputs.password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "auth_token": "$response.body#/auth_token"
+          }
+        },
+        {
+          "stepId": "get-all-accounts",
+          "description": "Retrieves a list of all accounts owned by the authenticated user.",
+          "operationId": "getAccount",
+          "parameters": [
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$steps.login-user.outputs.auth_token"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "account_list": "$response.body#/account_list"
+          }
+        },
+        {
+          "stepId": "get-last-ten-transactions",
+          "description": "Retrieves the last ten transactions for a specified account.",
+          "operationId": "showLastTenTransactions",
+          "parameters": [
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$steps.login-user.outputs.auth_token"
+            },
+            {
+              "name": "accountNo",
+              "in": "path",
+              "value": "$steps.get-all-accounts.outputs.account_list.accountNo"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "transaction_list": "$response.body#/transaction_list"
+          }
+        },
+        {
+          "stepId": "get-transactions-by-date-range",
+          "description": "Retrieves transactions for a specified account within a given start and end date.",
+          "operationId": "getTransactions",
+          "parameters": [
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$steps.login-user.outputs.auth_token"
+            },
+            {
+              "name": "accountNo",
+              "in": "path",
+              "value": "$steps.get-all-accounts.outputs.account_list.accountNo"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "Authorization": "$steps.login-user.outputs.auth_token",
+              "accountNo": "$steps.get-all-accounts.outputs.account_list[0].accountNo",
+              "startDate": "$inputs.startDate",
+              "endDate": "$inputs.endDate"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "filtered_transaction_list": "$response.body#/filtered_transaction_list"
+          }
+        }
+      ],
+      "outputs": {
+        "auth_token": "$steps.login-user.outputs.auth_token",
+        "account_list": "$steps.get-all-accounts.outputs.account_list",
+        "transaction_list": "$steps.get-last-ten-transactions.outputs.transaction_list",
+        "filtered_transaction_list": "$steps.get-transactions-by-date-range.outputs.filtered_transaction_list"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "view-personal-account-details",
+      "summary": "Enables a logged-in user to retrieve a list of all their banking accounts and then view detailed information, including the balance, for a specific account selected from their list.",
+      "description": "Enables a logged-in user to retrieve a list of all their banking accounts and then view detailed information, including the balance, for a specific account selected from their list.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "Authorization": {
+            "type": "string"
+          },
+          "accountNo": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "login-user",
+          "description": "Authenticates the user to obtain an authorization token.",
+          "operationId": "login",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "username": "$inputs.username",
+              "password": "$inputs.password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "auth_token": "$response.body#/auth_token"
+          }
+        },
+        {
+          "stepId": "get-all-accounts",
+          "description": "Retrieves a list of all accounts owned by the authenticated user.",
+          "operationId": "getAccount",
+          "parameters": [
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$steps.login-user.outputs.auth_token"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "account_list": "$response.body#/account_list"
+          }
+        },
+        {
+          "stepId": "get-account-balance",
+          "description": "Fetches detailed information, including the balance, for a specific account identified by its account number.",
+          "operationId": "getAccountBalance",
+          "parameters": [
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$steps.login-user.outputs.auth_token"
+            },
+            {
+              "name": "accountNo",
+              "in": "path",
+              "value": "$steps.get-all-accounts.outputs.account_list.accountNo"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "account_details": "$response.body#/account_details"
+          }
+        }
+      ],
+      "outputs": {
+        "auth_token": "$steps.login-user.outputs.auth_token",
+        "account_list": "$steps.get-all-accounts.outputs.account_list",
+        "account_details": "$steps.get-account-balance.outputs.account_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "initiate-funds-transfer",
+      "summary": "Enables a logged-in user to securely transfer a specified amount of money from one of their accounts to another. This workflow assumes the user has access to multiple accounts.",
+      "description": "Enables a logged-in user to securely transfer a specified amount of money from one of their accounts to another. This workflow assumes the user has access to multiple accounts.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "Authorization": {
+            "type": "string"
+          },
+          "transferAmount": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "login-user",
+          "description": "Authenticates the user to obtain an authorization token.",
+          "operationId": "login",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "username": "$inputs.username",
+              "password": "$inputs.password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "auth_token": "$response.body#/auth_token"
+          }
+        },
+        {
+          "stepId": "get-all-accounts",
+          "description": "Retrieves a list of all accounts owned by the authenticated user to identify source and destination accounts.",
+          "operationId": "getAccount",
+          "parameters": [
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$steps.login-user.outputs.auth_token"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "account_list": "$response.body#/account_list"
+          }
+        },
+        {
+          "stepId": "perform-transfer",
+          "description": "Executes a money transfer between a specified source account and a destination account with a given amount.",
+          "operationId": "trasnfer",
+          "parameters": [
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$steps.login-user.outputs.auth_token"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "Authorization": "$steps.login-user.outputs.auth_token",
+              "fromAccount": "$steps.get-all-accounts.outputs.account_list[0].accountNo",
+              "toAccount": "$steps.get-all-accounts.outputs.account_list[1].accountNo",
+              "transferAmount": "$inputs.transferAmount"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "transfer_status": "$response.body#/transfer_status"
+          }
+        }
+      ],
+      "outputs": {
+        "auth_token": "$steps.login-user.outputs.auth_token",
+        "account_list": "$steps.get-all-accounts.outputs.account_list",
+        "transfer_status": "$steps.perform-transfer.outputs.transfer_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "admin-user-account-management",
+      "summary": "Provides administrative capabilities for managing user accounts within the AltoroJ system. This includes adding new users and changing existing user passwords, requiring administrator authentication.",
+      "description": "Provides administrative capabilities for managing user accounts within the AltoroJ system. This includes adding new users and changing existing user passwords, requiring administrator authentication.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "Authorization": {
+            "type": "string"
+          },
+          "firstname": {
+            "type": "string"
+          },
+          "lastname": {
+            "type": "string"
+          },
+          "password1": {
+            "type": "string"
+          },
+          "password2": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "admin-login",
+          "description": "Authenticates an administrator to gain access to administrative functions.",
+          "operationId": "login",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "username": "$inputs.username",
+              "password": "$inputs.password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "auth_token": "$response.body#/auth_token"
+          }
+        },
+        {
+          "stepId": "add-new-user",
+          "description": "Adds a new user to the system with specified personal details and credentials.",
+          "operationId": "addUser",
+          "parameters": [
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$steps.admin-login.outputs.auth_token"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "Authorization": "$steps.admin-login.outputs.auth_token",
+              "firstname": "$inputs.firstname",
+              "lastname": "$inputs.lastname",
+              "username": "$inputs.username",
+              "password1": "$inputs.password1",
+              "password2": "$inputs.password2"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user_creation_status": "$response.body#/user_creation_status"
+          }
+        },
+        {
+          "stepId": "change-user-password",
+          "description": "Changes the password for an existing user identified by their username.",
+          "operationId": "changePassword",
+          "parameters": [
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$steps.admin-login.outputs.auth_token"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "Authorization": "$steps.admin-login.outputs.auth_token",
+              "username": "$inputs.username",
+              "password2": "$inputs.password2"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "password_change_status": "$response.body#/password_change_status"
+          }
+        }
+      ],
+      "outputs": {
+        "auth_token": "$steps.admin-login.outputs.auth_token",
+        "user_creation_status": "$steps.add-new-user.outputs.user_creation_status",
+        "password_change_status": "$steps.change-user-password.outputs.password_change_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "customer-feedback-management",
+      "summary": "Facilitates the submission of feedback from customers and allows authorized personnel (e.g., administrators) to retrieve specific feedback entries for review and follow-up.",
+      "description": "Facilitates the submission of feedback from customers and allows authorized personnel (e.g., administrators) to retrieve specific feedback entries for review and follow-up.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "Authorization": {
+            "type": "string"
+          },
+          "feedbackId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "submit-customer-feedback",
+          "description": "Allows any user to submit feedback to the bank, including their name, email, subject, and message.",
+          "operationId": "sendFeedback",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name",
+              "email": "$inputs.email",
+              "subject": "$inputs.subject",
+              "message": "$inputs.message"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "feedback_submission_status": "$response.body#/feedback_submission_status",
+            "feedback_id": "$response.body#/feedback_id"
+          }
+        },
+        {
+          "stepId": "admin-login",
+          "description": "Authenticates an administrator to gain access to feedback retrieval functions.",
+          "operationId": "login",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "username": "$inputs.username",
+              "password": "$inputs.password"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "auth_token": "$response.body#/auth_token"
+          }
+        },
+        {
+          "stepId": "retrieve-specific-feedback",
+          "description": "Retrieves the details of a specific feedback entry using its unique ID, typically for administrative review.",
+          "operationId": "getFeedback",
+          "parameters": [
+            {
+              "name": "Authorization",
+              "in": "header",
+              "value": "$steps.admin-login.outputs.auth_token"
+            },
+            {
+              "name": "feedbackId",
+              "in": "path",
+              "value": "$steps.submit-customer-feedback.outputs.feedback_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "feedback_details": "$response.body#/feedback_details"
+          }
+        }
+      ],
+      "outputs": {
+        "feedback_submission_status": "$steps.submit-customer-feedback.outputs.feedback_submission_status",
+        "feedback_id": "$steps.submit-customer-feedback.outputs.feedback_id",
+        "auth_token": "$steps.admin-login.outputs.auth_token",
+        "feedback_details": "$steps.retrieve-specific-feedback.outputs.feedback_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

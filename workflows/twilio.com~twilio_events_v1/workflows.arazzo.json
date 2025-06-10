@@ -1,0 +1,819 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/twilio.com/twilio_events_v1/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "create-and-validate-new-event-sink",
+      "summary": "This workflow allows a user to create a new destination (Sink) for Twilio events, initiate a test event to it, and then validate that the test event was successfully received, confirming the Sink's setup.",
+      "description": "This workflow allows a user to create a new destination (Sink) for Twilio events, initiate a test event to it, and then validate that the test event was successfully received, confirming the Sink's setup.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Description": {
+            "type": "string"
+          },
+          "SinkConfiguration": {
+            "type": "string"
+          },
+          "SinkType": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "TestId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-sink",
+          "description": "Creates a new Sink resource, which is a destination for Twilio events (e.g., Kinesis, Webhook).",
+          "operationId": "CreateSink",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Description": "$inputs.Description",
+              "SinkConfiguration": "$inputs.SinkConfiguration",
+              "SinkType": "$inputs.SinkType"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "status": "$response.body#/status"
+          }
+        },
+        {
+          "stepId": "test-sink",
+          "description": "Initiates a test event to the newly created Sink to check its configuration and connectivity.",
+          "operationId": "CreateSinkTest",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.create-sink.outputs.sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "result": "$response.body#/result"
+          }
+        },
+        {
+          "stepId": "validate-sink",
+          "description": "Validates that the test event sent to the Sink was successfully received, confirming the Sink's setup. Note: 'TestId' is a user-provided identifier for the test event.",
+          "operationId": "CreateSinkValidate",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.create-sink.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Sid": "$steps.create-sink.outputs.sid",
+              "TestId": "$inputs.TestId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "result": "$response.body#/result"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.create-sink.outputs.sid",
+        "status": "$steps.create-sink.outputs.status",
+        "result": "$steps.validate-sink.outputs.result"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "discover-twilio-event-types-and-schemas",
+      "summary": "This workflow allows developers to explore the full catalog of available Twilio event types and retrieve their detailed schema definitions, including different versions, to understand the structure of event data.",
+      "description": "This workflow allows developers to explore the full catalog of available Twilio event types and retrieve their detailed schema definitions, including different versions, to understand the structure of event data.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "SchemaId": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "Type": {
+            "type": "string"
+          },
+          "Id": {
+            "type": "string"
+          },
+          "SchemaVersion": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-event-types",
+          "description": "Retrieves a paginated list of all available event types offered by Twilio, which can be filtered by schema ID.",
+          "operationId": "ListEventType",
+          "parameters": [
+            {
+              "name": "SchemaId",
+              "in": "query",
+              "value": "$inputs.SchemaId"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "types": "$response.body#/types"
+          }
+        },
+        {
+          "stepId": "fetch-event-type-details",
+          "description": "Fetches detailed information for a specific event type, including its associated schema ID and documentation URL.",
+          "operationId": "FetchEventType",
+          "parameters": [
+            {
+              "name": "Type",
+              "in": "path",
+              "value": "$steps.list-event-types.outputs.types.type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "type": "$response.body#/type",
+            "schema_id": "$response.body#/schema_id",
+            "description": "$response.body#/description",
+            "status": "$response.body#/status",
+            "documentation_url": "$response.body#/documentation_url"
+          }
+        },
+        {
+          "stepId": "fetch-schema-details",
+          "description": "Retrieves the overall schema details for a given schema ID, including its latest version and links to nested resources.",
+          "operationId": "FetchSchema",
+          "parameters": [
+            {
+              "name": "Id",
+              "in": "path",
+              "value": "$steps.fetch-event-type-details.outputs.schema_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "latest_version": "$response.body#/latest_version",
+            "links": "$response.body#/links"
+          }
+        },
+        {
+          "stepId": "list-schema-versions",
+          "description": "Lists all available versions for a specific schema, providing details and URLs to their raw content.",
+          "operationId": "ListSchemaVersion",
+          "parameters": [
+            {
+              "name": "Id",
+              "in": "path",
+              "value": "$steps.fetch-schema-details.outputs.id"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "schema_versions": "$response.body#/schema_versions"
+          }
+        },
+        {
+          "stepId": "fetch-specific-schema-version",
+          "description": "Fetches the details of a specific version of a schema, including a link to its raw definition.",
+          "operationId": "FetchSchemaVersion",
+          "parameters": [
+            {
+              "name": "Id",
+              "in": "path",
+              "value": "$steps.list-schema-versions.outputs.schema_versions.id"
+            },
+            {
+              "name": "SchemaVersion",
+              "in": "path",
+              "value": "$steps.list-schema-versions.outputs.schema_versions.schema_version"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "schema_version": "$response.body#/schema_version",
+            "raw": "$response.body#/raw"
+          }
+        }
+      ],
+      "outputs": {
+        "types": "$steps.list-event-types.outputs.types",
+        "type": "$steps.fetch-event-type-details.outputs.type",
+        "schema_id": "$steps.fetch-event-type-details.outputs.schema_id",
+        "description": "$steps.fetch-event-type-details.outputs.description",
+        "status": "$steps.fetch-event-type-details.outputs.status",
+        "documentation_url": "$steps.fetch-event-type-details.outputs.documentation_url",
+        "id": "$steps.fetch-specific-schema-version.outputs.id",
+        "latest_version": "$steps.fetch-schema-details.outputs.latest_version",
+        "links": "$steps.fetch-schema-details.outputs.links",
+        "schema_versions": "$steps.list-schema-versions.outputs.schema_versions",
+        "schema_version": "$steps.fetch-specific-schema-version.outputs.schema_version",
+        "raw": "$steps.fetch-specific-schema-version.outputs.raw"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-new-event-subscription",
+      "summary": "This workflow enables a user to establish a new subscription, linking specific Twilio event types to an existing, active Sink. The user needs to know the desired event types and their schema versions.",
+      "description": "This workflow enables a user to establish a new subscription, linking specific Twilio event types to an existing, active Sink. The user needs to know the desired event types and their schema versions.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "InUse": {
+            "type": "string"
+          },
+          "Status": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "SchemaId": {
+            "type": "string"
+          },
+          "Description": {
+            "type": "string"
+          },
+          "Types": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-active-sinks",
+          "description": "Lists active Sinks to identify a suitable destination for the new subscription. Filters by 'active' status.",
+          "operationId": "ListSink",
+          "parameters": [
+            {
+              "name": "InUse",
+              "in": "query",
+              "value": "$inputs.InUse"
+            },
+            {
+              "name": "Status",
+              "in": "query",
+              "value": "$inputs.Status"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sinks": "$response.body#/sinks"
+          }
+        },
+        {
+          "stepId": "list-available-event-types",
+          "description": "Retrieves available event types to select which events to subscribe to. Note: This step provides event 'type' and 'schema_id', but 'schema_version' for subscription must be user-provided or obtained via schema discovery.",
+          "operationId": "ListEventType",
+          "parameters": [
+            {
+              "name": "SchemaId",
+              "in": "query",
+              "value": "$inputs.SchemaId"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "types": "$response.body#/types"
+          }
+        },
+        {
+          "stepId": "create-subscription",
+          "description": "Creates the subscription, specifying its description, the target Sink, and the event types (with their schema versions) to be streamed. 'Types' array requires 'schema_version' which is user-provided.",
+          "operationId": "CreateSubscription",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "SinkSid": "$steps.list-active-sinks.outputs.sinks[0].sid",
+              "Description": "$inputs.Description",
+              "Types": "$inputs.Types"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "description": "$response.body#/description",
+            "sink_sid": "$response.body#/sink_sid"
+          }
+        }
+      ],
+      "outputs": {
+        "sinks": "$steps.list-active-sinks.outputs.sinks",
+        "types": "$steps.list-available-event-types.outputs.types",
+        "sid": "$steps.create-subscription.outputs.sid",
+        "description": "$steps.create-subscription.outputs.description",
+        "sink_sid": "$steps.create-subscription.outputs.sink_sid"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "update-existing-event-subscription-details",
+      "summary": "Allows a user to modify the description or change the associated Sink for an existing event subscription.",
+      "description": "Allows a user to modify the description or change the associated Sink for an existing event subscription.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "SinkSid": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "Description": {
+            "type": "string"
+          },
+          "ReceiveEventsFromSubaccounts": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-subscriptions",
+          "description": "Lists existing subscriptions to identify the one to update.",
+          "operationId": "ListSubscription",
+          "parameters": [
+            {
+              "name": "SinkSid",
+              "in": "query",
+              "value": "$inputs.SinkSid"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "subscriptions": "$response.body#/subscriptions"
+          }
+        },
+        {
+          "stepId": "update-subscription",
+          "description": "Updates the specified subscription with a new description, a different Sink, or changes whether it receives events from subaccounts.",
+          "operationId": "UpdateSubscription",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.list-subscriptions.outputs.subscriptions.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Sid": "$steps.list-subscriptions.outputs.subscriptions[0].sid",
+              "Description": "$inputs.Description",
+              "SinkSid": "$inputs.SinkSid",
+              "ReceiveEventsFromSubaccounts": "$inputs.ReceiveEventsFromSubaccounts"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "description": "$response.body#/description",
+            "sink_sid": "$response.body#/sink_sid"
+          }
+        }
+      ],
+      "outputs": {
+        "subscriptions": "$steps.list-subscriptions.outputs.subscriptions",
+        "sid": "$steps.update-subscription.outputs.sid",
+        "description": "$steps.update-subscription.outputs.description",
+        "sink_sid": "$steps.update-subscription.outputs.sink_sid"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "add-event-type-to-existing-subscription",
+      "summary": "This workflow enables a user to add a new event type, with a specified schema version, to an existing event subscription.",
+      "description": "This workflow enables a user to add a new event type, with a specified schema version, to an existing event subscription.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "SinkSid": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "SchemaId": {
+            "type": "string"
+          },
+          "SubscriptionSid": {
+            "type": "string"
+          },
+          "Type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-subscriptions",
+          "description": "Lists existing subscriptions to select the target subscription to which a new event type will be added.",
+          "operationId": "ListSubscription",
+          "parameters": [
+            {
+              "name": "SinkSid",
+              "in": "query",
+              "value": "$inputs.SinkSid"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "subscriptions": "$response.body#/subscriptions"
+          }
+        },
+        {
+          "stepId": "list-available-event-types",
+          "description": "Retrieves available event types to select which new event to add. Note: This step provides event 'type' and 'schema_id', but 'schema_version' for subscription must be user-provided or obtained via schema discovery.",
+          "operationId": "ListEventType",
+          "parameters": [
+            {
+              "name": "SchemaId",
+              "in": "query",
+              "value": "$inputs.SchemaId"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "types": "$response.body#/types"
+          }
+        },
+        {
+          "stepId": "add-subscribed-event",
+          "description": "Adds the selected event type and its schema version to the specified subscription. 'SchemaVersion' is a user-provided input.",
+          "operationId": "CreateSubscribedEvent",
+          "parameters": [
+            {
+              "name": "SubscriptionSid",
+              "in": "path",
+              "value": "$steps.list-subscriptions.outputs.subscriptions.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "SubscriptionSid": "$steps.list-subscriptions.outputs.subscriptions[0].sid",
+              "Type": "$inputs.Type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "type": "$response.body#/type",
+            "schema_version": "$response.body#/schema_version"
+          }
+        }
+      ],
+      "outputs": {
+        "subscriptions": "$steps.list-subscriptions.outputs.subscriptions",
+        "types": "$steps.list-available-event-types.outputs.types",
+        "type": "$steps.add-subscribed-event.outputs.type",
+        "schema_version": "$steps.add-subscribed-event.outputs.schema_version"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

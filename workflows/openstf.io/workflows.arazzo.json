@@ -1,0 +1,386 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/openstf.io/main/2.3.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "user-device-lifecycle-management",
+      "summary": "A comprehensive workflow for a user to acquire a smartphone device from the farm, establish a remote connection for interactive testing or control, and then properly release the device back to the farm.",
+      "description": "A comprehensive workflow for a user to acquire a smartphone device from the farm, establish a remote connection for interactive testing or control, and then properly release the device back to the farm.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "string"
+          },
+          "serial": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-available-devices-for-acquisition",
+          "description": "List all available devices in the farm to help the user select a suitable device for acquisition.",
+          "operationId": "getDevices",
+          "parameters": [
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "devices": "$response.body#/devices"
+          }
+        },
+        {
+          "stepId": "acquire-device",
+          "description": "Request and acquire a specific device for the current user's exclusive use, specifying the device serial and an optional timeout.",
+          "operationId": "addUserDevice",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "serial": "$steps.list-available-devices-for-acquisition.outputs.devices[0].serial"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status"
+          }
+        },
+        {
+          "stepId": "get-acquired-device-details",
+          "description": "Retrieve detailed information about the device that has just been acquired by the user, confirming its status and properties under user ownership.",
+          "operationId": "getUserDeviceBySerial",
+          "parameters": [
+            {
+              "name": "serial",
+              "in": "path",
+              "value": "$steps.list-available-devices-for-acquisition.outputs.devices.serial"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "device": "$response.body#/device"
+          }
+        },
+        {
+          "stepId": "remote-connect-to-device",
+          "description": "Establish a remote connection to the acquired device, providing a URL for direct interaction or streaming, which is essential for remote testing.",
+          "operationId": "remoteConnectUserDeviceBySerial",
+          "parameters": [
+            {
+              "name": "serial",
+              "in": "path",
+              "value": "$steps.list-available-devices-for-acquisition.outputs.devices.serial"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "remoteConnectUrl": "$response.body#/remoteConnectUrl",
+            "serial": "$response.body#/serial"
+          }
+        },
+        {
+          "stepId": "remote-disconnect-from-device",
+          "description": "Terminate the active remote connection to the device, freeing up resources and ending the interactive session.",
+          "operationId": "remoteDisconnectUserDeviceBySerial",
+          "parameters": [
+            {
+              "name": "serial",
+              "in": "path",
+              "value": "$steps.remote-connect-to-device.outputs.serial"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status"
+          }
+        },
+        {
+          "stepId": "release-device",
+          "description": "Release the device from the user's ownership, making it available for other users in the test farm.",
+          "operationId": "deleteUserDeviceBySerial",
+          "parameters": [
+            {
+              "name": "serial",
+              "in": "path",
+              "value": "$steps.remote-connect-to-device.outputs.serial"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status"
+          }
+        }
+      ],
+      "outputs": {
+        "devices": "$steps.list-available-devices-for-acquisition.outputs.devices",
+        "status": "$steps.release-device.outputs.status",
+        "device": "$steps.get-acquired-device-details.outputs.device",
+        "remoteConnectUrl": "$steps.remote-connect-to-device.outputs.remoteConnectUrl",
+        "serial": "$steps.remote-connect-to-device.outputs.serial"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "device-discovery",
+      "summary": "Discover all available devices in the Smartphone Test Farm and retrieve detailed information about a specific device. This workflow helps users identify suitable devices for their testing needs.",
+      "description": "Discover all available devices in the Smartphone Test Farm and retrieve detailed information about a specific device. This workflow helps users identify suitable devices for their testing needs.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "string"
+          },
+          "serial": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-all-devices",
+          "description": "Retrieve a comprehensive list of all devices managed by the STF system, including those that are disconnected or offline, to provide a full overview of available resources.",
+          "operationId": "getDevices",
+          "parameters": [
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "devices": "$response.body#/devices"
+          }
+        },
+        {
+          "stepId": "get-specific-device-info",
+          "description": "Obtain detailed information for a particular device by its serial number, allowing users to inspect its properties before acquisition or use.",
+          "operationId": "getDeviceBySerial",
+          "parameters": [
+            {
+              "name": "serial",
+              "in": "path",
+              "value": "$steps.list-all-devices.outputs.devices.serial"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "device": "$response.body#/device"
+          }
+        }
+      ],
+      "outputs": {
+        "devices": "$steps.list-all-devices.outputs.devices",
+        "device": "$steps.get-specific-device-info.outputs.device"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "user-profile-and-owned-devices-overview",
+      "summary": "Retrieve the current user's profile information and a list of all smartphone devices currently owned or assigned to them. This provides a personal overview of the user's resources.",
+      "description": "Retrieve the current user's profile information and a list of all smartphone devices currently owned or assigned to them. This provides a personal overview of the user's resources.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-user-profile",
+          "description": "Fetch the profile details of the currently authenticated user, including their basic information.",
+          "operationId": "getUser",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user": "$response.body#/user"
+          }
+        },
+        {
+          "stepId": "list-user-owned-devices",
+          "description": "Get a list of all smartphone devices currently assigned to or owned by the user, allowing them to track their active sessions.",
+          "operationId": "getUserDevices",
+          "parameters": [
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "devices": "$response.body#/devices"
+          }
+        }
+      ],
+      "outputs": {
+        "user": "$steps.get-user-profile.outputs.user",
+        "devices": "$steps.list-user-owned-devices.outputs.devices"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

@@ -1,0 +1,145 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/openindex.ai/main/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "refined-document-search",
+      "summary": "Allows users to perform an initial broad natural language query and then refine the search results by applying specific metadata filters (e.g., source, time period, author) in a subsequent query to narrow down the results. This addresses the need for more precise information retrieval by leveraging the filtering capabilities of the API.",
+      "description": "Allows users to perform an initial broad natural language query and then refine the search results by applying specific metadata filters (e.g., source, time period, author) in a subsequent query to narrow down the results. This addresses the need for more precise information retrieval by leveraging the filtering capabilities of the API.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "queries": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "initial-document-query",
+          "description": "Submits an initial broad natural language query to retrieve relevant document chunks. The `queries` input will typically contain a single `Query` object with only the `query` string populated, without specific filters.",
+          "operationId": "query_query_post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "queries": "$inputs.queries"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "results": "$response.body#/results"
+          }
+        },
+        {
+          "stepId": "refine-document-query",
+          "description": "Submits a refined query based on the initial results. The `queries` input for this step will contain a `Query` object with the original `query` string (or a modified one) and a `filter` object populated with specific criteria (e.g., `source`, `author`, `time_period`) derived from analyzing the `metadata` within the `results` of the `initial-document-query` step. This allows for narrowing down the search space.",
+          "operationId": "query_query_post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "queries": "$inputs.queries"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "results": "$response.body#/results"
+          }
+        }
+      ],
+      "outputs": {
+        "results": "$steps.refine-document-query.outputs.results"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

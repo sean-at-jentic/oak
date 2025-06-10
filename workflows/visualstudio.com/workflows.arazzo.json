@@ -1,0 +1,1037 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/visualstudio.com/main/v1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "provision-and-connect-to-a-new-codespace",
+      "summary": "Allows a user to provision a new development environment (Codespace), retrieve its details, and obtain connection information to begin development. This workflow guides the user from selecting a location and SKU to creating the Codespace and getting the necessary tunnel details for connection.",
+      "description": "Allows a user to provision a new development environment (Codespace), retrieve its details, and obtain connection information to begin development. This workflow guides the user from selecting a location and SKU to creating the Codespace and getting the necessary tunnel details for connection.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string"
+          },
+          "planId": {
+            "type": "string"
+          },
+          "friendlyName": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "environmentId": {
+            "type": "string"
+          },
+          "deleted": {
+            "type": "string"
+          },
+          "portNumber": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-available-locations",
+          "description": "Retrieves a list of available Azure regions where Codespaces can be provisioned, allowing the user to choose a preferred deployment location.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1Locations/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "available": "$response.body#/available",
+            "hostnames": "$response.body#/hostnames"
+          }
+        },
+        {
+          "stepId": "get-location-skus",
+          "description": "Retrieves available SKU (compute size) information for a specific location, helping the user choose the right environment size based on their needs and regional availability.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1Locations~1{location}/get",
+          "parameters": [
+            {
+              "name": "location",
+              "in": "path",
+              "value": "$steps.get-available-locations.outputs.available"
+            },
+            {
+              "name": "planId",
+              "in": "query",
+              "value": "$inputs.planId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "skus": "$response.body#/skus"
+          }
+        },
+        {
+          "stepId": "create-codespace",
+          "description": "Creates a new Codespace environment with a specified friendly name, type, and optional configurations such as initial repository, SKU, and location.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1Environments/post",
+          "requestBody": {
+            "contentType": "application/json-patch+json",
+            "payload": {
+              "location": "$steps.get-available-locations.outputs.available[0]",
+              "skuName": "$steps.get-location-skus.outputs.skus[0].name",
+              "friendlyName": "$inputs.friendlyName",
+              "type": "$inputs.type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "state": "$response.body#/state",
+            "connection": "$response.body#/connection",
+            "friendlyName": "$response.body#/friendlyName"
+          }
+        },
+        {
+          "stepId": "get-codespace-details",
+          "description": "Retrieves the full details of the newly created Codespace, including its current state, connection information, and other metadata, to confirm successful provisioning.",
+          "operationId": "GetEnvironmentRoute",
+          "parameters": [
+            {
+              "name": "environmentId",
+              "in": "path",
+              "value": "$steps.create-codespace.outputs.id"
+            },
+            {
+              "name": "deleted",
+              "in": "query",
+              "value": "$inputs.deleted"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "state": "$response.body#/state",
+            "connection": "$response.body#/connection",
+            "portForwardingConnection": "$response.body#/portForwardingConnection",
+            "friendlyName": "$response.body#/friendlyName"
+          }
+        },
+        {
+          "stepId": "get-tunnel-port-info",
+          "description": "Obtains specific port forwarding information, such as a tunnel token, required to establish a secure connection to the Codespace for development.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1Tunnel~1{environmentId}~1portInfo/get",
+          "parameters": [
+            {
+              "name": "environmentId",
+              "in": "path",
+              "value": "$steps.create-codespace.outputs.id"
+            },
+            {
+              "name": "portNumber",
+              "in": "query",
+              "value": "$inputs.portNumber"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tunnelToken": "$response.body#/tunnelToken",
+            "portVisibility": "$response.body#/portVisibility"
+          }
+        }
+      ],
+      "outputs": {
+        "available": "$steps.get-available-locations.outputs.available",
+        "hostnames": "$steps.get-available-locations.outputs.hostnames",
+        "skus": "$steps.get-location-skus.outputs.skus",
+        "id": "$steps.get-codespace-details.outputs.id",
+        "state": "$steps.get-codespace-details.outputs.state",
+        "connection": "$steps.get-codespace-details.outputs.connection",
+        "friendlyName": "$steps.get-codespace-details.outputs.friendlyName",
+        "portForwardingConnection": "$steps.get-codespace-details.outputs.portForwardingConnection",
+        "tunnelToken": "$steps.get-tunnel-port-info.outputs.tunnelToken",
+        "portVisibility": "$steps.get-tunnel-port-info.outputs.portVisibility"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "prebuild-template-creation-and-validation",
+      "summary": "Enables users or CI/CD systems to create pre-built environment templates from a repository, retrieve their details, validate their readiness across different SKUs and locations, and update their status, streamlining Codespace provisioning.",
+      "description": "Enables users or CI/CD systems to create pre-built environment templates from a repository, retrieve their details, validate their readiness across different SKUs and locations, and update their status, streamlining Codespace provisioning.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "friendlyName": {
+            "type": "string"
+          },
+          "environmentId": {
+            "type": "string"
+          },
+          "repoId": {
+            "type": "string"
+          },
+          "branchName": {
+            "type": "string"
+          },
+          "prebuildHash": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "devContainerPath": {
+            "type": "string"
+          },
+          "storageType": {
+            "type": "string"
+          },
+          "fastPathEnabled": {
+            "type": "string"
+          },
+          "templateId": {
+            "type": "string"
+          },
+          "isSuccess": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-prebuild-template",
+          "description": "Creates a new prebuild template, initiating the process of pre-building a Codespace environment based on a specified repository and configuration.",
+          "operationPath": "openapi_source#/paths/~1api~1v2~1prebuilds~1templates/post",
+          "requestBody": {
+            "contentType": "application/json-patch+json",
+            "payload": {
+              "friendlyName": "$inputs.friendlyName"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "templateId": "$response.body#/templateId",
+            "sasUrl": "$response.body#/sasUrl",
+            "properties": "$response.body#/properties"
+          }
+        },
+        {
+          "stepId": "get-prebuild-template-info",
+          "description": "Retrieves detailed information about a specific prebuild template using its ID, including its associated repository details, branch, and prebuild hash.",
+          "operationPath": "openapi_source#/paths/~1api~1v2~1prebuilds~1template~1{environmentId}/get",
+          "parameters": [
+            {
+              "name": "environmentId",
+              "in": "path",
+              "value": "$steps.create-prebuild-template.outputs.templateId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "repoId": "$response.body#/repoId",
+            "branchName": "$response.body#/branchName",
+            "prebuildHash": "$response.body#/prebuildHash",
+            "devcontainerPath": "$response.body#/devcontainerPath"
+          }
+        },
+        {
+          "stepId": "check-prebuild-readiness",
+          "description": "Checks the readiness of a prebuild template for various SKUs and locations, indicating which configurations are supported for instant Codespace creation.",
+          "operationId": "GetPrebuildReadinessSkusRoute",
+          "parameters": [
+            {
+              "name": "repoId",
+              "in": "path",
+              "value": "$steps.get-prebuild-template-info.outputs.repoId"
+            },
+            {
+              "name": "branchName",
+              "in": "path",
+              "value": "$steps.get-prebuild-template-info.outputs.branchName"
+            },
+            {
+              "name": "prebuildHash",
+              "in": "path",
+              "value": "$steps.get-prebuild-template-info.outputs.prebuildHash"
+            },
+            {
+              "name": "location",
+              "in": "path",
+              "value": "$inputs.location"
+            },
+            {
+              "name": "devContainerPath",
+              "in": "path",
+              "value": "$steps.get-prebuild-template-info.outputs.devcontainerPath"
+            },
+            {
+              "name": "storageType",
+              "in": "query",
+              "value": "$inputs.storageType"
+            },
+            {
+              "name": "fastPathEnabled",
+              "in": "query",
+              "value": "$inputs.fastPathEnabled"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "templateSkus": "$response.body#/templateSkus",
+            "poolSkus": "$response.body#/poolSkus",
+            "supportedSkus": "$response.body#/supportedSkus"
+          }
+        },
+        {
+          "stepId": "update-prebuild-template-status",
+          "description": "Updates the status of a prebuild template (e.g., after a build or validation process) to indicate success or failure, providing feedback on its usability.",
+          "operationPath": "openapi_source#/paths/~1api~1v2~1prebuilds~1templates~1{templateId}~1updatestatus/post",
+          "parameters": [
+            {
+              "name": "templateId",
+              "in": "path",
+              "value": "$steps.create-prebuild-template.outputs.templateId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json-patch+json",
+            "payload": {
+              "templateId": "$steps.create-prebuild-template.outputs.templateId",
+              "isSuccess": "$inputs.isSuccess"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "templateId": "$steps.create-prebuild-template.outputs.templateId",
+        "sasUrl": "$steps.create-prebuild-template.outputs.sasUrl",
+        "properties": "$steps.create-prebuild-template.outputs.properties",
+        "id": "$steps.get-prebuild-template-info.outputs.id",
+        "repoId": "$steps.get-prebuild-template-info.outputs.repoId",
+        "branchName": "$steps.get-prebuild-template-info.outputs.branchName",
+        "prebuildHash": "$steps.get-prebuild-template-info.outputs.prebuildHash",
+        "devcontainerPath": "$steps.get-prebuild-template-info.outputs.devcontainerPath",
+        "templateSkus": "$steps.check-prebuild-readiness.outputs.templateSkus",
+        "poolSkus": "$steps.check-prebuild-readiness.outputs.poolSkus",
+        "supportedSkus": "$steps.check-prebuild-readiness.outputs.supportedSkus",
+        "status_data": "$steps.update-prebuild-template-status.outputs.status_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-codespace-operational-state",
+      "summary": "Allows a user to control the operational state of their existing Codespaces, including starting them to resume work and shutting them down to save resources.",
+      "description": "Allows a user to control the operational state of their existing Codespaces, including starting them to resume work and shutting them down to save resources.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "planId": {
+            "type": "string"
+          },
+          "deleted": {
+            "type": "string"
+          },
+          "environmentId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-user-codespaces",
+          "description": "Retrieves a list of all Codespaces owned by the user, providing their IDs and current states, to identify the target environment for state management.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1Environments/get",
+          "parameters": [
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "planId",
+              "in": "query",
+              "value": "$inputs.planId"
+            },
+            {
+              "name": "deleted",
+              "in": "query",
+              "value": "$inputs.deleted"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "codespaces": "$response.body#/0/codespaces"
+          }
+        },
+        {
+          "stepId": "start-codespace",
+          "description": "Starts a specific Codespace, making it available for active use and development.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1Environments~1{environmentId}~1start/post",
+          "parameters": [
+            {
+              "name": "environmentId",
+              "in": "path",
+              "value": "$steps.list-user-codespaces.outputs.codespaces.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "state": "$response.body#/state"
+          }
+        },
+        {
+          "stepId": "shutdown-codespace",
+          "description": "Shuts down a specific Codespace, stopping its compute resources and saving its current state.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1Environments~1{environmentId}~1shutdown/post",
+          "parameters": [
+            {
+              "name": "environmentId",
+              "in": "path",
+              "value": "$steps.list-user-codespaces.outputs.codespaces.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "state": "$response.body#/state"
+          }
+        }
+      ],
+      "outputs": {
+        "codespaces": "$steps.list-user-codespaces.outputs.codespaces",
+        "id": "$steps.shutdown-codespace.outputs.id",
+        "state": "$steps.shutdown-codespace.outputs.state"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "archive-and-restore-codespace",
+      "summary": "Enables a user to archive a Codespace to a low-cost storage state when not in active use, and then restore it later for continued development, optimizing resource usage and cost.",
+      "description": "Enables a user to archive a Codespace to a low-cost storage state when not in active use, and then restore it later for continued development, optimizing resource usage and cost.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "planId": {
+            "type": "string"
+          },
+          "deleted": {
+            "type": "string"
+          },
+          "environmentId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-user-codespaces-for-archive",
+          "description": "Retrieves a list of all Codespaces to identify the one to be archived.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1Environments/get",
+          "parameters": [
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "planId",
+              "in": "query",
+              "value": "$inputs.planId"
+            },
+            {
+              "name": "deleted",
+              "in": "query",
+              "value": "$inputs.deleted"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "codespaces": "$response.body#/0/codespaces"
+          }
+        },
+        {
+          "stepId": "archive-codespace",
+          "description": "Archives a specific Codespace, moving its data to a cost-effective storage solution while preserving its state.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1Environments~1{environmentId}~1archive/post",
+          "parameters": [
+            {
+              "name": "environmentId",
+              "in": "path",
+              "value": "$steps.list-user-codespaces-for-archive.outputs.codespaces.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "state": "$response.body#/state"
+          }
+        },
+        {
+          "stepId": "get-archived-codespace-details",
+          "description": "Retrieves detailed information about an archived Codespace, including its storage details, before restoration.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1Environments~1{environmentId}~1archive/get",
+          "parameters": [
+            {
+              "name": "environmentId",
+              "in": "path",
+              "value": "$steps.archive-codespace.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "state": "$response.body#/state",
+            "exportedBlobUrl": "$response.body#/exportedBlobUrl"
+          }
+        },
+        {
+          "stepId": "restore-codespace",
+          "description": "Restores an archived Codespace, bringing it back to an active state for continued development.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1Environments~1{environmentId}~1restore/patch",
+          "parameters": [
+            {
+              "name": "environmentId",
+              "in": "path",
+              "value": "$steps.archive-codespace.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "codespace_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "codespaces": "$steps.list-user-codespaces-for-archive.outputs.codespaces",
+        "id": "$steps.get-archived-codespace-details.outputs.id",
+        "state": "$steps.get-archived-codespace-details.outputs.state",
+        "exportedBlobUrl": "$steps.get-archived-codespace-details.outputs.exportedBlobUrl",
+        "codespace_data": "$steps.restore-codespace.outputs.codespace_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "delete-a-codespace",
+      "summary": "Allows a user to permanently delete an existing Codespace environment and its associated resources, freeing up allocated resources.",
+      "description": "Allows a user to permanently delete an existing Codespace environment and its associated resources, freeing up allocated resources.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "planId": {
+            "type": "string"
+          },
+          "deleted": {
+            "type": "string"
+          },
+          "environmentId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-user-codespaces-for-deletion",
+          "description": "Retrieves a list of all Codespaces to identify the specific environment to be deleted.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1Environments/get",
+          "parameters": [
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "planId",
+              "in": "query",
+              "value": "$inputs.planId"
+            },
+            {
+              "name": "deleted",
+              "in": "query",
+              "value": "$inputs.deleted"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "codespaces": "$response.body#/0/codespaces"
+          }
+        },
+        {
+          "stepId": "delete-codespace",
+          "description": "Deletes the specified Codespace environment and all its associated data.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1Environments~1{environmentId}/delete",
+          "parameters": [
+            {
+              "name": "environmentId",
+              "in": "path",
+              "value": "$steps.list-user-codespaces-for-deletion.outputs.codespaces.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "codespace_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "codespaces": "$steps.list-user-codespaces-for-deletion.outputs.codespaces",
+        "codespace_data": "$steps.delete-codespace.outputs.codespace_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "monitor-codespace-billing-and-usage",
+      "summary": "Allows a user to retrieve billing summaries and historical state change data for their Codespaces to track usage, understand costs, and analyze activity patterns.",
+      "description": "Allows a user to retrieve billing summaries and historical state change data for their Codespaces to track usage, understand costs, and analyze activity patterns.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "planId": {
+            "type": "string"
+          },
+          "deleted": {
+            "type": "string"
+          },
+          "environmentId": {
+            "type": "string"
+          },
+          "startTime": {
+            "type": "string"
+          },
+          "endTime": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-user-codespaces-for-billing",
+          "description": "Retrieves a list of all Codespaces to identify the target environment for billing and usage monitoring.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1Environments/get",
+          "parameters": [
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "planId",
+              "in": "query",
+              "value": "$inputs.planId"
+            },
+            {
+              "name": "deleted",
+              "in": "query",
+              "value": "$inputs.deleted"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "codespaces": "$response.body#/0/codespaces"
+          }
+        },
+        {
+          "stepId": "get-codespace-bill-summary",
+          "description": "Retrieves a detailed billing summary for a specific Codespace within a specified time range, showing compute and storage usage.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1GenevaActions~1Billing~1{environmentId}/get",
+          "parameters": [
+            {
+              "name": "environmentId",
+              "in": "path",
+              "value": "$steps.list-user-codespaces-for-billing.outputs.codespaces.id"
+            },
+            {
+              "name": "startTime",
+              "in": "query",
+              "value": "$inputs.startTime"
+            },
+            {
+              "name": "endTime",
+              "in": "query",
+              "value": "$inputs.endTime"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "environmentId": "$response.body#/environmentId",
+            "usageDetail": "$response.body#/usageDetail"
+          }
+        },
+        {
+          "stepId": "get-codespace-state-changes",
+          "description": "Retrieves the history of state changes (e.g., created, started, shutdown) for a specific Codespace, providing insights into its activity and usage patterns.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1GenevaActions~1Billing~1{environmentId}~1state-changes/get",
+          "parameters": [
+            {
+              "name": "environmentId",
+              "in": "path",
+              "value": "$steps.list-user-codespaces-for-billing.outputs.codespaces.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "time": "$response.body#/time",
+            "oldValue": "$response.body#/oldValue",
+            "newValue": "$response.body#/newValue"
+          }
+        }
+      ],
+      "outputs": {
+        "codespaces": "$steps.list-user-codespaces-for-billing.outputs.codespaces",
+        "id": "$steps.get-codespace-state-changes.outputs.id",
+        "environmentId": "$steps.get-codespace-bill-summary.outputs.environmentId",
+        "usageDetail": "$steps.get-codespace-bill-summary.outputs.usageDetail",
+        "time": "$steps.get-codespace-state-changes.outputs.time",
+        "oldValue": "$steps.get-codespace-state-changes.outputs.oldValue",
+        "newValue": "$steps.get-codespace-state-changes.outputs.newValue"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "update-codespace-user-secrets",
+      "summary": "Enables a user to update or add sensitive information, such as environment variables or container registry credentials, for a specific Codespace environment.",
+      "description": "Enables a user to update or add sensitive information, such as environment variables or container registry credentials, for a specific Codespace environment.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "planId": {
+            "type": "string"
+          },
+          "deleted": {
+            "type": "string"
+          },
+          "environmentId": {
+            "type": "string"
+          },
+          "secrets": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-user-codespaces-for-secrets",
+          "description": "Retrieves a list of all Codespaces to identify the target environment for secret updates.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1Environments/get",
+          "parameters": [
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "planId",
+              "in": "query",
+              "value": "$inputs.planId"
+            },
+            {
+              "name": "deleted",
+              "in": "query",
+              "value": "$inputs.deleted"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "codespaces": "$response.body#/0/codespaces"
+          }
+        },
+        {
+          "stepId": "update-codespace-secrets",
+          "description": "Updates the user-defined secrets associated with a specific Codespace, making them available within the environment.",
+          "operationPath": "openapi_source#/paths/~1api~1v1~1Environments~1{environmentId}~1secrets/put",
+          "parameters": [
+            {
+              "name": "environmentId",
+              "in": "path",
+              "value": "$steps.list-user-codespaces-for-secrets.outputs.codespaces.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json-patch+json",
+            "payload": {
+              "environmentId": "$steps.list-user-codespaces-for-secrets.outputs.codespaces[0].id",
+              "secrets": "$inputs.secrets"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "friendlyName": "$response.body#/friendlyName"
+          }
+        }
+      ],
+      "outputs": {
+        "codespaces": "$steps.list-user-codespaces-for-secrets.outputs.codespaces",
+        "id": "$steps.update-codespace-secrets.outputs.id",
+        "friendlyName": "$steps.update-codespace-secrets.outputs.friendlyName"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

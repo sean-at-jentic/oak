@@ -1,0 +1,817 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/twilio.com/twilio_serverless_v1/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "deploy-serverless-application",
+      "summary": "Orchestrates the deployment of a serverless application by creating a build from specified function and asset versions, monitoring its status, and then deploying it to a target environment.",
+      "description": "Orchestrates the deployment of a serverless application by creating a build from specified function and asset versions, monitoring its status, and then deploying it to a target environment.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "ServiceSid": {
+            "type": "string"
+          },
+          "AssetVersions": {
+            "type": "string"
+          },
+          "FunctionVersions": {
+            "type": "string"
+          },
+          "Dependencies": {
+            "type": "string"
+          },
+          "Runtime": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "EnvironmentSid": {
+            "type": "string"
+          },
+          "BuildSid": {
+            "type": "string"
+          },
+          "IsPlugin": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-build",
+          "description": "Creates a new build, bundling specific function and asset versions. At least one function or asset version is required.",
+          "operationId": "CreateBuild",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "AssetVersions": "$inputs.AssetVersions",
+              "FunctionVersions": "$inputs.FunctionVersions",
+              "Dependencies": "$inputs.Dependencies",
+              "Runtime": "$inputs.Runtime"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "status": "$response.body#/status",
+            "service_sid": "$response.body#/service_sid"
+          }
+        },
+        {
+          "stepId": "monitor-build-status",
+          "description": "Retrieves the current status of the created build to check if it's completed or failed.",
+          "operationId": "FetchBuildStatus",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$inputs.Sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status"
+          }
+        },
+        {
+          "stepId": "create-deployment",
+          "description": "Deploys the completed build to a specified environment, making the functions and assets accessible.",
+          "operationId": "CreateDeployment",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "EnvironmentSid",
+              "in": "path",
+              "value": "$inputs.EnvironmentSid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "BuildSid": "$inputs.BuildSid",
+              "IsPlugin": "$inputs.IsPlugin"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "build_sid": "$response.body#/build_sid",
+            "environment_sid": "$response.body#/environment_sid",
+            "service_sid": "$response.body#/service_sid"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.create-deployment.outputs.sid",
+        "status": "$steps.monitor-build-status.outputs.status",
+        "service_sid": "$steps.create-deployment.outputs.service_sid",
+        "build_sid": "$steps.create-deployment.outputs.build_sid",
+        "environment_sid": "$steps.create-deployment.outputs.environment_sid"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "initialize-serverless-project",
+      "summary": "Sets up a new Twilio Serverless Service and creates an initial environment for deploying serverless applications.",
+      "description": "Sets up a new Twilio Serverless Service and creates an initial environment for deploying serverless applications.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "UniqueName": {
+            "type": "string"
+          },
+          "FriendlyName": {
+            "type": "string"
+          },
+          "ServiceSid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-service",
+          "description": "Creates a new top-level serverless service.",
+          "operationId": "CreateService",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "UniqueName": "$inputs.UniqueName",
+              "FriendlyName": "$inputs.FriendlyName"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "unique_name": "$response.body#/unique_name",
+            "friendly_name": "$response.body#/friendly_name",
+            "account_sid": "$response.body#/account_sid",
+            "url": "$response.body#/url"
+          }
+        },
+        {
+          "stepId": "create-environment",
+          "description": "Creates a new environment (e.g., 'staging', 'production') within the newly created service.",
+          "operationId": "CreateEnvironment",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "UniqueName": "$inputs.UniqueName"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "unique_name": "$response.body#/unique_name",
+            "domain_name": "$response.body#/domain_name",
+            "service_sid": "$response.body#/service_sid"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.create-environment.outputs.sid",
+        "unique_name": "$steps.create-environment.outputs.unique_name",
+        "friendly_name": "$steps.create-service.outputs.friendly_name",
+        "account_sid": "$steps.create-service.outputs.account_sid",
+        "url": "$steps.create-service.outputs.url",
+        "domain_name": "$steps.create-environment.outputs.domain_name",
+        "service_sid": "$steps.create-environment.outputs.service_sid"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-and-analyze-environment-logs",
+      "summary": "Allows users to list available environments for a service and then fetch detailed logs for a specific environment, with options to filter by function or time range for debugging and monitoring.",
+      "description": "Allows users to list available environments for a service and then fetch detailed logs for a specific environment, with options to filter by function or time range for debugging and monitoring.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "ServiceSid": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "EnvironmentSid": {
+            "type": "string"
+          },
+          "FunctionSid": {
+            "type": "string"
+          },
+          "StartDate": {
+            "type": "string"
+          },
+          "EndDate": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-environments",
+          "description": "Retrieves a list of all environments associated with a given service.",
+          "operationId": "ListEnvironment",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "environments": "$response.body#/environments"
+          }
+        },
+        {
+          "stepId": "list-logs-for-environment",
+          "description": "Fetches a list of log entries for a specific environment, which can be filtered by function SID or date range.",
+          "operationId": "ListLog",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "EnvironmentSid",
+              "in": "path",
+              "value": "$inputs.EnvironmentSid"
+            },
+            {
+              "name": "FunctionSid",
+              "in": "query",
+              "value": "$inputs.FunctionSid"
+            },
+            {
+              "name": "StartDate",
+              "in": "query",
+              "value": "$inputs.StartDate"
+            },
+            {
+              "name": "EndDate",
+              "in": "query",
+              "value": "$inputs.EndDate"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "logs": "$response.body#/logs"
+          }
+        },
+        {
+          "stepId": "fetch-specific-log",
+          "description": "Retrieves the detailed information for a single log entry.",
+          "operationId": "FetchLog",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "EnvironmentSid",
+              "in": "path",
+              "value": "$inputs.EnvironmentSid"
+            },
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$inputs.Sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "message": "$response.body#/message",
+            "level": "$response.body#/level",
+            "date_created": "$response.body#/date_created",
+            "function_sid": "$response.body#/function_sid"
+          }
+        }
+      ],
+      "outputs": {
+        "environments": "$steps.list-environments.outputs.environments",
+        "logs": "$steps.list-logs-for-environment.outputs.logs",
+        "sid": "$steps.fetch-specific-log.outputs.sid",
+        "message": "$steps.fetch-specific-log.outputs.message",
+        "level": "$steps.fetch-specific-log.outputs.level",
+        "date_created": "$steps.fetch-specific-log.outputs.date_created",
+        "function_sid": "$steps.fetch-specific-log.outputs.function_sid"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "configure-environment-variables",
+      "summary": "Manages environment-specific variables by allowing creation, update, and retrieval of configuration values for serverless functions and assets.",
+      "description": "Manages environment-specific variables by allowing creation, update, and retrieval of configuration values for serverless functions and assets.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "ServiceSid": {
+            "type": "string"
+          },
+          "EnvironmentSid": {
+            "type": "string"
+          },
+          "Key": {
+            "type": "string"
+          },
+          "Value": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-variable",
+          "description": "Creates a new environment variable with a specified key and value.",
+          "operationId": "CreateVariable",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "EnvironmentSid",
+              "in": "path",
+              "value": "$inputs.EnvironmentSid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Key": "$inputs.Key",
+              "Value": "$inputs.Value"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "key": "$response.body#/key",
+            "value": "$response.body#/value",
+            "service_sid": "$response.body#/service_sid",
+            "environment_sid": "$response.body#/environment_sid"
+          }
+        },
+        {
+          "stepId": "update-variable",
+          "description": "Updates the key or value of an existing environment variable.",
+          "operationId": "UpdateVariable",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "EnvironmentSid",
+              "in": "path",
+              "value": "$inputs.EnvironmentSid"
+            },
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$inputs.Sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Key": "$inputs.Key",
+              "Value": "$inputs.Value"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "key": "$response.body#/key",
+            "value": "$response.body#/value"
+          }
+        },
+        {
+          "stepId": "fetch-variable",
+          "description": "Retrieves the details of a specific environment variable to verify its current state.",
+          "operationId": "FetchVariable",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "EnvironmentSid",
+              "in": "path",
+              "value": "$inputs.EnvironmentSid"
+            },
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$inputs.Sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "key": "$response.body#/key",
+            "value": "$response.body#/value",
+            "date_updated": "$response.body#/date_updated"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.fetch-variable.outputs.sid",
+        "key": "$steps.fetch-variable.outputs.key",
+        "value": "$steps.fetch-variable.outputs.value",
+        "service_sid": "$steps.create-variable.outputs.service_sid",
+        "environment_sid": "$steps.create-variable.outputs.environment_sid",
+        "date_updated": "$steps.fetch-variable.outputs.date_updated"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "inspect-function-version-content",
+      "summary": "Provides a way to inspect the details of a specific serverless function, list its available versions, and then retrieve the actual source code content of a chosen function version.",
+      "description": "Provides a way to inspect the details of a specific serverless function, list its available versions, and then retrieve the actual source code content of a chosen function version.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "ServiceSid": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "FunctionSid": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "fetch-function-details",
+          "description": "Retrieves the basic details of a specific function within a service.",
+          "operationId": "FetchFunction",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$inputs.Sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "friendly_name": "$response.body#/friendly_name",
+            "service_sid": "$response.body#/service_sid"
+          }
+        },
+        {
+          "stepId": "list-function-versions",
+          "description": "Lists all available versions for a given function, showing their SIDs, paths, and visibility.",
+          "operationId": "ListFunctionVersion",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "FunctionSid",
+              "in": "path",
+              "value": "$inputs.FunctionSid"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "function_versions": "$response.body#/function_versions"
+          }
+        },
+        {
+          "stepId": "fetch-function-version-content",
+          "description": "Retrieves the actual code content of a specific function version.",
+          "operationId": "FetchFunctionVersionContent",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "FunctionSid",
+              "in": "path",
+              "value": "$inputs.FunctionSid"
+            },
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$inputs.Sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "content": "$response.body#/content",
+            "sid": "$response.body#/sid",
+            "function_sid": "$response.body#/function_sid"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.fetch-function-version-content.outputs.sid",
+        "friendly_name": "$steps.fetch-function-details.outputs.friendly_name",
+        "service_sid": "$steps.fetch-function-details.outputs.service_sid",
+        "function_versions": "$steps.list-function-versions.outputs.function_versions",
+        "content": "$steps.fetch-function-version-content.outputs.content",
+        "function_sid": "$steps.fetch-function-version-content.outputs.function_sid"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

@@ -1,0 +1,994 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/interactivebrokers.com/main/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "oauth-authentication-and-session-establishment",
+      "summary": "Establishes an authenticated session with Interactive Brokers using the OAuth 1.0a flow, including the IB-specific Diffie-Hellman challenge, to obtain a live session token required for accessing protected resources.",
+      "description": "Establishes an authenticated session with Interactive Brokers using the OAuth 1.0a flow, including the IB-specific Diffie-Hellman challenge, to obtain a live session token required for accessing protected resources.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "oauth_callback": {
+            "type": "string"
+          },
+          "oauth_consumer_key": {
+            "type": "string"
+          },
+          "oauth_nonce": {
+            "type": "string"
+          },
+          "oauth_signature": {
+            "type": "string"
+          },
+          "oauth_signature_method": {
+            "type": "string"
+          },
+          "oauth_timestamp": {
+            "type": "string"
+          },
+          "oauth_verifier": {
+            "type": "string"
+          },
+          "diffie_hellman_challenge": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-request-token",
+          "description": "Obtains a request token, the first step in the OAuth 1.0a flow, which is then used to redirect the user for authorization.",
+          "operationPath": "openapi_source#/paths/~1oauth~1request_token/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "oauth_callback": "$inputs.oauth_callback",
+              "oauth_consumer_key": "$inputs.oauth_consumer_key",
+              "oauth_nonce": "$inputs.oauth_nonce",
+              "oauth_signature": "$inputs.oauth_signature",
+              "oauth_signature_method": "$inputs.oauth_signature_method",
+              "oauth_timestamp": "$inputs.oauth_timestamp"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "oauth_token": "$response.body#/oauth_token"
+          }
+        },
+        {
+          "stepId": "get-access-token",
+          "description": "Exchanges the request token and a user-provided verification code for an access token, which grants long-term access.",
+          "operationPath": "openapi_source#/paths/~1oauth~1access_token/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "oauth_token": "$steps.get-request-token.outputs.oauth_token",
+              "oauth_consumer_key": "$inputs.oauth_consumer_key",
+              "oauth_nonce": "$inputs.oauth_nonce",
+              "oauth_signature": "$inputs.oauth_signature",
+              "oauth_signature_method": "$inputs.oauth_signature_method",
+              "oauth_timestamp": "$inputs.oauth_timestamp",
+              "oauth_verifier": "$inputs.oauth_verifier"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "oauth_token": "$response.body#/oauth_token",
+            "oauth_token_secret": "$response.body#/oauth_token_secret"
+          }
+        },
+        {
+          "stepId": "get-live-session-token",
+          "description": "Obtains a live session token using the OAuth access token and a Diffie-Hellman challenge, which is required for making subsequent API calls to protected resources.",
+          "operationPath": "openapi_source#/paths/~1oauth~1live_session_token/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "oauth_token": "$steps.get-access-token.outputs.oauth_token",
+              "diffie_hellman_challenge": "$inputs.diffie_hellman_challenge",
+              "oauth_consumer_key": "$inputs.oauth_consumer_key",
+              "oauth_nonce": "$inputs.oauth_nonce",
+              "oauth_signature": "$inputs.oauth_signature",
+              "oauth_signature_method": "$inputs.oauth_signature_method",
+              "oauth_timestamp": "$inputs.oauth_timestamp"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "diffie_hellman_response": "$response.body#/diffie_hellman_response",
+            "live_session_token_signature": "$response.body#/live_session_token_signature"
+          }
+        }
+      ],
+      "outputs": {
+        "oauth_token": "$steps.get-access-token.outputs.oauth_token",
+        "oauth_token_secret": "$steps.get-access-token.outputs.oauth_token_secret",
+        "diffie_hellman_response": "$steps.get-live-session-token.outputs.diffie_hellman_response",
+        "live_session_token_signature": "$steps.get-live-session-token.outputs.live_session_token_signature"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "comprehensive-account-monitoring",
+      "summary": "Allows a 3rd party application to retrieve a complete overview of a user's brokerage account, including account details, current positions, open orders, and recent trade history.",
+      "description": "Allows a 3rd party application to retrieve a complete overview of a user's brokerage account, including account details, current positions, open orders, and recent trade history.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "account": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-account-details",
+          "description": "Retrieves the details for a specific brokerage account. (Note: The OpenAPI spec for this endpoint has an ambiguity regarding the 'account' path parameter and its path string.)",
+          "operationPath": "openapi_source#/paths/~1accounts/get",
+          "parameters": [
+            {
+              "name": "account",
+              "in": "path",
+              "value": "$inputs.account"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "accounts": "$response.body#/accounts"
+          }
+        },
+        {
+          "stepId": "get-account-summary",
+          "description": "Fetches a summary of account values, including balances and margin requirements, for the specified account.",
+          "operationPath": "openapi_source#/paths/~1accounts~1{account}~1summary/get",
+          "parameters": [
+            {
+              "name": "account",
+              "in": "path",
+              "value": "$steps.get-account-details.outputs.accounts"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Info": "$response.body#/Info",
+            "Ledger": "$response.body#/Ledger",
+            "Summary": "$response.body#/Summary"
+          }
+        },
+        {
+          "stepId": "get-account-positions",
+          "description": "Retrieves a list of all current positions held in the specified account.",
+          "operationPath": "openapi_source#/paths/~1accounts~1{account}~1positions/get",
+          "parameters": [
+            {
+              "name": "account",
+              "in": "path",
+              "value": "$steps.get-account-details.outputs.accounts"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "AverageCost": "$response.body#/AverageCost",
+            "ContractId": "$response.body#/ContractId",
+            "Position": "$response.body#/Position"
+          }
+        },
+        {
+          "stepId": "get-open-orders",
+          "description": "Lists all currently open orders for the specified account.",
+          "operationPath": "openapi_source#/paths/~1accounts~1{account}~1orders/get",
+          "parameters": [
+            {
+              "name": "account",
+              "in": "path",
+              "value": "$steps.get-account-details.outputs.accounts"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ContractId": "$response.body#/ContractId",
+            "CustomerOrderId": "$response.body#/CustomerOrderId",
+            "FilledQuantity": "$response.body#/FilledQuantity",
+            "ListingExchange": "$response.body#/ListingExchange",
+            "OrderType": "$response.body#/OrderType",
+            "OutsideRTH": "$response.body#/OutsideRTH",
+            "Price": "$response.body#/Price",
+            "RemainingQuantity": "$response.body#/RemainingQuantity",
+            "Side": "$response.body#/Side",
+            "Status": "$response.body#/Status",
+            "Ticker": "$response.body#/Ticker",
+            "TimeInForce": "$response.body#/TimeInForce",
+            "TransactionTime": "$response.body#/TransactionTime",
+            "Warning": "$response.body#/Warning"
+          }
+        },
+        {
+          "stepId": "get-recent-trades",
+          "description": "Retrieves a list of recent trade executions for the specified account, optionally filtered by a 'since' date.",
+          "operationPath": "openapi_source#/paths/~1accounts~1{account}~1trades/get",
+          "parameters": [
+            {
+              "name": "account",
+              "in": "path",
+              "value": "$steps.get-account-details.outputs.accounts"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "account": "$steps.get-account-details.outputs.accounts[0]"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "AvgPrice": "$response.body#/AvgPrice",
+            "Commission": "$response.body#/Commission",
+            "CommissionCurrency": "$response.body#/CommissionCurrency",
+            "ContractId": "$response.body#/ContractId",
+            "Currency": "$response.body#/Currency",
+            "CustomerOrderId": "$response.body#/CustomerOrderId",
+            "ExecId": "$response.body#/ExecId",
+            "ExecutionTime": "$response.body#/ExecutionTime",
+            "FilledQuantity": "$response.body#/FilledQuantity",
+            "LastMarket": "$response.body#/LastMarket",
+            "ListingExchange": "$response.body#/ListingExchange",
+            "OrderId": "$response.body#/OrderId",
+            "OrderType": "$response.body#/OrderType",
+            "Quantity": "$response.body#/Quantity",
+            "RemainingQuantity": "$response.body#/RemainingQuantity",
+            "Side": "$response.body#/Side",
+            "Ticker": "$response.body#/Ticker",
+            "TradePrice": "$response.body#/TradePrice",
+            "TradeSize": "$response.body#/TradeSize"
+          }
+        }
+      ],
+      "outputs": {
+        "accounts": "$steps.get-account-details.outputs.accounts",
+        "Info": "$steps.get-account-summary.outputs.Info",
+        "Ledger": "$steps.get-account-summary.outputs.Ledger",
+        "Summary": "$steps.get-account-summary.outputs.Summary",
+        "AverageCost": "$steps.get-account-positions.outputs.AverageCost",
+        "ContractId": "$steps.get-recent-trades.outputs.ContractId",
+        "Position": "$steps.get-account-positions.outputs.Position",
+        "CustomerOrderId": "$steps.get-recent-trades.outputs.CustomerOrderId",
+        "FilledQuantity": "$steps.get-recent-trades.outputs.FilledQuantity",
+        "ListingExchange": "$steps.get-recent-trades.outputs.ListingExchange",
+        "OrderType": "$steps.get-recent-trades.outputs.OrderType",
+        "OutsideRTH": "$steps.get-open-orders.outputs.OutsideRTH",
+        "Price": "$steps.get-open-orders.outputs.Price",
+        "RemainingQuantity": "$steps.get-recent-trades.outputs.RemainingQuantity",
+        "Side": "$steps.get-recent-trades.outputs.Side",
+        "Status": "$steps.get-open-orders.outputs.Status",
+        "Ticker": "$steps.get-recent-trades.outputs.Ticker",
+        "TimeInForce": "$steps.get-open-orders.outputs.TimeInForce",
+        "TransactionTime": "$steps.get-open-orders.outputs.TransactionTime",
+        "Warning": "$steps.get-open-orders.outputs.Warning",
+        "AvgPrice": "$steps.get-recent-trades.outputs.AvgPrice",
+        "Commission": "$steps.get-recent-trades.outputs.Commission",
+        "CommissionCurrency": "$steps.get-recent-trades.outputs.CommissionCurrency",
+        "Currency": "$steps.get-recent-trades.outputs.Currency",
+        "ExecId": "$steps.get-recent-trades.outputs.ExecId",
+        "ExecutionTime": "$steps.get-recent-trades.outputs.ExecutionTime",
+        "LastMarket": "$steps.get-recent-trades.outputs.LastMarket",
+        "OrderId": "$steps.get-recent-trades.outputs.OrderId",
+        "Quantity": "$steps.get-recent-trades.outputs.Quantity",
+        "TradePrice": "$steps.get-recent-trades.outputs.TradePrice",
+        "TradeSize": "$steps.get-recent-trades.outputs.TradeSize"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "pre-trade-analysis-and-order-placement",
+      "summary": "Enables a user to define a security, get its real-time market data, check the financial impact of a potential order on their account, and then place the order.",
+      "description": "Enables a user to define a security, get its real-time market data, check the financial impact of a potential order on their account, and then place the order.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "conid": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "exchange": {
+            "type": "string"
+          },
+          "symbol": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "account": {
+            "type": "string"
+          },
+          "Aux Price": {
+            "type": "string"
+          },
+          "Currency": {
+            "type": "string"
+          },
+          "CustomerOrderId": {
+            "type": "string"
+          },
+          "InstrumentType": {
+            "type": "string"
+          },
+          "ListingExchange": {
+            "type": "string"
+          },
+          "Order Type": {
+            "type": "string"
+          },
+          "Price": {
+            "type": "string"
+          },
+          "Quantity": {
+            "type": "string"
+          },
+          "Side": {
+            "type": "string"
+          },
+          "Ticker": {
+            "type": "string"
+          },
+          "GermanHftAlgo": {
+            "type": "string"
+          },
+          "Mifid2Algo": {
+            "type": "string"
+          },
+          "Mifid2DecisionMaker": {
+            "type": "string"
+          },
+          "Mifid2ExecutionAlgo": {
+            "type": "string"
+          },
+          "Mifid2ExecutionTrader": {
+            "type": "string"
+          },
+          "OrderRestrictions": {
+            "type": "string"
+          },
+          "Outside RTH": {
+            "type": "string"
+          },
+          "Time in Force": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-security-definition",
+          "description": "Obtains the internal Interactive Brokers identifier (ContractId) and other details for a trading product based on symbol, type, and currency/exchange.",
+          "operationPath": "openapi_source#/paths/~1secdef/get",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "conid": "$inputs.conid",
+              "currency": "$inputs.currency",
+              "exchange": "$inputs.exchange",
+              "symbol": "$inputs.symbol",
+              "type": "$inputs.type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "CompanyName": "$response.body#/CompanyName",
+            "ContractId": "$response.body#/ContractId",
+            "Currency": "$response.body#/Currency",
+            "Exchange": "$response.body#/Exchange",
+            "SecurityType": "$response.body#/SecurityType",
+            "Ticker": "$response.body#/Ticker"
+          }
+        },
+        {
+          "stepId": "get-market-data-snapshot",
+          "description": "Retrieves a real-time snapshot of market data (bid, ask, last trade) for the defined security.",
+          "operationPath": "openapi_source#/paths/~1marketdata~1snapshot/get",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "conid": "$steps.get-security-definition.outputs.ContractId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Bid": "$response.body#/0/Bid",
+            "Closing": "$response.body#/0/Closing",
+            "Complete": "$response.body#/0/Complete",
+            "Conid": "$response.body#/0/Conid",
+            "Offer": "$response.body#/0/Offer",
+            "Temporality": "$response.body#/0/Temporality",
+            "Trade": "$response.body#/0/Trade"
+          }
+        },
+        {
+          "stepId": "check-order-impact",
+          "description": "Calculates the estimated margin impact and commission costs for a hypothetical trade before placing it, helping the user assess risk.",
+          "operationPath": "openapi_source#/paths/~1accounts~1{account}~1order_impact/post",
+          "parameters": [
+            {
+              "name": "account",
+              "in": "path",
+              "value": "$inputs.account"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "ContractId": "$steps.get-security-definition.outputs.ContractId",
+              "Aux Price": "$inputs.Aux Price",
+              "Currency": "$inputs.Currency",
+              "CustomerOrderId": "$inputs.CustomerOrderId",
+              "InstrumentType": "$inputs.InstrumentType",
+              "ListingExchange": "$inputs.ListingExchange",
+              "Order Type": "$inputs.Order Type",
+              "Price": "$inputs.Price",
+              "Quantity": "$inputs.Quantity",
+              "Side": "$inputs.Side",
+              "Ticker": "$inputs.Ticker"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Commission": "$response.body#/Commission",
+            "CommissionsCurrency": "$response.body#/CommissionsCurrency",
+            "EquityWithLoan": "$response.body#/EquityWithLoan",
+            "InitMargin": "$response.body#/InitMargin",
+            "InitMarginBefore": "$response.body#/InitMarginBefore",
+            "MaintMargin": "$response.body#/MaintMargin",
+            "MaintMarginBefore": "$response.body#/MaintMarginBefore",
+            "MarginCurrency": "$response.body#/MarginCurrency",
+            "MaxCommissions": "$response.body#/MaxCommissions",
+            "MinCommissions": "$response.body#/MinCommissions"
+          }
+        },
+        {
+          "stepId": "place-order",
+          "description": "Submits the actual trade order to the brokerage after pre-trade analysis.",
+          "operationPath": "openapi_source#/paths/~1accounts~1{account}~1orders/post",
+          "parameters": [
+            {
+              "name": "account",
+              "in": "path",
+              "value": "$inputs.account"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "ContractId": "$steps.get-security-definition.outputs.ContractId",
+              "Aux Price": "$inputs.Aux Price",
+              "CustomerOrderId": "$inputs.CustomerOrderId",
+              "GermanHftAlgo": "$inputs.GermanHftAlgo",
+              "InstrumentType": "$inputs.InstrumentType",
+              "ListingExchange": "$inputs.ListingExchange",
+              "Mifid2Algo": "$inputs.Mifid2Algo",
+              "Mifid2DecisionMaker": "$inputs.Mifid2DecisionMaker",
+              "Mifid2ExecutionAlgo": "$inputs.Mifid2ExecutionAlgo",
+              "Mifid2ExecutionTrader": "$inputs.Mifid2ExecutionTrader",
+              "Order Type": "$inputs.Order Type",
+              "OrderRestrictions": "$inputs.OrderRestrictions",
+              "Outside RTH": "$inputs.Outside RTH",
+              "Price": "$inputs.Price",
+              "Quantity": "$inputs.Quantity",
+              "Side": "$inputs.Side",
+              "Ticker": "$inputs.Ticker",
+              "Time in Force": "$inputs.Time in Force"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ContractId": "$response.body#/ContractId",
+            "CustomerOrderId": "$response.body#/CustomerOrderId",
+            "FilledQuantity": "$response.body#/FilledQuantity",
+            "ListingExchange": "$response.body#/ListingExchange",
+            "OrderType": "$response.body#/OrderType",
+            "OutsideRTH": "$response.body#/OutsideRTH",
+            "Price": "$response.body#/Price",
+            "RemainingQuantity": "$response.body#/RemainingQuantity",
+            "Side": "$response.body#/Side",
+            "Status": "$response.body#/Status",
+            "Ticker": "$response.body#/Ticker",
+            "TimeInForce": "$response.body#/TimeInForce",
+            "TransactionTime": "$response.body#/TransactionTime",
+            "Warning": "$response.body#/Warning"
+          }
+        }
+      ],
+      "outputs": {
+        "CompanyName": "$steps.get-security-definition.outputs.CompanyName",
+        "ContractId": "$steps.place-order.outputs.ContractId",
+        "Currency": "$steps.get-security-definition.outputs.Currency",
+        "Exchange": "$steps.get-security-definition.outputs.Exchange",
+        "SecurityType": "$steps.get-security-definition.outputs.SecurityType",
+        "Ticker": "$steps.place-order.outputs.Ticker",
+        "Bid": "$steps.get-market-data-snapshot.outputs.Bid",
+        "Closing": "$steps.get-market-data-snapshot.outputs.Closing",
+        "Complete": "$steps.get-market-data-snapshot.outputs.Complete",
+        "Conid": "$steps.get-market-data-snapshot.outputs.Conid",
+        "Offer": "$steps.get-market-data-snapshot.outputs.Offer",
+        "Temporality": "$steps.get-market-data-snapshot.outputs.Temporality",
+        "Trade": "$steps.get-market-data-snapshot.outputs.Trade",
+        "Commission": "$steps.check-order-impact.outputs.Commission",
+        "CommissionsCurrency": "$steps.check-order-impact.outputs.CommissionsCurrency",
+        "EquityWithLoan": "$steps.check-order-impact.outputs.EquityWithLoan",
+        "InitMargin": "$steps.check-order-impact.outputs.InitMargin",
+        "InitMarginBefore": "$steps.check-order-impact.outputs.InitMarginBefore",
+        "MaintMargin": "$steps.check-order-impact.outputs.MaintMargin",
+        "MaintMarginBefore": "$steps.check-order-impact.outputs.MaintMarginBefore",
+        "MarginCurrency": "$steps.check-order-impact.outputs.MarginCurrency",
+        "MaxCommissions": "$steps.check-order-impact.outputs.MaxCommissions",
+        "MinCommissions": "$steps.check-order-impact.outputs.MinCommissions",
+        "CustomerOrderId": "$steps.place-order.outputs.CustomerOrderId",
+        "FilledQuantity": "$steps.place-order.outputs.FilledQuantity",
+        "ListingExchange": "$steps.place-order.outputs.ListingExchange",
+        "OrderType": "$steps.place-order.outputs.OrderType",
+        "OutsideRTH": "$steps.place-order.outputs.OutsideRTH",
+        "Price": "$steps.place-order.outputs.Price",
+        "RemainingQuantity": "$steps.place-order.outputs.RemainingQuantity",
+        "Side": "$steps.place-order.outputs.Side",
+        "Status": "$steps.place-order.outputs.Status",
+        "TimeInForce": "$steps.place-order.outputs.TimeInForce",
+        "TransactionTime": "$steps.place-order.outputs.TransactionTime",
+        "Warning": "$steps.place-order.outputs.Warning"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "modify-existing-order",
+      "summary": "Allows a user to retrieve the details of an existing open order and then submit a modification to that order, such as changing its price or quantity.",
+      "description": "Allows a user to retrieve the details of an existing open order and then submit a modification to that order, such as changing its price or quantity.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "account": {
+            "type": "string"
+          },
+          "CustomerOrderId": {
+            "type": "string"
+          },
+          "Aux Price": {
+            "type": "string"
+          },
+          "GermanHftAlgo": {
+            "type": "string"
+          },
+          "Mifid2Algo": {
+            "type": "string"
+          },
+          "Mifid2DecisionMaker": {
+            "type": "string"
+          },
+          "Mifid2ExecutionAlgo": {
+            "type": "string"
+          },
+          "Mifid2ExecutionTrader": {
+            "type": "string"
+          },
+          "Order Type": {
+            "type": "string"
+          },
+          "Outside RTH": {
+            "type": "string"
+          },
+          "Price": {
+            "type": "string"
+          },
+          "Quantity": {
+            "type": "string"
+          },
+          "Side": {
+            "type": "string"
+          },
+          "Time in Force": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-specific-order-info",
+          "description": "Retrieves the current status and details of a specific order using its Customer Order ID.",
+          "operationPath": "openapi_source#/paths/~1accounts~1{account}~1orders~1{CustomerOrderId}/get",
+          "parameters": [
+            {
+              "name": "account",
+              "in": "path",
+              "value": "$inputs.account"
+            },
+            {
+              "name": "CustomerOrderId",
+              "in": "path",
+              "value": "$inputs.CustomerOrderId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ContractId": "$response.body#/ContractId",
+            "CustomerOrderId": "$response.body#/CustomerOrderId",
+            "FilledQuantity": "$response.body#/FilledQuantity",
+            "ListingExchange": "$response.body#/ListingExchange",
+            "OrderType": "$response.body#/OrderType",
+            "OutsideRTH": "$response.body#/OutsideRTH",
+            "Price": "$response.body#/Price",
+            "RemainingQuantity": "$response.body#/RemainingQuantity",
+            "Side": "$response.body#/Side",
+            "Status": "$response.body#/Status",
+            "Ticker": "$response.body#/Ticker",
+            "TimeInForce": "$response.body#/TimeInForce",
+            "TransactionTime": "$response.body#/TransactionTime",
+            "Warning": "$response.body#/Warning"
+          }
+        },
+        {
+          "stepId": "modify-order",
+          "description": "Submits changes to an existing order, such as price or quantity, referencing the original order ID.",
+          "operationPath": "openapi_source#/paths/~1accounts~1{account}~1orders~1{CustomerOrderId}/put",
+          "parameters": [
+            {
+              "name": "account",
+              "in": "path",
+              "value": "$inputs.account"
+            },
+            {
+              "name": "CustomerOrderId",
+              "in": "path",
+              "value": "$steps.get-specific-order-info.outputs.CustomerOrderId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "CustomerOrderId": "$steps.get-specific-order-info.outputs.CustomerOrderId",
+              "OrigCustomerOrderId": "$steps.get-specific-order-info.outputs.CustomerOrderId",
+              "Aux Price": "$inputs.Aux Price",
+              "GermanHftAlgo": "$inputs.GermanHftAlgo",
+              "Mifid2Algo": "$inputs.Mifid2Algo",
+              "Mifid2DecisionMaker": "$inputs.Mifid2DecisionMaker",
+              "Mifid2ExecutionAlgo": "$inputs.Mifid2ExecutionAlgo",
+              "Mifid2ExecutionTrader": "$inputs.Mifid2ExecutionTrader",
+              "Order Type": "$inputs.Order Type",
+              "Outside RTH": "$inputs.Outside RTH",
+              "Price": "$inputs.Price",
+              "Quantity": "$inputs.Quantity",
+              "Side": "$inputs.Side",
+              "Time in Force": "$inputs.Time in Force"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "CustomerOrderId": "$response.body#/CustomerOrderId",
+            "OrderQty": "$response.body#/OrderQty",
+            "OrderType": "$response.body#/OrderType",
+            "Price": "$response.body#/Price",
+            "Side": "$response.body#/Side",
+            "Status": "$response.body#/Status",
+            "Symbol": "$response.body#/Symbol",
+            "Warning": "$response.body#/Warning"
+          }
+        }
+      ],
+      "outputs": {
+        "ContractId": "$steps.get-specific-order-info.outputs.ContractId",
+        "CustomerOrderId": "$steps.modify-order.outputs.CustomerOrderId",
+        "FilledQuantity": "$steps.get-specific-order-info.outputs.FilledQuantity",
+        "ListingExchange": "$steps.get-specific-order-info.outputs.ListingExchange",
+        "OrderType": "$steps.modify-order.outputs.OrderType",
+        "OutsideRTH": "$steps.get-specific-order-info.outputs.OutsideRTH",
+        "Price": "$steps.modify-order.outputs.Price",
+        "RemainingQuantity": "$steps.get-specific-order-info.outputs.RemainingQuantity",
+        "Side": "$steps.modify-order.outputs.Side",
+        "Status": "$steps.modify-order.outputs.Status",
+        "Ticker": "$steps.get-specific-order-info.outputs.Ticker",
+        "TimeInForce": "$steps.get-specific-order-info.outputs.TimeInForce",
+        "TransactionTime": "$steps.get-specific-order-info.outputs.TransactionTime",
+        "Warning": "$steps.modify-order.outputs.Warning",
+        "OrderQty": "$steps.modify-order.outputs.OrderQty",
+        "Symbol": "$steps.modify-order.outputs.Symbol"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "cancel-existing-order",
+      "summary": "Allows a user to retrieve the details of an existing open order and then submit a request to cancel that order.",
+      "description": "Allows a user to retrieve the details of an existing open order and then submit a request to cancel that order.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "account": {
+            "type": "string"
+          },
+          "CustomerOrderId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-specific-order-info",
+          "description": "Retrieves the current status and details of a specific order using its Customer Order ID.",
+          "operationPath": "openapi_source#/paths/~1accounts~1{account}~1orders~1{CustomerOrderId}/get",
+          "parameters": [
+            {
+              "name": "account",
+              "in": "path",
+              "value": "$inputs.account"
+            },
+            {
+              "name": "CustomerOrderId",
+              "in": "path",
+              "value": "$inputs.CustomerOrderId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ContractId": "$response.body#/ContractId",
+            "CustomerOrderId": "$response.body#/CustomerOrderId",
+            "FilledQuantity": "$response.body#/FilledQuantity",
+            "ListingExchange": "$response.body#/ListingExchange",
+            "OrderType": "$response.body#/OrderType",
+            "OutsideRTH": "$response.body#/OutsideRTH",
+            "Price": "$response.body#/Price",
+            "RemainingQuantity": "$response.body#/RemainingQuantity",
+            "Side": "$response.body#/Side",
+            "Status": "$response.body#/Status",
+            "Ticker": "$response.body#/Ticker",
+            "TimeInForce": "$response.body#/TimeInForce",
+            "TransactionTime": "$response.body#/TransactionTime",
+            "Warning": "$response.body#/Warning"
+          }
+        },
+        {
+          "stepId": "cancel-order",
+          "description": "Submits a request to cancel an existing order.",
+          "operationPath": "openapi_source#/paths/~1accounts~1{account}~1orders~1{CustomerOrderId}/delete",
+          "parameters": [
+            {
+              "name": "account",
+              "in": "path",
+              "value": "$inputs.account"
+            },
+            {
+              "name": "CustomerOrderId",
+              "in": "path",
+              "value": "$steps.get-specific-order-info.outputs.CustomerOrderId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "CustomerOrderId": "$response.body#/CustomerOrderId",
+            "OrderQty": "$response.body#/OrderQty",
+            "OrderType": "$response.body#/OrderType",
+            "Price": "$response.body#/Price",
+            "Side": "$response.body#/Side",
+            "Status": "$response.body#/Status",
+            "Symbol": "$response.body#/Symbol",
+            "Warning": "$response.body#/Warning"
+          }
+        }
+      ],
+      "outputs": {
+        "ContractId": "$steps.get-specific-order-info.outputs.ContractId",
+        "CustomerOrderId": "$steps.cancel-order.outputs.CustomerOrderId",
+        "FilledQuantity": "$steps.get-specific-order-info.outputs.FilledQuantity",
+        "ListingExchange": "$steps.get-specific-order-info.outputs.ListingExchange",
+        "OrderType": "$steps.cancel-order.outputs.OrderType",
+        "OutsideRTH": "$steps.get-specific-order-info.outputs.OutsideRTH",
+        "Price": "$steps.cancel-order.outputs.Price",
+        "RemainingQuantity": "$steps.get-specific-order-info.outputs.RemainingQuantity",
+        "Side": "$steps.cancel-order.outputs.Side",
+        "Status": "$steps.cancel-order.outputs.Status",
+        "Ticker": "$steps.get-specific-order-info.outputs.Ticker",
+        "TimeInForce": "$steps.get-specific-order-info.outputs.TimeInForce",
+        "TransactionTime": "$steps.get-specific-order-info.outputs.TransactionTime",
+        "Warning": "$steps.cancel-order.outputs.Warning",
+        "OrderQty": "$steps.cancel-order.outputs.OrderQty",
+        "Symbol": "$steps.cancel-order.outputs.Symbol"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

@@ -1,0 +1,745 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/twilio.com/twilio_studio_v1/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "initiate-and-monitor-flow-execution",
+      "summary": "Programmatically starts a Twilio Studio Flow for a contact and then tracks its overall status and retrieves its final context. This workflow is crucial for integrating Twilio Studio flows into external applications or systems.",
+      "description": "Programmatically starts a Twilio Studio Flow for a contact and then tracks its overall status and retrieves its final context. This workflow is crucial for integrating Twilio Studio flows into external applications or systems.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "FlowSid": {
+            "type": "string"
+          },
+          "To": {
+            "type": "string"
+          },
+          "From": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "ExecutionSid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-flow-execution",
+          "description": "Triggers a new execution for a specified Twilio Studio Flow, initiating the communication sequence defined by the flow.",
+          "operationId": "CreateExecution",
+          "parameters": [
+            {
+              "name": "FlowSid",
+              "in": "path",
+              "value": "$inputs.FlowSid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "To": "$inputs.To",
+              "From": "$inputs.From"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "flow_sid": "$response.body#/flow_sid"
+          }
+        },
+        {
+          "stepId": "fetch-execution-status",
+          "description": "Retrieves the current status and high-level details of the initiated flow execution, allowing for real-time monitoring.",
+          "operationId": "FetchExecution",
+          "parameters": [
+            {
+              "name": "FlowSid",
+              "in": "path",
+              "value": "$steps.create-flow-execution.outputs.flow_sid"
+            },
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.create-flow-execution.outputs.sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status",
+            "context": "$response.body#/context"
+          }
+        },
+        {
+          "stepId": "fetch-execution-full-context",
+          "description": "Retrieves the complete context (data) associated with the flow execution, which includes all variables and data accumulated during the flow's progression.",
+          "operationId": "FetchExecutionContext",
+          "parameters": [
+            {
+              "name": "FlowSid",
+              "in": "path",
+              "value": "$steps.create-flow-execution.outputs.flow_sid"
+            },
+            {
+              "name": "ExecutionSid",
+              "in": "path",
+              "value": "$steps.create-flow-execution.outputs.sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "context": "$response.body#/context"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.create-flow-execution.outputs.sid",
+        "flow_sid": "$steps.create-flow-execution.outputs.flow_sid",
+        "status": "$steps.fetch-execution-status.outputs.status",
+        "context": "$steps.fetch-execution-full-context.outputs.context"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "analyze-flow-execution-path",
+      "summary": "Provides a comprehensive way to inspect a specific Twilio Studio Flow Execution, including its individual steps and the context at each step. This workflow is invaluable for debugging, auditing, and understanding the user journey through a flow.",
+      "description": "Provides a comprehensive way to inspect a specific Twilio Studio Flow Execution, including its individual steps and the context at each step. This workflow is invaluable for debugging, auditing, and understanding the user journey through a flow.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "FlowSid": {
+            "type": "string"
+          },
+          "DateCreatedFrom": {
+            "type": "string"
+          },
+          "DateCreatedTo": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "ExecutionSid": {
+            "type": "string"
+          },
+          "StepSid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-flow-executions",
+          "description": "Lists all executions for a given flow, optionally filtered by creation date, to identify the execution of interest.",
+          "operationId": "ListExecution",
+          "parameters": [
+            {
+              "name": "FlowSid",
+              "in": "path",
+              "value": "$inputs.FlowSid"
+            },
+            {
+              "name": "DateCreatedFrom",
+              "in": "query",
+              "value": "$inputs.DateCreatedFrom"
+            },
+            {
+              "name": "DateCreatedTo",
+              "in": "query",
+              "value": "$inputs.DateCreatedTo"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "executions": "$response.body#/executions"
+          }
+        },
+        {
+          "stepId": "fetch-execution-details",
+          "description": "Retrieves comprehensive details of a specific flow execution, including its status and initial context.",
+          "operationId": "FetchExecution",
+          "parameters": [
+            {
+              "name": "FlowSid",
+              "in": "path",
+              "value": "$steps.list-flow-executions.outputs.executions.flow_sid"
+            },
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.list-flow-executions.outputs.executions.sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "execution_details": "$response.body#/execution_details"
+          }
+        },
+        {
+          "stepId": "list-execution-steps",
+          "description": "Lists all individual steps taken within a specific flow execution, showing the path the flow followed.",
+          "operationId": "ListExecutionStep",
+          "parameters": [
+            {
+              "name": "FlowSid",
+              "in": "path",
+              "value": "$steps.fetch-execution-details.outputs.execution_details.flow_sid"
+            },
+            {
+              "name": "ExecutionSid",
+              "in": "path",
+              "value": "$steps.fetch-execution-details.outputs.execution_details.sid"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "steps": "$response.body#/steps"
+          }
+        },
+        {
+          "stepId": "fetch-execution-step-context",
+          "description": "Retrieves the context (data) at a specific step within a flow execution, providing insight into the flow's state at that particular point.",
+          "operationId": "FetchExecutionStepContext",
+          "parameters": [
+            {
+              "name": "FlowSid",
+              "in": "path",
+              "value": "$steps.list-execution-steps.outputs.steps.flow_sid"
+            },
+            {
+              "name": "ExecutionSid",
+              "in": "path",
+              "value": "$steps.list-execution-steps.outputs.steps.execution_sid"
+            },
+            {
+              "name": "StepSid",
+              "in": "path",
+              "value": "$steps.list-execution-steps.outputs.steps.sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "step_context": "$response.body#/step_context"
+          }
+        }
+      ],
+      "outputs": {
+        "executions": "$steps.list-flow-executions.outputs.executions",
+        "execution_details": "$steps.fetch-execution-details.outputs.execution_details",
+        "steps": "$steps.list-execution-steps.outputs.steps",
+        "step_context": "$steps.fetch-execution-step-context.outputs.step_context"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "discover-and-inspect-flows",
+      "summary": "Enables API consumers to discover all their configured Twilio Studio Flows and retrieve detailed information about a specific flow. This is useful for managing and understanding deployed communication workflows.",
+      "description": "Enables API consumers to discover all their configured Twilio Studio Flows and retrieve detailed information about a specific flow. This is useful for managing and understanding deployed communication workflows.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-all-flows",
+          "description": "Retrieves a paginated list of all available Twilio Studio Flows under the account.",
+          "operationId": "ListFlow",
+          "parameters": [
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "flows": "$response.body#/flows"
+          }
+        },
+        {
+          "stepId": "fetch-flow-details",
+          "description": "Fetches the detailed configuration and metadata for a specific Twilio Studio Flow, identified by its SID.",
+          "operationId": "FetchFlow",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.list-all-flows.outputs.flows.sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "flow_details": "$response.body#/flow_details"
+          }
+        }
+      ],
+      "outputs": {
+        "flows": "$steps.list-all-flows.outputs.flows",
+        "flow_details": "$steps.fetch-flow-details.outputs.flow_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "terminate-active-flow-execution",
+      "summary": "Allows for the programmatic termination of a currently active Twilio Studio Flow Execution. This is useful for scenarios where a flow needs to be stopped prematurely due to external events or business logic.",
+      "description": "Allows for the programmatic termination of a currently active Twilio Studio Flow Execution. This is useful for scenarios where a flow needs to be stopped prematurely due to external events or business logic.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "FlowSid": {
+            "type": "string"
+          },
+          "DateCreatedFrom": {
+            "type": "string"
+          },
+          "DateCreatedTo": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "Status": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-active-executions",
+          "description": "Lists executions for a given flow to identify active ones that might need to be terminated. (Note: filtering for 'active' status might require client-side logic as the API does not support status filtering directly in this endpoint).",
+          "operationId": "ListExecution",
+          "parameters": [
+            {
+              "name": "FlowSid",
+              "in": "path",
+              "value": "$inputs.FlowSid"
+            },
+            {
+              "name": "DateCreatedFrom",
+              "in": "query",
+              "value": "$inputs.DateCreatedFrom"
+            },
+            {
+              "name": "DateCreatedTo",
+              "in": "query",
+              "value": "$inputs.DateCreatedTo"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "executions": "$response.body#/executions"
+          }
+        },
+        {
+          "stepId": "update-execution-status-to-ended",
+          "description": "Updates the status of a specific execution to 'ended', effectively terminating the flow and preventing further progression.",
+          "operationId": "UpdateExecution",
+          "parameters": [
+            {
+              "name": "FlowSid",
+              "in": "path",
+              "value": "$steps.list-active-executions.outputs.executions.flow_sid"
+            },
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.list-active-executions.outputs.executions.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "FlowSid": "$steps.list-active-executions.outputs.executions[0].flow_sid",
+              "Sid": "$steps.list-active-executions.outputs.executions[0].sid",
+              "Status": "$inputs.Status"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_execution": "$response.body#/updated_execution"
+          }
+        }
+      ],
+      "outputs": {
+        "executions": "$steps.list-active-executions.outputs.executions",
+        "updated_execution": "$steps.update-execution-status-to-ended.outputs.updated_execution"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "delete-historical-flow-executions",
+      "summary": "Enables the deletion of old or completed flow executions to manage data storage, comply with data retention policies, or clean up test data. This is a maintenance workflow for managing resource usage.",
+      "description": "Enables the deletion of old or completed flow executions to manage data storage, comply with data retention policies, or clean up test data. This is a maintenance workflow for managing resource usage.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "FlowSid": {
+            "type": "string"
+          },
+          "DateCreatedFrom": {
+            "type": "string"
+          },
+          "DateCreatedTo": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-executions-for-deletion",
+          "description": "Lists flow executions, typically filtered by creation date, to identify candidates for deletion.",
+          "operationId": "ListExecution",
+          "parameters": [
+            {
+              "name": "FlowSid",
+              "in": "path",
+              "value": "$inputs.FlowSid"
+            },
+            {
+              "name": "DateCreatedFrom",
+              "in": "query",
+              "value": "$inputs.DateCreatedFrom"
+            },
+            {
+              "name": "DateCreatedTo",
+              "in": "query",
+              "value": "$inputs.DateCreatedTo"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "executions": "$response.body#/executions"
+          }
+        },
+        {
+          "stepId": "delete-specific-execution",
+          "description": "Deletes a specific flow execution and all associated steps, permanently removing its record.",
+          "operationId": "DeleteExecution",
+          "parameters": [
+            {
+              "name": "FlowSid",
+              "in": "path",
+              "value": "$steps.list-executions-for-deletion.outputs.executions.flow_sid"
+            },
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.list-executions-for-deletion.outputs.executions.sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "execution_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "executions": "$steps.list-executions-for-deletion.outputs.executions",
+        "execution_data": "$steps.delete-specific-execution.outputs.execution_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

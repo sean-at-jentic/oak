@@ -1,0 +1,923 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/twilio.com/twilio_video_v1/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "end-to-end-room-and-participant-management",
+      "summary": "This workflow allows users to create a new video room, list its participants, disconnect a specific participant, and finally complete the room, managing the entire lifecycle of a video session.",
+      "description": "This workflow allows users to create a new video room, list its participants, disconnect a specific participant, and finally complete the room, managing the entire lifecycle of a video session.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Type": {
+            "type": "string"
+          },
+          "UniqueName": {
+            "type": "string"
+          },
+          "RecordParticipantsOnConnect": {
+            "type": "string"
+          },
+          "RecordingRules": {
+            "type": "string"
+          },
+          "RoomSid": {
+            "type": "string"
+          },
+          "Status": {
+            "type": "string"
+          },
+          "Identity": {
+            "type": "string"
+          },
+          "DateCreatedAfter": {
+            "type": "string"
+          },
+          "DateCreatedBefore": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-video-room",
+          "description": "Creates a new programmable video room with specified properties.",
+          "operationId": "CreateRoom",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Type": "$inputs.Type",
+              "UniqueName": "$inputs.UniqueName",
+              "RecordParticipantsOnConnect": "$inputs.RecordParticipantsOnConnect",
+              "RecordingRules": "$inputs.RecordingRules"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "room_sid": "$response.body#/room_sid",
+            "room_status": "$response.body#/room_status"
+          }
+        },
+        {
+          "stepId": "list-room-participants",
+          "description": "Retrieves a list of participants currently or previously connected to the specified room.",
+          "operationId": "ListRoomParticipant",
+          "parameters": [
+            {
+              "name": "RoomSid",
+              "in": "path",
+              "value": "$steps.create-video-room.outputs.room_sid"
+            },
+            {
+              "name": "Status",
+              "in": "query",
+              "value": "$inputs.Status"
+            },
+            {
+              "name": "Identity",
+              "in": "query",
+              "value": "$inputs.Identity"
+            },
+            {
+              "name": "DateCreatedAfter",
+              "in": "query",
+              "value": "$inputs.DateCreatedAfter"
+            },
+            {
+              "name": "DateCreatedBefore",
+              "in": "query",
+              "value": "$inputs.DateCreatedBefore"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "participants": "$response.body#/participants",
+            "first_participant_sid": "$response.body#/first_participant_sid"
+          }
+        },
+        {
+          "stepId": "disconnect-participant",
+          "description": "Disconnects a specific participant from the room.",
+          "operationId": "UpdateRoomParticipant",
+          "parameters": [
+            {
+              "name": "RoomSid",
+              "in": "path",
+              "value": "$steps.create-video-room.outputs.room_sid"
+            },
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.list-room-participants.outputs.first_participant_sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "RoomSid": "$steps.create-video-room.outputs.room_sid",
+              "Sid": "$steps.list-room-participants.outputs.first_participant_sid",
+              "Status": "$inputs.Status"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "disconnected_participant_sid": "$response.body#/disconnected_participant_sid",
+            "disconnected_participant_status": "$response.body#/disconnected_participant_status"
+          }
+        },
+        {
+          "stepId": "complete-video-room",
+          "description": "Changes the status of the video room to 'completed', ending the session.",
+          "operationId": "UpdateRoom",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.create-video-room.outputs.room_sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Sid": "$steps.create-video-room.outputs.room_sid",
+              "Status": "$inputs.Status"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "completed_room_sid": "$response.body#/completed_room_sid",
+            "completed_room_status": "$response.body#/completed_room_status"
+          }
+        }
+      ],
+      "outputs": {
+        "room_sid": "$steps.create-video-room.outputs.room_sid",
+        "room_status": "$steps.create-video-room.outputs.room_status",
+        "participants": "$steps.list-room-participants.outputs.participants",
+        "first_participant_sid": "$steps.list-room-participants.outputs.first_participant_sid",
+        "disconnected_participant_sid": "$steps.disconnect-participant.outputs.disconnected_participant_sid",
+        "disconnected_participant_status": "$steps.disconnect-participant.outputs.disconnected_participant_status",
+        "completed_room_sid": "$steps.complete-video-room.outputs.completed_room_sid",
+        "completed_room_status": "$steps.complete-video-room.outputs.completed_room_status"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "on-demand-video-composition-creation-and-retrieval",
+      "summary": "This workflow allows users to manually create a video composition from a specific room's recorded tracks and then retrieve its details, useful for generating custom video outputs from past sessions.",
+      "description": "This workflow allows users to manually create a video composition from a specific room's recorded tracks and then retrieve its details, useful for generating custom video outputs from past sessions.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "RoomSid": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-composition",
+          "description": "Initiates the composition process for a given room's media tracks, allowing for custom video layouts and audio sources.",
+          "operationId": "CreateComposition",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "RoomSid": "$inputs.RoomSid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "composition_sid": "$response.body#/composition_sid",
+            "composition_status": "$response.body#/composition_status"
+          }
+        },
+        {
+          "stepId": "fetch-composition-details",
+          "description": "Retrieves the detailed information and status of a specific video composition.",
+          "operationId": "FetchComposition",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.create-composition.outputs.composition_sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "composition_details": "$response.body#/composition_details"
+          }
+        }
+      ],
+      "outputs": {
+        "composition_sid": "$steps.create-composition.outputs.composition_sid",
+        "composition_status": "$steps.create-composition.outputs.composition_status",
+        "composition_details": "$steps.fetch-composition-details.outputs.composition_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "automated-video-composition-hook-configuration",
+      "summary": "This workflow enables users to set up and manage automated composition hooks, which trigger compositions for future completed rooms based on predefined layouts and audio sources, streamlining video post-production.",
+      "description": "This workflow enables users to set up and manage automated composition hooks, which trigger compositions for future completed rooms based on predefined layouts and audio sources, streamlining video post-production.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "FriendlyName": {
+            "type": "string"
+          },
+          "Enabled": {
+            "type": "string"
+          },
+          "DateCreatedAfter": {
+            "type": "string"
+          },
+          "DateCreatedBefore": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-composition-hook",
+          "description": "Defines a new automated composition rule that will apply to future completed video rooms.",
+          "operationId": "CreateCompositionHook",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "FriendlyName": "$inputs.FriendlyName"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "composition_hook_sid": "$response.body#/composition_hook_sid",
+            "composition_hook_friendly_name": "$response.body#/composition_hook_friendly_name"
+          }
+        },
+        {
+          "stepId": "list-composition-hooks",
+          "description": "Retrieves a list of all existing automated composition hooks, allowing for review and management.",
+          "operationId": "ListCompositionHook",
+          "parameters": [
+            {
+              "name": "Enabled",
+              "in": "query",
+              "value": "$inputs.Enabled"
+            },
+            {
+              "name": "DateCreatedAfter",
+              "in": "query",
+              "value": "$inputs.DateCreatedAfter"
+            },
+            {
+              "name": "DateCreatedBefore",
+              "in": "query",
+              "value": "$inputs.DateCreatedBefore"
+            },
+            {
+              "name": "FriendlyName",
+              "in": "query",
+              "value": "$inputs.FriendlyName"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "composition_hooks": "$response.body#/composition_hooks",
+            "first_hook_sid": "$response.body#/first_hook_sid"
+          }
+        },
+        {
+          "stepId": "update-composition-hook",
+          "description": "Modifies an existing automated composition hook, such as enabling/disabling it or changing its video layout.",
+          "operationId": "UpdateCompositionHook",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.create-composition-hook.outputs.composition_hook_sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Sid": "$steps.create-composition-hook.outputs.composition_hook_sid",
+              "FriendlyName": "$inputs.FriendlyName"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_composition_hook_details": "$response.body#/updated_composition_hook_details"
+          }
+        }
+      ],
+      "outputs": {
+        "composition_hook_sid": "$steps.create-composition-hook.outputs.composition_hook_sid",
+        "composition_hook_friendly_name": "$steps.create-composition-hook.outputs.composition_hook_friendly_name",
+        "composition_hooks": "$steps.list-composition-hooks.outputs.composition_hooks",
+        "first_hook_sid": "$steps.list-composition-hooks.outputs.first_hook_sid",
+        "updated_composition_hook_details": "$steps.update-composition-hook.outputs.updated_composition_hook_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "room-recording-rule-management-and-recording-access",
+      "summary": "This workflow allows users to configure specific recording rules for a video room and then retrieve the individual recordings generated within that room, providing granular control over recording behavior and access.",
+      "description": "This workflow allows users to configure specific recording rules for a video room and then retrieve the individual recordings generated within that room, providing granular control over recording behavior and access.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "RoomSid": {
+            "type": "string"
+          },
+          "Rules": {
+            "type": "string"
+          },
+          "Status": {
+            "type": "string"
+          },
+          "SourceSid": {
+            "type": "string"
+          },
+          "DateCreatedAfter": {
+            "type": "string"
+          },
+          "DateCreatedBefore": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "update-room-recording-rules",
+          "description": "Applies custom recording rules to a specific video room, defining which tracks should be recorded.",
+          "operationId": "UpdateRoomRecordingRule",
+          "parameters": [
+            {
+              "name": "RoomSid",
+              "in": "path",
+              "value": "$inputs.RoomSid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Rules": "$inputs.Rules"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "room_recording_rules": "$response.body#/room_recording_rules"
+          }
+        },
+        {
+          "stepId": "fetch-room-recording-rules",
+          "description": "Retrieves the currently active recording rules for a specified room.",
+          "operationId": "FetchRoomRecordingRule",
+          "parameters": [
+            {
+              "name": "RoomSid",
+              "in": "path",
+              "value": "$inputs.RoomSid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "current_room_recording_rules": "$response.body#/current_room_recording_rules"
+          }
+        },
+        {
+          "stepId": "list-room-recordings",
+          "description": "Retrieves a list of all individual track recordings associated with a specific room.",
+          "operationId": "ListRoomRecording",
+          "parameters": [
+            {
+              "name": "RoomSid",
+              "in": "path",
+              "value": "$inputs.RoomSid"
+            },
+            {
+              "name": "Status",
+              "in": "query",
+              "value": "$inputs.Status"
+            },
+            {
+              "name": "SourceSid",
+              "in": "query",
+              "value": "$inputs.SourceSid"
+            },
+            {
+              "name": "DateCreatedAfter",
+              "in": "query",
+              "value": "$inputs.DateCreatedAfter"
+            },
+            {
+              "name": "DateCreatedBefore",
+              "in": "query",
+              "value": "$inputs.DateCreatedBefore"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "room_recordings": "$response.body#/room_recordings",
+            "first_room_recording_sid": "$response.body#/first_room_recording_sid"
+          }
+        },
+        {
+          "stepId": "fetch-specific-room-recording",
+          "description": "Fetches detailed information about a particular recording from a specific room.",
+          "operationId": "FetchRoomRecording",
+          "parameters": [
+            {
+              "name": "RoomSid",
+              "in": "path",
+              "value": "$inputs.RoomSid"
+            },
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.list-room-recordings.outputs.first_room_recording_sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "specific_room_recording_details": "$response.body#/specific_room_recording_details"
+          }
+        }
+      ],
+      "outputs": {
+        "room_recording_rules": "$steps.update-room-recording-rules.outputs.room_recording_rules",
+        "current_room_recording_rules": "$steps.fetch-room-recording-rules.outputs.current_room_recording_rules",
+        "room_recordings": "$steps.list-room-recordings.outputs.room_recordings",
+        "first_room_recording_sid": "$steps.list-room-recordings.outputs.first_room_recording_sid",
+        "specific_room_recording_details": "$steps.fetch-specific-room-recording.outputs.specific_room_recording_details"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "anonymize-participant-identity",
+      "summary": "This workflow allows users to anonymize the identity of a specific participant in a video room, which is crucial for privacy compliance and data management.",
+      "description": "This workflow allows users to anonymize the identity of a specific participant in a video room, which is crucial for privacy compliance and data management.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "RoomSid": {
+            "type": "string"
+          },
+          "Status": {
+            "type": "string"
+          },
+          "Identity": {
+            "type": "string"
+          },
+          "DateCreatedAfter": {
+            "type": "string"
+          },
+          "DateCreatedBefore": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-room-participants-for-anonymization",
+          "description": "Identifies participants in a given room to select one for anonymization.",
+          "operationId": "ListRoomParticipant",
+          "parameters": [
+            {
+              "name": "RoomSid",
+              "in": "path",
+              "value": "$inputs.RoomSid"
+            },
+            {
+              "name": "Status",
+              "in": "query",
+              "value": "$inputs.Status"
+            },
+            {
+              "name": "Identity",
+              "in": "query",
+              "value": "$inputs.Identity"
+            },
+            {
+              "name": "DateCreatedAfter",
+              "in": "query",
+              "value": "$inputs.DateCreatedAfter"
+            },
+            {
+              "name": "DateCreatedBefore",
+              "in": "query",
+              "value": "$inputs.DateCreatedBefore"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "participants_list": "$response.body#/participants",
+            "participant_to_anonymize_sid": "$response.body#/participant_to_anonymize_sid"
+          }
+        },
+        {
+          "stepId": "anonymize-participant-identity",
+          "description": "Anonymizes the identity of a specified participant, replacing their original identity with their SID.",
+          "operationId": "UpdateRoomParticipantAnonymize",
+          "parameters": [
+            {
+              "name": "RoomSid",
+              "in": "path",
+              "value": "$inputs.RoomSid"
+            },
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.list-room-participants-for-anonymization.outputs.participant_to_anonymize_sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "anonymized_participant_sid": "$response.body#/anonymized_participant_sid",
+            "anonymized_participant_identity": "$response.body#/anonymized_participant_identity"
+          }
+        }
+      ],
+      "outputs": {
+        "participants_list": "$steps.list-room-participants-for-anonymization.outputs.participants_list",
+        "participant_to_anonymize_sid": "$steps.list-room-participants-for-anonymization.outputs.participant_to_anonymize_sid",
+        "anonymized_participant_sid": "$steps.anonymize-participant-identity.outputs.anonymized_participant_sid",
+        "anonymized_participant_identity": "$steps.anonymize-participant-identity.outputs.anonymized_participant_identity"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "configure-default-cloud-storage-for-recordings",
+      "summary": "This workflow enables users to set up global default settings for where recordings should be stored (e.g., Twilio cloud or external AWS S3) and whether they should be encrypted, ensuring data residency and security compliance.",
+      "description": "This workflow enables users to set up global default settings for where recordings should be stored (e.g., Twilio cloud or external AWS S3) and whether they should be encrypted, ensuring data residency and security compliance.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "FriendlyName": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-recording-settings",
+          "description": "Defines and applies new default recording storage settings for all recordings.",
+          "operationId": "CreateRecordingSettings",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "FriendlyName": "$inputs.FriendlyName"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "recording_settings_friendly_name": "$response.body#/recording_settings_friendly_name",
+            "aws_storage_enabled_status": "$response.body#/aws_storage_enabled",
+            "encryption_enabled_status": "$response.body#/encryption_enabled"
+          }
+        },
+        {
+          "stepId": "fetch-recording-settings",
+          "description": "Retrieves the currently active default recording settings to verify configuration.",
+          "operationId": "FetchRecordingSettings",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "current_recording_settings": "$response.body#/current_recording_settings"
+          }
+        }
+      ],
+      "outputs": {
+        "recording_settings_friendly_name": "$steps.create-recording-settings.outputs.recording_settings_friendly_name",
+        "aws_storage_enabled_status": "$steps.create-recording-settings.outputs.aws_storage_enabled_status",
+        "encryption_enabled_status": "$steps.create-recording-settings.outputs.encryption_enabled_status",
+        "current_recording_settings": "$steps.fetch-recording-settings.outputs.current_recording_settings"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

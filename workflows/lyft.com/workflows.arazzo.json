@@ -1,0 +1,908 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/lyft.com/main/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "request-and-track-a-ride",
+      "summary": "Enables a user to request a Lyft ride and then continuously monitor its status, driver location, and details until completion.",
+      "description": "Enables a user to request a Lyft ride and then continuously monitor its status, driver location, and details until completion.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "ride_type": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "request-new-ride",
+          "description": "Requests a new Lyft ride from a specified origin to an optional destination, potentially using a cost token from a prior estimate.",
+          "operationId": "NewRide",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "ride_type": "$inputs.ride_type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ride_id": "$response.body#/ride_id",
+            "status": "$response.body#/status"
+          }
+        },
+        {
+          "stepId": "get-ride-status-and-details",
+          "description": "Retrieves the current status and detailed information about an ongoing or completed ride, including driver and vehicle details.",
+          "operationId": "GetRide",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.request-new-ride.outputs.ride_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ride_id": "$response.body#/ride_id",
+            "status": "$response.body#/status",
+            "driver": "$response.body#/driver",
+            "vehicle": "$response.body#/vehicle",
+            "location": "$response.body#/location",
+            "cancellation_price": "$response.body#/cancellation_price"
+          }
+        }
+      ],
+      "outputs": {
+        "ride_id": "$steps.get-ride-status-and-details.outputs.ride_id",
+        "status": "$steps.get-ride-status-and-details.outputs.status",
+        "driver": "$steps.get-ride-status-and-details.outputs.driver",
+        "vehicle": "$steps.get-ride-status-and-details.outputs.vehicle",
+        "location": "$steps.get-ride-status-and-details.outputs.location",
+        "cancellation_price": "$steps.get-ride-status-and-details.outputs.cancellation_price"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "pre-ride-planning-and-estimation",
+      "summary": "Allows a user to gather all necessary information, such as available ride types, estimated pickup times, and cost estimates, before deciding to request a ride.",
+      "description": "Allows a user to gather all necessary information, such as available ride types, estimated pickup times, and cost estimates, before deciding to request a ride.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "lat": {
+            "type": "string"
+          },
+          "lng": {
+            "type": "string"
+          },
+          "ride_type": {
+            "type": "string"
+          },
+          "destination_lat": {
+            "type": "string"
+          },
+          "destination_lng": {
+            "type": "string"
+          },
+          "start_lat": {
+            "type": "string"
+          },
+          "start_lng": {
+            "type": "string"
+          },
+          "end_lat": {
+            "type": "string"
+          },
+          "end_lng": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-available-ride-types",
+          "description": "Retrieves information about what kinds of Lyft rides are available at a given location.",
+          "operationId": "GetRideTypes",
+          "parameters": [
+            {
+              "name": "lat",
+              "in": "query",
+              "value": "$inputs.lat"
+            },
+            {
+              "name": "lng",
+              "in": "query",
+              "value": "$inputs.lng"
+            },
+            {
+              "name": "ride_type",
+              "in": "query",
+              "value": "$inputs.ride_type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ride_types": "$response.body#/ride_types"
+          }
+        },
+        {
+          "stepId": "get-pickup-etas",
+          "description": "Determines how quickly a Lyft driver can arrive at the specified location for various ride types.",
+          "operationId": "GetETA",
+          "parameters": [
+            {
+              "name": "lat",
+              "in": "query",
+              "value": "$inputs.lat"
+            },
+            {
+              "name": "lng",
+              "in": "query",
+              "value": "$inputs.lng"
+            },
+            {
+              "name": "destination_lat",
+              "in": "query",
+              "value": "$inputs.destination_lat"
+            },
+            {
+              "name": "destination_lng",
+              "in": "query",
+              "value": "$inputs.destination_lng"
+            },
+            {
+              "name": "ride_type",
+              "in": "query",
+              "value": "$steps.get-available-ride-types.outputs.ride_types.ride_type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "eta_estimates": "$response.body#/eta_estimates"
+          }
+        },
+        {
+          "stepId": "get-cost-estimates",
+          "description": "Estimates the cost of a Lyft ride between two points, considering different ride types and potential Prime Time pricing.",
+          "operationId": "GetCost",
+          "parameters": [
+            {
+              "name": "ride_type",
+              "in": "query",
+              "value": "$steps.get-available-ride-types.outputs.ride_types.ride_type"
+            },
+            {
+              "name": "start_lat",
+              "in": "query",
+              "value": "$inputs.start_lat"
+            },
+            {
+              "name": "start_lng",
+              "in": "query",
+              "value": "$inputs.start_lng"
+            },
+            {
+              "name": "end_lat",
+              "in": "query",
+              "value": "$inputs.end_lat"
+            },
+            {
+              "name": "end_lng",
+              "in": "query",
+              "value": "$inputs.end_lng"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "cost_estimates": "$response.body#/cost_estimates"
+          }
+        }
+      ],
+      "outputs": {
+        "ride_types": "$steps.get-available-ride-types.outputs.ride_types",
+        "eta_estimates": "$steps.get-pickup-etas.outputs.eta_estimates",
+        "cost_estimates": "$steps.get-cost-estimates.outputs.cost_estimates"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "sandbox-testing-and-simulation",
+      "summary": "Provides developers with a comprehensive workflow to configure and simulate various ride scenarios within the sandbox environment for testing purposes.",
+      "description": "Provides developers with a comprehensive workflow to configure and simulate various ride scenarios within the sandbox environment for testing purposes.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "lat": {
+            "type": "string"
+          },
+          "lng": {
+            "type": "string"
+          },
+          "ride_types": {
+            "type": "string"
+          },
+          "ride_type": {
+            "type": "string"
+          },
+          "driver_availability": {
+            "type": "string"
+          },
+          "primetime_percentage": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "set-sandbox-ridetypes",
+          "description": "Presets the available ride types in a specific sandbox region for testing.",
+          "operationId": "SetRideTypes",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "lat": "$inputs.lat",
+              "lng": "$inputs.lng",
+              "ride_types": "$inputs.ride_types"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "lat": "$response.body#/lat",
+            "lng": "$response.body#/lng",
+            "ride_types": "$response.body#/ride_types"
+          }
+        },
+        {
+          "stepId": "set-sandbox-driver-availability",
+          "description": "Sets the driver availability for a specific ride type in the sandbox region.",
+          "operationId": "SetRideTypeAvailability",
+          "parameters": [
+            {
+              "name": "ride_type",
+              "in": "path",
+              "value": "$steps.set-sandbox-ridetypes.outputs.ride_types"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "ride_type": "$steps.set-sandbox-ridetypes.outputs.ride_types[0]",
+              "lat": "$steps.set-sandbox-ridetypes.outputs.lat",
+              "lng": "$steps.set-sandbox-ridetypes.outputs.lng",
+              "driver_availability": "$inputs.driver_availability"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "availability_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "set-sandbox-primetime",
+          "description": "Configures a Prime Time percentage for a specific sandbox region to simulate surge pricing.",
+          "operationId": "SetPrimeTime",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "lat": "$steps.set-sandbox-ridetypes.outputs.lat",
+              "lng": "$steps.set-sandbox-ridetypes.outputs.lng",
+              "primetime_percentage": "$inputs.primetime_percentage"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "primetime_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "request-sandbox-ride",
+          "description": "Requests a ride within the configured sandbox environment.",
+          "operationId": "NewRide",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "ride_type": "$steps.set-sandbox-ridetypes.outputs.ride_types[0]"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ride_id": "$response.body#/ride_id",
+            "status": "$response.body#/status"
+          }
+        },
+        {
+          "stepId": "propagate-sandbox-ride-status",
+          "description": "Advances the status of a sandbox ride through its lifecycle (e.g., accepted, arrived, pickedUp, droppedOff).",
+          "operationId": "SetRideStatus",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.request-sandbox-ride.outputs.ride_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.request-sandbox-ride.outputs.ride_id",
+              "status": "$inputs.status"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ride_id": "$response.body#/ride_id",
+            "status": "$response.body#/status"
+          }
+        },
+        {
+          "stepId": "get-sandbox-ride-details",
+          "description": "Retrieves the current details of the sandbox ride to verify its status and other simulated attributes.",
+          "operationId": "GetRide",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.propagate-sandbox-ride-status.outputs.ride_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ride_id": "$response.body#/ride_id",
+            "status": "$response.body#/status",
+            "driver": "$response.body#/driver",
+            "vehicle": "$response.body#/vehicle",
+            "location": "$response.body#/location"
+          }
+        }
+      ],
+      "outputs": {
+        "lat": "$steps.set-sandbox-ridetypes.outputs.lat",
+        "lng": "$steps.set-sandbox-ridetypes.outputs.lng",
+        "ride_types": "$steps.set-sandbox-ridetypes.outputs.ride_types",
+        "availability_data": "$steps.set-sandbox-driver-availability.outputs.availability_data",
+        "primetime_data": "$steps.set-sandbox-primetime.outputs.primetime_data",
+        "ride_id": "$steps.get-sandbox-ride-details.outputs.ride_id",
+        "status": "$steps.get-sandbox-ride-details.outputs.status",
+        "driver": "$steps.get-sandbox-ride-details.outputs.driver",
+        "vehicle": "$steps.get-sandbox-ride-details.outputs.vehicle",
+        "location": "$steps.get-sandbox-ride-details.outputs.location"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-active-ride-destination-and-cancellation",
+      "summary": "Allows a user to dynamically update the destination of an active ride or cancel it if necessary, handling potential cancellation fees.",
+      "description": "Allows a user to dynamically update the destination of an active ride or cancel it if necessary, handling potential cancellation fees.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-active-ride-details",
+          "description": "Retrieves the current status and detailed information about an active ride to determine if destination updates or cancellation are possible.",
+          "operationId": "GetRide",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ride_id": "$response.body#/ride_id",
+            "status": "$response.body#/status",
+            "cancellation_price": "$response.body#/cancellation_price"
+          }
+        },
+        {
+          "stepId": "update-ride-destination",
+          "description": "Modifies the destination of an active ride, provided it's not a Lyft Line ride and is still in progress.",
+          "operationId": "SetRideDestination",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-active-ride-details.outputs.ride_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.get-active-ride-details.outputs.ride_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "lat": "$response.body#/lat",
+            "lng": "$response.body#/lng",
+            "address": "$response.body#/address"
+          }
+        },
+        {
+          "stepId": "cancel-active-ride",
+          "description": "Cancels an ongoing requested ride, potentially requiring a confirmation token if a cancellation fee applies.",
+          "operationId": "CancelRide",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-active-ride-details.outputs.ride_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.get-active-ride-details.outputs.ride_id",
+              "cancel_confirmation_token": "$steps.get-active-ride-details.outputs.cancellation_price.token"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "error": "$response.body#/error",
+            "token": "$response.body#/token",
+            "token_duration": "$response.body#/token_duration"
+          }
+        }
+      ],
+      "outputs": {
+        "ride_id": "$steps.get-active-ride-details.outputs.ride_id",
+        "status": "$steps.get-active-ride-details.outputs.status",
+        "cancellation_price": "$steps.get-active-ride-details.outputs.cancellation_price",
+        "lat": "$steps.update-ride-destination.outputs.lat",
+        "lng": "$steps.update-ride-destination.outputs.lng",
+        "address": "$steps.update-ride-destination.outputs.address",
+        "error": "$steps.cancel-active-ride.outputs.error",
+        "token": "$steps.cancel-active-ride.outputs.token",
+        "token_duration": "$steps.cancel-active-ride.outputs.token_duration"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "post-ride-review-and-receipt",
+      "summary": "Allows a user to rate a completed ride, provide feedback, add a tip, and retrieve the final receipt for their records.",
+      "description": "Allows a user to rate a completed ride, provide feedback, add a tip, and retrieve the final receipt for their records.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "rating": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-completed-ride-details",
+          "description": "Retrieves detailed information for a completed ride to confirm its status before rating or getting a receipt.",
+          "operationId": "GetRide",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ride_id": "$response.body#/ride_id",
+            "status": "$response.body#/status"
+          }
+        },
+        {
+          "stepId": "set-ride-rating-and-tip",
+          "description": "Adds the passenger's rating, optional feedback, and optional tip for a completed ride.",
+          "operationId": "SetRideRating",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-completed-ride-details.outputs.ride_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.get-completed-ride-details.outputs.ride_id",
+              "rating": "$inputs.rating"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tip_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-ride-receipt",
+          "description": "Retrieves the detailed receipt information for a processed ride, including charges and line items.",
+          "operationId": "GetRideReceipt",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-completed-ride-details.outputs.ride_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ride_id": "$response.body#/ride_id",
+            "price": "$response.body#/price",
+            "charges": "$response.body#/charges",
+            "line_items": "$response.body#/line_items"
+          }
+        }
+      ],
+      "outputs": {
+        "ride_id": "$steps.get-ride-receipt.outputs.ride_id",
+        "status": "$steps.get-completed-ride-details.outputs.status",
+        "tip_data": "$steps.set-ride-rating-and-tip.outputs.tip_data",
+        "price": "$steps.get-ride-receipt.outputs.price",
+        "charges": "$steps.get-ride-receipt.outputs.charges",
+        "line_items": "$steps.get-ride-receipt.outputs.line_items"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "ride-history-and-profile-management",
+      "summary": "Enables a user to view their profile information and browse their past ride history, retrieving details and receipts for specific trips.",
+      "description": "Enables a user to view their profile information and browse their past ride history, retrieving details and receipts for specific trips.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "start_time": {
+            "type": "string"
+          },
+          "end_time": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-user-profile",
+          "description": "Retrieves the authenticated user's general profile information, including their ID and name.",
+          "operationId": "GetProfile",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "first_name": "$response.body#/first_name",
+            "last_name": "$response.body#/last_name"
+          }
+        },
+        {
+          "stepId": "list-user-rides",
+          "description": "Fetches a list of past and current rides for the authenticated passenger within a specified time range.",
+          "operationId": "GetRides",
+          "parameters": [
+            {
+              "name": "start_time",
+              "in": "query",
+              "value": "$inputs.start_time"
+            },
+            {
+              "name": "end_time",
+              "in": "query",
+              "value": "$inputs.end_time"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ride_history": "$response.body#/ride_history"
+          }
+        },
+        {
+          "stepId": "get-detailed-past-ride",
+          "description": "Retrieves comprehensive details for a specific ride from the user's history.",
+          "operationId": "GetRide",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.list-user-rides.outputs.ride_history.ride_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ride_id": "$response.body#/ride_id",
+            "status": "$response.body#/status",
+            "price": "$response.body#/price",
+            "origin": "$response.body#/origin",
+            "destination": "$response.body#/destination"
+          }
+        },
+        {
+          "stepId": "get-past-ride-receipt",
+          "description": "Retrieves the receipt for a specific past ride, including payment breakdown.",
+          "operationId": "GetRideReceipt",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.list-user-rides.outputs.ride_history.ride_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ride_id": "$response.body#/ride_id",
+            "price": "$response.body#/price",
+            "charges": "$response.body#/charges",
+            "line_items": "$response.body#/line_items"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.get-user-profile.outputs.id",
+        "first_name": "$steps.get-user-profile.outputs.first_name",
+        "last_name": "$steps.get-user-profile.outputs.last_name",
+        "ride_history": "$steps.list-user-rides.outputs.ride_history",
+        "ride_id": "$steps.get-past-ride-receipt.outputs.ride_id",
+        "status": "$steps.get-detailed-past-ride.outputs.status",
+        "price": "$steps.get-past-ride-receipt.outputs.price",
+        "origin": "$steps.get-detailed-past-ride.outputs.origin",
+        "destination": "$steps.get-detailed-past-ride.outputs.destination",
+        "charges": "$steps.get-past-ride-receipt.outputs.charges",
+        "line_items": "$steps.get-past-ride-receipt.outputs.line_items"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

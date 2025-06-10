@@ -1,0 +1,187 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/twilio.com/twilio_flex_v2/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "update-flex-user-profile",
+      "summary": "Allows an administrator or system to retrieve a Flex user's current profile details and then update specific attributes like email or locale. This is valuable for managing agent or supervisor information within the Flex contact center.",
+      "description": "Allows an administrator or system to retrieve a Flex user's current profile details and then update specific attributes like email or locale. This is valuable for managing agent or supervisor information within the Flex contact center.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "InstanceSid": {
+            "type": "string"
+          },
+          "FlexUserSid": {
+            "type": "string"
+          },
+          "Email": {
+            "type": "string"
+          },
+          "Locale": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "fetch-flex-user",
+          "description": "Retrieves the current details of a specific Flex user using their Instance SID and Flex User SID.",
+          "operationId": "FetchFlexUser",
+          "parameters": [
+            {
+              "name": "InstanceSid",
+              "in": "path",
+              "value": "$inputs.InstanceSid"
+            },
+            {
+              "name": "FlexUserSid",
+              "in": "path",
+              "value": "$inputs.FlexUserSid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "account_sid": "$response.body#/account_sid",
+            "instance_sid": "$response.body#/instance_sid",
+            "user_sid": "$response.body#/user_sid",
+            "flex_user_sid": "$response.body#/flex_user_sid",
+            "email": "$response.body#/email",
+            "locale": "$response.body#/locale"
+          }
+        },
+        {
+          "stepId": "update-flex-user",
+          "description": "Updates the email or locale for the specified Flex user. The Instance SID and Flex User SID are typically obtained from a prior fetch operation.",
+          "operationId": "UpdateFlexUser",
+          "parameters": [
+            {
+              "name": "InstanceSid",
+              "in": "path",
+              "value": "$steps.fetch-flex-user.outputs.instance_sid"
+            },
+            {
+              "name": "FlexUserSid",
+              "in": "path",
+              "value": "$steps.fetch-flex-user.outputs.flex_user_sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "InstanceSid": "$steps.fetch-flex-user.outputs.instance_sid",
+              "FlexUserSid": "$steps.fetch-flex-user.outputs.flex_user_sid",
+              "Email": "$inputs.Email",
+              "Locale": "$inputs.Locale"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "flex_user_sid": "$response.body#/flex_user_sid",
+            "email": "$response.body#/email",
+            "locale": "$response.body#/locale"
+          }
+        }
+      ],
+      "outputs": {
+        "account_sid": "$steps.fetch-flex-user.outputs.account_sid",
+        "instance_sid": "$steps.fetch-flex-user.outputs.instance_sid",
+        "user_sid": "$steps.fetch-flex-user.outputs.user_sid",
+        "flex_user_sid": "$steps.update-flex-user.outputs.flex_user_sid",
+        "email": "$steps.update-flex-user.outputs.email",
+        "locale": "$steps.update-flex-user.outputs.locale"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

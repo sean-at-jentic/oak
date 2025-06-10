@@ -1,0 +1,885 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/truesight.local/main/11.1.00/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "device-monitor-management",
+      "summary": "Identify a specific device, retrieve its monitored components, and then perform actions like triggering an immediate data collection or resetting error counts for a particular monitor instance. This workflow is useful for immediate troubleshooting and data refresh.",
+      "description": "Identify a specific device, retrieve its monitored components, and then perform actions like triggering an immediate data collection or resetting error counts for a particular monitor instance. This workflow is useful for immediate troubleshooting and data refresh.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "searchTerms": {
+            "type": "string"
+          },
+          "groupId": {
+            "type": "string"
+          },
+          "applicationId": {
+            "type": "string"
+          },
+          "serviceId": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "deviceId": {
+            "type": "string"
+          },
+          "monitorClass": {
+            "type": "string"
+          },
+          "monitorSid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-device",
+          "description": "Searches for devices by name, model, manufacturer, or serial number to identify the target device.",
+          "operationId": "searchDevices",
+          "parameters": [
+            {
+              "name": "searchTerms",
+              "in": "query",
+              "value": "$inputs.searchTerms"
+            },
+            {
+              "name": "groupId",
+              "in": "query",
+              "value": "$inputs.groupId"
+            },
+            {
+              "name": "applicationId",
+              "in": "query",
+              "value": "$inputs.applicationId"
+            },
+            {
+              "name": "serviceId",
+              "in": "query",
+              "value": "$inputs.serviceId"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "items": "$response.body#/items"
+          }
+        },
+        {
+          "stepId": "get-device-monitors",
+          "description": "Retrieve the list of monitors associated with a device, including their class, SID, parameter names, and types, which are necessary for subsequent actions or data retrieval.",
+          "operationId": "getDeviceMonitors",
+          "parameters": [
+            {
+              "name": "deviceId",
+              "in": "path",
+              "value": "$steps.find-device.outputs.items.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "monitorList": "$response.body#/monitorList"
+          }
+        },
+        {
+          "stepId": "trigger-collect-now",
+          "description": "Triggers an immediate data collection for a specific monitor on the identified device.",
+          "operationId": "collectNow",
+          "parameters": [
+            {
+              "name": "deviceId",
+              "in": "path",
+              "value": "$steps.find-device.outputs.items.id"
+            },
+            {
+              "name": "monitorClass",
+              "in": "query",
+              "value": "$steps.get-device-monitors.outputs.monitorList.monitorClass"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pslOutput": "$response.body#/pslOutput"
+          }
+        },
+        {
+          "stepId": "reset-monitor-error-count",
+          "description": "Resets the error count parameter to zero for a specific monitor instance on the device.",
+          "operationId": "reset",
+          "parameters": [
+            {
+              "name": "deviceId",
+              "in": "path",
+              "value": "$steps.find-device.outputs.items.id"
+            },
+            {
+              "name": "monitorClass",
+              "in": "query",
+              "value": "$steps.get-device-monitors.outputs.monitorList.monitorClass"
+            },
+            {
+              "name": "monitorSid",
+              "in": "query",
+              "value": "$steps.get-device-monitors.outputs.monitorList.monitorSid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pslOutput": "$response.body#/pslOutput"
+          }
+        }
+      ],
+      "outputs": {
+        "items": "$steps.find-device.outputs.items",
+        "monitorList": "$steps.get-device-monitors.outputs.monitorList",
+        "pslOutput": "$steps.reset-monitor-error-count.outputs.pslOutput"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "device-performance-history",
+      "summary": "Retrieve detailed information for a specific hardware device, identify its monitored parameters, and then fetch historical data for a chosen parameter over a defined period for performance analysis and trend identification.",
+      "description": "Retrieve detailed information for a specific hardware device, identify its monitored parameters, and then fetch historical data for a chosen parameter over a defined period for performance analysis and trend identification.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "searchTerms": {
+            "type": "string"
+          },
+          "groupId": {
+            "type": "string"
+          },
+          "applicationId": {
+            "type": "string"
+          },
+          "serviceId": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "deviceId": {
+            "type": "string"
+          },
+          "parameterName": {
+            "type": "string"
+          },
+          "monitorType": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "monitorSid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-device",
+          "description": "Searches for devices by name, model, manufacturer, or serial number to identify the target device for history retrieval.",
+          "operationId": "searchDevices",
+          "parameters": [
+            {
+              "name": "searchTerms",
+              "in": "query",
+              "value": "$inputs.searchTerms"
+            },
+            {
+              "name": "groupId",
+              "in": "query",
+              "value": "$inputs.groupId"
+            },
+            {
+              "name": "applicationId",
+              "in": "query",
+              "value": "$inputs.applicationId"
+            },
+            {
+              "name": "serviceId",
+              "in": "query",
+              "value": "$inputs.serviceId"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "items": "$response.body#/items"
+          }
+        },
+        {
+          "stepId": "get-device-details",
+          "description": "Retrieves comprehensive details about the selected device.",
+          "operationId": "getDevice",
+          "parameters": [
+            {
+              "name": "deviceId",
+              "in": "path",
+              "value": "$steps.find-device.outputs.items.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "deviceDetails": "$response.body#/deviceDetails"
+          }
+        },
+        {
+          "stepId": "get-device-monitors",
+          "description": "Retrieves the list of monitors for the device, providing necessary details like parameter name, monitor type, and monitor SID for historical data queries.",
+          "operationId": "getDeviceMonitors",
+          "parameters": [
+            {
+              "name": "deviceId",
+              "in": "path",
+              "value": "$steps.find-device.outputs.items.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "monitorList": "$response.body#/monitorList"
+          }
+        },
+        {
+          "stepId": "get-parameter-history",
+          "description": "Fetches historical data for a specific parameter of the device over a given time period.",
+          "operationId": "getDeviceParameterHistory",
+          "parameters": [
+            {
+              "name": "deviceId",
+              "in": "path",
+              "value": "$steps.find-device.outputs.items.id"
+            },
+            {
+              "name": "parameterName",
+              "in": "query",
+              "value": "$steps.get-device-monitors.outputs.monitorList.parameterName"
+            },
+            {
+              "name": "monitorType",
+              "in": "query",
+              "value": "$steps.get-device-monitors.outputs.monitorList.monitorType"
+            },
+            {
+              "name": "from",
+              "in": "query",
+              "value": "$inputs.from"
+            },
+            {
+              "name": "to",
+              "in": "query",
+              "value": "$inputs.to"
+            },
+            {
+              "name": "monitorSid",
+              "in": "query",
+              "value": "$steps.get-device-monitors.outputs.monitorList.monitorSid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "historyData": "$response.body#/historyData"
+          }
+        }
+      ],
+      "outputs": {
+        "items": "$steps.find-device.outputs.items",
+        "deviceDetails": "$steps.get-device-details.outputs.deviceDetails",
+        "monitorList": "$steps.get-device-monitors.outputs.monitorList",
+        "historyData": "$steps.get-parameter-history.outputs.historyData"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "device-reinitialization",
+      "summary": "Locate a specific hardware device and trigger a reinitialization of its monitoring parameters, such as resetting polling intervals or alert settings, to resolve monitoring issues or apply default configurations.",
+      "description": "Locate a specific hardware device and trigger a reinitialization of its monitoring parameters, such as resetting polling intervals or alert settings, to resolve monitoring issues or apply default configurations.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "searchTerms": {
+            "type": "string"
+          },
+          "groupId": {
+            "type": "string"
+          },
+          "applicationId": {
+            "type": "string"
+          },
+          "serviceId": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "deviceId": {
+            "type": "string"
+          },
+          "resetDiscoveryAndPollingIntervals": {
+            "type": "string"
+          },
+          "resetAlertAfterNTimes": {
+            "type": "string"
+          },
+          "resetAlertActions": {
+            "type": "string"
+          },
+          "resetOtherAlertSettings": {
+            "type": "string"
+          },
+          "resetDebugMode": {
+            "type": "string"
+          },
+          "resetRemovedPausedObjectList": {
+            "type": "string"
+          },
+          "resetReportSettings": {
+            "type": "string"
+          },
+          "resetJavaSettings": {
+            "type": "string"
+          },
+          "resetThresholds": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-device",
+          "description": "Searches for devices by name, model, manufacturer, or serial number to identify the target device for reinitialization.",
+          "operationId": "searchDevices",
+          "parameters": [
+            {
+              "name": "searchTerms",
+              "in": "query",
+              "value": "$inputs.searchTerms"
+            },
+            {
+              "name": "groupId",
+              "in": "query",
+              "value": "$inputs.groupId"
+            },
+            {
+              "name": "applicationId",
+              "in": "query",
+              "value": "$inputs.applicationId"
+            },
+            {
+              "name": "serviceId",
+              "in": "query",
+              "value": "$inputs.serviceId"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "items": "$response.body#/items"
+          }
+        },
+        {
+          "stepId": "reinitialize-device-monitoring",
+          "description": "Sends a 'Reinitialize KM' command to the identified device, allowing for various monitoring settings to be reset.",
+          "operationId": "reinitialize",
+          "parameters": [
+            {
+              "name": "deviceId",
+              "in": "path",
+              "value": "$steps.find-device.outputs.items.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "deviceId": "$steps.find-device.outputs.items[0].id",
+              "resetDiscoveryAndPollingIntervals": "$inputs.resetDiscoveryAndPollingIntervals",
+              "resetAlertAfterNTimes": "$inputs.resetAlertAfterNTimes",
+              "resetAlertActions": "$inputs.resetAlertActions",
+              "resetOtherAlertSettings": "$inputs.resetOtherAlertSettings",
+              "resetDebugMode": "$inputs.resetDebugMode",
+              "resetRemovedPausedObjectList": "$inputs.resetRemovedPausedObjectList",
+              "resetReportSettings": "$inputs.resetReportSettings",
+              "resetJavaSettings": "$inputs.resetJavaSettings",
+              "resetThresholds": "$inputs.resetThresholds"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pslOutput": "$response.body#/pslOutput"
+          }
+        }
+      ],
+      "outputs": {
+        "items": "$steps.find-device.outputs.items",
+        "pslOutput": "$steps.reinitialize-device-monitoring.outputs.pslOutput"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "agent-monitoring-scope-analysis",
+      "summary": "Identify a specific device, retrieve information about its associated PATROL Agent, and then list all other devices managed by that same agent to understand the agent's monitoring scope and dependencies.",
+      "description": "Identify a specific device, retrieve information about its associated PATROL Agent, and then list all other devices managed by that same agent to understand the agent's monitoring scope and dependencies.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "searchTerms": {
+            "type": "string"
+          },
+          "groupId": {
+            "type": "string"
+          },
+          "applicationId": {
+            "type": "string"
+          },
+          "serviceId": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "deviceId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "find-device",
+          "description": "Searches for devices to identify a starting point for agent analysis.",
+          "operationId": "searchDevices",
+          "parameters": [
+            {
+              "name": "searchTerms",
+              "in": "query",
+              "value": "$inputs.searchTerms"
+            },
+            {
+              "name": "groupId",
+              "in": "query",
+              "value": "$inputs.groupId"
+            },
+            {
+              "name": "applicationId",
+              "in": "query",
+              "value": "$inputs.applicationId"
+            },
+            {
+              "name": "serviceId",
+              "in": "query",
+              "value": "$inputs.serviceId"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "items": "$response.body#/items"
+          }
+        },
+        {
+          "stepId": "get-device-agent-info",
+          "description": "Retrieves detailed information about the PATROL Agent responsible for monitoring the identified device.",
+          "operationId": "getDeviceAgent",
+          "parameters": [
+            {
+              "name": "deviceId",
+              "in": "path",
+              "value": "$steps.find-device.outputs.items.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "deviceAgentInfo": "$response.body#/deviceAgentInfo"
+          }
+        },
+        {
+          "stepId": "list-agent-monitored-devices",
+          "description": "Lists all other devices that are monitored by the same PATROL Agent as the initial device, providing insight into the agent's overall monitoring responsibilities.",
+          "operationId": "getAgentDevices",
+          "parameters": [
+            {
+              "name": "deviceId",
+              "in": "path",
+              "value": "$steps.find-device.outputs.items.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "agentDevices": "$response.body#/agentDevices"
+          }
+        }
+      ],
+      "outputs": {
+        "items": "$steps.find-device.outputs.items",
+        "deviceAgentInfo": "$steps.get-device-agent-info.outputs.deviceAgentInfo",
+        "agentDevices": "$steps.list-agent-monitored-devices.outputs.agentDevices"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "group-energy-footprint-configuration",
+      "summary": "Retrieve a list of monitored groups, select a specific group, view its current energy cost and CO2 emission settings, and then update these values to reflect changes in environmental or financial policies.",
+      "description": "Retrieve a list of monitored groups, select a specific group, view its current energy cost and CO2 emission settings, and then update these values to reflect changes in environmental or financial policies.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "direction": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "string"
+          },
+          "groupId": {
+            "type": "string"
+          },
+          "energyCost": {
+            "type": "string"
+          },
+          "co2Emission": {
+            "type": "string"
+          },
+          "groupNameFilter": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-groups",
+          "description": "Gets a summarized list of all monitored groups.",
+          "operationId": "getGroups",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "direction",
+              "in": "query",
+              "value": "$inputs.direction"
+            },
+            {
+              "name": "sort",
+              "in": "query",
+              "value": "$inputs.sort"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "items": "$response.body#/items"
+          }
+        },
+        {
+          "stepId": "get-group-details",
+          "description": "Retrieves detailed information for a specific group, including its current energy cost and CO2 emission settings.",
+          "operationId": "getOneGroup",
+          "parameters": [
+            {
+              "name": "groupId",
+              "in": "path",
+              "value": "$steps.list-groups.outputs.items.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "groupDetails": "$response.body#/groupDetails"
+          }
+        },
+        {
+          "stepId": "update-group-energy-settings",
+          "description": "Updates the energy footprint parameters (electricity rate and CO2 emission) for the specified group.",
+          "operationId": "updateEnergyCost",
+          "parameters": [
+            {
+              "name": "groupId",
+              "in": "path",
+              "value": "$steps.list-groups.outputs.items.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "groupId": "$steps.list-groups.outputs.items[0].id",
+              "energyCost": "$inputs.energyCost",
+              "co2Emission": "$inputs.co2Emission",
+              "groupNameFilter": "$inputs.groupNameFilter"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updatedGlobalSummary": "$response.body#/updatedGlobalSummary"
+          }
+        }
+      ],
+      "outputs": {
+        "items": "$steps.list-groups.outputs.items",
+        "groupDetails": "$steps.get-group-details.outputs.groupDetails",
+        "updatedGlobalSummary": "$steps.update-group-energy-settings.outputs.updatedGlobalSummary"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

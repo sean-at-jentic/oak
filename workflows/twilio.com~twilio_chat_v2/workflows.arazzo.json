@@ -1,0 +1,1322 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/twilio.com/twilio_chat_v2/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "initialize-new-chat-service-with-custom-roles",
+      "summary": "This workflow sets up a new Twilio Chat Service, creates custom roles for deployment and channel management, and then assigns these roles as defaults to the service. This is crucial for defining permission structures from the outset.",
+      "description": "This workflow sets up a new Twilio Chat Service, creates custom roles for deployment and channel management, and then assigns these roles as defaults to the service. This is crucial for defining permission structures from the outset.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "FriendlyName": {
+            "type": "string"
+          },
+          "ServiceSid": {
+            "type": "string"
+          },
+          "Type": {
+            "type": "string"
+          },
+          "Permission": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-chat-service",
+          "description": "Creates a new chat service instance with a friendly name.",
+          "operationId": "CreateService",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "FriendlyName": "$inputs.FriendlyName"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        },
+        {
+          "stepId": "create-deployment-role",
+          "description": "Creates a custom deployment-level role with specified permissions for the new service.",
+          "operationId": "CreateRole",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$steps.create-chat-service.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "ServiceSid": "$steps.create-chat-service.outputs.sid",
+              "FriendlyName": "$inputs.FriendlyName",
+              "Type": "$inputs.Type",
+              "Permission": "$inputs.Permission"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        },
+        {
+          "stepId": "create-channel-role",
+          "description": "Creates a custom channel-level role with specified permissions for the new service.",
+          "operationId": "CreateRole",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$steps.create-chat-service.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "ServiceSid": "$steps.create-chat-service.outputs.sid",
+              "FriendlyName": "$inputs.FriendlyName",
+              "Type": "$inputs.Type",
+              "Permission": "$inputs.Permission"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        },
+        {
+          "stepId": "update-service-default-roles",
+          "description": "Updates the newly created service to set the default roles for service users, channel members, and channel creators.",
+          "operationId": "UpdateService",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.create-chat-service.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Sid": "$steps.create-chat-service.outputs.sid",
+              "DefaultServiceRoleSid": "$steps.create-deployment-role.outputs.sid",
+              "DefaultChannelRoleSid": "$steps.create-channel-role.outputs.sid",
+              "DefaultChannelCreatorRoleSid": "$steps.create-channel-role.outputs.sid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.update-service-default-roles.outputs.sid"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-channel-members-and-send-messages",
+      "summary": "This workflow demonstrates how to add a user as a member to a channel, send messages within that channel, and then retrieve the message history. It also includes the ability to update a message.",
+      "description": "This workflow demonstrates how to add a user as a member to a channel, send messages within that channel, and then retrieve the message history. It also includes the ability to update a message.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "ServiceSid": {
+            "type": "string"
+          },
+          "X-Twilio-Webhook-Enabled": {
+            "type": "string"
+          },
+          "FriendlyName": {
+            "type": "string"
+          },
+          "ChannelSid": {
+            "type": "string"
+          },
+          "Identity": {
+            "type": "string"
+          },
+          "From": {
+            "type": "string"
+          },
+          "Body": {
+            "type": "string"
+          },
+          "Order": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-channel-for-messaging",
+          "description": "Creates a channel where members will be added and messages exchanged.",
+          "operationId": "CreateChannel",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "X-Twilio-Webhook-Enabled",
+              "in": "header",
+              "value": "$inputs.X-Twilio-Webhook-Enabled"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "FriendlyName": "$inputs.FriendlyName"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        },
+        {
+          "stepId": "add-member-to-channel",
+          "description": "Adds a specific user as a member to the channel.",
+          "operationId": "CreateMember",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "ChannelSid",
+              "in": "path",
+              "value": "$steps.create-channel-for-messaging.outputs.sid"
+            },
+            {
+              "name": "X-Twilio-Webhook-Enabled",
+              "in": "header",
+              "value": "$inputs.X-Twilio-Webhook-Enabled"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "ChannelSid": "$steps.create-channel-for-messaging.outputs.sid",
+              "Identity": "$inputs.Identity"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        },
+        {
+          "stepId": "send-new-message",
+          "description": "Sends a new text message to the channel.",
+          "operationId": "CreateMessage",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "ChannelSid",
+              "in": "path",
+              "value": "$steps.create-channel-for-messaging.outputs.sid"
+            },
+            {
+              "name": "X-Twilio-Webhook-Enabled",
+              "in": "header",
+              "value": "$inputs.X-Twilio-Webhook-Enabled"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "ChannelSid": "$steps.create-channel-for-messaging.outputs.sid",
+              "From": "$inputs.From",
+              "Body": "$inputs.Body"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "body": "$response.body#/body"
+          }
+        },
+        {
+          "stepId": "list-channel-messages",
+          "description": "Retrieves the list of messages in the channel, ordered by creation time.",
+          "operationId": "ListMessage",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "ChannelSid",
+              "in": "path",
+              "value": "$steps.create-channel-for-messaging.outputs.sid"
+            },
+            {
+              "name": "Order",
+              "in": "query",
+              "value": "$inputs.Order"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "messages": "$response.body#/messages"
+          }
+        },
+        {
+          "stepId": "update-sent-message",
+          "description": "Updates the body of a previously sent message.",
+          "operationId": "UpdateMessage",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "ChannelSid",
+              "in": "path",
+              "value": "$steps.create-channel-for-messaging.outputs.sid"
+            },
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.send-new-message.outputs.sid"
+            },
+            {
+              "name": "X-Twilio-Webhook-Enabled",
+              "in": "header",
+              "value": "$inputs.X-Twilio-Webhook-Enabled"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "ChannelSid": "$steps.create-channel-for-messaging.outputs.sid",
+              "Sid": "$steps.send-new-message.outputs.sid",
+              "Body": "$inputs.Body"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "body": "$response.body#/body",
+            "was_edited": "$response.body#/was_edited"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.update-sent-message.outputs.sid",
+        "body": "$steps.update-sent-message.outputs.body",
+        "messages": "$steps.list-channel-messages.outputs.messages",
+        "was_edited": "$steps.update-sent-message.outputs.was_edited"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-and-manage-a-public-chat-channel",
+      "summary": "This workflow demonstrates how to create a new public chat channel within an existing service, update its properties, and then retrieve its details to confirm changes. This is a fundamental process for setting up chat rooms.",
+      "description": "This workflow demonstrates how to create a new public chat channel within an existing service, update its properties, and then retrieve its details to confirm changes. This is a fundamental process for setting up chat rooms.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "ServiceSid": {
+            "type": "string"
+          },
+          "X-Twilio-Webhook-Enabled": {
+            "type": "string"
+          },
+          "FriendlyName": {
+            "type": "string"
+          },
+          "UniqueName": {
+            "type": "string"
+          },
+          "Type": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "Attributes": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-public-channel",
+          "description": "Creates a new public chat channel within a specified service.",
+          "operationId": "CreateChannel",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "X-Twilio-Webhook-Enabled",
+              "in": "header",
+              "value": "$inputs.X-Twilio-Webhook-Enabled"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "FriendlyName": "$inputs.FriendlyName",
+              "UniqueName": "$inputs.UniqueName",
+              "Type": "$inputs.Type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        },
+        {
+          "stepId": "update-channel-attributes",
+          "description": "Updates the attributes (e.g., custom data) of the created channel.",
+          "operationId": "UpdateChannel",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.create-public-channel.outputs.sid"
+            },
+            {
+              "name": "X-Twilio-Webhook-Enabled",
+              "in": "header",
+              "value": "$inputs.X-Twilio-Webhook-Enabled"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Sid": "$steps.create-public-channel.outputs.sid",
+              "Attributes": "$inputs.Attributes"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        },
+        {
+          "stepId": "fetch-channel-details",
+          "description": "Retrieves the full details of the channel to verify the updates.",
+          "operationId": "FetchChannel",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.create-public-channel.outputs.sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "friendly_name": "$response.body#/friendly_name",
+            "unique_name": "$response.body#/unique_name",
+            "attributes": "$response.body#/attributes",
+            "type": "$response.body#/type",
+            "members_count": "$response.body#/members_count",
+            "messages_count": "$response.body#/messages_count"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.update-channel-attributes.outputs.sid",
+        "friendly_name": "$steps.fetch-channel-details.outputs.friendly_name",
+        "unique_name": "$steps.fetch-channel-details.outputs.unique_name",
+        "attributes": "$steps.fetch-channel-details.outputs.attributes",
+        "type": "$steps.fetch-channel-details.outputs.type",
+        "members_count": "$steps.fetch-channel-details.outputs.members_count",
+        "messages_count": "$steps.fetch-channel-details.outputs.messages_count"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "onboard-and-manage-a-chat-user",
+      "summary": "This workflow covers the process of creating a new user within a chat service, updating their profile information, and then fetching their details to confirm their status and attributes. Essential for user management in a chat application.",
+      "description": "This workflow covers the process of creating a new user within a chat service, updating their profile information, and then fetching their details to confirm their status and attributes. Essential for user management in a chat application.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "ServiceSid": {
+            "type": "string"
+          },
+          "X-Twilio-Webhook-Enabled": {
+            "type": "string"
+          },
+          "Identity": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "Attributes": {
+            "type": "string"
+          },
+          "FriendlyName": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-chat-user",
+          "description": "Registers a new user with a unique identity within the specified chat service.",
+          "operationId": "CreateUser",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "X-Twilio-Webhook-Enabled",
+              "in": "header",
+              "value": "$inputs.X-Twilio-Webhook-Enabled"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Identity": "$inputs.Identity"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid",
+            "identity": "$response.body#/identity"
+          }
+        },
+        {
+          "stepId": "update-user-profile",
+          "description": "Updates the friendly name and custom attributes for the newly created user.",
+          "operationId": "UpdateUser",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.create-chat-user.outputs.sid"
+            },
+            {
+              "name": "X-Twilio-Webhook-Enabled",
+              "in": "header",
+              "value": "$inputs.X-Twilio-Webhook-Enabled"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Sid": "$steps.create-chat-user.outputs.sid",
+              "Attributes": "$inputs.Attributes",
+              "FriendlyName": "$inputs.FriendlyName"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        },
+        {
+          "stepId": "fetch-user-status",
+          "description": "Retrieves the user's current status, including online presence and notification reachability.",
+          "operationId": "FetchUser",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.create-chat-user.outputs.sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "identity": "$response.body#/identity",
+            "friendly_name": "$response.body#/friendly_name",
+            "is_online": "$response.body#/is_online",
+            "is_notifiable": "$response.body#/is_notifiable",
+            "joined_channels_count": "$response.body#/joined_channels_count"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.update-user-profile.outputs.sid",
+        "identity": "$steps.fetch-user-status.outputs.identity",
+        "friendly_name": "$steps.fetch-user-status.outputs.friendly_name",
+        "is_online": "$steps.fetch-user-status.outputs.is_online",
+        "is_notifiable": "$steps.fetch-user-status.outputs.is_notifiable",
+        "joined_channels_count": "$steps.fetch-user-status.outputs.joined_channels_count"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "configure-channel-webhooks-for-event-notifications",
+      "summary": "This workflow demonstrates how to create a channel and then set up webhooks to receive notifications for specific events occurring within that channel, such as new messages or channel destruction. This is vital for integrating chat events with external systems.",
+      "description": "This workflow demonstrates how to create a channel and then set up webhooks to receive notifications for specific events occurring within that channel, such as new messages or channel destruction. This is vital for integrating chat events with external systems.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "ServiceSid": {
+            "type": "string"
+          },
+          "X-Twilio-Webhook-Enabled": {
+            "type": "string"
+          },
+          "FriendlyName": {
+            "type": "string"
+          },
+          "ChannelSid": {
+            "type": "string"
+          },
+          "Type": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "Configuration.RetryCount": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-channel-for-webhooks",
+          "description": "Creates a new channel to associate webhooks with.",
+          "operationId": "CreateChannel",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "X-Twilio-Webhook-Enabled",
+              "in": "header",
+              "value": "$inputs.X-Twilio-Webhook-Enabled"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "FriendlyName": "$inputs.FriendlyName"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        },
+        {
+          "stepId": "create-message-sent-webhook",
+          "description": "Creates a webhook that triggers when a new message is sent in the channel.",
+          "operationId": "CreateChannelWebhook",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "ChannelSid",
+              "in": "path",
+              "value": "$steps.create-channel-for-webhooks.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "ChannelSid": "$steps.create-channel-for-webhooks.outputs.sid",
+              "Type": "$inputs.Type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        },
+        {
+          "stepId": "list-channel-webhooks",
+          "description": "Lists all webhooks configured for the channel to verify the new webhook.",
+          "operationId": "ListChannelWebhook",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "ChannelSid",
+              "in": "path",
+              "value": "$steps.create-channel-for-webhooks.outputs.sid"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "webhooks": "$response.body#/webhooks"
+          }
+        },
+        {
+          "stepId": "update-webhook-retry-count",
+          "description": "Updates the retry count for the created webhook.",
+          "operationId": "UpdateChannelWebhook",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "ChannelSid",
+              "in": "path",
+              "value": "$steps.create-channel-for-webhooks.outputs.sid"
+            },
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.create-message-sent-webhook.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "ChannelSid": "$steps.create-channel-for-webhooks.outputs.sid",
+              "Sid": "$steps.create-message-sent-webhook.outputs.sid",
+              "Configuration.RetryCount": "$inputs.Configuration.RetryCount"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.update-webhook-retry-count.outputs.sid",
+        "webhooks": "$steps.list-channel-webhooks.outputs.webhooks"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "invite-and-manage-users-in-a-private-channel",
+      "summary": "This workflow demonstrates the process of creating a private chat channel, inviting a specific user to it, listing the invites, and then optionally deleting an invite. This is useful for controlled access channels.",
+      "description": "This workflow demonstrates the process of creating a private chat channel, inviting a specific user to it, listing the invites, and then optionally deleting an invite. This is useful for controlled access channels.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "ServiceSid": {
+            "type": "string"
+          },
+          "X-Twilio-Webhook-Enabled": {
+            "type": "string"
+          },
+          "FriendlyName": {
+            "type": "string"
+          },
+          "Type": {
+            "type": "string"
+          },
+          "ChannelSid": {
+            "type": "string"
+          },
+          "Identity": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-private-channel",
+          "description": "Creates a new private chat channel.",
+          "operationId": "CreateChannel",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "X-Twilio-Webhook-Enabled",
+              "in": "header",
+              "value": "$inputs.X-Twilio-Webhook-Enabled"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "FriendlyName": "$inputs.FriendlyName",
+              "Type": "$inputs.Type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        },
+        {
+          "stepId": "invite-user-to-channel",
+          "description": "Invites a user to the private channel using their identity.",
+          "operationId": "CreateInvite",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "ChannelSid",
+              "in": "path",
+              "value": "$steps.create-private-channel.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "ChannelSid": "$steps.create-private-channel.outputs.sid",
+              "Identity": "$inputs.Identity"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        },
+        {
+          "stepId": "list-channel-invites",
+          "description": "Lists all pending invites for the private channel.",
+          "operationId": "ListInvite",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "ChannelSid",
+              "in": "path",
+              "value": "$steps.create-private-channel.outputs.sid"
+            },
+            {
+              "name": "Identity",
+              "in": "query",
+              "value": "$inputs.Identity"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "invites": "$response.body#/invites"
+          }
+        },
+        {
+          "stepId": "delete-channel-invite",
+          "description": "Deletes a specific invite from the private channel.",
+          "operationId": "DeleteInvite",
+          "parameters": [
+            {
+              "name": "ServiceSid",
+              "in": "path",
+              "value": "$inputs.ServiceSid"
+            },
+            {
+              "name": "ChannelSid",
+              "in": "path",
+              "value": "$steps.create-private-channel.outputs.sid"
+            },
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.invite-user-to-channel.outputs.sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "invite_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.invite-user-to-channel.outputs.sid",
+        "invites": "$steps.list-channel-invites.outputs.invites",
+        "invite_data": "$steps.delete-channel-invite.outputs.invite_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-push-notification-credentials",
+      "summary": "This workflow allows for the creation, listing, and updating of push notification credentials (APN, GCM, FCM) which are essential for sending real-time notifications to chat users.",
+      "description": "This workflow allows for the creation, listing, and updating of push notification credentials (APN, GCM, FCM) which are essential for sending real-time notifications to chat users.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Type": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "FriendlyName": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-apn-credential",
+          "description": "Creates a new APN (Apple Push Notification) credential.",
+          "operationId": "CreateCredential",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Type": "$inputs.Type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        },
+        {
+          "stepId": "list-all-credentials",
+          "description": "Retrieves a list of all configured push notification credentials.",
+          "operationId": "ListCredential",
+          "parameters": [
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "credentials": "$response.body#/credentials"
+          }
+        },
+        {
+          "stepId": "update-credential-friendly-name",
+          "description": "Updates the friendly name of the newly created credential.",
+          "operationId": "UpdateCredential",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.create-apn-credential.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Sid": "$steps.create-apn-credential.outputs.sid",
+              "FriendlyName": "$inputs.FriendlyName"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.update-credential-friendly-name.outputs.sid",
+        "credentials": "$steps.list-all-credentials.outputs.credentials"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

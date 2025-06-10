@@ -1,0 +1,3353 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/jellyfin.local/main/v1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "user-authentication-and-profile-management",
+      "summary": "Allows a user to authenticate, retrieve their profile, and update their personal settings and password. This workflow covers the essential steps for a user to manage their account details after initial login.",
+      "description": "Allows a user to authenticate, retrieve their profile, and update their personal settings and password. This workflow covers the essential steps for a user to manage their account details after initial login.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Username": {
+            "type": "string"
+          },
+          "Pw": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "authenticate-user-by-name",
+          "description": "Authenticates a user with a username and password, returning user details and an access token.",
+          "operationId": "AuthenticateUserByName",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "Username": "$inputs.Username",
+              "Pw": "$inputs.Pw"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "User": "$response.body#/User",
+            "SessionInfo": "$response.body#/SessionInfo",
+            "AccessToken": "$response.body#/AccessToken",
+            "ServerId": "$response.body#/ServerId"
+          }
+        },
+        {
+          "stepId": "get-current-user-profile",
+          "description": "Retrieves the authenticated user's full profile information using their session token.",
+          "operationId": "GetCurrentUser",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "UserDto": "$response.body#/UserDto"
+          }
+        },
+        {
+          "stepId": "update-user-configuration",
+          "description": "Updates the user's personal configuration, such as audio/subtitle language preferences or display settings.",
+          "operationId": "UpdateUserConfiguration",
+          "parameters": [
+            {
+              "name": "userId",
+              "in": "path",
+              "value": "$steps.authenticate-user-by-name.outputs.User.Id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "userId": "$steps.authenticate-user-by-name.outputs.User.Id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "configuration_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "update-user-password",
+          "description": "Allows a user to change their password, requiring their current password for verification.",
+          "operationId": "UpdateUserPassword",
+          "parameters": [
+            {
+              "name": "userId",
+              "in": "path",
+              "value": "$steps.authenticate-user-by-name.outputs.User.Id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "userId": "$steps.authenticate-user-by-name.outputs.User.Id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "password_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "User": "$steps.authenticate-user-by-name.outputs.User",
+        "SessionInfo": "$steps.authenticate-user-by-name.outputs.SessionInfo",
+        "AccessToken": "$steps.authenticate-user-by-name.outputs.AccessToken",
+        "ServerId": "$steps.authenticate-user-by-name.outputs.ServerId",
+        "UserDto": "$steps.get-current-user-profile.outputs.UserDto",
+        "configuration_data": "$steps.update-user-configuration.outputs.configuration_data",
+        "password_data": "$steps.update-user-password.outputs.password_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "quick-connect-setup-and-client-authorization",
+      "summary": "Facilitates a secure and easy way for new clients to connect to the Jellyfin server without manually entering credentials, using a temporary code and server-side authorization.",
+      "description": "Facilitates a secure and easy way for new clients to connect to the Jellyfin server without manually entering credentials, using a temporary code and server-side authorization.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "secret": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "initiate-quick-connect",
+          "description": "Initiates a new quick connect request, generating a unique secret and a user-facing code for client pairing.",
+          "operationId": "Initiate",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "QuickConnectResult": "$response.body#/QuickConnectResult"
+          }
+        },
+        {
+          "stepId": "get-quick-connect-status",
+          "description": "Retrieves the current status of the quick connect feature on the server (e.g., Available, Active, Unavailable).",
+          "operationId": "GetStatus",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "QuickConnectState": "$response.body#/QuickConnectState"
+          }
+        },
+        {
+          "stepId": "authorize-quick-connect",
+          "description": "Authorizes a pending quick connect request using the user-facing code, linking the client to a user account.",
+          "operationId": "Authorize",
+          "parameters": [
+            {
+              "name": "code",
+              "in": "query",
+              "value": "$inputs.code"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "boolean": "$response.body#/boolean"
+          }
+        },
+        {
+          "stepId": "connect-with-secret",
+          "description": "Allows a client to retrieve authentication information (e.g., access token) using the secret obtained during initiation, completing the quick connect process.",
+          "operationId": "Connect",
+          "parameters": [
+            {
+              "name": "secret",
+              "in": "query",
+              "value": "$inputs.secret"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "QuickConnectResult": "$response.body#/QuickConnectResult"
+          }
+        }
+      ],
+      "outputs": {
+        "QuickConnectResult": "$steps.connect-with-secret.outputs.QuickConnectResult",
+        "QuickConnectState": "$steps.get-quick-connect-status.outputs.QuickConnectState",
+        "boolean": "$steps.authorize-quick-connect.outputs.boolean"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "browse-and-stream-media-content",
+      "summary": "Enables a user to navigate their media library, select an item, and initiate streaming playback, including reporting playback status.",
+      "description": "Enables a user to navigate their media library, select an item, and initiate streaming playback, including reporting playback status.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "includeExternalContent": {
+            "type": "string"
+          },
+          "presetViews": {
+            "type": "string"
+          },
+          "includeHidden": {
+            "type": "string"
+          },
+          "maxOfficialRating": {
+            "type": "string"
+          },
+          "hasThemeSong": {
+            "type": "string"
+          },
+          "hasThemeVideo": {
+            "type": "string"
+          },
+          "hasSubtitles": {
+            "type": "string"
+          },
+          "hasSpecialFeature": {
+            "type": "string"
+          },
+          "hasTrailer": {
+            "type": "string"
+          },
+          "adjacentTo": {
+            "type": "string"
+          },
+          "parentIndexNumber": {
+            "type": "string"
+          },
+          "hasParentalRating": {
+            "type": "string"
+          },
+          "isHd": {
+            "type": "string"
+          },
+          "is4K": {
+            "type": "string"
+          },
+          "locationTypes": {
+            "type": "string"
+          },
+          "excludeLocationTypes": {
+            "type": "string"
+          },
+          "isMissing": {
+            "type": "string"
+          },
+          "isUnaired": {
+            "type": "string"
+          },
+          "minCommunityRating": {
+            "type": "string"
+          },
+          "minCriticRating": {
+            "type": "string"
+          },
+          "minPremiereDate": {
+            "type": "string"
+          },
+          "minDateLastSaved": {
+            "type": "string"
+          },
+          "minDateLastSavedForUser": {
+            "type": "string"
+          },
+          "maxPremiereDate": {
+            "type": "string"
+          },
+          "hasOverview": {
+            "type": "string"
+          },
+          "hasImdbId": {
+            "type": "string"
+          },
+          "hasTmdbId": {
+            "type": "string"
+          },
+          "hasTvdbId": {
+            "type": "string"
+          },
+          "excludeItemIds": {
+            "type": "string"
+          },
+          "startIndex": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "recursive": {
+            "type": "string"
+          },
+          "searchTerm": {
+            "type": "string"
+          },
+          "sortOrder": {
+            "type": "string"
+          },
+          "parentId": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "string"
+          },
+          "excludeItemTypes": {
+            "type": "string"
+          },
+          "includeItemTypes": {
+            "type": "string"
+          },
+          "filters": {
+            "type": "string"
+          },
+          "isFavorite": {
+            "type": "string"
+          },
+          "mediaTypes": {
+            "type": "string"
+          },
+          "imageTypes": {
+            "type": "string"
+          },
+          "sortBy": {
+            "type": "string"
+          },
+          "isPlayed": {
+            "type": "string"
+          },
+          "genres": {
+            "type": "string"
+          },
+          "officialRatings": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "string"
+          },
+          "years": {
+            "type": "string"
+          },
+          "enableUserData": {
+            "type": "string"
+          },
+          "imageTypeLimit": {
+            "type": "string"
+          },
+          "enableImageTypes": {
+            "type": "string"
+          },
+          "person": {
+            "type": "string"
+          },
+          "personIds": {
+            "type": "string"
+          },
+          "personTypes": {
+            "type": "string"
+          },
+          "studios": {
+            "type": "string"
+          },
+          "artists": {
+            "type": "string"
+          },
+          "excludeArtistIds": {
+            "type": "string"
+          },
+          "artistIds": {
+            "type": "string"
+          },
+          "albumArtistIds": {
+            "type": "string"
+          },
+          "contributingArtistIds": {
+            "type": "string"
+          },
+          "albums": {
+            "type": "string"
+          },
+          "albumIds": {
+            "type": "string"
+          },
+          "ids": {
+            "type": "string"
+          },
+          "videoTypes": {
+            "type": "string"
+          },
+          "minOfficialRating": {
+            "type": "string"
+          },
+          "isLocked": {
+            "type": "string"
+          },
+          "isPlaceHolder": {
+            "type": "string"
+          },
+          "hasOfficialRating": {
+            "type": "string"
+          },
+          "collapseBoxSetItems": {
+            "type": "string"
+          },
+          "minWidth": {
+            "type": "string"
+          },
+          "minHeight": {
+            "type": "string"
+          },
+          "maxWidth": {
+            "type": "string"
+          },
+          "maxHeight": {
+            "type": "string"
+          },
+          "is3D": {
+            "type": "string"
+          },
+          "seriesStatus": {
+            "type": "string"
+          },
+          "nameStartsWithOrGreater": {
+            "type": "string"
+          },
+          "nameStartsWith": {
+            "type": "string"
+          },
+          "nameLessThan": {
+            "type": "string"
+          },
+          "studioIds": {
+            "type": "string"
+          },
+          "genreIds": {
+            "type": "string"
+          },
+          "enableTotalRecordCount": {
+            "type": "string"
+          },
+          "enableImages": {
+            "type": "string"
+          },
+          "itemId": {
+            "type": "string"
+          },
+          "container": {
+            "type": "string"
+          },
+          "static": {
+            "type": "string"
+          },
+          "params": {
+            "type": "string"
+          },
+          "tag": {
+            "type": "string"
+          },
+          "deviceProfileId": {
+            "type": "string"
+          },
+          "playSessionId": {
+            "type": "string"
+          },
+          "segmentContainer": {
+            "type": "string"
+          },
+          "segmentLength": {
+            "type": "string"
+          },
+          "minSegments": {
+            "type": "string"
+          },
+          "mediaSourceId": {
+            "type": "string"
+          },
+          "deviceId": {
+            "type": "string"
+          },
+          "audioCodec": {
+            "type": "string"
+          },
+          "enableAutoStreamCopy": {
+            "type": "string"
+          },
+          "allowVideoStreamCopy": {
+            "type": "string"
+          },
+          "allowAudioStreamCopy": {
+            "type": "string"
+          },
+          "breakOnNonKeyFrames": {
+            "type": "string"
+          },
+          "audioSampleRate": {
+            "type": "string"
+          },
+          "maxAudioBitDepth": {
+            "type": "string"
+          },
+          "audioBitRate": {
+            "type": "string"
+          },
+          "audioChannels": {
+            "type": "string"
+          },
+          "maxAudioChannels": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "level": {
+            "type": "string"
+          },
+          "framerate": {
+            "type": "string"
+          },
+          "maxFramerate": {
+            "type": "string"
+          },
+          "copyTimestamps": {
+            "type": "string"
+          },
+          "startTimeTicks": {
+            "type": "string"
+          },
+          "width": {
+            "type": "string"
+          },
+          "height": {
+            "type": "string"
+          },
+          "videoBitRate": {
+            "type": "string"
+          },
+          "subtitleStreamIndex": {
+            "type": "string"
+          },
+          "subtitleMethod": {
+            "type": "string"
+          },
+          "maxRefFrames": {
+            "type": "string"
+          },
+          "maxVideoBitDepth": {
+            "type": "string"
+          },
+          "requireAvc": {
+            "type": "string"
+          },
+          "deInterlace": {
+            "type": "string"
+          },
+          "requireNonAnamorphic": {
+            "type": "string"
+          },
+          "transcodingMaxAudioChannels": {
+            "type": "string"
+          },
+          "cpuCoreLimit": {
+            "type": "string"
+          },
+          "liveStreamId": {
+            "type": "string"
+          },
+          "enableMpegtsM2TsMode": {
+            "type": "string"
+          },
+          "videoCodec": {
+            "type": "string"
+          },
+          "subtitleCodec": {
+            "type": "string"
+          },
+          "transcodeReasons": {
+            "type": "string"
+          },
+          "audioStreamIndex": {
+            "type": "string"
+          },
+          "videoStreamIndex": {
+            "type": "string"
+          },
+          "context": {
+            "type": "string"
+          },
+          "streamOptions": {
+            "type": "string"
+          },
+          "report-playback-start_body": {
+            "type": "object"
+          },
+          "report-playback-progress_body": {
+            "type": "object"
+          },
+          "report-playback-stopped_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-user-views",
+          "description": "Retrieves the main media categories or views available to a specific user (e.g., Movies, TV Shows, Music).",
+          "operationId": "GetUserViews",
+          "parameters": [
+            {
+              "name": "userId",
+              "in": "path",
+              "value": "$inputs.userId"
+            },
+            {
+              "name": "includeExternalContent",
+              "in": "query",
+              "value": "$inputs.includeExternalContent"
+            },
+            {
+              "name": "presetViews",
+              "in": "query",
+              "value": "$inputs.presetViews"
+            },
+            {
+              "name": "includeHidden",
+              "in": "query",
+              "value": "$inputs.includeHidden"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Items": "$response.body#/Items"
+          }
+        },
+        {
+          "stepId": "get-items-in-view",
+          "description": "Fetches a paginated list of media items within a selected view or folder, allowing for filtering and sorting.",
+          "operationId": "GetItemsByUserId",
+          "parameters": [
+            {
+              "name": "userId",
+              "in": "path",
+              "value": "$inputs.userId"
+            },
+            {
+              "name": "maxOfficialRating",
+              "in": "query",
+              "value": "$inputs.maxOfficialRating"
+            },
+            {
+              "name": "hasThemeSong",
+              "in": "query",
+              "value": "$inputs.hasThemeSong"
+            },
+            {
+              "name": "hasThemeVideo",
+              "in": "query",
+              "value": "$inputs.hasThemeVideo"
+            },
+            {
+              "name": "hasSubtitles",
+              "in": "query",
+              "value": "$inputs.hasSubtitles"
+            },
+            {
+              "name": "hasSpecialFeature",
+              "in": "query",
+              "value": "$inputs.hasSpecialFeature"
+            },
+            {
+              "name": "hasTrailer",
+              "in": "query",
+              "value": "$inputs.hasTrailer"
+            },
+            {
+              "name": "adjacentTo",
+              "in": "query",
+              "value": "$inputs.adjacentTo"
+            },
+            {
+              "name": "parentIndexNumber",
+              "in": "query",
+              "value": "$inputs.parentIndexNumber"
+            },
+            {
+              "name": "hasParentalRating",
+              "in": "query",
+              "value": "$inputs.hasParentalRating"
+            },
+            {
+              "name": "isHd",
+              "in": "query",
+              "value": "$inputs.isHd"
+            },
+            {
+              "name": "is4K",
+              "in": "query",
+              "value": "$inputs.is4K"
+            },
+            {
+              "name": "locationTypes",
+              "in": "query",
+              "value": "$inputs.locationTypes"
+            },
+            {
+              "name": "excludeLocationTypes",
+              "in": "query",
+              "value": "$inputs.excludeLocationTypes"
+            },
+            {
+              "name": "isMissing",
+              "in": "query",
+              "value": "$inputs.isMissing"
+            },
+            {
+              "name": "isUnaired",
+              "in": "query",
+              "value": "$inputs.isUnaired"
+            },
+            {
+              "name": "minCommunityRating",
+              "in": "query",
+              "value": "$inputs.minCommunityRating"
+            },
+            {
+              "name": "minCriticRating",
+              "in": "query",
+              "value": "$inputs.minCriticRating"
+            },
+            {
+              "name": "minPremiereDate",
+              "in": "query",
+              "value": "$inputs.minPremiereDate"
+            },
+            {
+              "name": "minDateLastSaved",
+              "in": "query",
+              "value": "$inputs.minDateLastSaved"
+            },
+            {
+              "name": "minDateLastSavedForUser",
+              "in": "query",
+              "value": "$inputs.minDateLastSavedForUser"
+            },
+            {
+              "name": "maxPremiereDate",
+              "in": "query",
+              "value": "$inputs.maxPremiereDate"
+            },
+            {
+              "name": "hasOverview",
+              "in": "query",
+              "value": "$inputs.hasOverview"
+            },
+            {
+              "name": "hasImdbId",
+              "in": "query",
+              "value": "$inputs.hasImdbId"
+            },
+            {
+              "name": "hasTmdbId",
+              "in": "query",
+              "value": "$inputs.hasTmdbId"
+            },
+            {
+              "name": "hasTvdbId",
+              "in": "query",
+              "value": "$inputs.hasTvdbId"
+            },
+            {
+              "name": "excludeItemIds",
+              "in": "query",
+              "value": "$inputs.excludeItemIds"
+            },
+            {
+              "name": "startIndex",
+              "in": "query",
+              "value": "$inputs.startIndex"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "recursive",
+              "in": "query",
+              "value": "$inputs.recursive"
+            },
+            {
+              "name": "searchTerm",
+              "in": "query",
+              "value": "$inputs.searchTerm"
+            },
+            {
+              "name": "sortOrder",
+              "in": "query",
+              "value": "$inputs.sortOrder"
+            },
+            {
+              "name": "parentId",
+              "in": "query",
+              "value": "$steps.get-user-views.outputs.Items.Id"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            },
+            {
+              "name": "excludeItemTypes",
+              "in": "query",
+              "value": "$inputs.excludeItemTypes"
+            },
+            {
+              "name": "includeItemTypes",
+              "in": "query",
+              "value": "$inputs.includeItemTypes"
+            },
+            {
+              "name": "filters",
+              "in": "query",
+              "value": "$inputs.filters"
+            },
+            {
+              "name": "isFavorite",
+              "in": "query",
+              "value": "$inputs.isFavorite"
+            },
+            {
+              "name": "mediaTypes",
+              "in": "query",
+              "value": "$inputs.mediaTypes"
+            },
+            {
+              "name": "imageTypes",
+              "in": "query",
+              "value": "$inputs.imageTypes"
+            },
+            {
+              "name": "sortBy",
+              "in": "query",
+              "value": "$inputs.sortBy"
+            },
+            {
+              "name": "isPlayed",
+              "in": "query",
+              "value": "$inputs.isPlayed"
+            },
+            {
+              "name": "genres",
+              "in": "query",
+              "value": "$inputs.genres"
+            },
+            {
+              "name": "officialRatings",
+              "in": "query",
+              "value": "$inputs.officialRatings"
+            },
+            {
+              "name": "tags",
+              "in": "query",
+              "value": "$inputs.tags"
+            },
+            {
+              "name": "years",
+              "in": "query",
+              "value": "$inputs.years"
+            },
+            {
+              "name": "enableUserData",
+              "in": "query",
+              "value": "$inputs.enableUserData"
+            },
+            {
+              "name": "imageTypeLimit",
+              "in": "query",
+              "value": "$inputs.imageTypeLimit"
+            },
+            {
+              "name": "enableImageTypes",
+              "in": "query",
+              "value": "$inputs.enableImageTypes"
+            },
+            {
+              "name": "person",
+              "in": "query",
+              "value": "$inputs.person"
+            },
+            {
+              "name": "personIds",
+              "in": "query",
+              "value": "$inputs.personIds"
+            },
+            {
+              "name": "personTypes",
+              "in": "query",
+              "value": "$inputs.personTypes"
+            },
+            {
+              "name": "studios",
+              "in": "query",
+              "value": "$inputs.studios"
+            },
+            {
+              "name": "artists",
+              "in": "query",
+              "value": "$inputs.artists"
+            },
+            {
+              "name": "excludeArtistIds",
+              "in": "query",
+              "value": "$inputs.excludeArtistIds"
+            },
+            {
+              "name": "artistIds",
+              "in": "query",
+              "value": "$inputs.artistIds"
+            },
+            {
+              "name": "albumArtistIds",
+              "in": "query",
+              "value": "$inputs.albumArtistIds"
+            },
+            {
+              "name": "contributingArtistIds",
+              "in": "query",
+              "value": "$inputs.contributingArtistIds"
+            },
+            {
+              "name": "albums",
+              "in": "query",
+              "value": "$inputs.albums"
+            },
+            {
+              "name": "albumIds",
+              "in": "query",
+              "value": "$inputs.albumIds"
+            },
+            {
+              "name": "ids",
+              "in": "query",
+              "value": "$inputs.ids"
+            },
+            {
+              "name": "videoTypes",
+              "in": "query",
+              "value": "$inputs.videoTypes"
+            },
+            {
+              "name": "minOfficialRating",
+              "in": "query",
+              "value": "$inputs.minOfficialRating"
+            },
+            {
+              "name": "isLocked",
+              "in": "query",
+              "value": "$inputs.isLocked"
+            },
+            {
+              "name": "isPlaceHolder",
+              "in": "query",
+              "value": "$inputs.isPlaceHolder"
+            },
+            {
+              "name": "hasOfficialRating",
+              "in": "query",
+              "value": "$inputs.hasOfficialRating"
+            },
+            {
+              "name": "collapseBoxSetItems",
+              "in": "query",
+              "value": "$inputs.collapseBoxSetItems"
+            },
+            {
+              "name": "minWidth",
+              "in": "query",
+              "value": "$inputs.minWidth"
+            },
+            {
+              "name": "minHeight",
+              "in": "query",
+              "value": "$inputs.minHeight"
+            },
+            {
+              "name": "maxWidth",
+              "in": "query",
+              "value": "$inputs.maxWidth"
+            },
+            {
+              "name": "maxHeight",
+              "in": "query",
+              "value": "$inputs.maxHeight"
+            },
+            {
+              "name": "is3D",
+              "in": "query",
+              "value": "$inputs.is3D"
+            },
+            {
+              "name": "seriesStatus",
+              "in": "query",
+              "value": "$inputs.seriesStatus"
+            },
+            {
+              "name": "nameStartsWithOrGreater",
+              "in": "query",
+              "value": "$inputs.nameStartsWithOrGreater"
+            },
+            {
+              "name": "nameStartsWith",
+              "in": "query",
+              "value": "$inputs.nameStartsWith"
+            },
+            {
+              "name": "nameLessThan",
+              "in": "query",
+              "value": "$inputs.nameLessThan"
+            },
+            {
+              "name": "studioIds",
+              "in": "query",
+              "value": "$inputs.studioIds"
+            },
+            {
+              "name": "genreIds",
+              "in": "query",
+              "value": "$inputs.genreIds"
+            },
+            {
+              "name": "enableTotalRecordCount",
+              "in": "query",
+              "value": "$inputs.enableTotalRecordCount"
+            },
+            {
+              "name": "enableImages",
+              "in": "query",
+              "value": "$inputs.enableImages"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Items": "$response.body#/Items"
+          }
+        },
+        {
+          "stepId": "get-item-details",
+          "description": "Retrieves comprehensive detailed information about a specific media item.",
+          "operationId": "GetItem",
+          "parameters": [
+            {
+              "name": "userId",
+              "in": "path",
+              "value": "$inputs.userId"
+            },
+            {
+              "name": "itemId",
+              "in": "path",
+              "value": "$steps.get-items-in-view.outputs.Items.Id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "BaseItemDto": "$response.body#/BaseItemDto"
+          }
+        },
+        {
+          "stepId": "get-playback-info",
+          "description": "Obtains necessary playback information for an item, including available media sources, transcoding details, and a play session ID.",
+          "operationId": "GetPlaybackInfo",
+          "parameters": [
+            {
+              "name": "itemId",
+              "in": "path",
+              "value": "$inputs.itemId"
+            },
+            {
+              "name": "userId",
+              "in": "query",
+              "value": "$inputs.userId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "PlaybackInfoResponse": "$response.body#/PlaybackInfoResponse"
+          }
+        },
+        {
+          "stepId": "stream-video",
+          "description": "Initiates the streaming of the video content, potentially with transcoding based on client capabilities.",
+          "operationId": "GetVideoStream",
+          "parameters": [
+            {
+              "name": "itemId",
+              "in": "path",
+              "value": "$inputs.itemId"
+            },
+            {
+              "name": "container",
+              "in": "query",
+              "value": "$inputs.container"
+            },
+            {
+              "name": "static",
+              "in": "query",
+              "value": "$inputs.static"
+            },
+            {
+              "name": "params",
+              "in": "query",
+              "value": "$inputs.params"
+            },
+            {
+              "name": "tag",
+              "in": "query",
+              "value": "$inputs.tag"
+            },
+            {
+              "name": "deviceProfileId",
+              "in": "query",
+              "value": "$inputs.deviceProfileId"
+            },
+            {
+              "name": "playSessionId",
+              "in": "query",
+              "value": "$inputs.playSessionId"
+            },
+            {
+              "name": "segmentContainer",
+              "in": "query",
+              "value": "$inputs.segmentContainer"
+            },
+            {
+              "name": "segmentLength",
+              "in": "query",
+              "value": "$inputs.segmentLength"
+            },
+            {
+              "name": "minSegments",
+              "in": "query",
+              "value": "$inputs.minSegments"
+            },
+            {
+              "name": "mediaSourceId",
+              "in": "query",
+              "value": "$inputs.mediaSourceId"
+            },
+            {
+              "name": "deviceId",
+              "in": "query",
+              "value": "$inputs.deviceId"
+            },
+            {
+              "name": "audioCodec",
+              "in": "query",
+              "value": "$inputs.audioCodec"
+            },
+            {
+              "name": "enableAutoStreamCopy",
+              "in": "query",
+              "value": "$inputs.enableAutoStreamCopy"
+            },
+            {
+              "name": "allowVideoStreamCopy",
+              "in": "query",
+              "value": "$inputs.allowVideoStreamCopy"
+            },
+            {
+              "name": "allowAudioStreamCopy",
+              "in": "query",
+              "value": "$inputs.allowAudioStreamCopy"
+            },
+            {
+              "name": "breakOnNonKeyFrames",
+              "in": "query",
+              "value": "$inputs.breakOnNonKeyFrames"
+            },
+            {
+              "name": "audioSampleRate",
+              "in": "query",
+              "value": "$inputs.audioSampleRate"
+            },
+            {
+              "name": "maxAudioBitDepth",
+              "in": "query",
+              "value": "$inputs.maxAudioBitDepth"
+            },
+            {
+              "name": "audioBitRate",
+              "in": "query",
+              "value": "$inputs.audioBitRate"
+            },
+            {
+              "name": "audioChannels",
+              "in": "query",
+              "value": "$inputs.audioChannels"
+            },
+            {
+              "name": "maxAudioChannels",
+              "in": "query",
+              "value": "$inputs.maxAudioChannels"
+            },
+            {
+              "name": "profile",
+              "in": "query",
+              "value": "$inputs.profile"
+            },
+            {
+              "name": "level",
+              "in": "query",
+              "value": "$inputs.level"
+            },
+            {
+              "name": "framerate",
+              "in": "query",
+              "value": "$inputs.framerate"
+            },
+            {
+              "name": "maxFramerate",
+              "in": "query",
+              "value": "$inputs.maxFramerate"
+            },
+            {
+              "name": "copyTimestamps",
+              "in": "query",
+              "value": "$inputs.copyTimestamps"
+            },
+            {
+              "name": "startTimeTicks",
+              "in": "query",
+              "value": "$inputs.startTimeTicks"
+            },
+            {
+              "name": "width",
+              "in": "query",
+              "value": "$inputs.width"
+            },
+            {
+              "name": "height",
+              "in": "query",
+              "value": "$inputs.height"
+            },
+            {
+              "name": "videoBitRate",
+              "in": "query",
+              "value": "$inputs.videoBitRate"
+            },
+            {
+              "name": "subtitleStreamIndex",
+              "in": "query",
+              "value": "$inputs.subtitleStreamIndex"
+            },
+            {
+              "name": "subtitleMethod",
+              "in": "query",
+              "value": "$inputs.subtitleMethod"
+            },
+            {
+              "name": "maxRefFrames",
+              "in": "query",
+              "value": "$inputs.maxRefFrames"
+            },
+            {
+              "name": "maxVideoBitDepth",
+              "in": "query",
+              "value": "$inputs.maxVideoBitDepth"
+            },
+            {
+              "name": "requireAvc",
+              "in": "query",
+              "value": "$inputs.requireAvc"
+            },
+            {
+              "name": "deInterlace",
+              "in": "query",
+              "value": "$inputs.deInterlace"
+            },
+            {
+              "name": "requireNonAnamorphic",
+              "in": "query",
+              "value": "$inputs.requireNonAnamorphic"
+            },
+            {
+              "name": "transcodingMaxAudioChannels",
+              "in": "query",
+              "value": "$inputs.transcodingMaxAudioChannels"
+            },
+            {
+              "name": "cpuCoreLimit",
+              "in": "query",
+              "value": "$inputs.cpuCoreLimit"
+            },
+            {
+              "name": "liveStreamId",
+              "in": "query",
+              "value": "$inputs.liveStreamId"
+            },
+            {
+              "name": "enableMpegtsM2TsMode",
+              "in": "query",
+              "value": "$inputs.enableMpegtsM2TsMode"
+            },
+            {
+              "name": "videoCodec",
+              "in": "query",
+              "value": "$inputs.videoCodec"
+            },
+            {
+              "name": "subtitleCodec",
+              "in": "query",
+              "value": "$inputs.subtitleCodec"
+            },
+            {
+              "name": "transcodeReasons",
+              "in": "query",
+              "value": "$inputs.transcodeReasons"
+            },
+            {
+              "name": "audioStreamIndex",
+              "in": "query",
+              "value": "$inputs.audioStreamIndex"
+            },
+            {
+              "name": "videoStreamIndex",
+              "in": "query",
+              "value": "$inputs.videoStreamIndex"
+            },
+            {
+              "name": "context",
+              "in": "query",
+              "value": "$inputs.context"
+            },
+            {
+              "name": "streamOptions",
+              "in": "query",
+              "value": "$inputs.streamOptions"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "binary_video_stream": "$response.body#/binary_video_stream"
+          }
+        },
+        {
+          "stepId": "report-playback-start",
+          "description": "Notifies the server that playback of an item has begun, allowing the server to track user activity.",
+          "operationId": "ReportPlaybackStart",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.report-playback-start_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "start_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "report-playback-progress",
+          "description": "Periodically updates the server with the current playback progress of an item, enabling resume functionality.",
+          "operationId": "ReportPlaybackProgress",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.report-playback-progress_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "progress_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "report-playback-stopped",
+          "description": "Informs the server that playback of an item has concluded or been stopped by the user.",
+          "operationId": "ReportPlaybackStopped",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.report-playback-stopped_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "stopped_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "Items": "$steps.get-items-in-view.outputs.Items",
+        "BaseItemDto": "$steps.get-item-details.outputs.BaseItemDto",
+        "PlaybackInfoResponse": "$steps.get-playback-info.outputs.PlaybackInfoResponse",
+        "binary_video_stream": "$steps.stream-video.outputs.binary_video_stream",
+        "start_data": "$steps.report-playback-start.outputs.start_data",
+        "progress_data": "$steps.report-playback-progress.outputs.progress_data",
+        "stopped_data": "$steps.report-playback-stopped.outputs.stopped_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "live-tv-recording-management",
+      "summary": "Enables a user to browse Live TV channels and programs, and then create or manage recording timers for series.",
+      "description": "Enables a user to browse Live TV channels and programs, and then create or manage recording timers for series.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "startIndex": {
+            "type": "string"
+          },
+          "isMovie": {
+            "type": "string"
+          },
+          "isSeries": {
+            "type": "string"
+          },
+          "isNews": {
+            "type": "string"
+          },
+          "isKids": {
+            "type": "string"
+          },
+          "isSports": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "isFavorite": {
+            "type": "string"
+          },
+          "isLiked": {
+            "type": "string"
+          },
+          "isDisliked": {
+            "type": "string"
+          },
+          "enableImages": {
+            "type": "string"
+          },
+          "imageTypeLimit": {
+            "type": "string"
+          },
+          "enableImageTypes": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "string"
+          },
+          "enableUserData": {
+            "type": "string"
+          },
+          "sortBy": {
+            "type": "string"
+          },
+          "sortOrder": {
+            "type": "string"
+          },
+          "enableFavoriteSorting": {
+            "type": "string"
+          },
+          "addCurrentProgram": {
+            "type": "string"
+          },
+          "channelIds": {
+            "type": "string"
+          },
+          "minStartDate": {
+            "type": "string"
+          },
+          "hasAired": {
+            "type": "string"
+          },
+          "isAiring": {
+            "type": "string"
+          },
+          "maxStartDate": {
+            "type": "string"
+          },
+          "minEndDate": {
+            "type": "string"
+          },
+          "maxEndDate": {
+            "type": "string"
+          },
+          "genres": {
+            "type": "string"
+          },
+          "genreIds": {
+            "type": "string"
+          },
+          "seriesTimerId": {
+            "type": "string"
+          },
+          "librarySeriesId": {
+            "type": "string"
+          },
+          "enableTotalRecordCount": {
+            "type": "string"
+          },
+          "timerId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-live-tv-channels",
+          "description": "Retrieves a list of all available Live TV channels, with options to filter by type or user favorites.",
+          "operationId": "GetLiveTvChannels",
+          "parameters": [
+            {
+              "name": "type",
+              "in": "query",
+              "value": "$inputs.type"
+            },
+            {
+              "name": "userId",
+              "in": "query",
+              "value": "$inputs.userId"
+            },
+            {
+              "name": "startIndex",
+              "in": "query",
+              "value": "$inputs.startIndex"
+            },
+            {
+              "name": "isMovie",
+              "in": "query",
+              "value": "$inputs.isMovie"
+            },
+            {
+              "name": "isSeries",
+              "in": "query",
+              "value": "$inputs.isSeries"
+            },
+            {
+              "name": "isNews",
+              "in": "query",
+              "value": "$inputs.isNews"
+            },
+            {
+              "name": "isKids",
+              "in": "query",
+              "value": "$inputs.isKids"
+            },
+            {
+              "name": "isSports",
+              "in": "query",
+              "value": "$inputs.isSports"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "isFavorite",
+              "in": "query",
+              "value": "$inputs.isFavorite"
+            },
+            {
+              "name": "isLiked",
+              "in": "query",
+              "value": "$inputs.isLiked"
+            },
+            {
+              "name": "isDisliked",
+              "in": "query",
+              "value": "$inputs.isDisliked"
+            },
+            {
+              "name": "enableImages",
+              "in": "query",
+              "value": "$inputs.enableImages"
+            },
+            {
+              "name": "imageTypeLimit",
+              "in": "query",
+              "value": "$inputs.imageTypeLimit"
+            },
+            {
+              "name": "enableImageTypes",
+              "in": "query",
+              "value": "$inputs.enableImageTypes"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            },
+            {
+              "name": "enableUserData",
+              "in": "query",
+              "value": "$inputs.enableUserData"
+            },
+            {
+              "name": "sortBy",
+              "in": "query",
+              "value": "$inputs.sortBy"
+            },
+            {
+              "name": "sortOrder",
+              "in": "query",
+              "value": "$inputs.sortOrder"
+            },
+            {
+              "name": "enableFavoriteSorting",
+              "in": "query",
+              "value": "$inputs.enableFavoriteSorting"
+            },
+            {
+              "name": "addCurrentProgram",
+              "in": "query",
+              "value": "$inputs.addCurrentProgram"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Items": "$response.body#/Items"
+          }
+        },
+        {
+          "stepId": "get-live-tv-programs",
+          "description": "Fetches the Electronic Program Guide (EPG) for specified channels, allowing users to see what's currently airing or upcoming.",
+          "operationId": "GetLiveTvPrograms",
+          "parameters": [
+            {
+              "name": "channelIds",
+              "in": "query",
+              "value": "$steps.get-live-tv-channels.outputs.Items.Id"
+            },
+            {
+              "name": "userId",
+              "in": "query",
+              "value": "$inputs.userId"
+            },
+            {
+              "name": "minStartDate",
+              "in": "query",
+              "value": "$inputs.minStartDate"
+            },
+            {
+              "name": "hasAired",
+              "in": "query",
+              "value": "$inputs.hasAired"
+            },
+            {
+              "name": "isAiring",
+              "in": "query",
+              "value": "$inputs.isAiring"
+            },
+            {
+              "name": "maxStartDate",
+              "in": "query",
+              "value": "$inputs.maxStartDate"
+            },
+            {
+              "name": "minEndDate",
+              "in": "query",
+              "value": "$inputs.minEndDate"
+            },
+            {
+              "name": "maxEndDate",
+              "in": "query",
+              "value": "$inputs.maxEndDate"
+            },
+            {
+              "name": "isMovie",
+              "in": "query",
+              "value": "$inputs.isMovie"
+            },
+            {
+              "name": "isSeries",
+              "in": "query",
+              "value": "$inputs.isSeries"
+            },
+            {
+              "name": "isNews",
+              "in": "query",
+              "value": "$inputs.isNews"
+            },
+            {
+              "name": "isKids",
+              "in": "query",
+              "value": "$inputs.isKids"
+            },
+            {
+              "name": "isSports",
+              "in": "query",
+              "value": "$inputs.isSports"
+            },
+            {
+              "name": "startIndex",
+              "in": "query",
+              "value": "$inputs.startIndex"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "sortBy",
+              "in": "query",
+              "value": "$inputs.sortBy"
+            },
+            {
+              "name": "sortOrder",
+              "in": "query",
+              "value": "$inputs.sortOrder"
+            },
+            {
+              "name": "genres",
+              "in": "query",
+              "value": "$inputs.genres"
+            },
+            {
+              "name": "genreIds",
+              "in": "query",
+              "value": "$inputs.genreIds"
+            },
+            {
+              "name": "enableImages",
+              "in": "query",
+              "value": "$inputs.enableImages"
+            },
+            {
+              "name": "imageTypeLimit",
+              "in": "query",
+              "value": "$inputs.imageTypeLimit"
+            },
+            {
+              "name": "enableImageTypes",
+              "in": "query",
+              "value": "$inputs.enableImageTypes"
+            },
+            {
+              "name": "enableUserData",
+              "in": "query",
+              "value": "$inputs.enableUserData"
+            },
+            {
+              "name": "seriesTimerId",
+              "in": "query",
+              "value": "$inputs.seriesTimerId"
+            },
+            {
+              "name": "librarySeriesId",
+              "in": "query",
+              "value": "$inputs.librarySeriesId"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            },
+            {
+              "name": "enableTotalRecordCount",
+              "in": "query",
+              "value": "$inputs.enableTotalRecordCount"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Items": "$response.body#/Items"
+          }
+        },
+        {
+          "stepId": "create-series-timer",
+          "description": "Creates a new series recording timer to automatically record future episodes of a TV series based on program information.",
+          "operationId": "CreateSeriesTimer",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "SeriesTimerInfoDto": "$steps.get-live-tv-programs.outputs.Items[0]"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "TunerChannelMapping": "$response.body#/TunerChannelMapping"
+          }
+        },
+        {
+          "stepId": "get-series-timers",
+          "description": "Retrieves a list of all currently configured series recording timers, allowing users to review their scheduled recordings.",
+          "operationId": "GetSeriesTimers",
+          "parameters": [
+            {
+              "name": "sortBy",
+              "in": "query",
+              "value": "$inputs.sortBy"
+            },
+            {
+              "name": "sortOrder",
+              "in": "query",
+              "value": "$inputs.sortOrder"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Items": "$response.body#/Items"
+          }
+        },
+        {
+          "stepId": "cancel-series-timer",
+          "description": "Cancels an existing series recording timer, stopping future recordings for that series.",
+          "operationId": "CancelSeriesTimer",
+          "parameters": [
+            {
+              "name": "timerId",
+              "in": "path",
+              "value": "$steps.get-series-timers.outputs.Items.Id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "timer_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "Items": "$steps.get-series-timers.outputs.Items",
+        "TunerChannelMapping": "$steps.create-series-timer.outputs.TunerChannelMapping",
+        "timer_data": "$steps.cancel-series-timer.outputs.timer_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "administer-library-content",
+      "summary": "Allows an administrator to manage media content within the library, including refreshing metadata, updating item details, and deleting items.",
+      "description": "Allows an administrator to manage media content within the library, including refreshing metadata, updating item details, and deleting items.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "isHidden": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "maxOfficialRating": {
+            "type": "string"
+          },
+          "hasThemeSong": {
+            "type": "string"
+          },
+          "hasThemeVideo": {
+            "type": "string"
+          },
+          "hasSubtitles": {
+            "type": "string"
+          },
+          "hasSpecialFeature": {
+            "type": "string"
+          },
+          "hasTrailer": {
+            "type": "string"
+          },
+          "adjacentTo": {
+            "type": "string"
+          },
+          "parentIndexNumber": {
+            "type": "string"
+          },
+          "hasParentalRating": {
+            "type": "string"
+          },
+          "isHd": {
+            "type": "string"
+          },
+          "is4K": {
+            "type": "string"
+          },
+          "locationTypes": {
+            "type": "string"
+          },
+          "excludeLocationTypes": {
+            "type": "string"
+          },
+          "isMissing": {
+            "type": "string"
+          },
+          "isUnaired": {
+            "type": "string"
+          },
+          "minCommunityRating": {
+            "type": "string"
+          },
+          "minCriticRating": {
+            "type": "string"
+          },
+          "minPremiereDate": {
+            "type": "string"
+          },
+          "minDateLastSaved": {
+            "type": "string"
+          },
+          "minDateLastSavedForUser": {
+            "type": "string"
+          },
+          "maxPremiereDate": {
+            "type": "string"
+          },
+          "hasOverview": {
+            "type": "string"
+          },
+          "hasImdbId": {
+            "type": "string"
+          },
+          "hasTmdbId": {
+            "type": "string"
+          },
+          "hasTvdbId": {
+            "type": "string"
+          },
+          "excludeItemIds": {
+            "type": "string"
+          },
+          "startIndex": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "recursive": {
+            "type": "string"
+          },
+          "searchTerm": {
+            "type": "string"
+          },
+          "sortOrder": {
+            "type": "string"
+          },
+          "parentId": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "string"
+          },
+          "excludeItemTypes": {
+            "type": "string"
+          },
+          "includeItemTypes": {
+            "type": "string"
+          },
+          "filters": {
+            "type": "string"
+          },
+          "isFavorite": {
+            "type": "string"
+          },
+          "mediaTypes": {
+            "type": "string"
+          },
+          "imageTypes": {
+            "type": "string"
+          },
+          "sortBy": {
+            "type": "string"
+          },
+          "isPlayed": {
+            "type": "string"
+          },
+          "genres": {
+            "type": "string"
+          },
+          "officialRatings": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "string"
+          },
+          "years": {
+            "type": "string"
+          },
+          "enableUserData": {
+            "type": "string"
+          },
+          "imageTypeLimit": {
+            "type": "string"
+          },
+          "enableImageTypes": {
+            "type": "string"
+          },
+          "person": {
+            "type": "string"
+          },
+          "personIds": {
+            "type": "string"
+          },
+          "personTypes": {
+            "type": "string"
+          },
+          "studios": {
+            "type": "string"
+          },
+          "artists": {
+            "type": "string"
+          },
+          "excludeArtistIds": {
+            "type": "string"
+          },
+          "artistIds": {
+            "type": "string"
+          },
+          "albumArtistIds": {
+            "type": "string"
+          },
+          "contributingArtistIds": {
+            "type": "string"
+          },
+          "albums": {
+            "type": "string"
+          },
+          "albumIds": {
+            "type": "string"
+          },
+          "ids": {
+            "type": "string"
+          },
+          "videoTypes": {
+            "type": "string"
+          },
+          "minOfficialRating": {
+            "type": "string"
+          },
+          "isLocked": {
+            "type": "string"
+          },
+          "isPlaceHolder": {
+            "type": "string"
+          },
+          "hasOfficialRating": {
+            "type": "string"
+          },
+          "collapseBoxSetItems": {
+            "type": "string"
+          },
+          "minWidth": {
+            "type": "string"
+          },
+          "minHeight": {
+            "type": "string"
+          },
+          "maxWidth": {
+            "type": "string"
+          },
+          "maxHeight": {
+            "type": "string"
+          },
+          "is3D": {
+            "type": "string"
+          },
+          "seriesStatus": {
+            "type": "string"
+          },
+          "nameStartsWithOrGreater": {
+            "type": "string"
+          },
+          "nameStartsWith": {
+            "type": "string"
+          },
+          "nameLessThan": {
+            "type": "string"
+          },
+          "studioIds": {
+            "type": "string"
+          },
+          "genreIds": {
+            "type": "string"
+          },
+          "enableTotalRecordCount": {
+            "type": "string"
+          },
+          "enableImages": {
+            "type": "string"
+          },
+          "itemId": {
+            "type": "string"
+          },
+          "metadataRefreshMode": {
+            "type": "string"
+          },
+          "imageRefreshMode": {
+            "type": "string"
+          },
+          "replaceAllMetadata": {
+            "type": "string"
+          },
+          "replaceAllImages": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-media-folders",
+          "description": "Retrieves a list of all configured media library folders on the server.",
+          "operationId": "GetMediaFolders",
+          "parameters": [
+            {
+              "name": "isHidden",
+              "in": "query",
+              "value": "$inputs.isHidden"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Items": "$response.body#/Items"
+          }
+        },
+        {
+          "stepId": "get-items-for-management",
+          "description": "Searches and retrieves a list of items from the library, potentially filtered by folder or search term, to identify specific items for management.",
+          "operationId": "GetItems",
+          "parameters": [
+            {
+              "name": "userId",
+              "in": "query",
+              "value": "$inputs.userId"
+            },
+            {
+              "name": "maxOfficialRating",
+              "in": "query",
+              "value": "$inputs.maxOfficialRating"
+            },
+            {
+              "name": "hasThemeSong",
+              "in": "query",
+              "value": "$inputs.hasThemeSong"
+            },
+            {
+              "name": "hasThemeVideo",
+              "in": "query",
+              "value": "$inputs.hasThemeVideo"
+            },
+            {
+              "name": "hasSubtitles",
+              "in": "query",
+              "value": "$inputs.hasSubtitles"
+            },
+            {
+              "name": "hasSpecialFeature",
+              "in": "query",
+              "value": "$inputs.hasSpecialFeature"
+            },
+            {
+              "name": "hasTrailer",
+              "in": "query",
+              "value": "$inputs.hasTrailer"
+            },
+            {
+              "name": "adjacentTo",
+              "in": "query",
+              "value": "$inputs.adjacentTo"
+            },
+            {
+              "name": "parentIndexNumber",
+              "in": "query",
+              "value": "$inputs.parentIndexNumber"
+            },
+            {
+              "name": "hasParentalRating",
+              "in": "query",
+              "value": "$inputs.hasParentalRating"
+            },
+            {
+              "name": "isHd",
+              "in": "query",
+              "value": "$inputs.isHd"
+            },
+            {
+              "name": "is4K",
+              "in": "query",
+              "value": "$inputs.is4K"
+            },
+            {
+              "name": "locationTypes",
+              "in": "query",
+              "value": "$inputs.locationTypes"
+            },
+            {
+              "name": "excludeLocationTypes",
+              "in": "query",
+              "value": "$inputs.excludeLocationTypes"
+            },
+            {
+              "name": "isMissing",
+              "in": "query",
+              "value": "$inputs.isMissing"
+            },
+            {
+              "name": "isUnaired",
+              "in": "query",
+              "value": "$inputs.isUnaired"
+            },
+            {
+              "name": "minCommunityRating",
+              "in": "query",
+              "value": "$inputs.minCommunityRating"
+            },
+            {
+              "name": "minCriticRating",
+              "in": "query",
+              "value": "$inputs.minCriticRating"
+            },
+            {
+              "name": "minPremiereDate",
+              "in": "query",
+              "value": "$inputs.minPremiereDate"
+            },
+            {
+              "name": "minDateLastSaved",
+              "in": "query",
+              "value": "$inputs.minDateLastSaved"
+            },
+            {
+              "name": "minDateLastSavedForUser",
+              "in": "query",
+              "value": "$inputs.minDateLastSavedForUser"
+            },
+            {
+              "name": "maxPremiereDate",
+              "in": "query",
+              "value": "$inputs.maxPremiereDate"
+            },
+            {
+              "name": "hasOverview",
+              "in": "query",
+              "value": "$inputs.hasOverview"
+            },
+            {
+              "name": "hasImdbId",
+              "in": "query",
+              "value": "$inputs.hasImdbId"
+            },
+            {
+              "name": "hasTmdbId",
+              "in": "query",
+              "value": "$inputs.hasTmdbId"
+            },
+            {
+              "name": "hasTvdbId",
+              "in": "query",
+              "value": "$inputs.hasTvdbId"
+            },
+            {
+              "name": "excludeItemIds",
+              "in": "query",
+              "value": "$inputs.excludeItemIds"
+            },
+            {
+              "name": "startIndex",
+              "in": "query",
+              "value": "$inputs.startIndex"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "recursive",
+              "in": "query",
+              "value": "$inputs.recursive"
+            },
+            {
+              "name": "searchTerm",
+              "in": "query",
+              "value": "$inputs.searchTerm"
+            },
+            {
+              "name": "sortOrder",
+              "in": "query",
+              "value": "$inputs.sortOrder"
+            },
+            {
+              "name": "parentId",
+              "in": "query",
+              "value": "$steps.get-media-folders.outputs.Items.Id"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            },
+            {
+              "name": "excludeItemTypes",
+              "in": "query",
+              "value": "$inputs.excludeItemTypes"
+            },
+            {
+              "name": "includeItemTypes",
+              "in": "query",
+              "value": "$inputs.includeItemTypes"
+            },
+            {
+              "name": "filters",
+              "in": "query",
+              "value": "$inputs.filters"
+            },
+            {
+              "name": "isFavorite",
+              "in": "query",
+              "value": "$inputs.isFavorite"
+            },
+            {
+              "name": "mediaTypes",
+              "in": "query",
+              "value": "$inputs.mediaTypes"
+            },
+            {
+              "name": "imageTypes",
+              "in": "query",
+              "value": "$inputs.imageTypes"
+            },
+            {
+              "name": "sortBy",
+              "in": "query",
+              "value": "$inputs.sortBy"
+            },
+            {
+              "name": "isPlayed",
+              "in": "query",
+              "value": "$inputs.isPlayed"
+            },
+            {
+              "name": "genres",
+              "in": "query",
+              "value": "$inputs.genres"
+            },
+            {
+              "name": "officialRatings",
+              "in": "query",
+              "value": "$inputs.officialRatings"
+            },
+            {
+              "name": "tags",
+              "in": "query",
+              "value": "$inputs.tags"
+            },
+            {
+              "name": "years",
+              "in": "query",
+              "value": "$inputs.years"
+            },
+            {
+              "name": "enableUserData",
+              "in": "query",
+              "value": "$inputs.enableUserData"
+            },
+            {
+              "name": "imageTypeLimit",
+              "in": "query",
+              "value": "$inputs.imageTypeLimit"
+            },
+            {
+              "name": "enableImageTypes",
+              "in": "query",
+              "value": "$inputs.enableImageTypes"
+            },
+            {
+              "name": "person",
+              "in": "query",
+              "value": "$inputs.person"
+            },
+            {
+              "name": "personIds",
+              "in": "query",
+              "value": "$inputs.personIds"
+            },
+            {
+              "name": "personTypes",
+              "in": "query",
+              "value": "$inputs.personTypes"
+            },
+            {
+              "name": "studios",
+              "in": "query",
+              "value": "$inputs.studios"
+            },
+            {
+              "name": "artists",
+              "in": "query",
+              "value": "$inputs.artists"
+            },
+            {
+              "name": "excludeArtistIds",
+              "in": "query",
+              "value": "$inputs.excludeArtistIds"
+            },
+            {
+              "name": "artistIds",
+              "in": "query",
+              "value": "$inputs.artistIds"
+            },
+            {
+              "name": "albumArtistIds",
+              "in": "query",
+              "value": "$inputs.albumArtistIds"
+            },
+            {
+              "name": "contributingArtistIds",
+              "in": "query",
+              "value": "$inputs.contributingArtistIds"
+            },
+            {
+              "name": "albums",
+              "in": "query",
+              "value": "$inputs.albums"
+            },
+            {
+              "name": "albumIds",
+              "in": "query",
+              "value": "$inputs.albumIds"
+            },
+            {
+              "name": "ids",
+              "in": "query",
+              "value": "$inputs.ids"
+            },
+            {
+              "name": "videoTypes",
+              "in": "query",
+              "value": "$inputs.videoTypes"
+            },
+            {
+              "name": "minOfficialRating",
+              "in": "query",
+              "value": "$inputs.minOfficialRating"
+            },
+            {
+              "name": "isLocked",
+              "in": "query",
+              "value": "$inputs.isLocked"
+            },
+            {
+              "name": "isPlaceHolder",
+              "in": "query",
+              "value": "$inputs.isPlaceHolder"
+            },
+            {
+              "name": "hasOfficialRating",
+              "in": "query",
+              "value": "$inputs.hasOfficialRating"
+            },
+            {
+              "name": "collapseBoxSetItems",
+              "in": "query",
+              "value": "$inputs.collapseBoxSetItems"
+            },
+            {
+              "name": "minWidth",
+              "in": "query",
+              "value": "$inputs.minWidth"
+            },
+            {
+              "name": "minHeight",
+              "in": "query",
+              "value": "$inputs.minHeight"
+            },
+            {
+              "name": "maxWidth",
+              "in": "query",
+              "value": "$inputs.maxWidth"
+            },
+            {
+              "name": "maxHeight",
+              "in": "query",
+              "value": "$inputs.maxHeight"
+            },
+            {
+              "name": "is3D",
+              "in": "query",
+              "value": "$inputs.is3D"
+            },
+            {
+              "name": "seriesStatus",
+              "in": "query",
+              "value": "$inputs.seriesStatus"
+            },
+            {
+              "name": "nameStartsWithOrGreater",
+              "in": "query",
+              "value": "$inputs.nameStartsWithOrGreater"
+            },
+            {
+              "name": "nameStartsWith",
+              "in": "query",
+              "value": "$inputs.nameStartsWith"
+            },
+            {
+              "name": "nameLessThan",
+              "in": "query",
+              "value": "$inputs.nameLessThan"
+            },
+            {
+              "name": "studioIds",
+              "in": "query",
+              "value": "$inputs.studioIds"
+            },
+            {
+              "name": "genreIds",
+              "in": "query",
+              "value": "$inputs.genreIds"
+            },
+            {
+              "name": "enableTotalRecordCount",
+              "in": "query",
+              "value": "$inputs.enableTotalRecordCount"
+            },
+            {
+              "name": "enableImages",
+              "in": "query",
+              "value": "$inputs.enableImages"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Items": "$response.body#/Items"
+          }
+        },
+        {
+          "stepId": "get-item-metadata-editor-info",
+          "description": "Retrieves metadata editor information for a specific item, providing details on editable fields and available options.",
+          "operationId": "GetMetadataEditorInfo",
+          "parameters": [
+            {
+              "name": "itemId",
+              "in": "path",
+              "value": "$steps.get-items-for-management.outputs.Items.Id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "MetadataEditorInfo": "$response.body#/MetadataEditorInfo"
+          }
+        },
+        {
+          "stepId": "update-item-metadata",
+          "description": "Updates the metadata for a specific item in the library using a provided BaseItemDto object.",
+          "operationId": "UpdateItem",
+          "parameters": [
+            {
+              "name": "itemId",
+              "in": "path",
+              "value": "$steps.get-items-for-management.outputs.Items.Id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "itemId": "$steps.get-items-for-management.outputs.Items[0].Id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "metadata_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "refresh-item-metadata",
+          "description": "Triggers a metadata refresh for a specific item, pulling new information from configured sources and updating images if specified.",
+          "operationId": "Post",
+          "parameters": [
+            {
+              "name": "itemId",
+              "in": "path",
+              "value": "$steps.get-items-for-management.outputs.Items.Id"
+            },
+            {
+              "name": "metadataRefreshMode",
+              "in": "query",
+              "value": "$inputs.metadataRefreshMode"
+            },
+            {
+              "name": "imageRefreshMode",
+              "in": "query",
+              "value": "$inputs.imageRefreshMode"
+            },
+            {
+              "name": "replaceAllMetadata",
+              "in": "query",
+              "value": "$inputs.replaceAllMetadata"
+            },
+            {
+              "name": "replaceAllImages",
+              "in": "query",
+              "value": "$inputs.replaceAllImages"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "metadata_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "delete-item-from-library",
+          "description": "Deletes a specific item from the library and its associated files from the filesystem.",
+          "operationId": "DeleteItem",
+          "parameters": [
+            {
+              "name": "itemId",
+              "in": "path",
+              "value": "$steps.get-items-for-management.outputs.Items.Id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "library_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "Items": "$steps.get-items-for-management.outputs.Items",
+        "MetadataEditorInfo": "$steps.get-item-metadata-editor-info.outputs.MetadataEditorInfo",
+        "metadata_data": "$steps.refresh-item-metadata.outputs.metadata_data",
+        "library_data": "$steps.delete-item-from-library.outputs.library_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-playlists",
+      "summary": "Allows a user to create new playlists, add or remove items from them, and reorder playlist items, providing full control over their media queues.",
+      "description": "Allows a user to create new playlists, add or remove items from them, and reorder playlist items, providing full control over their media queues.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "ids": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "mediaType": {
+            "type": "string"
+          },
+          "create-playlist_body": {
+            "type": "object"
+          },
+          "playlistId": {
+            "type": "string"
+          },
+          "startIndex": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "string"
+          },
+          "enableImages": {
+            "type": "string"
+          },
+          "enableUserData": {
+            "type": "string"
+          },
+          "imageTypeLimit": {
+            "type": "string"
+          },
+          "enableImageTypes": {
+            "type": "string"
+          },
+          "itemId": {
+            "type": "string"
+          },
+          "newIndex": {
+            "type": "string"
+          },
+          "entryIds": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-playlist",
+          "description": "Creates a new empty playlist or a playlist with initial items, specifying its name and media type.",
+          "operationId": "CreatePlaylist",
+          "parameters": [
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "ids",
+              "in": "query",
+              "value": "$inputs.ids"
+            },
+            {
+              "name": "userId",
+              "in": "query",
+              "value": "$inputs.userId"
+            },
+            {
+              "name": "mediaType",
+              "in": "query",
+              "value": "$inputs.mediaType"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-playlist_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "PlaylistCreationResult": "$response.body#/PlaylistCreationResult"
+          }
+        },
+        {
+          "stepId": "add-to-playlist",
+          "description": "Adds one or more items to an existing playlist by their IDs.",
+          "operationId": "AddToPlaylist",
+          "parameters": [
+            {
+              "name": "playlistId",
+              "in": "path",
+              "value": "$inputs.playlistId"
+            },
+            {
+              "name": "ids",
+              "in": "query",
+              "value": "$inputs.ids"
+            },
+            {
+              "name": "userId",
+              "in": "query",
+              "value": "$inputs.userId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "playlist_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-playlist-items",
+          "description": "Retrieves the list of items currently contained within a specific playlist.",
+          "operationId": "GetPlaylistItems",
+          "parameters": [
+            {
+              "name": "playlistId",
+              "in": "path",
+              "value": "$inputs.playlistId"
+            },
+            {
+              "name": "userId",
+              "in": "query",
+              "value": "$inputs.userId"
+            },
+            {
+              "name": "startIndex",
+              "in": "query",
+              "value": "$inputs.startIndex"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "fields",
+              "in": "query",
+              "value": "$inputs.fields"
+            },
+            {
+              "name": "enableImages",
+              "in": "query",
+              "value": "$inputs.enableImages"
+            },
+            {
+              "name": "enableUserData",
+              "in": "query",
+              "value": "$inputs.enableUserData"
+            },
+            {
+              "name": "imageTypeLimit",
+              "in": "query",
+              "value": "$inputs.imageTypeLimit"
+            },
+            {
+              "name": "enableImageTypes",
+              "in": "query",
+              "value": "$inputs.enableImageTypes"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Items": "$response.body#/Items"
+          }
+        },
+        {
+          "stepId": "move-playlist-item",
+          "description": "Changes the playback order by moving a specific item to a new position within a playlist.",
+          "operationId": "MoveItem",
+          "parameters": [
+            {
+              "name": "playlistId",
+              "in": "path",
+              "value": "$inputs.playlistId"
+            },
+            {
+              "name": "itemId",
+              "in": "path",
+              "value": "$steps.get-playlist-items.outputs.Items.Id"
+            },
+            {
+              "name": "newIndex",
+              "in": "path",
+              "value": "$inputs.newIndex"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "item_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "remove-from-playlist",
+          "description": "Removes one or more items from a playlist using their entry IDs.",
+          "operationId": "RemoveFromPlaylist",
+          "parameters": [
+            {
+              "name": "playlistId",
+              "in": "path",
+              "value": "$inputs.playlistId"
+            },
+            {
+              "name": "entryIds",
+              "in": "query",
+              "value": "$steps.get-playlist-items.outputs.Items.PlaylistItemId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "playlist_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "PlaylistCreationResult": "$steps.create-playlist.outputs.PlaylistCreationResult",
+        "playlist_data": "$steps.remove-from-playlist.outputs.playlist_data",
+        "Items": "$steps.get-playlist-items.outputs.Items",
+        "item_data": "$steps.move-playlist-item.outputs.item_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-server-plugins",
+      "summary": "Allows an administrator to view installed plugins, retrieve and update their configurations, and enable or disable them.",
+      "description": "Allows an administrator to view installed plugins, retrieve and update their configurations, and enable or disable them.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "pluginId": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-plugins",
+          "description": "Retrieves a list of all currently installed plugins on the server, including their status and version.",
+          "operationId": "GetPlugins",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "PluginInfo": "$response.body#/0/PluginInfo"
+          }
+        },
+        {
+          "stepId": "get-plugin-configuration",
+          "description": "Retrieves the configuration settings for a specific plugin, allowing administrators to inspect its current state.",
+          "operationId": "GetPluginConfiguration",
+          "parameters": [
+            {
+              "name": "pluginId",
+              "in": "path",
+              "value": "$steps.get-plugins.outputs.PluginInfo.Id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "BasePluginConfiguration": "$response.body#/BasePluginConfiguration"
+          }
+        },
+        {
+          "stepId": "update-plugin-configuration",
+          "description": "Updates the configuration settings for a specific plugin, applying new parameters or preferences.",
+          "operationId": "UpdatePluginConfiguration",
+          "parameters": [
+            {
+              "name": "pluginId",
+              "in": "path",
+              "value": "$steps.get-plugins.outputs.PluginInfo.Id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "configuration_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "disable-plugin",
+          "description": "Disables a specific plugin by its ID and version, preventing it from running or affecting server operations.",
+          "operationId": "DisablePlugin",
+          "parameters": [
+            {
+              "name": "pluginId",
+              "in": "path",
+              "value": "$steps.get-plugins.outputs.PluginInfo.Id"
+            },
+            {
+              "name": "version",
+              "in": "path",
+              "value": "$steps.get-plugins.outputs.PluginInfo.Version.VersionString"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "plugin_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "enable-plugin",
+          "description": "Enables a previously disabled plugin by its ID and version, restoring its functionality.",
+          "operationId": "EnablePlugin",
+          "parameters": [
+            {
+              "name": "pluginId",
+              "in": "path",
+              "value": "$steps.get-plugins.outputs.PluginInfo.Id"
+            },
+            {
+              "name": "version",
+              "in": "path",
+              "value": "$steps.get-plugins.outputs.PluginInfo.Version.VersionString"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "plugin_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "PluginInfo": "$steps.get-plugins.outputs.PluginInfo",
+        "BasePluginConfiguration": "$steps.get-plugin-configuration.outputs.BasePluginConfiguration",
+        "configuration_data": "$steps.update-plugin-configuration.outputs.configuration_data",
+        "plugin_data": "$steps.enable-plugin.outputs.plugin_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-api-keys",
+      "summary": "Allows an administrator to manage API keys, including viewing existing keys, creating new ones, and revoking them for security purposes.",
+      "description": "Allows an administrator to manage API keys, including viewing existing keys, creating new ones, and revoking them for security purposes.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "app": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-api-keys",
+          "description": "Retrieves a list of all currently active API keys, showing their associated applications and status.",
+          "operationId": "GetKeys",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Items": "$response.body#/Items"
+          }
+        },
+        {
+          "stepId": "create-api-key",
+          "description": "Creates a new API key for a specified application, enabling external services to interact with the server.",
+          "operationId": "CreateKey",
+          "parameters": [
+            {
+              "name": "app",
+              "in": "query",
+              "value": "$inputs.app"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "key_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "revoke-api-key",
+          "description": "Revokes an existing API key, invalidating it and preventing further access.",
+          "operationId": "RevokeKey",
+          "parameters": [
+            {
+              "name": "key",
+              "in": "path",
+              "value": "$steps.get-api-keys.outputs.Items.AccessToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "key_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "Items": "$steps.get-api-keys.outputs.Items",
+        "key_data": "$steps.revoke-api-key.outputs.key_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

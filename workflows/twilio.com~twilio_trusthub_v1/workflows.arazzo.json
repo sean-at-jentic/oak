@@ -1,0 +1,782 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/twilio.com/twilio_trusthub_v1/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "complete-customer-profile-onboarding-and-submission",
+      "summary": "This workflow automates the end-to-end process of creating a new Customer Profile, associating required End Users and Supporting Documents, and submitting the profile for Twilio's compliance review. This is essential for businesses to meet regulatory requirements for their communication services.",
+      "description": "This workflow automates the end-to-end process of creating a new Customer Profile, associating required End Users and Supporting Documents, and submitting the profile for Twilio's compliance review. This is essential for businesses to meet regulatory requirements for their communication services.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "FriendlyName": {
+            "type": "string"
+          },
+          "Email": {
+            "type": "string"
+          },
+          "Type": {
+            "type": "string"
+          },
+          "CustomerProfileSid": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "Status": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-policy-requirements",
+          "description": "Retrieves a list of available policies to identify the appropriate policy SID and understand its requirements for End Users and Supporting Documents. This step helps the user determine what information needs to be collected for the Customer Profile.",
+          "operationId": "ListPolicies",
+          "parameters": [
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "policy_sid": "$response.body#/policy_sid",
+            "policy_requirements": "$response.body#/policy_requirements"
+          }
+        },
+        {
+          "stepId": "create-customer-profile",
+          "description": "Creates a new Customer Profile, which acts as a container for all compliance-related information. The policy SID obtained in the previous step dictates the requirements for this profile.",
+          "operationId": "CreateCustomerProfile",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "PolicySid": "$steps.get-policy-requirements.outputs.policy_sid",
+              "FriendlyName": "$inputs.FriendlyName",
+              "Email": "$inputs.Email"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "customer_profile_sid": "$response.body#/customer_profile_sid",
+            "customer_profile_status": "$response.body#/customer_profile_status"
+          }
+        },
+        {
+          "stepId": "create-end-user",
+          "description": "Creates an End User resource, representing an individual or business entity associated with the Customer Profile. The 'Type' and 'Attributes' for the End User should align with the requirements specified by the chosen policy.",
+          "operationId": "CreateEndUser",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "FriendlyName": "$inputs.FriendlyName",
+              "Type": "$inputs.Type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "end_user_sid": "$response.body#/end_user_sid"
+          }
+        },
+        {
+          "stepId": "create-supporting-document",
+          "description": "Creates a Supporting Document resource, which can be used to upload necessary verification documents. The 'Type' and 'Attributes' for the document should align with the requirements specified by the chosen policy.",
+          "operationId": "CreateSupportingDocument",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "FriendlyName": "$inputs.FriendlyName",
+              "Type": "$inputs.Type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "supporting_document_sid": "$response.body#/supporting_document_sid"
+          }
+        },
+        {
+          "stepId": "assign-end-user-to-profile",
+          "description": "Associates the created End User with the Customer Profile, linking the identity information to the compliance bundle.",
+          "operationId": "CreateCustomerProfileEntityAssignment",
+          "parameters": [
+            {
+              "name": "CustomerProfileSid",
+              "in": "path",
+              "value": "$steps.create-customer-profile.outputs.customer_profile_sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "CustomerProfileSid": "$steps.create-customer-profile.outputs.customer_profile_sid",
+              "ObjectSid": "$steps.create-end-user.outputs.end_user_sid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "entity_assignment_sid": "$response.body#/entity_assignment_sid"
+          }
+        },
+        {
+          "stepId": "assign-supporting-document-to-profile",
+          "description": "Associates the created Supporting Document with the Customer Profile, adding the necessary documentation to the compliance bundle.",
+          "operationId": "CreateCustomerProfileEntityAssignment",
+          "parameters": [
+            {
+              "name": "CustomerProfileSid",
+              "in": "path",
+              "value": "$steps.create-customer-profile.outputs.customer_profile_sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "CustomerProfileSid": "$steps.create-customer-profile.outputs.customer_profile_sid",
+              "ObjectSid": "$steps.create-supporting-document.outputs.supporting_document_sid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "document_assignment_sid": "$response.body#/document_assignment_sid"
+          }
+        },
+        {
+          "stepId": "submit-customer-profile-for-review",
+          "description": "Submits the Customer Profile for Twilio's review by updating its status to 'pending-review'. This triggers the compliance evaluation process.",
+          "operationId": "UpdateCustomerProfile",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.create-customer-profile.outputs.customer_profile_sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Sid": "$steps.create-customer-profile.outputs.customer_profile_sid",
+              "Status": "$inputs.Status"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_customer_profile_status": "$response.body#/updated_customer_profile_status"
+          }
+        },
+        {
+          "stepId": "check-customer-profile-status",
+          "description": "Retrieves the current status of the Customer Profile, including any errors or reasons for non-compliance after evaluation.",
+          "operationId": "FetchCustomerProfile",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.create-customer-profile.outputs.customer_profile_sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "final_customer_profile_status": "$response.body#/final_customer_profile_status",
+            "evaluation_errors": "$response.body#/evaluation_errors"
+          }
+        }
+      ],
+      "outputs": {
+        "policy_sid": "$steps.get-policy-requirements.outputs.policy_sid",
+        "policy_requirements": "$steps.get-policy-requirements.outputs.policy_requirements",
+        "customer_profile_sid": "$steps.create-customer-profile.outputs.customer_profile_sid",
+        "customer_profile_status": "$steps.create-customer-profile.outputs.customer_profile_status",
+        "end_user_sid": "$steps.create-end-user.outputs.end_user_sid",
+        "supporting_document_sid": "$steps.create-supporting-document.outputs.supporting_document_sid",
+        "entity_assignment_sid": "$steps.assign-end-user-to-profile.outputs.entity_assignment_sid",
+        "document_assignment_sid": "$steps.assign-supporting-document-to-profile.outputs.document_assignment_sid",
+        "updated_customer_profile_status": "$steps.submit-customer-profile-for-review.outputs.updated_customer_profile_status",
+        "final_customer_profile_status": "$steps.check-customer-profile-status.outputs.final_customer_profile_status",
+        "evaluation_errors": "$steps.check-customer-profile-status.outputs.evaluation_errors"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "complete-trust-product-onboarding-and-submission",
+      "summary": "This workflow enables the full process of creating a new Trust Product, attaching relevant End Users and Supporting Documents, and submitting it for Twilio's compliance review. This is crucial for specific regulatory use cases where 'Trust Products' are the required compliance entity.",
+      "description": "This workflow enables the full process of creating a new Trust Product, attaching relevant End Users and Supporting Documents, and submitting it for Twilio's compliance review. This is crucial for specific regulatory use cases where 'Trust Products' are the required compliance entity.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "FriendlyName": {
+            "type": "string"
+          },
+          "Email": {
+            "type": "string"
+          },
+          "Type": {
+            "type": "string"
+          },
+          "TrustProductSid": {
+            "type": "string"
+          },
+          "Sid": {
+            "type": "string"
+          },
+          "Status": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-policy-requirements",
+          "description": "Retrieves a list of available policies to identify the appropriate policy SID and understand its requirements for End Users and Supporting Documents, specifically for Trust Products.",
+          "operationId": "ListPolicies",
+          "parameters": [
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "policy_sid": "$response.body#/policy_sid",
+            "policy_requirements": "$response.body#/policy_requirements"
+          }
+        },
+        {
+          "stepId": "create-trust-product",
+          "description": "Creates a new Trust Product, which serves as the primary compliance bundle. The policy SID obtained in the previous step defines the necessary components for this product.",
+          "operationId": "CreateTrustProduct",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "PolicySid": "$steps.get-policy-requirements.outputs.policy_sid",
+              "FriendlyName": "$inputs.FriendlyName",
+              "Email": "$inputs.Email"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "trust_product_sid": "$response.body#/trust_product_sid",
+            "trust_product_status": "$response.body#/trust_product_status"
+          }
+        },
+        {
+          "stepId": "create-end-user",
+          "description": "Creates an End User resource, representing an individual or business entity to be linked with the Trust Product. The 'Type' and 'Attributes' should adhere to the policy's requirements.",
+          "operationId": "CreateEndUser",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "FriendlyName": "$inputs.FriendlyName",
+              "Type": "$inputs.Type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "end_user_sid": "$response.body#/end_user_sid"
+          }
+        },
+        {
+          "stepId": "create-supporting-document",
+          "description": "Creates a Supporting Document resource for the Trust Product, uploading required verification files. The 'Type' and 'Attributes' should be based on the policy's specifications.",
+          "operationId": "CreateSupportingDocument",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "FriendlyName": "$inputs.FriendlyName",
+              "Type": "$inputs.Type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "supporting_document_sid": "$response.body#/supporting_document_sid"
+          }
+        },
+        {
+          "stepId": "assign-end-user-to-product",
+          "description": "Associates the created End User with the Trust Product, integrating their identity into the compliance bundle.",
+          "operationId": "CreateTrustProductEntityAssignment",
+          "parameters": [
+            {
+              "name": "TrustProductSid",
+              "in": "path",
+              "value": "$steps.create-trust-product.outputs.trust_product_sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "TrustProductSid": "$steps.create-trust-product.outputs.trust_product_sid",
+              "ObjectSid": "$steps.create-end-user.outputs.end_user_sid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "entity_assignment_sid": "$response.body#/entity_assignment_sid"
+          }
+        },
+        {
+          "stepId": "assign-supporting-document-to-product",
+          "description": "Associates the created Supporting Document with the Trust Product, completing the documentation requirements for the compliance bundle.",
+          "operationId": "CreateTrustProductEntityAssignment",
+          "parameters": [
+            {
+              "name": "TrustProductSid",
+              "in": "path",
+              "value": "$steps.create-trust-product.outputs.trust_product_sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "TrustProductSid": "$steps.create-trust-product.outputs.trust_product_sid",
+              "ObjectSid": "$steps.create-supporting-document.outputs.supporting_document_sid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "document_assignment_sid": "$response.body#/document_assignment_sid"
+          }
+        },
+        {
+          "stepId": "submit-trust-product-for-review",
+          "description": "Submits the Trust Product for Twilio's review by updating its status to 'pending-review', initiating the compliance evaluation.",
+          "operationId": "UpdateTrustProduct",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.create-trust-product.outputs.trust_product_sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "Sid": "$steps.create-trust-product.outputs.trust_product_sid",
+              "Status": "$inputs.Status"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_trust_product_status": "$response.body#/updated_trust_product_status"
+          }
+        },
+        {
+          "stepId": "check-trust-product-status",
+          "description": "Retrieves the current status of the Trust Product, including any evaluation results or errors.",
+          "operationId": "FetchTrustProduct",
+          "parameters": [
+            {
+              "name": "Sid",
+              "in": "path",
+              "value": "$steps.create-trust-product.outputs.trust_product_sid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "final_trust_product_status": "$response.body#/final_trust_product_status",
+            "evaluation_errors": "$response.body#/evaluation_errors"
+          }
+        }
+      ],
+      "outputs": {
+        "policy_sid": "$steps.get-policy-requirements.outputs.policy_sid",
+        "policy_requirements": "$steps.get-policy-requirements.outputs.policy_requirements",
+        "trust_product_sid": "$steps.create-trust-product.outputs.trust_product_sid",
+        "trust_product_status": "$steps.create-trust-product.outputs.trust_product_status",
+        "end_user_sid": "$steps.create-end-user.outputs.end_user_sid",
+        "supporting_document_sid": "$steps.create-supporting-document.outputs.supporting_document_sid",
+        "entity_assignment_sid": "$steps.assign-end-user-to-product.outputs.entity_assignment_sid",
+        "document_assignment_sid": "$steps.assign-supporting-document-to-product.outputs.document_assignment_sid",
+        "updated_trust_product_status": "$steps.submit-trust-product-for-review.outputs.updated_trust_product_status",
+        "final_trust_product_status": "$steps.check-trust-product-status.outputs.final_trust_product_status",
+        "evaluation_errors": "$steps.check-trust-product-status.outputs.evaluation_errors"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "initiate-and-resume-customer-compliance-embedded-session",
+      "summary": "This workflow allows a user to programmatically initiate a new embedded web session for customer compliance, which is useful for guiding customers through a self-service compliance process, or to resume an expired/rejected session for further editing.",
+      "description": "This workflow allows a user to programmatically initiate a new embedded web session for customer compliance, which is useful for guiding customers through a self-service compliance process, or to resume an expired/rejected session for further editing.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "PrimaryProfileSid": {
+            "type": "string"
+          },
+          "CustomerId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-customer-compliance-inquiry",
+          "description": "Initializes a new embedded compliance inquiry session for a customer, returning a session token and inquiry ID to embed the compliance form.",
+          "operationId": "CreateComplianceInquiry",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "PrimaryProfileSid": "$inputs.PrimaryProfileSid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "inquiry_id": "$response.body#/inquiry_id",
+            "inquiry_session_token": "$response.body#/inquiry_session_token",
+            "customer_id": "$response.body#/customer_id"
+          }
+        },
+        {
+          "stepId": "resume-customer-compliance-inquiry",
+          "description": "Resumes an existing customer compliance inquiry session, allowing the customer to continue editing or resubmit a rejected profile.",
+          "operationId": "UpdateComplianceInquiry",
+          "parameters": [
+            {
+              "name": "CustomerId",
+              "in": "path",
+              "value": "$steps.create-customer-compliance-inquiry.outputs.customer_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "CustomerId": "$steps.create-customer-compliance-inquiry.outputs.customer_id",
+              "PrimaryProfileSid": "$inputs.PrimaryProfileSid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "inquiry_id": "$response.body#/inquiry_id",
+            "inquiry_session_token": "$response.body#/inquiry_session_token",
+            "customer_id": "$response.body#/customer_id"
+          }
+        }
+      ],
+      "outputs": {
+        "inquiry_id": "$steps.resume-customer-compliance-inquiry.outputs.inquiry_id",
+        "inquiry_session_token": "$steps.resume-customer-compliance-inquiry.outputs.inquiry_session_token",
+        "customer_id": "$steps.resume-customer-compliance-inquiry.outputs.customer_id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "initiate-and-resume-gb-regulatory-compliance-embedded-session",
+      "summary": "This workflow facilitates the initiation of a new embedded web session for GB regulatory compliance registration, providing a token to embed the form. It also allows for resuming previously initiated or rejected registration sessions.",
+      "description": "This workflow facilitates the initiation of a new embedded web session for GB regulatory compliance registration, providing a token to embed the form. It also allows for resuming previously initiated or rejected registration sessions.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "EndUserType": {
+            "type": "string"
+          },
+          "PhoneNumberType": {
+            "type": "string"
+          },
+          "RegistrationId": {
+            "type": "string"
+          },
+          "IsIsvEmbed": {
+            "type": "string"
+          },
+          "ThemeSetId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-gb-compliance-registration",
+          "description": "Initializes a new embedded session for GB regulatory compliance registration, returning a session token and inquiry ID.",
+          "operationId": "CreateComplianceRegistration",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "EndUserType": "$inputs.EndUserType",
+              "PhoneNumberType": "$inputs.PhoneNumberType"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "inquiry_id": "$response.body#/inquiry_id",
+            "inquiry_session_token": "$response.body#/inquiry_session_token",
+            "registration_id": "$response.body#/registration_id"
+          }
+        },
+        {
+          "stepId": "resume-gb-compliance-registration",
+          "description": "Resumes an existing GB regulatory compliance registration session, allowing for continued editing or resubmission.",
+          "operationId": "UpdateComplianceRegistration",
+          "parameters": [
+            {
+              "name": "RegistrationId",
+              "in": "path",
+              "value": "$steps.create-gb-compliance-registration.outputs.registration_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "RegistrationId": "$steps.create-gb-compliance-registration.outputs.registration_id",
+              "IsIsvEmbed": "$inputs.IsIsvEmbed",
+              "ThemeSetId": "$inputs.ThemeSetId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "inquiry_id": "$response.body#/inquiry_id",
+            "inquiry_session_token": "$response.body#/inquiry_session_token",
+            "registration_id": "$response.body#/registration_id"
+          }
+        }
+      ],
+      "outputs": {
+        "inquiry_id": "$steps.resume-gb-compliance-registration.outputs.inquiry_id",
+        "inquiry_session_token": "$steps.resume-gb-compliance-registration.outputs.inquiry_session_token",
+        "registration_id": "$steps.resume-gb-compliance-registration.outputs.registration_id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

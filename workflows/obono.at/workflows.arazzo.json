@@ -1,0 +1,687 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/obono.at/main/1.4.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "create-and-view-receipt",
+      "summary": "This workflow allows a user to authenticate, create a new RKSV-compliant receipt (Beleg) for a virtual cash register, and then retrieve its full details for verification or display.",
+      "description": "This workflow allows a user to authenticate, create a new RKSV-compliant receipt (Beleg) for a virtual cash register, and then retrieve its full details for verification or display.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "registrierkasseUuid": {
+            "type": "string"
+          },
+          "belegUuid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "authenticate-user",
+          "description": "Authenticates the user with username and password to obtain an access token and the associated cash register UUID.",
+          "operationPath": "openapi_source#/paths/~1auth/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "accessToken": "$response.body#/accessToken",
+            "registrierkasseUuid": "$response.body#/registrierkasseUuid"
+          }
+        },
+        {
+          "stepId": "create-receipt",
+          "description": "Signs a new receipt with provided Belegdaten and stores it in the 'Datenerfassungsprotokoll'. A unique Beleg UUID must be provided by the client.",
+          "operationId": "addBeleg",
+          "parameters": [
+            {
+              "name": "registrierkasseUuid",
+              "in": "path",
+              "value": "$steps.authenticate-user.outputs.registrierkasseUuid"
+            },
+            {
+              "name": "belegUuid",
+              "in": "path",
+              "value": "$inputs.belegUuid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "registrierkasseUuid": "$steps.authenticate-user.outputs.registrierkasseUuid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "locationHeader": "$response.headers.Location",
+            "belegUuid": "$response.body#/belegUuid"
+          }
+        },
+        {
+          "stepId": "get-receipt-details",
+          "description": "Retrieves the complete details of the newly created receipt from the 'Datenerfassungsprotokoll'.",
+          "operationId": "getBeleg",
+          "parameters": [
+            {
+              "name": "registrierkasseUuid",
+              "in": "path",
+              "value": "$steps.authenticate-user.outputs.registrierkasseUuid"
+            },
+            {
+              "name": "belegUuid",
+              "in": "path",
+              "value": "$steps.create-receipt.outputs.belegUuid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Beleg": "$response.body#/Beleg"
+          }
+        }
+      ],
+      "outputs": {
+        "accessToken": "$steps.authenticate-user.outputs.accessToken",
+        "registrierkasseUuid": "$steps.authenticate-user.outputs.registrierkasseUuid",
+        "locationHeader": "$steps.create-receipt.outputs.locationHeader",
+        "belegUuid": "$steps.create-receipt.outputs.belegUuid",
+        "Beleg": "$steps.get-receipt-details.outputs.Beleg"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "comprehensive-cash-register-data-export-for-auditing",
+      "summary": "This workflow allows users to authenticate and then export all relevant data from a specific cash register in various formats (DEP7, GoBD, CSV, XLS) for auditing and compliance purposes, including generating the full DEP file.",
+      "description": "This workflow allows users to authenticate and then export all relevant data from a specific cash register in various formats (DEP7, GoBD, CSV, XLS) for auditing and compliance purposes, including generating the full DEP file.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "registrierkasseUuid": {
+            "type": "string"
+          },
+          "before": {
+            "type": "string"
+          },
+          "after": {
+            "type": "string"
+          },
+          "posten": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "authenticate-user",
+          "description": "Authenticates the user with username and password to obtain an access token and the associated cash register UUID.",
+          "operationPath": "openapi_source#/paths/~1auth/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "accessToken": "$response.body#/accessToken",
+            "registrierkasseUuid": "$response.body#/registrierkasseUuid"
+          }
+        },
+        {
+          "stepId": "export-dep7-data",
+          "description": "Exports receipt data for the specified cash register in DEP7 format, optionally filtered by date range.",
+          "operationPath": "openapi_source#/paths/~1export~1dep7~1registrierkassen~1{registrierkasseUuid}~1belege/get",
+          "parameters": [
+            {
+              "name": "registrierkasseUuid",
+              "in": "path",
+              "value": "$steps.authenticate-user.outputs.registrierkasseUuid"
+            },
+            {
+              "name": "before",
+              "in": "query",
+              "value": "$inputs.before"
+            },
+            {
+              "name": "after",
+              "in": "query",
+              "value": "$inputs.after"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "dep7Data": "$response.body#/dep7Data"
+          }
+        },
+        {
+          "stepId": "export-gobd-data",
+          "description": "Exports cash register data in GoBD format, optionally filtered by date range.",
+          "operationPath": "openapi_source#/paths/~1export~1gobd~1registrierkassen~1{registrierkasseUuid}/get",
+          "parameters": [
+            {
+              "name": "registrierkasseUuid",
+              "in": "path",
+              "value": "$steps.authenticate-user.outputs.registrierkasseUuid"
+            },
+            {
+              "name": "before",
+              "in": "query",
+              "value": "$inputs.before"
+            },
+            {
+              "name": "after",
+              "in": "query",
+              "value": "$inputs.after"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "gobdData": "$response.body#/gobdData"
+          }
+        },
+        {
+          "stepId": "export-csv-data",
+          "description": "Exports receipt data in CSV format, optionally filtered by date range and allowing export of Posten (items) instead of Belegdaten.",
+          "operationPath": "openapi_source#/paths/~1export~1csv~1registrierkassen~1{registrierkasseUuid}~1belege/get",
+          "parameters": [
+            {
+              "name": "registrierkasseUuid",
+              "in": "path",
+              "value": "$steps.authenticate-user.outputs.registrierkasseUuid"
+            },
+            {
+              "name": "before",
+              "in": "query",
+              "value": "$inputs.before"
+            },
+            {
+              "name": "after",
+              "in": "query",
+              "value": "$inputs.after"
+            },
+            {
+              "name": "posten",
+              "in": "query",
+              "value": "$inputs.posten"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "csvData": "$response.body#/csvData"
+          }
+        },
+        {
+          "stepId": "export-xls-data",
+          "description": "Exports receipt data in Microsoft Excel (XLS) format, optionally filtered by date range.",
+          "operationPath": "openapi_source#/paths/~1export~1xls~1registrierkassen~1{registrierkasseUuid}~1belege/get",
+          "parameters": [
+            {
+              "name": "registrierkasseUuid",
+              "in": "path",
+              "value": "$steps.authenticate-user.outputs.registrierkasseUuid"
+            },
+            {
+              "name": "before",
+              "in": "query",
+              "value": "$inputs.before"
+            },
+            {
+              "name": "after",
+              "in": "query",
+              "value": "$inputs.after"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "xlsData": "$response.body#/xlsData"
+          }
+        },
+        {
+          "stepId": "generate-dep-file",
+          "description": "Generates the complete Data Recording Protocol (DEP) file for the specified cash register.",
+          "operationId": "getDEP",
+          "parameters": [
+            {
+              "name": "registrierkasseUuid",
+              "in": "path",
+              "value": "$steps.authenticate-user.outputs.registrierkasseUuid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "depFile": "$response.body#/depFile"
+          }
+        }
+      ],
+      "outputs": {
+        "accessToken": "$steps.authenticate-user.outputs.accessToken",
+        "registrierkasseUuid": "$steps.authenticate-user.outputs.registrierkasseUuid",
+        "dep7Data": "$steps.export-dep7-data.outputs.dep7Data",
+        "gobdData": "$steps.export-gobd-data.outputs.gobdData",
+        "csvData": "$steps.export-csv-data.outputs.csvData",
+        "xlsData": "$steps.export-xls-data.outputs.xlsData",
+        "depFile": "$steps.generate-dep-file.outputs.depFile"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "generate-and-export-closing-receipt",
+      "summary": "This workflow facilitates the creation of a legally required closing receipt (Abschlussbeleg) for a cash register and then exports it into a user-friendly PDF format for archiving or printing.",
+      "description": "This workflow facilitates the creation of a legally required closing receipt (Abschlussbeleg) for a cash register and then exports it into a user-friendly PDF format for archiving or printing.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "registrierkasseUuid": {
+            "type": "string"
+          },
+          "Abschluss-Beginn-Datum-Uhrzeit": {
+            "type": "string"
+          },
+          "Abschluss-Ende-Datum-Uhrzeit": {
+            "type": "string"
+          },
+          "belegUuid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "authenticate-user",
+          "description": "Authenticates the user with username and password to obtain an access token and the associated cash register UUID.",
+          "operationPath": "openapi_source#/paths/~1auth/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "accessToken": "$response.body#/accessToken",
+            "registrierkasseUuid": "$response.body#/registrierkasseUuid"
+          }
+        },
+        {
+          "stepId": "create-closing-receipt",
+          "description": "Generates an 'Abschlussbeleg' (closing receipt) for the specified cash register, requiring a begin and end date/time for the closing period.",
+          "operationId": "createAbschluss",
+          "parameters": [
+            {
+              "name": "registrierkasseUuid",
+              "in": "path",
+              "value": "$steps.authenticate-user.outputs.registrierkasseUuid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "registrierkasseUuid": "$steps.authenticate-user.outputs.registrierkasseUuid",
+              "Abschluss-Beginn-Datum-Uhrzeit": "$inputs.Abschluss-Beginn-Datum-Uhrzeit",
+              "Abschluss-Ende-Datum-Uhrzeit": "$inputs.Abschluss-Ende-Datum-Uhrzeit"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "locationHeader": "$response.headers.Location",
+            "belegUuid": "$response.body#/belegUuid"
+          }
+        },
+        {
+          "stepId": "export-receipt-as-pdf",
+          "description": "Exports the generated closing receipt as a PDF file for easy viewing and archiving.",
+          "operationPath": "openapi_source#/paths/~1export~1pdf~1belege~1{belegUuid}/get",
+          "parameters": [
+            {
+              "name": "belegUuid",
+              "in": "path",
+              "value": "$steps.create-closing-receipt.outputs.belegUuid"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "pdfFile": "$response.body#/pdfFile"
+          }
+        }
+      ],
+      "outputs": {
+        "accessToken": "$steps.authenticate-user.outputs.accessToken",
+        "registrierkasseUuid": "$steps.authenticate-user.outputs.registrierkasseUuid",
+        "locationHeader": "$steps.create-closing-receipt.outputs.locationHeader",
+        "belegUuid": "$steps.create-closing-receipt.outputs.belegUuid",
+        "pdfFile": "$steps.export-receipt-as-pdf.outputs.pdfFile"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-and-print-thermal-receipt",
+      "summary": "This workflow allows a user to retrieve a list of receipt UUIDs for a cash register, select a specific receipt, and then generate its thermal print-ready data, optionally including the RKSV QR code.",
+      "description": "This workflow allows a user to retrieve a list of receipt UUIDs for a cash register, select a specific receipt, and then generate its thermal print-ready data, optionally including the RKSV QR code.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "registrierkasseUuid": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "order": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "before": {
+            "type": "string"
+          },
+          "after": {
+            "type": "string"
+          },
+          "gte": {
+            "type": "string"
+          },
+          "lte": {
+            "type": "string"
+          },
+          "belegUuid": {
+            "type": "string"
+          },
+          "qr": {
+            "type": "string"
+          },
+          "width": {
+            "type": "string"
+          },
+          "dialect": {
+            "type": "string"
+          },
+          "encoding": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "authenticate-user",
+          "description": "Authenticates the user with username and password to obtain an access token and the associated cash register UUID.",
+          "operationPath": "openapi_source#/paths/~1auth/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "accessToken": "$response.body#/accessToken",
+            "registrierkasseUuid": "$response.body#/registrierkasseUuid"
+          }
+        },
+        {
+          "stepId": "get-receipt-uuids",
+          "description": "Retrieves a list of receipt UUIDs for a specific cash register, using the 'uuidlist' format.",
+          "operationId": "getBelege",
+          "parameters": [
+            {
+              "name": "registrierkasseUuid",
+              "in": "path",
+              "value": "$steps.authenticate-user.outputs.registrierkasseUuid"
+            },
+            {
+              "name": "format",
+              "in": "query",
+              "value": "$inputs.format"
+            },
+            {
+              "name": "order",
+              "in": "query",
+              "value": "$inputs.order"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "before",
+              "in": "query",
+              "value": "$inputs.before"
+            },
+            {
+              "name": "after",
+              "in": "query",
+              "value": "$inputs.after"
+            },
+            {
+              "name": "gte",
+              "in": "query",
+              "value": "$inputs.gte"
+            },
+            {
+              "name": "lte",
+              "in": "query",
+              "value": "$inputs.lte"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "belegUuids": "$response.body#/belegUuids"
+          }
+        },
+        {
+          "stepId": "generate-thermal-print-data",
+          "description": "Generates thermal printer compatible data for a specific receipt, with options for including QR code, print width, printer dialect, and encoding.",
+          "operationPath": "openapi_source#/paths/~1export~1thermal-print~1belege~1{belegUuid}/get",
+          "parameters": [
+            {
+              "name": "belegUuid",
+              "in": "path",
+              "value": "$inputs.belegUuid"
+            },
+            {
+              "name": "qr",
+              "in": "query",
+              "value": "$inputs.qr"
+            },
+            {
+              "name": "width",
+              "in": "query",
+              "value": "$inputs.width"
+            },
+            {
+              "name": "dialect",
+              "in": "query",
+              "value": "$inputs.dialect"
+            },
+            {
+              "name": "encoding",
+              "in": "query",
+              "value": "$inputs.encoding"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "thermalPrintData": "$response.body#/thermalPrintData"
+          }
+        }
+      ],
+      "outputs": {
+        "accessToken": "$steps.authenticate-user.outputs.accessToken",
+        "registrierkasseUuid": "$steps.authenticate-user.outputs.registrierkasseUuid",
+        "belegUuids": "$steps.get-receipt-uuids.outputs.belegUuids",
+        "thermalPrintData": "$steps.generate-thermal-print-data.outputs.thermalPrintData"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

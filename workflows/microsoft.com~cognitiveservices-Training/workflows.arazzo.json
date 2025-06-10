@@ -1,0 +1,950 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/microsoft.com/cognitiveservices-Training/3.2/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "train-and-evaluate-custom-vision-model",
+      "summary": "This workflow automates the process of training a custom vision model and then retrieving the performance metrics of the newly trained model iteration. This workflow is essential for understanding model quality and deciding if further training or data collection is needed.",
+      "description": "This workflow automates the process of training a custom vision model and then retrieving the performance metrics of the newly trained model iteration. This workflow is essential for understanding model quality and deciding if further training or data collection is needed.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string"
+          },
+          "trainingType": {
+            "type": "string"
+          },
+          "reservedBudgetInHours": {
+            "type": "string"
+          },
+          "forceTrain": {
+            "type": "string"
+          },
+          "notificationEmailAddress": {
+            "type": "string"
+          },
+          "train-project_body": {
+            "type": "object"
+          },
+          "iterationId": {
+            "type": "string"
+          },
+          "threshold": {
+            "type": "string"
+          },
+          "overlapThreshold": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "train-project",
+          "description": "Initiates the training process for a specified project, creating a new model iteration.",
+          "operationId": "Projects_Train",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "path",
+              "value": "$inputs.projectId"
+            },
+            {
+              "name": "trainingType",
+              "in": "query",
+              "value": "$inputs.trainingType"
+            },
+            {
+              "name": "reservedBudgetInHours",
+              "in": "query",
+              "value": "$inputs.reservedBudgetInHours"
+            },
+            {
+              "name": "forceTrain",
+              "in": "query",
+              "value": "$inputs.forceTrain"
+            },
+            {
+              "name": "notificationEmailAddress",
+              "in": "query",
+              "value": "$inputs.notificationEmailAddress"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.train-project_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "iterationId": "$response.body#/iterationId",
+            "iterationStatus": "$response.body#/iterationStatus"
+          }
+        },
+        {
+          "stepId": "list-project-iterations",
+          "description": "Retrieves a list of all iterations for the project to confirm the training status and get the latest iteration ID.",
+          "operationId": "Iterations_List",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "path",
+              "value": "$inputs.projectId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "iterations": "$response.body#/0/iterations"
+          }
+        },
+        {
+          "stepId": "get-iteration-performance",
+          "description": "Retrieves detailed performance metrics (precision, recall, etc.) for the latest trained iteration.",
+          "operationId": "Iterations_GetPerformance",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "path",
+              "value": "$inputs.projectId"
+            },
+            {
+              "name": "iterationId",
+              "in": "path",
+              "value": "$steps.train-project.outputs.iterationId"
+            },
+            {
+              "name": "threshold",
+              "in": "query",
+              "value": "$inputs.threshold"
+            },
+            {
+              "name": "overlapThreshold",
+              "in": "query",
+              "value": "$inputs.overlapThreshold"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "performanceMetrics": "$response.body#/performanceMetrics"
+          }
+        }
+      ],
+      "outputs": {
+        "iterationId": "$steps.train-project.outputs.iterationId",
+        "iterationStatus": "$steps.train-project.outputs.iterationStatus",
+        "iterations": "$steps.list-project-iterations.outputs.iterations",
+        "performanceMetrics": "$steps.get-iteration-performance.outputs.performanceMetrics"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "create-and-initialize-custom-vision-project",
+      "summary": "This workflow allows a user to set up a new custom vision project, optionally choosing a specific domain, and creating the initial set of tags required for image labeling. This is a foundational workflow for any new custom vision task.",
+      "description": "This workflow allows a user to set up a new custom vision project, optionally choosing a specific domain, and creating the initial set of tags required for image labeling. This is a foundational workflow for any new custom vision task.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "domainId": {
+            "type": "string"
+          },
+          "classificationType": {
+            "type": "string"
+          },
+          "targetExportPlatforms": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-available-domains",
+          "description": "Retrieves a list of available domains to understand the types of models that can be created (e.g., classification, object detection).",
+          "operationId": "Domains_List",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "domains": "$response.body#/0/domains"
+          }
+        },
+        {
+          "stepId": "create-new-project",
+          "description": "Creates a new custom vision project with a specified name, description, domain, and classification type.",
+          "operationId": "Projects_Create",
+          "parameters": [
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "description",
+              "in": "query",
+              "value": "$inputs.description"
+            },
+            {
+              "name": "domainId",
+              "in": "query",
+              "value": "$steps.list-available-domains.outputs.domains.id"
+            },
+            {
+              "name": "classificationType",
+              "in": "query",
+              "value": "$inputs.classificationType"
+            },
+            {
+              "name": "targetExportPlatforms",
+              "in": "query",
+              "value": "$inputs.targetExportPlatforms"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "projectId": "$response.body#/projectId",
+            "projectName": "$response.body#/projectName"
+          }
+        },
+        {
+          "stepId": "create-initial-tag",
+          "description": "Adds an initial tag to the newly created project, which will be used for labeling images.",
+          "operationId": "Projects_CreateTag",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "path",
+              "value": "$steps.create-new-project.outputs.projectId"
+            },
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "description",
+              "in": "query",
+              "value": "$inputs.description"
+            },
+            {
+              "name": "type",
+              "in": "query",
+              "value": "$inputs.type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tagId": "$response.body#/tagId",
+            "tagName": "$response.body#/tagName"
+          }
+        }
+      ],
+      "outputs": {
+        "domains": "$steps.list-available-domains.outputs.domains",
+        "projectId": "$steps.create-new-project.outputs.projectId",
+        "projectName": "$steps.create-new-project.outputs.projectName",
+        "tagId": "$steps.create-initial-tag.outputs.tagId",
+        "tagName": "$steps.create-initial-tag.outputs.tagName"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "populate-project-with-training-images-and-annotations",
+      "summary": "This workflow enables users to add training data (images) to a project and associate them with relevant tags and regions (for object detection). This is a core step in preparing a dataset for model training.",
+      "description": "This workflow enables users to add training data (images) to a project and associate them with relevant tags and regions (for object detection). This is a core step in preparing a dataset for model training.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-project-details",
+          "description": "Retrieves details of an existing project to confirm its existence and gather necessary information.",
+          "operationId": "Projects_Get",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "path",
+              "value": "$inputs.projectId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "projectId": "$response.body#/projectId",
+            "projectName": "$response.body#/projectName"
+          }
+        },
+        {
+          "stepId": "create-tag-for-images",
+          "description": "Creates a new tag that will be applied to the images being added.",
+          "operationId": "Projects_CreateTag",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "path",
+              "value": "$steps.get-project-details.outputs.projectId"
+            },
+            {
+              "name": "name",
+              "in": "query",
+              "value": "$inputs.name"
+            },
+            {
+              "name": "description",
+              "in": "query",
+              "value": "$inputs.description"
+            },
+            {
+              "name": "type",
+              "in": "query",
+              "value": "$inputs.type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "newTagId": "$response.body#/newTagId"
+          }
+        },
+        {
+          "stepId": "add-images-from-urls",
+          "description": "Uploads a batch of images to the project using their URLs and associates them with the created tag.",
+          "operationId": "Images_CreateFromUrls",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "path",
+              "value": "$steps.get-project-details.outputs.projectId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "projectId": "$steps.get-project-details.outputs.projectId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "imageCreateSummary": "$response.body#/imageCreateSummary",
+            "createdImageIds": "$response.body#/createdImageIds"
+          }
+        },
+        {
+          "stepId": "add-image-regions",
+          "description": "Adds bounding box region annotations to the newly uploaded images, typically for object detection projects.",
+          "operationId": "Images_CreateRegions",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "path",
+              "value": "$steps.get-project-details.outputs.projectId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "projectId": "$steps.get-project-details.outputs.projectId"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "regionCreateSummary": "$response.body#/regionCreateSummary"
+          }
+        }
+      ],
+      "outputs": {
+        "projectId": "$steps.get-project-details.outputs.projectId",
+        "projectName": "$steps.get-project-details.outputs.projectName",
+        "newTagId": "$steps.create-tag-for-images.outputs.newTagId",
+        "imageCreateSummary": "$steps.add-images-from-urls.outputs.imageCreateSummary",
+        "createdImageIds": "$steps.add-images-from-urls.outputs.createdImageIds",
+        "regionCreateSummary": "$steps.add-image-regions.outputs.regionCreateSummary"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "publish-and-quick-test-trained-model",
+      "summary": "This workflow makes a trained model iteration available for real-time predictions and then performs a quick test using an image or URL to validate its functionality. This workflow covers the deployment and initial validation of a model.",
+      "description": "This workflow makes a trained model iteration available for real-time predictions and then performs a quick test using an image or URL to validate its functionality. This workflow covers the deployment and initial validation of a model.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string"
+          },
+          "iterationId": {
+            "type": "string"
+          },
+          "publishName": {
+            "type": "string"
+          },
+          "predictionId": {
+            "type": "string"
+          },
+          "store": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-trained-iterations",
+          "description": "Retrieves a list of trained iterations for the project to select one for publishing.",
+          "operationId": "Iterations_List",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "path",
+              "value": "$inputs.projectId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "iterations": "$response.body#/0/iterations"
+          }
+        },
+        {
+          "stepId": "publish-model-iteration",
+          "description": "Publishes a specific trained iteration, making it available for prediction requests via a prediction endpoint.",
+          "operationId": "Iterations_Publish",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "path",
+              "value": "$inputs.projectId"
+            },
+            {
+              "name": "iterationId",
+              "in": "path",
+              "value": "$steps.list-trained-iterations.outputs.iterations.id"
+            },
+            {
+              "name": "publishName",
+              "in": "query",
+              "value": "$inputs.publishName"
+            },
+            {
+              "name": "predictionId",
+              "in": "query",
+              "value": "$inputs.predictionId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "publishStatus": "$response.body#/publishStatus"
+          }
+        },
+        {
+          "stepId": "quick-test-image-url",
+          "description": "Performs a quick test on the published model using an image URL to get immediate prediction results.",
+          "operationId": "Projects_QuickTestImageUrl",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "path",
+              "value": "$inputs.projectId"
+            },
+            {
+              "name": "iterationId",
+              "in": "query",
+              "value": "$steps.list-trained-iterations.outputs.iterations.id"
+            },
+            {
+              "name": "store",
+              "in": "query",
+              "value": "$inputs.store"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "iterationId": "$steps.list-trained-iterations.outputs.iterations[0].id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "imagePrediction": "$response.body#/imagePrediction"
+          }
+        }
+      ],
+      "outputs": {
+        "iterations": "$steps.list-trained-iterations.outputs.iterations",
+        "publishStatus": "$steps.publish-model-iteration.outputs.publishStatus",
+        "imagePrediction": "$steps.quick-test-image-url.outputs.imagePrediction"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "efficiently-tag-untagged-images-using-suggestions",
+      "summary": "This workflow leverages the model's capabilities to suggest tags and regions for untagged images, significantly speeding up the data labeling process for active learning or refinement. It helps improve model accuracy by adding more relevant training data.",
+      "description": "This workflow leverages the model's capabilities to suggest tags and regions for untagged images, significantly speeding up the data labeling process for active learning or refinement. It helps improve model accuracy by adding more relevant training data.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string"
+          },
+          "iterationId": {
+            "type": "string"
+          },
+          "orderBy": {
+            "type": "string"
+          },
+          "take": {
+            "type": "string"
+          },
+          "skip": {
+            "type": "string"
+          },
+          "imageIds": {
+            "type": "string"
+          },
+          "apply-suggested-tags_body": {
+            "type": "object"
+          },
+          "apply-suggested-regions_body": {
+            "type": "object"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-untagged-image-count",
+          "description": "Retrieves the count of untagged images in a project to determine if there's data available for suggestion-based tagging.",
+          "operationId": "Images_GetUntaggedCount",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "path",
+              "value": "$inputs.projectId"
+            },
+            {
+              "name": "iterationId",
+              "in": "query",
+              "value": "$inputs.iterationId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "untaggedImageCount": "$response.body#/untaggedImageCount"
+          }
+        },
+        {
+          "stepId": "list-untagged-images",
+          "description": "Fetches a batch of untagged images from the project.",
+          "operationId": "Images_ListUntagged",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "path",
+              "value": "$inputs.projectId"
+            },
+            {
+              "name": "iterationId",
+              "in": "query",
+              "value": "$inputs.iterationId"
+            },
+            {
+              "name": "orderBy",
+              "in": "query",
+              "value": "$inputs.orderBy"
+            },
+            {
+              "name": "take",
+              "in": "query",
+              "value": "$inputs.take"
+            },
+            {
+              "name": "skip",
+              "in": "query",
+              "value": "$inputs.skip"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "untaggedImages": "$response.body#/0/untaggedImages",
+            "untaggedImageIds": "$response.body#/0/untaggedImageIds"
+          }
+        },
+        {
+          "stepId": "get-suggested-tags-and-regions",
+          "description": "Obtains suggested tags and regions for the untagged images based on a trained iteration, along with confidence scores.",
+          "operationId": "Projects_SuggestTagsAndRegions",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "path",
+              "value": "$inputs.projectId"
+            },
+            {
+              "name": "iterationId",
+              "in": "query",
+              "value": "$inputs.iterationId"
+            },
+            {
+              "name": "imageIds",
+              "in": "query",
+              "value": "$steps.list-untagged-images.outputs.untaggedImageIds"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "suggestedTagsAndRegions": "$response.body#/0/suggestedTagsAndRegions"
+          }
+        },
+        {
+          "stepId": "apply-suggested-tags",
+          "description": "Applies the suggested tags to the respective images, effectively labeling them.",
+          "operationId": "Images_CreateTags",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "path",
+              "value": "$inputs.projectId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.apply-suggested-tags_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "taggingSummary": "$response.body#/taggingSummary"
+          }
+        },
+        {
+          "stepId": "apply-suggested-regions",
+          "description": "Applies the suggested regions (bounding boxes) to the respective images, annotating them for object detection.",
+          "operationId": "Images_CreateRegions",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "path",
+              "value": "$inputs.projectId"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.apply-suggested-regions_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "regionSummary": "$response.body#/regionSummary"
+          }
+        }
+      ],
+      "outputs": {
+        "untaggedImageCount": "$steps.get-untagged-image-count.outputs.untaggedImageCount",
+        "untaggedImages": "$steps.list-untagged-images.outputs.untaggedImages",
+        "untaggedImageIds": "$steps.list-untagged-images.outputs.untaggedImageIds",
+        "suggestedTagsAndRegions": "$steps.get-suggested-tags-and-regions.outputs.suggestedTagsAndRegions",
+        "taggingSummary": "$steps.apply-suggested-tags.outputs.taggingSummary",
+        "regionSummary": "$steps.apply-suggested-regions.outputs.regionSummary"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "project-migration-export-and-import",
+      "summary": "This workflow allows users to create a portable backup of a custom vision project, including its images, tags, and iterations, and then import it into another Custom Vision instance or account. This is crucial for disaster recovery, migration, or sharing projects.",
+      "description": "This workflow allows users to create a portable backup of a custom vision project, including its images, tags, and iterations, and then import it into another Custom Vision instance or account. This is crucial for disaster recovery, migration, or sharing projects.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "export-project-for-migration",
+          "description": "Exports an existing project, generating a unique token that can be used to import the project elsewhere.",
+          "operationId": "Projects_Export",
+          "parameters": [
+            {
+              "name": "projectId",
+              "in": "path",
+              "value": "$inputs.projectId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "exportToken": "$response.body#/exportToken",
+            "exportedProjectDetails": "$response.body#/exportedProjectDetails"
+          }
+        },
+        {
+          "stepId": "import-project-with-token",
+          "description": "Imports a project using the token obtained from the export operation, effectively restoring or migrating the project.",
+          "operationId": "Projects_Import",
+          "parameters": [
+            {
+              "name": "token",
+              "in": "query",
+              "value": "$steps.export-project-for-migration.outputs.exportToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "importedProject": "$response.body#/importedProject"
+          }
+        }
+      ],
+      "outputs": {
+        "exportToken": "$steps.export-project-for-migration.outputs.exportToken",
+        "exportedProjectDetails": "$steps.export-project-for-migration.outputs.exportedProjectDetails",
+        "importedProject": "$steps.import-project-with-token.outputs.importedProject"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

@@ -1,0 +1,874 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/pocketsmith.com/main/2.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "initial-user-setup--account-creation",
+      "summary": "Guides a user through the initial setup process by retrieving their profile, updating preferences, creating a financial institution, and then adding a primary account to that institution. This workflow is essential for new users to get started with managing their finances in PocketSmith.",
+      "description": "Guides a user through the initial setup process by retrieving their profile, updating preferences, creating a financial institution, and then adding a primary account to that institution. This workflow is essential for new users to get started with managing their finances in PocketSmith.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "currency_code": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-authorised-user",
+          "description": "Retrieves the ID and current details of the authenticated user.",
+          "operationPath": "openapi_source#/paths/~1me/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "base_currency_code": "$response.body#/base_currency_code",
+            "time_zone": "$response.body#/time_zone"
+          }
+        },
+        {
+          "stepId": "update-user-preferences",
+          "description": "Updates the user's preferences such as base currency and time zone.",
+          "operationPath": "openapi_source#/paths/~1users~1{id}/put",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-authorised-user.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.get-authorised-user.outputs.id",
+              "base_currency_code": "$steps.get-authorised-user.outputs.base_currency_code",
+              "time_zone": "$steps.get-authorised-user.outputs.time_zone"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "create-institution",
+          "description": "Creates a new financial institution for the user.",
+          "operationPath": "openapi_source#/paths/~1users~1{id}~1institutions/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-authorised-user.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.get-authorised-user.outputs.id",
+              "title": "$inputs.title",
+              "currency_code": "$inputs.currency_code"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "title": "$response.body#/title",
+            "currency_code": "$response.body#/currency_code"
+          }
+        },
+        {
+          "stepId": "create-account",
+          "description": "Creates a new account within the newly created institution.",
+          "operationPath": "openapi_source#/paths/~1users~1{id}~1accounts/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-authorised-user.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.get-authorised-user.outputs.id",
+              "institution_id": "$steps.create-institution.outputs.id",
+              "currency_code": "$steps.create-institution.outputs.currency_code",
+              "title": "$inputs.title",
+              "type": "$inputs.type"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "title": "$response.body#/title"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-account.outputs.id",
+        "base_currency_code": "$steps.get-authorised-user.outputs.base_currency_code",
+        "time_zone": "$steps.get-authorised-user.outputs.time_zone",
+        "title": "$steps.create-account.outputs.title",
+        "currency_code": "$steps.create-institution.outputs.currency_code"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manual-transaction-entry--categorization",
+      "summary": "Allows a user to manually add a new transaction to a specific account and then immediately categorize it, add a memo, or apply labels for better financial tracking. This is useful for cash transactions or unlinked accounts.",
+      "description": "Allows a user to manually add a new transaction to a specific account and then immediately categorize it, add a memo, or apply labels for better financial tracking. This is useful for cash transactions or unlinked accounts.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "payee": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          },
+          "memo": {
+            "type": "string"
+          },
+          "category_id": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "labels": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-user-transaction-accounts",
+          "description": "Retrieves the list of transaction accounts for the user to select where to post the new transaction.",
+          "operationPath": "openapi_source#/paths/~1users~1{id}~1transaction_accounts/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/0/id",
+            "name": "$response.body#/0/name"
+          }
+        },
+        {
+          "stepId": "create-transaction",
+          "description": "Creates a new transaction in the specified transaction account.",
+          "operationPath": "openapi_source#/paths/~1transaction_accounts~1{id}~1transactions/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "payee": "$inputs.payee",
+              "amount": "$inputs.amount",
+              "date": "$inputs.date"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "payee": "$response.body#/payee",
+            "amount": "$response.body#/amount",
+            "date": "$response.body#/date"
+          }
+        },
+        {
+          "stepId": "get-user-categories",
+          "description": "Retrieves the list of categories available for the user to assign to the transaction.",
+          "operationPath": "openapi_source#/paths/~1users~1{id}~1categories/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/0/id",
+            "title": "$response.body#/0/title"
+          }
+        },
+        {
+          "stepId": "update-transaction-details",
+          "description": "Updates the newly created transaction with categorization, memo, notes, or labels.",
+          "operationPath": "openapi_source#/paths/~1transactions~1{id}/put",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-transaction.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.create-transaction.outputs.id",
+              "payee": "$steps.create-transaction.outputs.payee",
+              "amount": "$steps.create-transaction.outputs.amount",
+              "date": "$steps.create-transaction.outputs.date",
+              "memo": "$inputs.memo",
+              "category_id": "$inputs.category_id",
+              "note": "$inputs.note",
+              "labels": "$inputs.labels"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.update-transaction-details.outputs.id",
+        "name": "$steps.get-user-transaction-accounts.outputs.name",
+        "payee": "$steps.create-transaction.outputs.payee",
+        "amount": "$steps.create-transaction.outputs.amount",
+        "date": "$steps.create-transaction.outputs.date",
+        "title": "$steps.get-user-categories.outputs.title"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "comprehensive-financial-overview",
+      "summary": "Provides a detailed financial overview for the user, including an overall budget summary, a breakdown of budget performance per category, and trend analysis for specific categories over a defined period. This workflow helps users understand their spending habits and budget adherence.",
+      "description": "Provides a detailed financial overview for the user, including an overall budget summary, a breakdown of budget performance per category, and trend analysis for specific categories over a defined period. This workflow helps users understand their spending habits and budget adherence.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "period": {
+            "type": "string"
+          },
+          "interval": {
+            "type": "string"
+          },
+          "start_date": {
+            "type": "string"
+          },
+          "end_date": {
+            "type": "string"
+          },
+          "roll_up": {
+            "type": "string"
+          },
+          "categories": {
+            "type": "string"
+          },
+          "scenarios": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-authorised-user",
+          "description": "Retrieves the ID of the authenticated user.",
+          "operationPath": "openapi_source#/paths/~1me/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "get-budget-summary",
+          "description": "Retrieves the user's overall budget summary for a specified period and date range.",
+          "operationPath": "openapi_source#/paths/~1users~1{id}~1budget_summary/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-authorised-user.outputs.id"
+            },
+            {
+              "name": "period",
+              "in": "query",
+              "value": "$inputs.period"
+            },
+            {
+              "name": "interval",
+              "in": "query",
+              "value": "$inputs.interval"
+            },
+            {
+              "name": "start_date",
+              "in": "query",
+              "value": "$inputs.start_date"
+            },
+            {
+              "name": "end_date",
+              "in": "query",
+              "value": "$inputs.end_date"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "total_actual_amount": "$response.body#/0/total_actual_amount",
+            "total_forecast_amount": "$response.body#/0/total_forecast_amount"
+          }
+        },
+        {
+          "stepId": "list-budget-per-category",
+          "description": "Lists the user's budget details, providing analysis for each category.",
+          "operationPath": "openapi_source#/paths/~1users~1{id}~1budget/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-authorised-user.outputs.id"
+            },
+            {
+              "name": "roll_up",
+              "in": "query",
+              "value": "$inputs.roll_up"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "category": "$response.body#/0/category",
+            "expense": "$response.body#/0/expense",
+            "income": "$response.body#/0/income"
+          }
+        },
+        {
+          "stepId": "get-trend-analysis",
+          "description": "Retrieves an income and/or expense budget analysis for specific categories and scenarios over a given date range.",
+          "operationPath": "openapi_source#/paths/~1users~1{id}~1trend_analysis/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-authorised-user.outputs.id"
+            },
+            {
+              "name": "period",
+              "in": "query",
+              "value": "$inputs.period"
+            },
+            {
+              "name": "interval",
+              "in": "query",
+              "value": "$inputs.interval"
+            },
+            {
+              "name": "start_date",
+              "in": "query",
+              "value": "$inputs.start_date"
+            },
+            {
+              "name": "end_date",
+              "in": "query",
+              "value": "$inputs.end_date"
+            },
+            {
+              "name": "categories",
+              "in": "query",
+              "value": "$inputs.categories"
+            },
+            {
+              "name": "scenarios",
+              "in": "query",
+              "value": "$inputs.scenarios"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "category": "$response.body#/0/category",
+            "expense": "$response.body#/0/expense",
+            "income": "$response.body#/0/income"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.get-authorised-user.outputs.id",
+        "total_actual_amount": "$steps.get-budget-summary.outputs.total_actual_amount",
+        "total_forecast_amount": "$steps.get-budget-summary.outputs.total_forecast_amount",
+        "category": "$steps.get-trend-analysis.outputs.category",
+        "expense": "$steps.get-trend-analysis.outputs.expense",
+        "income": "$steps.get-trend-analysis.outputs.income"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "automated-transaction-categorization-setup",
+      "summary": "Enables a user to create a category rule that automatically assigns a category to transactions based on matching payee keywords. This streamlines the categorization process for recurring transactions.",
+      "description": "Enables a user to create a category rule that automatically assigns a category to transactions based on matching payee keywords. This streamlines the categorization process for recurring transactions.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "payee_matches": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-authorised-user",
+          "description": "Retrieves the ID of the authenticated user.",
+          "operationPath": "openapi_source#/paths/~1me/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "list-user-categories",
+          "description": "Lists all categories belonging to the user, allowing selection for the new rule.",
+          "operationPath": "openapi_source#/paths/~1users~1{id}~1categories/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-authorised-user.outputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/0/id",
+            "title": "$response.body#/0/title"
+          }
+        },
+        {
+          "stepId": "create-category-rule",
+          "description": "Creates a new category rule for a selected category, based on payee matches.",
+          "operationPath": "openapi_source#/paths/~1categories~1{id}~1category_rules/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "payee_matches": "$inputs.payee_matches"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "category": "$response.body#/category"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.create-category-rule.outputs.id",
+        "title": "$steps.list-user-categories.outputs.title",
+        "category": "$steps.create-category-rule.outputs.category"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-transaction-attachments",
+      "summary": "Allows a user to upload a new attachment (e.g., a receipt) and then associate it with an existing transaction for better record-keeping and auditing.",
+      "description": "Allows a user to upload a new attachment (e.g., a receipt) and then associate it with an existing transaction for better record-keeping and auditing.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "file_name": {
+            "type": "string"
+          },
+          "file_data": {
+            "type": "string"
+          },
+          "start_date": {
+            "type": "string"
+          },
+          "end_date": {
+            "type": "string"
+          },
+          "updated_since": {
+            "type": "string"
+          },
+          "uncategorised": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "needs_review": {
+            "type": "string"
+          },
+          "search": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-authorised-user",
+          "description": "Retrieves the ID of the authenticated user.",
+          "operationPath": "openapi_source#/paths/~1me/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "create-attachment",
+          "description": "Uploads a new attachment file (e.g., receipt image) for the user.",
+          "operationPath": "openapi_source#/paths/~1users~1{id}~1attachments/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-authorised-user.outputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.get-authorised-user.outputs.id",
+              "title": "$inputs.title",
+              "file_name": "$inputs.file_name",
+              "file_data": "$inputs.file_data"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        },
+        {
+          "stepId": "list-user-transactions",
+          "description": "Lists transactions for the user, allowing selection of a transaction to assign the attachment to.",
+          "operationPath": "openapi_source#/paths/~1users~1{id}~1transactions/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-authorised-user.outputs.id"
+            },
+            {
+              "name": "start_date",
+              "in": "query",
+              "value": "$inputs.start_date"
+            },
+            {
+              "name": "end_date",
+              "in": "query",
+              "value": "$inputs.end_date"
+            },
+            {
+              "name": "updated_since",
+              "in": "query",
+              "value": "$inputs.updated_since"
+            },
+            {
+              "name": "uncategorised",
+              "in": "query",
+              "value": "$inputs.uncategorised"
+            },
+            {
+              "name": "type",
+              "in": "query",
+              "value": "$inputs.type"
+            },
+            {
+              "name": "needs_review",
+              "in": "query",
+              "value": "$inputs.needs_review"
+            },
+            {
+              "name": "search",
+              "in": "query",
+              "value": "$inputs.search"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/0/id",
+            "payee": "$response.body#/0/payee",
+            "amount": "$response.body#/0/amount"
+          }
+        },
+        {
+          "stepId": "assign-attachment-to-transaction",
+          "description": "Assigns the newly uploaded attachment to a specific transaction.",
+          "operationPath": "openapi_source#/paths/~1transactions~1{id}~1attachments/post",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "attachment_id": "$steps.create-attachment.outputs.id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.assign-attachment-to-transaction.outputs.id",
+        "payee": "$steps.list-user-transactions.outputs.payee",
+        "amount": "$steps.list-user-transactions.outputs.amount"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

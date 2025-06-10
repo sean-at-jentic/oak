@@ -1,0 +1,1105 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/mandrillapp.com/main/1.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "end-to-end-email-sending-and-tracking",
+      "summary": "This workflow allows users to send a transactional email, then search for it in the message history, retrieve its detailed information (like opens and clicks), and finally fetch its full content.",
+      "description": "This workflow allows users to send a transactional email, then search for it in the message history, retrieve its detailed information (like opens and clicks), and finally fetch its full content.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "async": {
+            "type": "string"
+          },
+          "ip_pool": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "send_at": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "string"
+          },
+          "date_from": {
+            "type": "string"
+          },
+          "date_to": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "senders": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "send-transactional-email",
+          "description": "Sends a new transactional message through Mandrill. The message can include recipients, subject, HTML/text content, and optional tags/metadata.",
+          "operationPath": "openapi_source#/paths/~1messages~1send.json/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "async": "$inputs.async",
+              "ip_pool": "$inputs.ip_pool",
+              "key": "$inputs.key",
+              "message": "$inputs.message",
+              "send_at": "$inputs.send_at"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "_id": "$response.body#/0/_id",
+            "email": "$response.body#/0/email",
+            "status": "$response.body#/0/status"
+          }
+        },
+        {
+          "stepId": "search-sent-message",
+          "description": "Searches the content of recently sent messages based on various criteria like recipient email, date range, or tags. This step is crucial for finding the message ID to retrieve further details.",
+          "operationPath": "openapi_source#/paths/~1messages~1search.json/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "query": "$steps.send-transactional-email.outputs.email",
+              "tags": "$inputs.tags",
+              "date_from": "$inputs.date_from",
+              "date_to": "$inputs.date_to",
+              "key": "$inputs.key",
+              "limit": "$inputs.limit",
+              "senders": "$inputs.senders"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "_id": "$response.body#/0/_id",
+            "email": "$response.body#/0/email",
+            "subject": "$response.body#/0/subject",
+            "state": "$response.body#/0/state"
+          }
+        },
+        {
+          "stepId": "get-message-info",
+          "description": "Retrieves detailed information for a single recently sent message, including delivery status, open and click tracking data, and SMTP events.",
+          "operationPath": "openapi_source#/paths/~1messages~1info.json/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "email": "$response.body#/email",
+            "subject": "$response.body#/subject",
+            "state": "$response.body#/state",
+            "opens": "$response.body#/opens",
+            "clicks": "$response.body#/clicks",
+            "tags": "$response.body#/tags",
+            "smtp_events": "$response.body#/smtp_events"
+          }
+        },
+        {
+          "stepId": "get-message-content",
+          "description": "Fetches the full HTML and text content of a recently sent message, along with its attachments and headers.",
+          "operationPath": "openapi_source#/paths/~1messages~1content.json/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "html": "$response.body#/html",
+            "text": "$response.body#/text",
+            "subject": "$response.body#/subject",
+            "from_email": "$response.body#/from_email",
+            "to": "$response.body#/to",
+            "attachments": "$response.body#/attachments"
+          }
+        }
+      ],
+      "outputs": {
+        "_id": "$steps.search-sent-message.outputs._id",
+        "email": "$steps.get-message-info.outputs.email",
+        "status": "$steps.send-transactional-email.outputs.status",
+        "subject": "$steps.get-message-content.outputs.subject",
+        "state": "$steps.get-message-info.outputs.state",
+        "opens": "$steps.get-message-info.outputs.opens",
+        "clicks": "$steps.get-message-info.outputs.clicks",
+        "tags": "$steps.get-message-info.outputs.tags",
+        "smtp_events": "$steps.get-message-info.outputs.smtp_events",
+        "html": "$steps.get-message-content.outputs.html",
+        "text": "$steps.get-message-content.outputs.text",
+        "from_email": "$steps.get-message-content.outputs.from_email",
+        "to": "$steps.get-message-content.outputs.to",
+        "attachments": "$steps.get-message-content.outputs.attachments"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "template-creation-and-rendering",
+      "summary": "This workflow covers the lifecycle of an email template, from creation and updates to publishing and rendering for preview or sending.",
+      "description": "This workflow covers the lifecycle of an email template, from creation and updates to publishing and rendering for preview or sending.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "merge_vars": {
+            "type": "string"
+          },
+          "template_content": {
+            "type": "string"
+          },
+          "template_name": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-new-template",
+          "description": "Creates a new email template with specified HTML/text content, subject, and sender details.",
+          "operationPath": "openapi_source#/paths/~1templates~1add.json/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "name": "$response.body#/name",
+            "code": "$response.body#/code",
+            "subject": "$response.body#/subject",
+            "from_email": "$response.body#/from_email",
+            "from_name": "$response.body#/from_name",
+            "published_at": "$response.body#/published_at"
+          }
+        },
+        {
+          "stepId": "update-template-content",
+          "description": "Modifies the content or settings of an existing email template.",
+          "operationPath": "openapi_source#/paths/~1templates~1update.json/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "name": "$response.body#/name",
+            "code": "$response.body#/code",
+            "subject": "$response.body#/subject",
+            "from_email": "$response.body#/from_email",
+            "from_name": "$response.body#/from_name",
+            "published_at": "$response.body#/published_at"
+          }
+        },
+        {
+          "stepId": "publish-template",
+          "description": "Publishes the draft content of a template, making it available for sending transactional emails.",
+          "operationPath": "openapi_source#/paths/~1templates~1publish.json/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "name": "$response.body#/name",
+            "publish_code": "$response.body#/publish_code",
+            "published_at": "$response.body#/published_at"
+          }
+        },
+        {
+          "stepId": "render-template-for-preview",
+          "description": "Injects dynamic content and merge fields into a template, returning the rendered HTML for preview purposes.",
+          "operationPath": "openapi_source#/paths/~1templates~1render.json/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "key": "$inputs.key",
+              "merge_vars": "$inputs.merge_vars",
+              "template_content": "$inputs.template_content",
+              "template_name": "$inputs.template_name"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "html": "$response.body#/html"
+          }
+        }
+      ],
+      "outputs": {
+        "name": "$steps.publish-template.outputs.name",
+        "code": "$steps.update-template-content.outputs.code",
+        "subject": "$steps.update-template-content.outputs.subject",
+        "from_email": "$steps.update-template-content.outputs.from_email",
+        "from_name": "$steps.update-template-content.outputs.from_name",
+        "published_at": "$steps.publish-template.outputs.published_at",
+        "publish_code": "$steps.publish-template.outputs.publish_code",
+        "html": "$steps.render-template-for-preview.outputs.html"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "scheduled-email-management",
+      "summary": "This workflow allows users to list all scheduled emails and then perform actions such as canceling or rescheduling a specific email.",
+      "description": "This workflow allows users to list all scheduled emails and then perform actions such as canceling or rescheduling a specific email.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "send_at": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-scheduled-emails",
+          "description": "Queries and returns a list of all emails currently scheduled for future delivery, optionally filtered by recipient.",
+          "operationPath": "openapi_source#/paths/~1messages~1list-scheduled.json/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "key": "$inputs.key",
+              "to": "$inputs.to"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "scheduled_message_id": "$response.body#/0/scheduled_message_id",
+            "scheduled_message_subject": "$response.body#/0/scheduled_message_subject",
+            "scheduled_message_send_at": "$response.body#/0/scheduled_message_send_at"
+          }
+        },
+        {
+          "stepId": "cancel-scheduled-email",
+          "description": "Cancels a previously scheduled email, preventing it from being sent.",
+          "operationPath": "openapi_source#/paths/~1messages~1cancel-scheduled.json/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.list-scheduled-emails.outputs.scheduled_message_id",
+              "key": "$inputs.key"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "_id": "$response.body#/_id",
+            "created_at": "$response.body#/created_at",
+            "send_at": "$response.body#/send_at",
+            "subject": "$response.body#/subject",
+            "to": "$response.body#/to"
+          }
+        },
+        {
+          "stepId": "reschedule-email",
+          "description": "Changes the scheduled send time for an existing scheduled email.",
+          "operationPath": "openapi_source#/paths/~1messages~1reschedule.json/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.list-scheduled-emails.outputs.scheduled_message_id",
+              "key": "$inputs.key",
+              "send_at": "$inputs.send_at"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "_id": "$response.body#/_id",
+            "created_at": "$response.body#/created_at",
+            "send_at": "$response.body#/send_at",
+            "subject": "$response.body#/subject",
+            "to": "$response.body#/to"
+          }
+        }
+      ],
+      "outputs": {
+        "scheduled_message_id": "$steps.list-scheduled-emails.outputs.scheduled_message_id",
+        "scheduled_message_subject": "$steps.list-scheduled-emails.outputs.scheduled_message_subject",
+        "scheduled_message_send_at": "$steps.list-scheduled-emails.outputs.scheduled_message_send_at",
+        "_id": "$steps.reschedule-email.outputs._id",
+        "created_at": "$steps.reschedule-email.outputs.created_at",
+        "send_at": "$steps.reschedule-email.outputs.send_at",
+        "subject": "$steps.reschedule-email.outputs.subject",
+        "to": "$steps.reschedule-email.outputs.to"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "sender-domain-verification",
+      "summary": "This workflow guides users through adding a sender domain, initiating the verification process, and checking its SPF and DKIM settings for optimal email deliverability.",
+      "description": "This workflow guides users through adding a sender domain, initiating the verification process, and checking its SPF and DKIM settings for optimal email deliverability.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "domain": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "mailbox": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-sender-domain",
+          "description": "Adds a new sender domain to the account, which is a prerequisite for sending emails from that domain.",
+          "operationPath": "openapi_source#/paths/~1senders~1add-domain.json/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "domain": "$response.body#/domain",
+            "created_at": "$response.body#/created_at",
+            "valid_signing": "$response.body#/valid_signing"
+          }
+        },
+        {
+          "stepId": "verify-sender-domain",
+          "description": "Sends a verification email to confirm ownership of the sender domain, an optional but recommended step for security and deliverability.",
+          "operationPath": "openapi_source#/paths/~1senders~1verify-domain.json/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "domain": "$inputs.domain",
+              "key": "$inputs.key",
+              "mailbox": "$inputs.mailbox"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "domain": "$response.body#/domain",
+            "email": "$response.body#/email",
+            "status": "$response.body#/status"
+          }
+        },
+        {
+          "stepId": "check-sender-domain-settings",
+          "description": "Checks the SPF (Sender Policy Framework) and DKIM (DomainKeys Identified Mail) settings for the domain to ensure proper email authentication.",
+          "operationPath": "openapi_source#/paths/~1senders~1check-domain.json/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "domain": "$response.body#/domain",
+            "dkim": "$response.body#/dkim",
+            "spf": "$response.body#/spf",
+            "valid_signing": "$response.body#/valid_signing"
+          }
+        }
+      ],
+      "outputs": {
+        "domain": "$steps.check-sender-domain-settings.outputs.domain",
+        "created_at": "$steps.add-sender-domain.outputs.created_at",
+        "valid_signing": "$steps.check-sender-domain-settings.outputs.valid_signing",
+        "email": "$steps.verify-sender-domain.outputs.email",
+        "status": "$steps.verify-sender-domain.outputs.status",
+        "dkim": "$steps.check-sender-domain-settings.outputs.dkim",
+        "spf": "$steps.check-sender-domain-settings.outputs.spf"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "inbound-email-domain-and-route-configuration",
+      "summary": "This workflow guides a user through setting up a new domain for receiving inbound emails and configuring a routing rule to process them.",
+      "description": "This workflow guides a user through setting up a new domain for receiving inbound emails and configuring a routing rule to process them.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "domain": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "pattern": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-inbound-domain",
+          "description": "Adds a new domain to the account for inbound email processing.",
+          "operationPath": "openapi_source#/paths/~1inbound~1add-domain.json/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "domain": "$response.body#/domain",
+            "created_at": "$response.body#/created_at",
+            "valid_mx": "$response.body#/valid_mx"
+          }
+        },
+        {
+          "stepId": "check-inbound-domain-mx",
+          "description": "Checks the MX (Mail Exchange) settings for the newly added inbound domain to ensure it's correctly configured for receiving mail.",
+          "operationPath": "openapi_source#/paths/~1inbound~1check-domain.json/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "domain": "$response.body#/domain",
+            "valid_mx": "$response.body#/valid_mx"
+          }
+        },
+        {
+          "stepId": "add-inbound-route",
+          "description": "Adds a new mailbox route to the inbound domain, specifying a pattern and a webhook URL where incoming emails matching the pattern will be sent.",
+          "operationPath": "openapi_source#/paths/~1inbound~1add-route.json/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "domain": "$inputs.domain",
+              "key": "$inputs.key",
+              "pattern": "$inputs.pattern",
+              "url": "$inputs.url"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "pattern": "$response.body#/pattern",
+            "url": "$response.body#/url"
+          }
+        }
+      ],
+      "outputs": {
+        "domain": "$steps.check-inbound-domain-mx.outputs.domain",
+        "created_at": "$steps.add-inbound-domain.outputs.created_at",
+        "valid_mx": "$steps.check-inbound-domain-mx.outputs.valid_mx",
+        "id": "$steps.add-inbound-route.outputs.id",
+        "pattern": "$steps.add-inbound-route.outputs.pattern",
+        "url": "$steps.add-inbound-route.outputs.url"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "email-rejection-list-management",
+      "summary": "This workflow provides a comprehensive way to manage the email rejection blacklist, enabling users to view existing rejections, add new ones, and remove entries.",
+      "description": "This workflow provides a comprehensive way to manage the email rejection blacklist, enabling users to view existing rejections, add new ones, and remove entries.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "include_expired": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "subaccount": {
+            "type": "string"
+          },
+          "comment": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-email-rejections",
+          "description": "Retrieves the email rejection blacklist, optionally filtered by email address or including expired entries.",
+          "operationPath": "openapi_source#/paths/~1rejects~1list.json/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "email": "$inputs.email",
+              "include_expired": "$inputs.include_expired",
+              "key": "$inputs.key",
+              "subaccount": "$inputs.subaccount"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "rejected_email": "$response.body#/0/rejected_email",
+            "rejection_reason": "$response.body#/0/rejection_reason",
+            "rejection_id": "$response.body#/0/rejection_id"
+          }
+        },
+        {
+          "stepId": "add-email-to-blacklist",
+          "description": "Adds a specific email address to the rejection blacklist, preventing future emails from being sent to it.",
+          "operationPath": "openapi_source#/paths/~1rejects~1add.json/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "comment": "$inputs.comment",
+              "email": "$inputs.email",
+              "key": "$inputs.key",
+              "subaccount": "$inputs.subaccount"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "email": "$response.body#/email",
+            "added": "$response.body#/added"
+          }
+        },
+        {
+          "stepId": "delete-email-from-blacklist",
+          "description": "Removes an email address from the rejection blacklist, allowing emails to be sent to it again.",
+          "operationPath": "openapi_source#/paths/~1rejects~1delete.json/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "email": "$steps.list-email-rejections.outputs.rejected_email",
+              "key": "$inputs.key",
+              "subaccount": "$inputs.subaccount"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "email": "$response.body#/email",
+            "deleted": "$response.body#/deleted"
+          }
+        }
+      ],
+      "outputs": {
+        "rejected_email": "$steps.list-email-rejections.outputs.rejected_email",
+        "rejection_reason": "$steps.list-email-rejections.outputs.rejection_reason",
+        "rejection_id": "$steps.list-email-rejections.outputs.rejection_id",
+        "email": "$steps.delete-email-from-blacklist.outputs.email",
+        "added": "$steps.add-email-to-blacklist.outputs.added",
+        "deleted": "$steps.delete-email-from-blacklist.outputs.deleted"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "webhook-configuration-and-management",
+      "summary": "This workflow enables users to set up new webhooks for real-time event notifications, list existing webhooks, and update their configurations.",
+      "description": "This workflow enables users to set up new webhooks for real-time event notifications, list existing webhooks, and update their configurations.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "events": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "add-new-webhook",
+          "description": "Creates a new webhook endpoint to receive notifications for specified email events (e.g., sends, opens, clicks).",
+          "operationPath": "openapi_source#/paths/~1webhooks~1add.json/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "description": "$inputs.description",
+              "events": "$inputs.events",
+              "key": "$inputs.key",
+              "url": "$inputs.url"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "url": "$response.body#/url",
+            "description": "$response.body#/description",
+            "events": "$response.body#/events",
+            "created_at": "$response.body#/created_at"
+          }
+        },
+        {
+          "stepId": "list-webhooks",
+          "description": "Retrieves a list of all webhooks configured for the account, including their IDs and event subscriptions.",
+          "operationPath": "openapi_source#/paths/~1webhooks~1list.json/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "webhook_id": "$response.body#/0/id",
+            "webhook_url": "$response.body#/0/webhook_url",
+            "webhook_description": "$response.body#/0/webhook_description"
+          }
+        },
+        {
+          "stepId": "update-webhook-settings",
+          "description": "Modifies the URL, description, or event subscriptions of an existing webhook.",
+          "operationPath": "openapi_source#/paths/~1webhooks~1update.json/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.list-webhooks.outputs.webhook_id",
+              "description": "$inputs.description",
+              "events": "$inputs.events",
+              "key": "$inputs.key",
+              "url": "$inputs.url"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "url": "$response.body#/url",
+            "description": "$response.body#/description",
+            "events": "$response.body#/events",
+            "created_at": "$response.body#/created_at"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.update-webhook-settings.outputs.id",
+        "url": "$steps.update-webhook-settings.outputs.url",
+        "description": "$steps.update-webhook-settings.outputs.description",
+        "events": "$steps.update-webhook-settings.outputs.events",
+        "created_at": "$steps.update-webhook-settings.outputs.created_at",
+        "webhook_id": "$steps.list-webhooks.outputs.webhook_id",
+        "webhook_url": "$steps.list-webhooks.outputs.webhook_url",
+        "webhook_description": "$steps.list-webhooks.outputs.webhook_description"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "dedicated-ip-configuration-and-warmup",
+      "summary": "This workflow allows users to manage their dedicated IPs, including listing them, starting the warmup process for a specific IP, and assigning it to an IP pool.",
+      "description": "This workflow allows users to manage their dedicated IPs, including listing them, starting the warmup process for a specific IP, and assigning it to an IP pool.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "create_pool": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "pool": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-dedicated-ips",
+          "description": "Retrieves a list of all dedicated IPs associated with the account.",
+          "operationPath": "openapi_source#/paths/~1ips~1list.json/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ip_address": "$response.body#/0/ip_address",
+            "ip_pool": "$response.body#/0/ip_pool",
+            "ip_warmup_status": "$response.body#/0/ip_warmup_status"
+          }
+        },
+        {
+          "stepId": "start-ip-warmup",
+          "description": "Initiates the warmup process for a specified dedicated IP, gradually increasing its sending volume over time to build reputation.",
+          "operationPath": "openapi_source#/paths/~1ips~1start-warmup.json/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ip": "$response.body#/ip",
+            "pool": "$response.body#/pool",
+            "warmup": "$response.body#/warmup"
+          }
+        },
+        {
+          "stepId": "set-ip-pool",
+          "description": "Moves a dedicated IP to a different IP pool, allowing for better organization and management of sending infrastructure.",
+          "operationPath": "openapi_source#/paths/~1ips~1set-pool.json/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "ip": "$steps.list-dedicated-ips.outputs.ip_address",
+              "create_pool": "$inputs.create_pool",
+              "key": "$inputs.key",
+              "pool": "$inputs.pool"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "ip": "$response.body#/ip",
+            "pool": "$response.body#/pool",
+            "warmup": "$response.body#/warmup"
+          }
+        }
+      ],
+      "outputs": {
+        "ip_address": "$steps.list-dedicated-ips.outputs.ip_address",
+        "ip_pool": "$steps.list-dedicated-ips.outputs.ip_pool",
+        "ip_warmup_status": "$steps.list-dedicated-ips.outputs.ip_warmup_status",
+        "ip": "$steps.set-ip-pool.outputs.ip",
+        "pool": "$steps.set-ip-pool.outputs.pool",
+        "warmup": "$steps.set-ip-pool.outputs.warmup"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "account-activity-data-export",
+      "summary": "This workflow enables users to initiate an export of their email activity history, monitor the export job's status, and retrieve the URL to download the completed export file.",
+      "description": "This workflow enables users to initiate an export of their email activity history, monitor the export job's status, and retrieve the URL to download the completed export file.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "tags": {
+            "type": "string"
+          },
+          "api_keys": {
+            "type": "string"
+          },
+          "date_from": {
+            "type": "string"
+          },
+          "date_to": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "notify_email": {
+            "type": "string"
+          },
+          "senders": {
+            "type": "string"
+          },
+          "states": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "begin-activity-export",
+          "description": "Starts an asynchronous job to export the account's email activity history to a downloadable zip archive.",
+          "operationPath": "openapi_source#/paths/~1exports~1activity.json/post",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "tags": "$inputs.tags",
+              "api_keys": "$inputs.api_keys",
+              "date_from": "$inputs.date_from",
+              "date_to": "$inputs.date_to",
+              "key": "$inputs.key",
+              "notify_email": "$inputs.notify_email",
+              "senders": "$inputs.senders",
+              "states": "$inputs.states"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "state": "$response.body#/state",
+            "created_at": "$response.body#/created_at",
+            "type": "$response.body#/type"
+          }
+        },
+        {
+          "stepId": "get-export-job-info",
+          "description": "Retrieves the current status and details of an export job. Once the job is 'complete', it provides a URL to fetch the results.",
+          "operationPath": "openapi_source#/paths/~1exports~1info.json/post",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "id": "$response.body#/id",
+            "state": "$response.body#/state",
+            "result_url": "$response.body#/result_url",
+            "finished_at": "$response.body#/finished_at"
+          }
+        }
+      ],
+      "outputs": {
+        "id": "$steps.get-export-job-info.outputs.id",
+        "state": "$steps.get-export-job-info.outputs.state",
+        "created_at": "$steps.begin-activity-export.outputs.created_at",
+        "type": "$steps.begin-activity-export.outputs.type",
+        "result_url": "$steps.get-export-job-info.outputs.result_url",
+        "finished_at": "$steps.get-export-job-info.outputs.finished_at"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

@@ -1,0 +1,392 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/tcgdex.net/main/2.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "browse-all-cards-and-view-details",
+      "summary": "Allows users to retrieve a comprehensive list of all available Pokémon TCG cards (in summary form) and then select a specific card from that list to view its complete details, including images, stats, and abilities.",
+      "description": "Allows users to retrieve a comprehensive list of all available Pokémon TCG cards (in summary form) and then select a specific card from that list to view its complete details, including images, stats, and abilities.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "cardId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-all-card-resumes",
+          "description": "Fetches a summary list of all Pokémon TCG cards available in the database. Each entry provides basic information like ID, local ID, image URL, and name.",
+          "operationId": "cards",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "CardResume": "$response.body#/0/CardResume"
+          }
+        },
+        {
+          "stepId": "get-card-details-by-global-id",
+          "description": "Retrieves the full, detailed information for a specific card using its unique global ID, which was obtained from the previous step.",
+          "operationId": "findPetsByTags",
+          "parameters": [
+            {
+              "name": "cardId",
+              "in": "path",
+              "value": "$inputs.cardId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Card": "$response.body#/Card"
+          }
+        }
+      ],
+      "outputs": {
+        "CardResume": "$steps.get-all-card-resumes.outputs.CardResume",
+        "Card": "$steps.get-card-details-by-global-id.outputs.Card"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "explore-sets-and-view-card-details",
+      "summary": "Enables users to discover available Pokémon TCG card sets, view the cards contained within a chosen set, and then drill down to see the full details of a specific card from that set.",
+      "description": "Enables users to discover available Pokémon TCG card sets, view the cards contained within a chosen set, and then drill down to see the full details of a specific card from that set.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "set": {
+            "type": "string"
+          },
+          "cardLocalId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-all-set-resumes",
+          "description": "Fetches a summary list of all Pokémon TCG sets, providing basic information for each set.",
+          "operationPath": "openapi_source#/paths/~1sets/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "SetResume": "$response.body#/0/SetResume"
+          }
+        },
+        {
+          "stepId": "get-set-details-with-cards",
+          "description": "Retrieves the full details of a specific set, including its name, logo, card count, and a list of all cards belonging to that set.",
+          "operationPath": "openapi_source#/paths/~1sets~1{set}/get",
+          "parameters": [
+            {
+              "name": "set",
+              "in": "path",
+              "value": "$inputs.set"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Set": "$response.body#/Set"
+          }
+        },
+        {
+          "stepId": "get-card-details-by-set-and-local-id",
+          "description": "Retrieves the complete details of a specific card by providing its set ID and its local ID within that set, both obtained from the previous step.",
+          "operationPath": "openapi_source#/paths/~1sets~1{set}~1{cardLocalId}/get",
+          "parameters": [
+            {
+              "name": "set",
+              "in": "path",
+              "value": "$inputs.set"
+            },
+            {
+              "name": "cardLocalId",
+              "in": "path",
+              "value": "$inputs.cardLocalId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Card": "$response.body#/Card"
+          }
+        }
+      ],
+      "outputs": {
+        "SetResume": "$steps.get-all-set-resumes.outputs.SetResume",
+        "Set": "$steps.get-set-details-with-cards.outputs.Set",
+        "Card": "$steps.get-card-details-by-set-and-local-id.outputs.Card"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "filter-cards-by-type-and-view-details",
+      "summary": "Allows users to discover all available Pokémon TCG card types, filter cards by a selected type (e.g., 'Psychic', 'Fire'), and then view the complete details of a specific card from the filtered results.",
+      "description": "Allows users to discover all available Pokémon TCG card types, filter cards by a selected type (e.g., 'Psychic', 'Fire'), and then view the complete details of a specific card from the filtered results.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "cardId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-all-card-types",
+          "description": "Fetches a list of all possible Pokémon TCG card types (e.g., 'Grass', 'Water', 'Lightning').",
+          "operationPath": "openapi_source#/paths/~1types/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "type_list": "$response.body#/0/type_list"
+          }
+        },
+        {
+          "stepId": "get-cards-by-type",
+          "description": "Retrieves a list of cards that belong to the specified type, using a type value obtained from the previous step.",
+          "operationPath": "openapi_source#/paths/~1types~1{type}/get",
+          "parameters": [
+            {
+              "name": "type",
+              "in": "path",
+              "value": "$inputs.type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "StringEndpoint": "$response.body#/0/StringEndpoint"
+          }
+        },
+        {
+          "stepId": "get-card-details-from-filtered-list",
+          "description": "Retrieves the full details of a specific card from the filtered list using its global ID, which was obtained from the 'cards' array within the StringEndpoint response.",
+          "operationId": "findPetsByTags",
+          "parameters": [
+            {
+              "name": "cardId",
+              "in": "path",
+              "value": "$inputs.cardId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Card": "$response.body#/Card"
+          }
+        }
+      ],
+      "outputs": {
+        "type_list": "$steps.get-all-card-types.outputs.type_list",
+        "StringEndpoint": "$steps.get-cards-by-type.outputs.StringEndpoint",
+        "Card": "$steps.get-card-details-from-filtered-list.outputs.Card"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "explore-series-and-their-sets",
+      "summary": "Provides a hierarchical browsing experience, allowing users to list all Pokémon TCG card series and then view the sets contained within a chosen series.",
+      "description": "Provides a hierarchical browsing experience, allowing users to list all Pokémon TCG card series and then view the sets contained within a chosen series.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "serie": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-all-series-resumes",
+          "description": "Fetches a summary list of all Pokémon TCG series, providing basic information for each series.",
+          "operationPath": "openapi_source#/paths/~1series/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "SerieResume": "$response.body#/0/SerieResume"
+          }
+        },
+        {
+          "stepId": "get-series-details-with-sets",
+          "description": "Retrieves the full details of a specific series, including its name, logo, and a list of all sets belonging to that series.",
+          "operationPath": "openapi_source#/paths/~1series~1{serie}/get",
+          "parameters": [
+            {
+              "name": "serie",
+              "in": "path",
+              "value": "$inputs.serie"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "Serie": "$response.body#/Serie"
+          }
+        }
+      ],
+      "outputs": {
+        "SerieResume": "$steps.get-all-series-resumes.outputs.SerieResume",
+        "Serie": "$steps.get-series-details-with-sets.outputs.Serie"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

@@ -1,0 +1,560 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/twilio.com/twilio_voice_v1/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "configure-byoc-trunk-and-routing",
+      "summary": "This workflow allows a user to set up a Bring Your Own Carrier (BYOC) Trunk, define a Connection Policy, and add SIP targets to that policy. This enables Twilio to route calls to the user's own SIP infrastructure and vice-versa, providing a flexible voice routing solution.",
+      "description": "This workflow allows a user to set up a Bring Your Own Carrier (BYOC) Trunk, define a Connection Policy, and add SIP targets to that policy. This enables Twilio to route calls to the user's own SIP infrastructure and vice-versa, providing a flexible voice routing solution.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "FriendlyName": {
+            "type": "string"
+          },
+          "ConnectionPolicySid": {
+            "type": "string"
+          },
+          "Target": {
+            "type": "string"
+          },
+          "VoiceUrl": {
+            "type": "string"
+          },
+          "VoiceMethod": {
+            "type": "string"
+          },
+          "VoiceFallbackUrl": {
+            "type": "string"
+          },
+          "VoiceFallbackMethod": {
+            "type": "string"
+          },
+          "StatusCallbackUrl": {
+            "type": "string"
+          },
+          "StatusCallbackMethod": {
+            "type": "string"
+          },
+          "CnamLookupEnabled": {
+            "type": "string"
+          },
+          "FromDomainSid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-connection-policy",
+          "description": "Creates a new Connection Policy, which defines how Twilio routes calls to your infrastructure. This policy will later be associated with a BYOC Trunk.",
+          "operationId": "CreateConnectionPolicy",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "FriendlyName": "$inputs.FriendlyName"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        },
+        {
+          "stepId": "create-connection-policy-target",
+          "description": "Adds a specific SIP endpoint (target) to the newly created Connection Policy. Multiple targets can be added to a single policy for redundancy or load balancing.",
+          "operationId": "CreateConnectionPolicyTarget",
+          "parameters": [
+            {
+              "name": "ConnectionPolicySid",
+              "in": "path",
+              "value": "$steps.create-connection-policy.outputs.sid"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "ConnectionPolicySid": "$steps.create-connection-policy.outputs.sid",
+              "Target": "$inputs.Target"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        },
+        {
+          "stepId": "create-byoc-trunk",
+          "description": "Creates a BYOC Trunk, linking it to the Connection Policy and defining how Twilio should handle inbound and outbound calls via your SIP infrastructure. This includes specifying voice URLs and callback methods.",
+          "operationId": "CreateByocTrunk",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "ConnectionPolicySid": "$steps.create-connection-policy.outputs.sid",
+              "FriendlyName": "$inputs.FriendlyName",
+              "VoiceUrl": "$inputs.VoiceUrl",
+              "VoiceMethod": "$inputs.VoiceMethod",
+              "VoiceFallbackUrl": "$inputs.VoiceFallbackUrl",
+              "VoiceFallbackMethod": "$inputs.VoiceFallbackMethod",
+              "StatusCallbackUrl": "$inputs.StatusCallbackUrl",
+              "StatusCallbackMethod": "$inputs.StatusCallbackMethod",
+              "CnamLookupEnabled": "$inputs.CnamLookupEnabled",
+              "FromDomainSid": "$inputs.FromDomainSid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.create-byoc-trunk.outputs.sid"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-voice-dialing-country-permissions",
+      "summary": "This workflow enables an account administrator to review and update voice dialing permissions for various countries, including enabling/disabling dialing to low-risk, high-risk special, and high-risk toll fraud numbers. It also allows fetching specific country details and high-risk prefixes for compliance and fraud prevention.",
+      "description": "This workflow enables an account administrator to review and update voice dialing permissions for various countries, including enabling/disabling dialing to low-risk, high-risk special, and high-risk toll fraud numbers. It also allows fetching specific country details and high-risk prefixes for compliance and fraud prevention.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "IsoCode": {
+            "type": "string"
+          },
+          "Continent": {
+            "type": "string"
+          },
+          "CountryCode": {
+            "type": "string"
+          },
+          "LowRiskNumbersEnabled": {
+            "type": "string"
+          },
+          "HighRiskSpecialNumbersEnabled": {
+            "type": "string"
+          },
+          "HighRiskTollfraudNumbersEnabled": {
+            "type": "string"
+          },
+          "PageSize": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "string"
+          },
+          "PageToken": {
+            "type": "string"
+          },
+          "UpdateRequest": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-dialing-permissions-countries",
+          "description": "Retrieves a list of all voice dialing country permissions for the account, with optional filters for ISO code, continent, country code, and risk categories.",
+          "operationId": "ListDialingPermissionsCountry",
+          "parameters": [
+            {
+              "name": "IsoCode",
+              "in": "query",
+              "value": "$inputs.IsoCode"
+            },
+            {
+              "name": "Continent",
+              "in": "query",
+              "value": "$inputs.Continent"
+            },
+            {
+              "name": "CountryCode",
+              "in": "query",
+              "value": "$inputs.CountryCode"
+            },
+            {
+              "name": "LowRiskNumbersEnabled",
+              "in": "query",
+              "value": "$inputs.LowRiskNumbersEnabled"
+            },
+            {
+              "name": "HighRiskSpecialNumbersEnabled",
+              "in": "query",
+              "value": "$inputs.HighRiskSpecialNumbersEnabled"
+            },
+            {
+              "name": "HighRiskTollfraudNumbersEnabled",
+              "in": "query",
+              "value": "$inputs.HighRiskTollfraudNumbersEnabled"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "content": "$response.body#/content",
+            "meta": "$response.body#/meta"
+          }
+        },
+        {
+          "stepId": "fetch-dialing-permissions-country",
+          "description": "Retrieves detailed voice dialing permissions for a specific country identified by its ISO country code.",
+          "operationId": "FetchDialingPermissionsCountry",
+          "parameters": [
+            {
+              "name": "IsoCode",
+              "in": "path",
+              "value": "$steps.list-dialing-permissions-countries.outputs.content.iso_code"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "iso_code": "$response.body#/iso_code",
+            "name": "$response.body#/name",
+            "continent": "$response.body#/continent",
+            "country_codes": "$response.body#/country_codes",
+            "low_risk_numbers_enabled": "$response.body#/low_risk_numbers_enabled",
+            "high_risk_special_numbers_enabled": "$response.body#/high_risk_special_numbers_enabled",
+            "high_risk_tollfraud_numbers_enabled": "$response.body#/high_risk_tollfraud_numbers_enabled",
+            "url": "$response.body#/url",
+            "links": "$response.body#/links"
+          }
+        },
+        {
+          "stepId": "list-dialing-permissions-hrs-prefixes",
+          "description": "Fetches the high-risk special services prefixes associated with a specific country's dialing permissions.",
+          "operationId": "ListDialingPermissionsHrsPrefixes",
+          "parameters": [
+            {
+              "name": "IsoCode",
+              "in": "path",
+              "value": "$steps.fetch-dialing-permissions-country.outputs.iso_code"
+            },
+            {
+              "name": "PageSize",
+              "in": "query",
+              "value": "$inputs.PageSize"
+            },
+            {
+              "name": "Page",
+              "in": "query",
+              "value": "$inputs.Page"
+            },
+            {
+              "name": "PageToken",
+              "in": "query",
+              "value": "$inputs.PageToken"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "content": "$response.body#/content",
+            "meta": "$response.body#/meta"
+          }
+        },
+        {
+          "stepId": "bulk-update-dialing-permissions",
+          "description": "Initiates a bulk update request to change voice dialing country permissions for one or more countries simultaneously, based on a URL-encoded JSON array of update objects.",
+          "operationId": "CreateDialingPermissionsCountryBulkUpdate",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "UpdateRequest": "$inputs.UpdateRequest"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "update_count": "$response.body#/update_count",
+            "update_request": "$response.body#/update_request"
+          }
+        }
+      ],
+      "outputs": {
+        "content": "$steps.list-dialing-permissions-hrs-prefixes.outputs.content",
+        "meta": "$steps.list-dialing-permissions-hrs-prefixes.outputs.meta",
+        "iso_code": "$steps.fetch-dialing-permissions-country.outputs.iso_code",
+        "name": "$steps.fetch-dialing-permissions-country.outputs.name",
+        "continent": "$steps.fetch-dialing-permissions-country.outputs.continent",
+        "country_codes": "$steps.fetch-dialing-permissions-country.outputs.country_codes",
+        "low_risk_numbers_enabled": "$steps.fetch-dialing-permissions-country.outputs.low_risk_numbers_enabled",
+        "high_risk_special_numbers_enabled": "$steps.fetch-dialing-permissions-country.outputs.high_risk_special_numbers_enabled",
+        "high_risk_tollfraud_numbers_enabled": "$steps.fetch-dialing-permissions-country.outputs.high_risk_tollfraud_numbers_enabled",
+        "url": "$steps.fetch-dialing-permissions-country.outputs.url",
+        "links": "$steps.fetch-dialing-permissions-country.outputs.links",
+        "update_count": "$steps.bulk-update-dialing-permissions.outputs.update_count",
+        "update_request": "$steps.bulk-update-dialing-permissions.outputs.update_request"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "establish-source-ip-to-sip-domain-mapping",
+      "summary": "This workflow allows a user to create an IP Record (representing a specific IP address) and then map it to a SIP Domain. This is crucial for controlling which source IP address Twilio uses when sending outbound SIP traffic to the user's infrastructure, enabling proper firewall configuration and routing.",
+      "description": "This workflow allows a user to create an IP Record (representing a specific IP address) and then map it to a SIP Domain. This is crucial for controlling which source IP address Twilio uses when sending outbound SIP traffic to the user's infrastructure, enabling proper firewall configuration and routing.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "IpAddress": {
+            "type": "string"
+          },
+          "SipDomainSid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-ip-record",
+          "description": "Creates a new IP Record, which is a representation of an IP address (and optional CIDR prefix length) that can be used for voice routing.",
+          "operationId": "CreateIpRecord",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "IpAddress": "$inputs.IpAddress"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        },
+        {
+          "stepId": "create-source-ip-mapping",
+          "description": "Maps the newly created IP Record to a specific SIP Domain. This mapping dictates the source IP address Twilio will use for outbound SIP traffic to that domain.",
+          "operationId": "CreateSourceIpMapping",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "IpRecordSid": "$steps.create-ip-record.outputs.sid",
+              "SipDomainSid": "$inputs.SipDomainSid"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "sid": "$response.body#/sid"
+          }
+        }
+      ],
+      "outputs": {
+        "sid": "$steps.create-source-ip-mapping.outputs.sid"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-sub-account-dialing-permissions-inheritance",
+      "summary": "This workflow allows a user to view and modify whether a sub-account inherits voice dialing permissions from the Master Project. This provides flexibility in managing permissions across different accounts, enabling centralized control or delegated autonomy.",
+      "description": "This workflow allows a user to view and modify whether a sub-account inherits voice dialing permissions from the Master Project. This provides flexibility in managing permissions across different accounts, enabling centralized control or delegated autonomy.",
+      "steps": [
+        {
+          "stepId": "fetch-dialing-permissions-settings",
+          "description": "Retrieves the current setting for voice dialing permissions inheritance for the sub-account.",
+          "operationId": "FetchDialingPermissionsSettings",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "dialing_permissions_inheritance": "$response.body#/dialing_permissions_inheritance",
+            "url": "$response.body#/url"
+          }
+        },
+        {
+          "stepId": "update-dialing-permissions-settings",
+          "description": "Updates the voice dialing permissions inheritance setting for the sub-account, allowing it to either inherit from the Master Project or manage its own permissions.",
+          "operationId": "UpdateDialingPermissionsSettings",
+          "requestBody": {
+            "contentType": "application/x-www-form-urlencoded",
+            "payload": {
+              "DialingPermissionsInheritance": "$steps.fetch-dialing-permissions-settings.outputs.dialing_permissions_inheritance"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "dialing_permissions_inheritance": "$response.body#/dialing_permissions_inheritance",
+            "url": "$response.body#/url"
+          }
+        }
+      ],
+      "outputs": {
+        "dialing_permissions_inheritance": "$steps.update-dialing-permissions-settings.outputs.dialing_permissions_inheritance",
+        "url": "$steps.update-dialing-permissions-settings.outputs.url"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

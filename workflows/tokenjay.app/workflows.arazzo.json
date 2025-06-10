@@ -1,0 +1,511 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/tokenjay.app/main/0.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "initiate-and-track-ergo-pay-payment",
+      "summary": "Allows a user or merchant to create a new payment request and then periodically check its status until completion, facilitating a secure and verifiable payment process on the Ergo blockchain.",
+      "description": "Allows a user or merchant to create a new payment request and then periodically check its status until completion, facilitating a secure and verifiable payment process on the Ergo blockchain.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "nanoErg": {
+            "type": "string"
+          },
+          "receiverAddress": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-payment-request",
+          "description": "Creates a new payment request, returning a unique request ID and an ErgoPay URL (typically a QR code) for the user to scan and sign the transaction with their Ergo wallet.",
+          "operationId": "addPaymentRequest",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "nanoErg": "$inputs.nanoErg",
+              "receiverAddress": "$inputs.receiverAddress"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "requestId": "$response.body#/requestId",
+            "ergoPayUrl": "$response.body#/ergoPayUrl"
+          }
+        },
+        {
+          "stepId": "get-payment-state",
+          "description": "Retrieves the current state of a previously created payment request using its unique request ID, allowing the initiator to monitor the transaction's progress (e.g., CREATED, WAITING, EXECUTED, INVALID).",
+          "operationId": "getPaymentState",
+          "parameters": [
+            {
+              "name": "requestId",
+              "in": "path",
+              "value": "$steps.create-payment-request.outputs.requestId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "requestId": "$response.body#/requestId",
+            "paymentRequestState": "$response.body#/paymentRequestState",
+            "txId": "$response.body#/txId"
+          }
+        }
+      ],
+      "outputs": {
+        "requestId": "$steps.get-payment-state.outputs.requestId",
+        "ergoPayUrl": "$steps.create-payment-request.outputs.ergoPayUrl",
+        "paymentRequestState": "$steps.get-payment-state.outputs.paymentRequestState",
+        "txId": "$steps.get-payment-state.outputs.txId"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "perform-sigma-usd-exchange",
+      "summary": "Guides a user through the process of exchanging Ergo for SigmaUSD (or vice versa) by first calculating the exchange details and then generating an ErgoPay request for execution.",
+      "description": "Guides a user through the process of exchanging Ergo for SigmaUSD (or vice versa) by first calculating the exchange details and then generating an ErgoPay request for execution.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "checkRate": {
+            "type": "string"
+          },
+          "executionFee": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "calculate-sigmausd-exchange-info",
+          "description": "Calculates the estimated exchange rate, associated fees (bank and TokenJay), and total amounts for a given quantity of SigmaUSD to be exchanged.",
+          "operationId": "calcSigmaUsdExchange",
+          "parameters": [
+            {
+              "name": "amount",
+              "in": "path",
+              "value": "$inputs.amount"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "exchangeRate": "$response.body#/exchangeRate",
+            "ergAmount": "$response.body#/ergAmount",
+            "ergAmountDescription": "$response.body#/ergAmountDescription",
+            "bankFeeAmount": "$response.body#/bankFeeAmount",
+            "bankFeeDescription": "$response.body#/bankFeeDescription",
+            "jayFeeAmount": "$response.body#/jayFeeAmount",
+            "jayFeeDescription": "$response.body#/jayFeeDescription",
+            "totalAmount": "$response.body#/totalAmount"
+          }
+        },
+        {
+          "stepId": "initiate-sigmausd-exchange",
+          "description": "Builds an ErgoPay request for the SigmaUSD exchange, which can be presented to the user (e.g., as a QR code) for signing with their Ergo wallet to complete the transaction.",
+          "operationId": "doSigmaUsdExchange",
+          "parameters": [
+            {
+              "name": "amount",
+              "in": "query",
+              "value": "$inputs.amount"
+            },
+            {
+              "name": "address",
+              "in": "query",
+              "value": "$inputs.address"
+            },
+            {
+              "name": "checkRate",
+              "in": "query",
+              "value": "$inputs.checkRate"
+            },
+            {
+              "name": "executionFee",
+              "in": "query",
+              "value": "$inputs.executionFee"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "message": "$response.body#/message",
+            "messageSeverity": "$response.body#/messageSeverity",
+            "address": "$response.body#/address",
+            "reducedTx": "$response.body#/reducedTx",
+            "replyTo": "$response.body#/replyTo",
+            "addresses": "$response.body#/addresses",
+            "reducedTxList": "$response.body#/reducedTxList"
+          }
+        }
+      ],
+      "outputs": {
+        "exchangeRate": "$steps.calculate-sigmausd-exchange-info.outputs.exchangeRate",
+        "ergAmount": "$steps.calculate-sigmausd-exchange-info.outputs.ergAmount",
+        "ergAmountDescription": "$steps.calculate-sigmausd-exchange-info.outputs.ergAmountDescription",
+        "bankFeeAmount": "$steps.calculate-sigmausd-exchange-info.outputs.bankFeeAmount",
+        "bankFeeDescription": "$steps.calculate-sigmausd-exchange-info.outputs.bankFeeDescription",
+        "jayFeeAmount": "$steps.calculate-sigmausd-exchange-info.outputs.jayFeeAmount",
+        "jayFeeDescription": "$steps.calculate-sigmausd-exchange-info.outputs.jayFeeDescription",
+        "totalAmount": "$steps.calculate-sigmausd-exchange-info.outputs.totalAmount",
+        "message": "$steps.initiate-sigmausd-exchange.outputs.message",
+        "messageSeverity": "$steps.initiate-sigmausd-exchange.outputs.messageSeverity",
+        "address": "$steps.initiate-sigmausd-exchange.outputs.address",
+        "reducedTx": "$steps.initiate-sigmausd-exchange.outputs.reducedTx",
+        "replyTo": "$steps.initiate-sigmausd-exchange.outputs.replyTo",
+        "addresses": "$steps.initiate-sigmausd-exchange.outputs.addresses",
+        "reducedTxList": "$steps.initiate-sigmausd-exchange.outputs.reducedTxList"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "perform-sigma-rsv-exchange",
+      "summary": "Enables a user to calculate the details of a SigmaRSV exchange and then generate an ErgoPay request to execute it, facilitating the acquisition or disposal of SigmaRSV tokens.",
+      "description": "Enables a user to calculate the details of a SigmaRSV exchange and then generate an ErgoPay request to execute it, facilitating the acquisition or disposal of SigmaRSV tokens.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "checkRate": {
+            "type": "string"
+          },
+          "executionFee": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "calculate-sigrsv-exchange-info",
+          "description": "Calculates the estimated exchange rate, associated fees (bank and TokenJay), and total amounts for a given quantity of SigmaRSV to be exchanged.",
+          "operationId": "calcSigmaRsvExchange",
+          "parameters": [
+            {
+              "name": "amount",
+              "in": "path",
+              "value": "$inputs.amount"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "exchangeRate": "$response.body#/exchangeRate",
+            "ergAmount": "$response.body#/ergAmount",
+            "ergAmountDescription": "$response.body#/ergAmountDescription",
+            "bankFeeAmount": "$response.body#/bankFeeAmount",
+            "bankFeeDescription": "$response.body#/bankFeeDescription",
+            "jayFeeAmount": "$response.body#/jayFeeAmount",
+            "jayFeeDescription": "$response.body#/jayFeeDescription",
+            "totalAmount": "$response.body#/totalAmount"
+          }
+        },
+        {
+          "stepId": "initiate-sigrsv-exchange",
+          "description": "Builds an ErgoPay request for the SigmaRSV exchange, which can be presented to the user for signing with their Ergo wallet to complete the transaction.",
+          "operationId": "doSigmaRsvExchange",
+          "parameters": [
+            {
+              "name": "amount",
+              "in": "query",
+              "value": "$inputs.amount"
+            },
+            {
+              "name": "address",
+              "in": "query",
+              "value": "$inputs.address"
+            },
+            {
+              "name": "checkRate",
+              "in": "query",
+              "value": "$inputs.checkRate"
+            },
+            {
+              "name": "executionFee",
+              "in": "query",
+              "value": "$inputs.executionFee"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "message": "$response.body#/message",
+            "messageSeverity": "$response.body#/messageSeverity",
+            "address": "$response.body#/address",
+            "reducedTx": "$response.body#/reducedTx",
+            "replyTo": "$response.body#/replyTo",
+            "addresses": "$response.body#/addresses",
+            "reducedTxList": "$response.body#/reducedTxList"
+          }
+        }
+      ],
+      "outputs": {
+        "exchangeRate": "$steps.calculate-sigrsv-exchange-info.outputs.exchangeRate",
+        "ergAmount": "$steps.calculate-sigrsv-exchange-info.outputs.ergAmount",
+        "ergAmountDescription": "$steps.calculate-sigrsv-exchange-info.outputs.ergAmountDescription",
+        "bankFeeAmount": "$steps.calculate-sigrsv-exchange-info.outputs.bankFeeAmount",
+        "bankFeeDescription": "$steps.calculate-sigrsv-exchange-info.outputs.bankFeeDescription",
+        "jayFeeAmount": "$steps.calculate-sigrsv-exchange-info.outputs.jayFeeAmount",
+        "jayFeeDescription": "$steps.calculate-sigrsv-exchange-info.outputs.jayFeeDescription",
+        "totalAmount": "$steps.calculate-sigrsv-exchange-info.outputs.totalAmount",
+        "message": "$steps.initiate-sigrsv-exchange.outputs.message",
+        "messageSeverity": "$steps.initiate-sigrsv-exchange.outputs.messageSeverity",
+        "address": "$steps.initiate-sigrsv-exchange.outputs.address",
+        "reducedTx": "$steps.initiate-sigrsv-exchange.outputs.reducedTx",
+        "replyTo": "$steps.initiate-sigrsv-exchange.outputs.replyTo",
+        "addresses": "$steps.initiate-sigrsv-exchange.outputs.addresses",
+        "reducedTxList": "$steps.initiate-sigrsv-exchange.outputs.reducedTxList"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "initiate-token-burn-via-mosaik-app",
+      "summary": "Allows a user to interact with the TokenJay Mosaik application to prepare a token burning transaction and then retrieve the ErgoPay request for wallet signing.",
+      "description": "Allows a user to interact with the TokenJay Mosaik application to prepare a token burning transaction and then retrieve the ErgoPay request for wallet signing.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "prepare-token-burn-transaction_body": {
+            "type": "object"
+          },
+          "uuid": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-token-burn-mosaik-app",
+          "description": "Retrieves the main Mosaik application view for token burning, which includes UI elements and available actions for the user.",
+          "operationId": "mainApp",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "appVersion": "$response.body#/appVersion",
+            "actions": "$response.body#/actions",
+            "view": "$response.body#/view",
+            "manifest": "$response.body#/manifest"
+          }
+        },
+        {
+          "stepId": "prepare-token-burn-transaction",
+          "description": "Prepares the token burning transaction based on dynamic user input from the Mosaik app's interface, returning an action ID that identifies the prepared transaction.",
+          "operationId": "prepareTransaction",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.prepare-token-burn-transaction_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "action_id": "$response.body#/action_id",
+            "appVersion": "$response.body#/appVersion"
+          }
+        },
+        {
+          "stepId": "get-burning-ergopay-request",
+          "description": "Retrieves the final ErgoPay request for the prepared token burning transaction, ready to be presented to the user for signing with their Ergo wallet.",
+          "operationId": "getBurningTransaction",
+          "parameters": [
+            {
+              "name": "uuid",
+              "in": "path",
+              "value": "$steps.prepare-token-burn-transaction.outputs.action_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "message": "$response.body#/message",
+            "messageSeverity": "$response.body#/messageSeverity",
+            "address": "$response.body#/address",
+            "reducedTx": "$response.body#/reducedTx",
+            "replyTo": "$response.body#/replyTo",
+            "addresses": "$response.body#/addresses",
+            "reducedTxList": "$response.body#/reducedTxList"
+          }
+        }
+      ],
+      "outputs": {
+        "appVersion": "$steps.prepare-token-burn-transaction.outputs.appVersion",
+        "actions": "$steps.get-token-burn-mosaik-app.outputs.actions",
+        "view": "$steps.get-token-burn-mosaik-app.outputs.view",
+        "manifest": "$steps.get-token-burn-mosaik-app.outputs.manifest",
+        "action_id": "$steps.prepare-token-burn-transaction.outputs.action_id",
+        "message": "$steps.get-burning-ergopay-request.outputs.message",
+        "messageSeverity": "$steps.get-burning-ergopay-request.outputs.messageSeverity",
+        "address": "$steps.get-burning-ergopay-request.outputs.address",
+        "reducedTx": "$steps.get-burning-ergopay-request.outputs.reducedTx",
+        "replyTo": "$steps.get-burning-ergopay-request.outputs.replyTo",
+        "addresses": "$steps.get-burning-ergopay-request.outputs.addresses",
+        "reducedTxList": "$steps.get-burning-ergopay-request.outputs.reducedTxList"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

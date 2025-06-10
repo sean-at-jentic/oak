@@ -1,0 +1,1017 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/yodlee.com/main/1.1.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "user-onboarding-and-manual-account-creation",
+      "summary": "This workflow enables a new user to register with Yodlee, obtain an access token, and then manually add a financial account (e.g., a real estate asset or a simple bank account) to their profile. It includes an optional step for validating real estate addresses.",
+      "description": "This workflow enables a new user to register with Yodlee, obtain an access token, and then manually add a financial account (e.g., a real estate asset or a simple bank account) to their profile. It includes an optional step for validating real estate addresses.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "account": {
+            "type": "string"
+          },
+          "accountId": {
+            "type": "string"
+          },
+          "include": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "register-user",
+          "description": "Registers a new user in the Yodlee system, creating their profile and initial session.",
+          "operationId": "registerUser",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "user": "$inputs.user"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "user.session.userSession": "$response.body#/user.session.userSession",
+            "user.id": "$response.body#/user.id",
+            "user.loginName": "$response.body#/user.loginName"
+          }
+        },
+        {
+          "stepId": "generate-user-access-token",
+          "description": "Generates an access token required for subsequent user-specific API calls.",
+          "operationId": "generateAccessToken",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "token.accessToken": "$response.body#/token.accessToken"
+          }
+        },
+        {
+          "stepId": "evaluate-address-for-real-estate",
+          "description": "Optionally validates a real estate address before adding a manual real estate account. This helps prevent errors during account creation.",
+          "operationId": "evaluateAddress",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "address": "$inputs.address"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "isValidAddress": "$response.body#/isValidAddress",
+            "address": "$response.body#/address"
+          }
+        },
+        {
+          "stepId": "add-manual-account",
+          "description": "Adds a manual financial account (e.g., bank, credit card, investment, real estate) to the user's profile.",
+          "operationId": "createManualAccount",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "account": "$inputs.account"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "account[0].id": "$response.body#/account[0].id",
+            "account[0].accountName": "$response.body#/account[0].accountName",
+            "account[0].accountNumber": "$response.body#/account[0].accountNumber"
+          }
+        },
+        {
+          "stepId": "get-newly-added-account-details",
+          "description": "Retrieves the detailed information for the newly added manual account to confirm its successful creation and status.",
+          "operationId": "getAccount",
+          "parameters": [
+            {
+              "name": "accountId",
+              "in": "path",
+              "value": "$inputs.accountId"
+            },
+            {
+              "name": "include",
+              "in": "query",
+              "value": "$inputs.include"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "account": "$response.body#/account"
+          }
+        }
+      ],
+      "outputs": {
+        "user.session.userSession": "$steps.register-user.outputs.user.session.userSession",
+        "user.id": "$steps.register-user.outputs.user.id",
+        "user.loginName": "$steps.register-user.outputs.user.loginName",
+        "token.accessToken": "$steps.generate-user-access-token.outputs.token.accessToken",
+        "isValidAddress": "$steps.evaluate-address-for-real-estate.outputs.isValidAddress",
+        "address": "$steps.evaluate-address-for-real-estate.outputs.address",
+        "account[0].id": "$steps.add-manual-account.outputs.account[0].id",
+        "account[0].accountName": "$steps.add-manual-account.outputs.account[0].accountName",
+        "account[0].accountNumber": "$steps.add-manual-account.outputs.account[0].accountNumber",
+        "account": "$steps.get-newly-added-account-details.outputs.account"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "comprehensive-financial-overview",
+      "summary": "This workflow provides a holistic financial snapshot for a user, aggregating their account balances, recent transactions, net worth, and investment holdings from all linked financial institutions.",
+      "description": "This workflow provides a holistic financial snapshot for a user, aggregating their account balances, recent transactions, net worth, and investment holdings from all linked financial institutions.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string"
+          },
+          "container": {
+            "type": "string"
+          },
+          "include": {
+            "type": "string"
+          },
+          "providerAccountId": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "baseType": {
+            "type": "string"
+          },
+          "categoryId": {
+            "type": "string"
+          },
+          "categoryType": {
+            "type": "string"
+          },
+          "detailCategoryId": {
+            "type": "string"
+          },
+          "fromDate": {
+            "type": "string"
+          },
+          "highLevelCategoryId": {
+            "type": "string"
+          },
+          "keyword": {
+            "type": "string"
+          },
+          "skip": {
+            "type": "string"
+          },
+          "toDate": {
+            "type": "string"
+          },
+          "top": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "accountIds": {
+            "type": "string"
+          },
+          "interval": {
+            "type": "string"
+          },
+          "assetClassification.classificationType": {
+            "type": "string"
+          },
+          "classificationValue": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "generate-user-access-token",
+          "description": "Generates an access token for the user to access their financial data.",
+          "operationId": "generateAccessToken",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "token.accessToken": "$response.body#/token.accessToken"
+          }
+        },
+        {
+          "stepId": "get-all-accounts",
+          "description": "Retrieves a list of all financial accounts (aggregated and manual) linked to the user's profile.",
+          "operationId": "getAllAccounts",
+          "parameters": [
+            {
+              "name": "accountId",
+              "in": "query",
+              "value": "$inputs.accountId"
+            },
+            {
+              "name": "container",
+              "in": "query",
+              "value": "$inputs.container"
+            },
+            {
+              "name": "include",
+              "in": "query",
+              "value": "$inputs.include"
+            },
+            {
+              "name": "providerAccountId",
+              "in": "query",
+              "value": "$inputs.providerAccountId"
+            },
+            {
+              "name": "requestId",
+              "in": "query",
+              "value": "$inputs.requestId"
+            },
+            {
+              "name": "status",
+              "in": "query",
+              "value": "$inputs.status"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "account": "$response.body#/account"
+          }
+        },
+        {
+          "stepId": "get-transactions",
+          "description": "Fetches a list of transactions across all or specific accounts for the user, allowing for filtering by date, category, or keywords.",
+          "operationId": "getTransactions",
+          "parameters": [
+            {
+              "name": "accountId",
+              "in": "query",
+              "value": "$steps.get-all-accounts.outputs.account.id"
+            },
+            {
+              "name": "baseType",
+              "in": "query",
+              "value": "$inputs.baseType"
+            },
+            {
+              "name": "categoryId",
+              "in": "query",
+              "value": "$inputs.categoryId"
+            },
+            {
+              "name": "categoryType",
+              "in": "query",
+              "value": "$inputs.categoryType"
+            },
+            {
+              "name": "container",
+              "in": "query",
+              "value": "$inputs.container"
+            },
+            {
+              "name": "detailCategoryId",
+              "in": "query",
+              "value": "$inputs.detailCategoryId"
+            },
+            {
+              "name": "fromDate",
+              "in": "query",
+              "value": "$inputs.fromDate"
+            },
+            {
+              "name": "highLevelCategoryId",
+              "in": "query",
+              "value": "$inputs.highLevelCategoryId"
+            },
+            {
+              "name": "keyword",
+              "in": "query",
+              "value": "$inputs.keyword"
+            },
+            {
+              "name": "skip",
+              "in": "query",
+              "value": "$inputs.skip"
+            },
+            {
+              "name": "toDate",
+              "in": "query",
+              "value": "$inputs.toDate"
+            },
+            {
+              "name": "top",
+              "in": "query",
+              "value": "$inputs.top"
+            },
+            {
+              "name": "type",
+              "in": "query",
+              "value": "$inputs.type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "transaction": "$response.body#/transaction"
+          }
+        },
+        {
+          "stepId": "get-networth-summary",
+          "description": "Calculates and retrieves the user's net worth summary, optionally including historical balances.",
+          "operationId": "getNetworth",
+          "parameters": [
+            {
+              "name": "accountIds",
+              "in": "query",
+              "value": "$steps.get-all-accounts.outputs.account.id"
+            },
+            {
+              "name": "container",
+              "in": "query",
+              "value": "$inputs.container"
+            },
+            {
+              "name": "fromDate",
+              "in": "query",
+              "value": "$inputs.fromDate"
+            },
+            {
+              "name": "include",
+              "in": "query",
+              "value": "$inputs.include"
+            },
+            {
+              "name": "interval",
+              "in": "query",
+              "value": "$inputs.interval"
+            },
+            {
+              "name": "skip",
+              "in": "query",
+              "value": "$inputs.skip"
+            },
+            {
+              "name": "toDate",
+              "in": "query",
+              "value": "$inputs.toDate"
+            },
+            {
+              "name": "top",
+              "in": "query",
+              "value": "$inputs.top"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "networth": "$response.body#/networth"
+          }
+        },
+        {
+          "stepId": "get-holdings",
+          "description": "Retrieves details of investment holdings for the user, including asset classification information.",
+          "operationId": "getHoldings",
+          "parameters": [
+            {
+              "name": "accountId",
+              "in": "query",
+              "value": "$steps.get-all-accounts.outputs.account.id"
+            },
+            {
+              "name": "assetClassification.classificationType",
+              "in": "query",
+              "value": "$inputs.assetClassification.classificationType"
+            },
+            {
+              "name": "classificationValue",
+              "in": "query",
+              "value": "$inputs.classificationValue"
+            },
+            {
+              "name": "include",
+              "in": "query",
+              "value": "$inputs.include"
+            },
+            {
+              "name": "providerAccountId",
+              "in": "query",
+              "value": "$inputs.providerAccountId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "holding": "$response.body#/holding"
+          }
+        }
+      ],
+      "outputs": {
+        "token.accessToken": "$steps.generate-user-access-token.outputs.token.accessToken",
+        "account": "$steps.get-all-accounts.outputs.account",
+        "transaction": "$steps.get-transactions.outputs.transaction",
+        "networth": "$steps.get-networth-summary.outputs.networth",
+        "holding": "$steps.get-holdings.outputs.holding"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "account-data-refresh-and-status-monitoring",
+      "summary": "This workflow allows an application to trigger a refresh of a user's aggregated financial data from their linked institutions and continuously monitor the status of the refresh process until completion.",
+      "description": "This workflow allows an application to trigger a refresh of a user's aggregated financial data from their linked institutions and continuously monitor the status of the refresh process until completion.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "include": {
+            "type": "string"
+          },
+          "providerIds": {
+            "type": "string"
+          },
+          "providerAccountIds": {
+            "type": "string"
+          },
+          "field": {
+            "type": "string"
+          },
+          "providerAccountId": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "accountId": {
+            "type": "string"
+          },
+          "container": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "generate-user-access-token",
+          "description": "Generates an access token for the user to initiate data refresh operations.",
+          "operationId": "generateAccessToken",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "token.accessToken": "$response.body#/token.accessToken"
+          }
+        },
+        {
+          "stepId": "get-all-provider-accounts",
+          "description": "Retrieves a list of all provider accounts linked to the user, identifying which accounts are available for refresh.",
+          "operationId": "getAllProviderAccounts",
+          "parameters": [
+            {
+              "name": "include",
+              "in": "query",
+              "value": "$inputs.include"
+            },
+            {
+              "name": "providerIds",
+              "in": "query",
+              "value": "$inputs.providerIds"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "providerAccount": "$response.body#/providerAccount"
+          }
+        },
+        {
+          "stepId": "refresh-provider-account",
+          "description": "Initiates a data refresh for a specific provider account, pulling the latest information from the financial institution.",
+          "operationId": "editCredentialsOrRefreshProviderAccount",
+          "parameters": [
+            {
+              "name": "providerAccountIds",
+              "in": "query",
+              "value": "$steps.get-all-provider-accounts.outputs.providerAccount.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "providerAccountIds": "$steps.get-all-provider-accounts.outputs.providerAccount[0].id",
+              "field": "$inputs.field"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "providerAccount[0].id": "$response.body#/providerAccount[0].id",
+            "providerAccount[0].requestId": "$response.body#/providerAccount[0].requestId",
+            "providerAccount[0].status": "$response.body#/providerAccount[0].status",
+            "providerAccount[0].loginForm": "$response.body#/providerAccount[0].loginForm"
+          }
+        },
+        {
+          "stepId": "poll-provider-account-status",
+          "description": "Continuously polls the status of the provider account refresh process, checking for completion or required user input (e.g., MFA).",
+          "operationId": "getProviderAccount",
+          "parameters": [
+            {
+              "name": "include",
+              "in": "query",
+              "value": "$inputs.include"
+            },
+            {
+              "name": "providerAccountId",
+              "in": "path",
+              "value": "$inputs.providerAccountId"
+            },
+            {
+              "name": "requestId",
+              "in": "query",
+              "value": "$inputs.requestId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "providerAccount[0].status": "$response.body#/providerAccount[0].status",
+            "providerAccount[0].loginForm": "$response.body#/providerAccount[0].loginForm"
+          }
+        },
+        {
+          "stepId": "get-updated-accounts",
+          "description": "Retrieves the updated account details and balances after a successful data refresh.",
+          "operationId": "getAllAccounts",
+          "parameters": [
+            {
+              "name": "accountId",
+              "in": "query",
+              "value": "$inputs.accountId"
+            },
+            {
+              "name": "container",
+              "in": "query",
+              "value": "$inputs.container"
+            },
+            {
+              "name": "include",
+              "in": "query",
+              "value": "$inputs.include"
+            },
+            {
+              "name": "providerAccountId",
+              "in": "query",
+              "value": "$inputs.providerAccountId"
+            },
+            {
+              "name": "requestId",
+              "in": "query",
+              "value": "$inputs.requestId"
+            },
+            {
+              "name": "status",
+              "in": "query",
+              "value": "$inputs.status"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "account": "$response.body#/account"
+          }
+        }
+      ],
+      "outputs": {
+        "token.accessToken": "$steps.generate-user-access-token.outputs.token.accessToken",
+        "providerAccount": "$steps.get-all-provider-accounts.outputs.providerAccount",
+        "providerAccount[0].id": "$steps.refresh-provider-account.outputs.providerAccount[0].id",
+        "providerAccount[0].requestId": "$steps.refresh-provider-account.outputs.providerAccount[0].requestId",
+        "providerAccount[0].status": "$steps.poll-provider-account-status.outputs.providerAccount[0].status",
+        "providerAccount[0].loginForm": "$steps.poll-provider-account-status.outputs.providerAccount[0].loginForm",
+        "account": "$steps.get-updated-accounts.outputs.account"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "transaction-categorization-and-rule-management",
+      "summary": "This workflow allows users to manage and apply custom categorization rules to their financial transactions, enhancing personal finance management and reporting.",
+      "description": "This workflow allows users to manage and apply custom categorization rules to their financial transactions, enhancing personal finance management and reporting.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "ruleParam": {
+            "type": "string"
+          },
+          "accountId": {
+            "type": "string"
+          },
+          "baseType": {
+            "type": "string"
+          },
+          "categoryId": {
+            "type": "string"
+          },
+          "categoryType": {
+            "type": "string"
+          },
+          "container": {
+            "type": "string"
+          },
+          "detailCategoryId": {
+            "type": "string"
+          },
+          "fromDate": {
+            "type": "string"
+          },
+          "highLevelCategoryId": {
+            "type": "string"
+          },
+          "keyword": {
+            "type": "string"
+          },
+          "skip": {
+            "type": "string"
+          },
+          "toDate": {
+            "type": "string"
+          },
+          "top": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "generate-user-access-token",
+          "description": "Generates an access token for the user to manage transaction categories and rules.",
+          "operationId": "generateAccessToken",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "token.accessToken": "$response.body#/token.accessToken"
+          }
+        },
+        {
+          "stepId": "get-transaction-category-list",
+          "description": "Retrieves the list of system-defined and user-defined transaction categories, which are necessary for creating new categories or rules.",
+          "operationId": "getTransactionCategories",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "transactionCategory": "$response.body#/transactionCategory"
+          }
+        },
+        {
+          "stepId": "create-user-defined-category",
+          "description": "Creates a new user-defined transaction category under an existing system-defined parent category.",
+          "operationId": "createTransactionCategory",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "parentCategoryId": "$steps.get-transaction-category-list.outputs.transactionCategory[0].id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "category_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "create-transaction-categorization-rule",
+          "description": "Creates a new rule to automatically categorize transactions based on specified criteria (e.g., amount, description).",
+          "operationId": "createOrRunTransactionCategorizationRules",
+          "parameters": [
+            {
+              "name": "action",
+              "in": "query",
+              "value": "$inputs.action"
+            },
+            {
+              "name": "ruleParam",
+              "in": "query",
+              "value": "$inputs.ruleParam"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "rule_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "run-all-transaction-categorization-rules",
+          "description": "Applies all active transaction categorization rules to the user's transactions, updating their categories.",
+          "operationId": "createOrRunTransactionCategorizationRules",
+          "parameters": [
+            {
+              "name": "action",
+              "in": "query",
+              "value": "$inputs.action"
+            },
+            {
+              "name": "ruleParam",
+              "in": "query",
+              "value": "$inputs.ruleParam"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "rules_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "get-transactions-after-categorization",
+          "description": "Retrieves transactions to view the updated categories after applying the categorization rules.",
+          "operationId": "getTransactions",
+          "parameters": [
+            {
+              "name": "accountId",
+              "in": "query",
+              "value": "$inputs.accountId"
+            },
+            {
+              "name": "baseType",
+              "in": "query",
+              "value": "$inputs.baseType"
+            },
+            {
+              "name": "categoryId",
+              "in": "query",
+              "value": "$inputs.categoryId"
+            },
+            {
+              "name": "categoryType",
+              "in": "query",
+              "value": "$inputs.categoryType"
+            },
+            {
+              "name": "container",
+              "in": "query",
+              "value": "$inputs.container"
+            },
+            {
+              "name": "detailCategoryId",
+              "in": "query",
+              "value": "$inputs.detailCategoryId"
+            },
+            {
+              "name": "fromDate",
+              "in": "query",
+              "value": "$inputs.fromDate"
+            },
+            {
+              "name": "highLevelCategoryId",
+              "in": "query",
+              "value": "$inputs.highLevelCategoryId"
+            },
+            {
+              "name": "keyword",
+              "in": "query",
+              "value": "$inputs.keyword"
+            },
+            {
+              "name": "skip",
+              "in": "query",
+              "value": "$inputs.skip"
+            },
+            {
+              "name": "toDate",
+              "in": "query",
+              "value": "$inputs.toDate"
+            },
+            {
+              "name": "top",
+              "in": "query",
+              "value": "$inputs.top"
+            },
+            {
+              "name": "type",
+              "in": "query",
+              "value": "$inputs.type"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "transaction": "$response.body#/transaction"
+          }
+        }
+      ],
+      "outputs": {
+        "token.accessToken": "$steps.generate-user-access-token.outputs.token.accessToken",
+        "transactionCategory": "$steps.get-transaction-category-list.outputs.transactionCategory",
+        "category_data": "$steps.create-user-defined-category.outputs.category_data",
+        "rule_data": "$steps.create-transaction-categorization-rule.outputs.rule_data",
+        "rules_data": "$steps.run-all-transaction-categorization-rules.outputs.rules_data",
+        "transaction": "$steps.get-transactions-after-categorization.outputs.transaction"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

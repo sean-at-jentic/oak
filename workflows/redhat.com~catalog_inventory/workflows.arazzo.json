@@ -1,0 +1,735 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/redhat.com/catalog_inventory/1.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "discover-and-order-service-offering",
+      "summary": "Allows a user to browse available service offerings, inspect their details and associated plans, and then initiate an order for a chosen offering and plan, finally monitoring the order's progress.",
+      "description": "Allows a user to browse available service offerings, inspect their details and associated plans, and then initiate an order for a chosen offering and plan, finally monitoring the order's progress.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "filter": {
+            "type": "string"
+          },
+          "sort_by": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "service_parameters": {
+            "type": "string"
+          },
+          "provider_control_parameters": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-service-offerings",
+          "description": "Retrieves a list of all available service offerings in the catalog.",
+          "operationId": "listServiceOfferings",
+          "parameters": [
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            },
+            {
+              "name": "sort_by",
+              "in": "query",
+              "value": "$inputs.sort_by"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "offering_id": "$response.body#/offering_id"
+          }
+        },
+        {
+          "stepId": "show-service-offering-details",
+          "description": "Retrieves detailed information for a specific service offering.",
+          "operationId": "showServiceOffering",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.list-service-offerings.outputs.offering_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "offering_id": "$response.body#/id",
+            "offering_name": "$response.body#/offering_name",
+            "offering_description": "$response.body#/offering_description"
+          }
+        },
+        {
+          "stepId": "list-service-offering-plans",
+          "description": "Lists all service plans associated with a specific service offering.",
+          "operationId": "listServiceOfferingServicePlans",
+          "parameters": [
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            },
+            {
+              "name": "sort_by",
+              "in": "query",
+              "value": "$inputs.sort_by"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.show-service-offering-details.outputs.offering_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "plan_id": "$response.body#/plan_id",
+            "plan_create_schema": "$response.body#/plan_create_schema"
+          }
+        },
+        {
+          "stepId": "order-service-offering",
+          "description": "Initiates an order for a service offering using a specified service plan and parameters.",
+          "operationId": "orderServiceOffering",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.show-service-offering-details.outputs.offering_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.show-service-offering-details.outputs.offering_id",
+              "service_plan_id": "$steps.list-service-offering-plans.outputs.plan_id",
+              "service_parameters": "$inputs.service_parameters",
+              "provider_control_parameters": "$inputs.provider_control_parameters"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "task_id": "$response.body#/task_id"
+          }
+        },
+        {
+          "stepId": "monitor-order-task",
+          "description": "Monitors the status and details of the asynchronous order task.",
+          "operationId": "showTask",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.order-service-offering.outputs.task_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "state": "$response.body#/state",
+            "status": "$response.body#/status",
+            "message": "$response.body#/message",
+            "completed_at": "$response.body#/completed_at"
+          }
+        }
+      ],
+      "outputs": {
+        "offering_id": "$steps.show-service-offering-details.outputs.offering_id",
+        "offering_name": "$steps.show-service-offering-details.outputs.offering_name",
+        "offering_description": "$steps.show-service-offering-details.outputs.offering_description",
+        "plan_id": "$steps.list-service-offering-plans.outputs.plan_id",
+        "plan_create_schema": "$steps.list-service-offering-plans.outputs.plan_create_schema",
+        "task_id": "$steps.order-service-offering.outputs.task_id",
+        "state": "$steps.monitor-order-task.outputs.state",
+        "status": "$steps.monitor-order-task.outputs.status",
+        "message": "$steps.monitor-order-task.outputs.message",
+        "completed_at": "$steps.monitor-order-task.outputs.completed_at"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "refresh-data-source-and-monitor-status",
+      "summary": "Allows an administrator to trigger a full refresh of a data source to ensure inventory data is up-to-date, and then track the status of the asynchronous refresh task.",
+      "description": "Allows an administrator to trigger a full refresh of a data source to ensure inventory data is up-to-date, and then track the status of the asynchronous refresh task.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "filter": {
+            "type": "string"
+          },
+          "sort_by": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-sources",
+          "description": "Retrieves a list of all configured data sources.",
+          "operationId": "listSources",
+          "parameters": [
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            },
+            {
+              "name": "sort_by",
+              "in": "query",
+              "value": "$inputs.sort_by"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "source_id": "$response.body#/source_id"
+          }
+        },
+        {
+          "stepId": "trigger-source-refresh",
+          "description": "Initiates a full refresh operation for a specific data source.",
+          "operationId": "refreshSource",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.list-sources.outputs.source_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "source_id_passed": "$response.body#/source_id_passed"
+          }
+        },
+        {
+          "stepId": "get-source-details-for-task-id",
+          "description": "Retrieves updated details of the source, including the ID of the refresh task.",
+          "operationId": "showSource",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.trigger-source-refresh.outputs.source_id_passed"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "refresh_task_id": "$response.body#/refresh_task_id"
+          }
+        },
+        {
+          "stepId": "monitor-task-status",
+          "description": "Monitors the status and details of the asynchronous refresh task.",
+          "operationId": "showTask",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-source-details-for-task-id.outputs.refresh_task_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "state": "$response.body#/state",
+            "status": "$response.body#/status",
+            "message": "$response.body#/message",
+            "completed_at": "$response.body#/completed_at"
+          }
+        }
+      ],
+      "outputs": {
+        "source_id": "$steps.list-sources.outputs.source_id",
+        "source_id_passed": "$steps.trigger-source-refresh.outputs.source_id_passed",
+        "refresh_task_id": "$steps.get-source-details-for-task-id.outputs.refresh_task_id",
+        "state": "$steps.monitor-task-status.outputs.state",
+        "status": "$steps.monitor-task-status.outputs.status",
+        "message": "$steps.monitor-task-status.outputs.message",
+        "completed_at": "$steps.monitor-task-status.outputs.completed_at"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "manage-service-inventory-tags",
+      "summary": "Allows a user to list service inventories, view their existing tags, and then add or remove tags from a specific inventory item for better organization and filtering.",
+      "description": "Allows a user to list service inventories, view their existing tags, and then add or remove tags from a specific inventory item for better organization and filtering.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "filter": {
+            "type": "string"
+          },
+          "sort_by": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-service-inventories",
+          "description": "Retrieves a collection of service inventory items.",
+          "operationId": "listServiceInventories",
+          "parameters": [
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            },
+            {
+              "name": "sort_by",
+              "in": "query",
+              "value": "$inputs.sort_by"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "inventory_id": "$response.body#/inventory_id"
+          }
+        },
+        {
+          "stepId": "show-service-inventory-details",
+          "description": "Retrieves detailed information for a specific service inventory item.",
+          "operationId": "showServiceInventory",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.list-service-inventories.outputs.inventory_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "inventory_id": "$response.body#/id",
+            "inventory_name": "$response.body#/inventory_name"
+          }
+        },
+        {
+          "stepId": "list-service-inventory-tags",
+          "description": "Lists all tags currently associated with a specific service inventory.",
+          "operationId": "listServiceInventoryTags",
+          "parameters": [
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            },
+            {
+              "name": "sort_by",
+              "in": "query",
+              "value": "$inputs.sort_by"
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.show-service-inventory-details.outputs.inventory_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "existing_tags": "$response.body#/existing_tags"
+          }
+        },
+        {
+          "stepId": "tag-service-inventory",
+          "description": "Adds one or more tags to a specific service inventory item.",
+          "operationId": "tagServiceInventory",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.show-service-inventory-details.outputs.inventory_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.show-service-inventory-details.outputs.inventory_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "added_tags": "$response.body#/0/added_tags"
+          }
+        },
+        {
+          "stepId": "untag-service-inventory",
+          "description": "Removes one or more tags from a specific service inventory item.",
+          "operationId": "untagServiceInventory",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.show-service-inventory-details.outputs.inventory_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.show-service-inventory-details.outputs.inventory_id"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "inventory_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "inventory_id": "$steps.show-service-inventory-details.outputs.inventory_id",
+        "inventory_name": "$steps.show-service-inventory-details.outputs.inventory_name",
+        "existing_tags": "$steps.list-service-inventory-tags.outputs.existing_tags",
+        "added_tags": "$steps.tag-service-inventory.outputs.added_tags",
+        "inventory_data": "$steps.untag-service-inventory.outputs.inventory_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "view-service-instance-details",
+      "summary": "Allows a user to list all deployed service instances and then retrieve detailed information for a specific instance, useful for monitoring and auditing.",
+      "description": "Allows a user to list all deployed service instances and then retrieve detailed information for a specific instance, useful for monitoring and auditing.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "filter": {
+            "type": "string"
+          },
+          "sort_by": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-service-instances",
+          "description": "Retrieves a collection of all deployed service instances.",
+          "operationId": "listServiceInstances",
+          "parameters": [
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "value": "$inputs.offset"
+            },
+            {
+              "name": "filter",
+              "in": "query",
+              "value": "$inputs.filter"
+            },
+            {
+              "name": "sort_by",
+              "in": "query",
+              "value": "$inputs.sort_by"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "instance_id": "$response.body#/instance_id"
+          }
+        },
+        {
+          "stepId": "show-service-instance-details",
+          "description": "Retrieves detailed information for a specific service instance.",
+          "operationId": "showServiceInstance",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.list-service-instances.outputs.instance_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "instance_id": "$response.body#/id",
+            "instance_name": "$response.body#/instance_name",
+            "external_url": "$response.body#/external_url",
+            "service_offering_id": "$response.body#/service_offering_id",
+            "service_plan_id": "$response.body#/service_plan_id"
+          }
+        }
+      ],
+      "outputs": {
+        "instance_id": "$steps.show-service-instance-details.outputs.instance_id",
+        "instance_name": "$steps.show-service-instance-details.outputs.instance_name",
+        "external_url": "$steps.show-service-instance-details.outputs.external_url",
+        "service_offering_id": "$steps.show-service-instance-details.outputs.service_offering_id",
+        "service_plan_id": "$steps.show-service-instance-details.outputs.service_plan_id"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

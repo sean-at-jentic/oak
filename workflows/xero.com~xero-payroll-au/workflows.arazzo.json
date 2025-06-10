@@ -1,0 +1,525 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/xero.com/xero-payroll-au/7.0.0/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "full-payroll-run-processing",
+      "summary": "This comprehensive workflow manages the end-to-end process of setting up a payroll calendar, creating a new pay run for a specific period, and then posting that pay run to finalize payroll for employees.",
+      "description": "This comprehensive workflow manages the end-to-end process of setting up a payroll calendar, creating a new pay run for a specific period, and then posting that pay run to finalize payroll for employees.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Xero-Tenant-Id": {
+            "type": "string"
+          },
+          "Idempotency-Key": {
+            "type": "string"
+          },
+          "create-payroll-calendar_body": {
+            "type": "object"
+          },
+          "PayRunID": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-payroll-calendar",
+          "description": "Defines a new payroll calendar, which dictates pay periods and payment dates.",
+          "operationId": "createPayrollCalendar",
+          "parameters": [
+            {
+              "name": "Xero-Tenant-Id",
+              "in": "header",
+              "value": "$inputs.Xero-Tenant-Id"
+            },
+            {
+              "name": "Idempotency-Key",
+              "in": "header",
+              "value": "$inputs.Idempotency-Key"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-payroll-calendar_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "PayrollCalendarID": "$response.body#/PayrollCalendars"
+          }
+        },
+        {
+          "stepId": "create-pay-run",
+          "description": "Initiates a new pay run based on a specified payroll calendar, typically in a DRAFT status.",
+          "operationId": "createPayRun",
+          "parameters": [
+            {
+              "name": "Xero-Tenant-Id",
+              "in": "header",
+              "value": "$inputs.Xero-Tenant-Id"
+            },
+            {
+              "name": "Idempotency-Key",
+              "in": "header",
+              "value": "$inputs.Idempotency-Key"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "PayrollCalendarID": "$steps.create-payroll-calendar.outputs.PayrollCalendarID"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "PayRunID": "$response.body#/PayRuns"
+          }
+        },
+        {
+          "stepId": "post-pay-run",
+          "description": "Finalizes and posts the pay run, making it official and triggering associated financial transactions.",
+          "operationId": "updatePayRun",
+          "parameters": [
+            {
+              "name": "Xero-Tenant-Id",
+              "in": "header",
+              "value": "$inputs.Xero-Tenant-Id"
+            },
+            {
+              "name": "Idempotency-Key",
+              "in": "header",
+              "value": "$inputs.Idempotency-Key"
+            },
+            {
+              "name": "PayRunID",
+              "in": "path",
+              "value": "$steps.create-pay-run.outputs.PayRunID"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "PayRunID": "$steps.create-pay-run.outputs.PayRunID"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "PayRunID": "$response.body#/PayRuns"
+          }
+        }
+      ],
+      "outputs": {
+        "PayrollCalendarID": "$steps.create-payroll-calendar.outputs.PayrollCalendarID",
+        "PayRunID": "$steps.post-pay-run.outputs.PayRunID"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "employee-onboarding--initial-setup",
+      "summary": "This workflow allows an organization to onboard a new employee by creating their core record and then updating their detailed payroll information such as bank accounts, tax declaration, or superannuation memberships.",
+      "description": "This workflow allows an organization to onboard a new employee by creating their core record and then updating their detailed payroll information such as bank accounts, tax declaration, or superannuation memberships.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Xero-Tenant-Id": {
+            "type": "string"
+          },
+          "Idempotency-Key": {
+            "type": "string"
+          },
+          "create-employee_body": {
+            "type": "object"
+          },
+          "EmployeeID": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-employee",
+          "description": "Creates a new employee record with essential details.",
+          "operationId": "createEmployee",
+          "parameters": [
+            {
+              "name": "Xero-Tenant-Id",
+              "in": "header",
+              "value": "$inputs.Xero-Tenant-Id"
+            },
+            {
+              "name": "Idempotency-Key",
+              "in": "header",
+              "value": "$inputs.Idempotency-Key"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-employee_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "EmployeeID": "$response.body#/Employees"
+          }
+        },
+        {
+          "stepId": "update-employee-payroll-details",
+          "description": "Updates an employee's payroll-related details, such as bank accounts, pay template, opening balances, tax declaration, or superannuation memberships.",
+          "operationId": "updateEmployee",
+          "parameters": [
+            {
+              "name": "Xero-Tenant-Id",
+              "in": "header",
+              "value": "$inputs.Xero-Tenant-Id"
+            },
+            {
+              "name": "Idempotency-Key",
+              "in": "header",
+              "value": "$inputs.Idempotency-Key"
+            },
+            {
+              "name": "EmployeeID",
+              "in": "path",
+              "value": "$steps.create-employee.outputs.EmployeeID"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "EmployeeID": "$steps.create-employee.outputs.EmployeeID"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "EmployeeID": "$response.body#/Employees"
+          }
+        }
+      ],
+      "outputs": {
+        "EmployeeID": "$steps.update-employee-payroll-details.outputs.EmployeeID"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "leave-application-management--approval",
+      "summary": "This workflow enables an employee or administrator to submit a new leave application and then allows an authorized user to approve it, integrating with the payroll system.",
+      "description": "This workflow enables an employee or administrator to submit a new leave application and then allows an authorized user to approve it, integrating with the payroll system.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Xero-Tenant-Id": {
+            "type": "string"
+          },
+          "Idempotency-Key": {
+            "type": "string"
+          },
+          "create-leave-application_body": {
+            "type": "object"
+          },
+          "LeaveApplicationID": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-leave-application",
+          "description": "Submits a new leave application for an employee for a specified period and leave type.",
+          "operationId": "createLeaveApplication",
+          "parameters": [
+            {
+              "name": "Xero-Tenant-Id",
+              "in": "header",
+              "value": "$inputs.Xero-Tenant-Id"
+            },
+            {
+              "name": "Idempotency-Key",
+              "in": "header",
+              "value": "$inputs.Idempotency-Key"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-leave-application_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "LeaveApplicationID": "$response.body#/LeaveApplications"
+          }
+        },
+        {
+          "stepId": "approve-leave-application",
+          "description": "Approves a previously submitted leave application, marking it as ready for payroll processing.",
+          "operationId": "approveLeaveApplication",
+          "parameters": [
+            {
+              "name": "Xero-Tenant-Id",
+              "in": "header",
+              "value": "$inputs.Xero-Tenant-Id"
+            },
+            {
+              "name": "Idempotency-Key",
+              "in": "header",
+              "value": "$inputs.Idempotency-Key"
+            },
+            {
+              "name": "LeaveApplicationID",
+              "in": "path",
+              "value": "$steps.create-leave-application.outputs.LeaveApplicationID"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "LeaveApplicationID": "$response.body#/LeaveApplications"
+          }
+        }
+      ],
+      "outputs": {
+        "LeaveApplicationID": "$steps.approve-leave-application.outputs.LeaveApplicationID"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "timesheet-submission--approval",
+      "summary": "This workflow facilitates the creation of an employee's timesheet for a specific period and its subsequent approval by a manager or administrator, preparing it for inclusion in a pay run.",
+      "description": "This workflow facilitates the creation of an employee's timesheet for a specific period and its subsequent approval by a manager or administrator, preparing it for inclusion in a pay run.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "Xero-Tenant-Id": {
+            "type": "string"
+          },
+          "Idempotency-Key": {
+            "type": "string"
+          },
+          "create-timesheet_body": {
+            "type": "object"
+          },
+          "TimesheetID": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-timesheet",
+          "description": "Creates a new timesheet for an employee, detailing hours worked against earnings rates and tracking items.",
+          "operationId": "createTimesheet",
+          "parameters": [
+            {
+              "name": "Xero-Tenant-Id",
+              "in": "header",
+              "value": "$inputs.Xero-Tenant-Id"
+            },
+            {
+              "name": "Idempotency-Key",
+              "in": "header",
+              "value": "$inputs.Idempotency-Key"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": "$inputs.create-timesheet_body"
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "TimesheetID": "$response.body#/Timesheets"
+          }
+        },
+        {
+          "stepId": "approve-timesheet",
+          "description": "Updates the status of a timesheet to 'APPROVED', indicating it has been reviewed and is ready for payroll.",
+          "operationId": "updateTimesheet",
+          "parameters": [
+            {
+              "name": "Xero-Tenant-Id",
+              "in": "header",
+              "value": "$inputs.Xero-Tenant-Id"
+            },
+            {
+              "name": "Idempotency-Key",
+              "in": "header",
+              "value": "$inputs.Idempotency-Key"
+            },
+            {
+              "name": "TimesheetID",
+              "in": "path",
+              "value": "$steps.create-timesheet.outputs.TimesheetID"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "TimesheetID": "$steps.create-timesheet.outputs.TimesheetID"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "TimesheetID": "$response.body#/Timesheets"
+          }
+        }
+      ],
+      "outputs": {
+        "TimesheetID": "$steps.approve-timesheet.outputs.TimesheetID"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

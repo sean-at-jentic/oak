@@ -1,0 +1,897 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/twitter.com/legacy/1.1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "tweet-lifecycle-management",
+      "summary": "Enables an authenticated user to post a new tweet, retrieve their own recent tweets, and then delete a specific tweet.",
+      "description": "Enables an authenticated user to post a new tweet, retrieve their own recent tweets, and then delete a specific tweet.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "in_reply_to_status_id": {
+            "type": "string"
+          },
+          "lat": {
+            "type": "string"
+          },
+          "long": {
+            "type": "string"
+          },
+          "place_id": {
+            "type": "string"
+          },
+          "display_coordinates": {
+            "type": "string"
+          },
+          "trim_user": {
+            "type": "string"
+          },
+          "count": {
+            "type": "string"
+          },
+          "since_id": {
+            "type": "string"
+          },
+          "max_id": {
+            "type": "string"
+          },
+          "exclude_replies": {
+            "type": "string"
+          },
+          "contributor_details": {
+            "type": "string"
+          },
+          "include_rts": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "post-new-tweet",
+          "description": "Publishes a new text-based tweet for the authenticating user.",
+          "operationId": "statuses.update",
+          "parameters": [
+            {
+              "name": "status",
+              "in": "query",
+              "value": "$inputs.status"
+            },
+            {
+              "name": "in_reply_to_status_id",
+              "in": "query",
+              "value": "$inputs.in_reply_to_status_id"
+            },
+            {
+              "name": "lat",
+              "in": "query",
+              "value": "$inputs.lat"
+            },
+            {
+              "name": "long",
+              "in": "query",
+              "value": "$inputs.long"
+            },
+            {
+              "name": "place_id",
+              "in": "query",
+              "value": "$inputs.place_id"
+            },
+            {
+              "name": "display_coordinates",
+              "in": "query",
+              "value": "$inputs.display_coordinates"
+            },
+            {
+              "name": "trim_user",
+              "in": "query",
+              "value": "$inputs.trim_user"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tweet_id": "$response.body#/tweet_id",
+            "tweet_text": "$response.body#/tweet_text",
+            "user_id": "$response.body#/user_id"
+          }
+        },
+        {
+          "stepId": "get-my-tweets",
+          "description": "Retrieves the most recent tweets posted by the authenticating user, including the one just posted.",
+          "operationId": "statuses.user_timeline",
+          "parameters": [
+            {
+              "name": "count",
+              "in": "query",
+              "value": "$inputs.count"
+            },
+            {
+              "name": "since_id",
+              "in": "query",
+              "value": "$inputs.since_id"
+            },
+            {
+              "name": "max_id",
+              "in": "query",
+              "value": "$inputs.max_id"
+            },
+            {
+              "name": "trim_user",
+              "in": "query",
+              "value": "$inputs.trim_user"
+            },
+            {
+              "name": "exclude_replies",
+              "in": "query",
+              "value": "$inputs.exclude_replies"
+            },
+            {
+              "name": "contributor_details",
+              "in": "query",
+              "value": "$inputs.contributor_details"
+            },
+            {
+              "name": "include_rts",
+              "in": "query",
+              "value": "$inputs.include_rts"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "tweet_ids": "$response.body#/tweet_ids",
+            "tweet_objects": "$response.body#/tweet_objects"
+          }
+        },
+        {
+          "stepId": "delete-specific-tweet",
+          "description": "Deletes a specific tweet by its ID, which must be authored by the authenticating user.",
+          "operationId": "statuses.destroy",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "trim_user",
+              "in": "query",
+              "value": "$inputs.trim_user"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "deleted_tweet_confirmation": "$response.body#/deleted_tweet_confirmation"
+          }
+        }
+      ],
+      "outputs": {
+        "tweet_id": "$steps.post-new-tweet.outputs.tweet_id",
+        "tweet_text": "$steps.post-new-tweet.outputs.tweet_text",
+        "user_id": "$steps.post-new-tweet.outputs.user_id",
+        "tweet_ids": "$steps.get-my-tweets.outputs.tweet_ids",
+        "tweet_objects": "$steps.get-my-tweets.outputs.tweet_objects",
+        "deleted_tweet_confirmation": "$steps.delete-specific-tweet.outputs.deleted_tweet_confirmation"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "discover-local-trends",
+      "summary": "Allows a user to find geographical locations with trending topics closest to a specified coordinate and then retrieve the top trends for one of those locations.",
+      "description": "Allows a user to find geographical locations with trending topics closest to a specified coordinate and then retrieve the top trends for one of those locations.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "lat": {
+            "type": "string"
+          },
+          "long": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "exclude": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-closest-trend-locations",
+          "description": "Returns locations with trending topic information, sorted by distance to a given latitude/longitude.",
+          "operationId": "trends.closest",
+          "parameters": [
+            {
+              "name": "lat",
+              "in": "query",
+              "value": "$inputs.lat"
+            },
+            {
+              "name": "long",
+              "in": "query",
+              "value": "$inputs.long"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "woeids": "$response.body#/woeids",
+            "location_names": "$response.body#/location_names"
+          }
+        },
+        {
+          "stepId": "get-trends-for-place",
+          "description": "Retrieves the top 10 trending topics for a specific Yahoo! Where On Earth ID (WOEID).",
+          "operationId": "trends.place",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "query",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "exclude",
+              "in": "query",
+              "value": "$inputs.exclude"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "trending_topics": "$response.body#/trending_topics"
+          }
+        }
+      ],
+      "outputs": {
+        "woeids": "$steps.get-closest-trend-locations.outputs.woeids",
+        "location_names": "$steps.get-closest-trend-locations.outputs.location_names",
+        "trending_topics": "$steps.get-trends-for-place.outputs.trending_topics"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "view-and-update-account-preferences",
+      "summary": "Allows an authenticated user to retrieve their current account settings and then update specific preferences such as trend location, sleep time, timezone, and language.",
+      "description": "Allows an authenticated user to retrieve their current account settings and then update specific preferences such as trend location, sleep time, timezone, and language.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "trend_location_woeid": {
+            "type": "string"
+          },
+          "sleep_time_enabled": {
+            "type": "string"
+          },
+          "start_sleep_time": {
+            "type": "string"
+          },
+          "end_sleep_time": {
+            "type": "string"
+          },
+          "time_zone": {
+            "type": "string"
+          },
+          "lang": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-current-settings",
+          "description": "Retrieves the current account settings for the authenticating user.",
+          "operationId": "account.settings.get",
+          "parameters": [
+            {
+              "name": "trend_location_woeid",
+              "in": "query",
+              "value": "$inputs.trend_location_woeid"
+            },
+            {
+              "name": "sleep_time_enabled",
+              "in": "query",
+              "value": "$inputs.sleep_time_enabled"
+            },
+            {
+              "name": "start_sleep_time",
+              "in": "query",
+              "value": "$inputs.start_sleep_time"
+            },
+            {
+              "name": "end_sleep_time",
+              "in": "query",
+              "value": "$inputs.end_sleep_time"
+            },
+            {
+              "name": "time_zone",
+              "in": "query",
+              "value": "$inputs.time_zone"
+            },
+            {
+              "name": "lang",
+              "in": "query",
+              "value": "$inputs.lang"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "trend_location_woeid": "$response.body#/trend_location_woeid",
+            "sleep_time_enabled": "$response.body#/sleep_time_enabled",
+            "start_sleep_time": "$response.body#/start_sleep_time",
+            "end_sleep_time": "$response.body#/end_sleep_time",
+            "time_zone": "$response.body#/time_zone",
+            "lang": "$response.body#/lang"
+          }
+        },
+        {
+          "stepId": "update-account-preferences",
+          "description": "Updates the authenticating user's account settings with new values. The user provides the desired new values for any of the optional parameters.",
+          "operationId": "account.settings.post",
+          "parameters": [
+            {
+              "name": "trend_location_woeid",
+              "in": "query",
+              "value": "$inputs.trend_location_woeid"
+            },
+            {
+              "name": "sleep_time_enabled",
+              "in": "query",
+              "value": "$inputs.sleep_time_enabled"
+            },
+            {
+              "name": "start_sleep_time",
+              "in": "query",
+              "value": "$inputs.start_sleep_time"
+            },
+            {
+              "name": "end_sleep_time",
+              "in": "query",
+              "value": "$inputs.end_sleep_time"
+            },
+            {
+              "name": "time_zone",
+              "in": "query",
+              "value": "$inputs.time_zone"
+            },
+            {
+              "name": "lang",
+              "in": "query",
+              "value": "$inputs.lang"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "updated_settings_confirmation": "$response.body#/updated_settings_confirmation"
+          }
+        }
+      ],
+      "outputs": {
+        "trend_location_woeid": "$steps.get-current-settings.outputs.trend_location_woeid",
+        "sleep_time_enabled": "$steps.get-current-settings.outputs.sleep_time_enabled",
+        "start_sleep_time": "$steps.get-current-settings.outputs.start_sleep_time",
+        "end_sleep_time": "$steps.get-current-settings.outputs.end_sleep_time",
+        "time_zone": "$steps.get-current-settings.outputs.time_zone",
+        "lang": "$steps.get-current-settings.outputs.lang",
+        "updated_settings_confirmation": "$steps.update-account-preferences.outputs.updated_settings_confirmation"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "direct-message-inbox-management",
+      "summary": "Allows an authenticated user to view their incoming direct messages, inspect a specific message, and then delete it.",
+      "description": "Allows an authenticated user to view their incoming direct messages, inspect a specific message, and then delete it.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "string"
+          },
+          "since_id": {
+            "type": "string"
+          },
+          "max_id": {
+            "type": "string"
+          },
+          "include_entities": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "skip_status": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-incoming-dms",
+          "description": "Retrieves the most recent direct messages sent to the authenticating user.",
+          "operationId": "direct_messages",
+          "parameters": [
+            {
+              "name": "count",
+              "in": "query",
+              "value": "$inputs.count"
+            },
+            {
+              "name": "since_id",
+              "in": "query",
+              "value": "$inputs.since_id"
+            },
+            {
+              "name": "max_id",
+              "in": "query",
+              "value": "$inputs.max_id"
+            },
+            {
+              "name": "include_entities",
+              "in": "query",
+              "value": "$inputs.include_entities"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "skip_status",
+              "in": "query",
+              "value": "$inputs.skip_status"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "dm_ids": "$response.body#/dm_ids",
+            "dm_objects": "$response.body#/dm_objects"
+          }
+        },
+        {
+          "stepId": "view-specific-dm",
+          "description": "Retrieves a single direct message specified by its ID.",
+          "operationId": "direct_messages.show",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "query",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "dm_details": "$response.body#/dm_details"
+          }
+        },
+        {
+          "stepId": "delete-specific-dm",
+          "description": "Deletes a specific direct message received by the authenticating user.",
+          "operationId": "direct_messages.destroy",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "query",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "include_entities",
+              "in": "query",
+              "value": "$inputs.include_entities"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "deletion_confirmation": "$response.body#/deletion_confirmation"
+          }
+        }
+      ],
+      "outputs": {
+        "dm_ids": "$steps.get-incoming-dms.outputs.dm_ids",
+        "dm_objects": "$steps.get-incoming-dms.outputs.dm_objects",
+        "dm_details": "$steps.view-specific-dm.outputs.dm_details",
+        "deletion_confirmation": "$steps.delete-specific-dm.outputs.deletion_confirmation"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "twitter-list-content-browsing",
+      "summary": "Enables an authenticated user to discover lists they subscribe to or own, and then view the tweet timeline of a selected list.",
+      "description": "Enables an authenticated user to discover lists they subscribe to or own, and then view the tweet timeline of a selected list.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "screen_name": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "owner_screen_name": {
+            "type": "string"
+          },
+          "owner_id": {
+            "type": "string"
+          },
+          "since_id": {
+            "type": "string"
+          },
+          "max_id": {
+            "type": "string"
+          },
+          "count": {
+            "type": "string"
+          },
+          "include_entities": {
+            "type": "string"
+          },
+          "include_rts": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-my-lists",
+          "description": "Returns all lists the authenticating user subscribes to, including their own.",
+          "operationId": "lists.list",
+          "parameters": [
+            {
+              "name": "screen_name",
+              "in": "query",
+              "value": "$inputs.screen_name"
+            },
+            {
+              "name": "user_id",
+              "in": "query",
+              "value": "$inputs.user_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "list_ids": "$response.body#/list_ids",
+            "list_slugs": "$response.body#/list_slugs",
+            "list_owner_screen_names": "$response.body#/list_owner_screen_names",
+            "list_owner_ids": "$response.body#/list_owner_ids"
+          }
+        },
+        {
+          "stepId": "get-list-timeline",
+          "description": "Retrieves the tweet timeline for members of a specified list.",
+          "operationId": "lists.statuses",
+          "parameters": [
+            {
+              "name": "owner_screen_name",
+              "in": "query",
+              "value": "$inputs.owner_screen_name"
+            },
+            {
+              "name": "owner_id",
+              "in": "query",
+              "value": "$inputs.owner_id"
+            },
+            {
+              "name": "since_id",
+              "in": "query",
+              "value": "$inputs.since_id"
+            },
+            {
+              "name": "max_id",
+              "in": "query",
+              "value": "$inputs.max_id"
+            },
+            {
+              "name": "count",
+              "in": "query",
+              "value": "$inputs.count"
+            },
+            {
+              "name": "include_entities",
+              "in": "query",
+              "value": "$inputs.include_entities"
+            },
+            {
+              "name": "include_rts",
+              "in": "query",
+              "value": "$inputs.include_rts"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "list_tweets": "$response.body#/list_tweets"
+          }
+        }
+      ],
+      "outputs": {
+        "list_ids": "$steps.get-my-lists.outputs.list_ids",
+        "list_slugs": "$steps.get-my-lists.outputs.list_slugs",
+        "list_owner_screen_names": "$steps.get-my-lists.outputs.list_owner_screen_names",
+        "list_owner_ids": "$steps.get-my-lists.outputs.list_owner_ids",
+        "list_tweets": "$steps.get-list-timeline.outputs.list_tweets"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "saved-search-management",
+      "summary": "Enables an authenticated user to create a new saved search query, list their existing saved searches, and then delete a specific saved search.",
+      "description": "Enables an authenticated user to create a new saved search query, list their existing saved searches, and then delete a specific saved search.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-saved-search",
+          "description": "Creates a new saved search query for the authenticating user.",
+          "operationId": "saved_searches.create",
+          "parameters": [
+            {
+              "name": "query",
+              "in": "query",
+              "value": "$inputs.query"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "saved_search_id": "$response.body#/saved_search_id",
+            "saved_search_query": "$response.body#/saved_search_query"
+          }
+        },
+        {
+          "stepId": "list-all-saved-searches",
+          "description": "Retrieves all saved search queries for the authenticating user.",
+          "operationId": "saved_searches.list",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "saved_search_ids": "$response.body#/saved_search_ids",
+            "saved_search_objects": "$response.body#/saved_search_objects"
+          }
+        },
+        {
+          "stepId": "delete-specific-saved-search",
+          "description": "Deletes a specific saved search by its ID, which must be owned by the authenticating user.",
+          "operationId": "saved_searches.destroy",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "deletion_confirmation": "$response.body#/deletion_confirmation"
+          }
+        }
+      ],
+      "outputs": {
+        "saved_search_id": "$steps.create-saved-search.outputs.saved_search_id",
+        "saved_search_query": "$steps.create-saved-search.outputs.saved_search_query",
+        "saved_search_ids": "$steps.list-all-saved-searches.outputs.saved_search_ids",
+        "saved_search_objects": "$steps.list-all-saved-searches.outputs.saved_search_objects",
+        "deletion_confirmation": "$steps.delete-specific-saved-search.outputs.deletion_confirmation"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

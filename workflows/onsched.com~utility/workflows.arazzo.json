@@ -1,0 +1,140 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/onsched.com/utility/v1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "comprehensive-api-health-status",
+      "summary": "Provides a comprehensive overview of the API's health by first performing a basic liveness check and then retrieving detailed thread pool metrics. This workflow is ideal for dashboards or automated monitoring systems that require both a quick status and deeper operational insights.",
+      "description": "Provides a comprehensive overview of the API's health by first performing a basic liveness check and then retrieving detailed thread pool metrics. This workflow is ideal for dashboards or automated monitoring systems that require both a quick status and deeper operational insights.",
+      "steps": [
+        {
+          "stepId": "check-heartbeat",
+          "description": "Performs an initial liveness check to confirm the service is responsive.",
+          "operationPath": "openapi_source#/paths/~1utility~1v1~1health~1heartbeat/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "heartbeat_response": "$response.body#/heartbeat_response"
+          }
+        },
+        {
+          "stepId": "get-detailed-thread-metrics",
+          "description": "Retrieves detailed thread pool statistics to assess the API's current performance and resource utilization, complementing the basic liveness check.",
+          "operationPath": "openapi_source#/paths/~1utility~1v1~1health~1threadinfo/get",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "availableCompletionThreads": "$response.body#/availableCompletionThreads",
+            "availableWorkerThreads": "$response.body#/availableWorkerThreads",
+            "minCompletionThreads": "$response.body#/minCompletionThreads",
+            "minWorkerThreads": "$response.body#/minWorkerThreads",
+            "maxCompletionThreads": "$response.body#/maxCompletionThreads",
+            "maxWorkerThreads": "$response.body#/maxWorkerThreads",
+            "occupiedCompletionThreads": "$response.body#/occupiedCompletionThreads",
+            "occupiedWorkerThreads": "$response.body#/occupiedWorkerThreads"
+          }
+        }
+      ],
+      "outputs": {
+        "heartbeat_response": "$steps.check-heartbeat.outputs.heartbeat_response",
+        "availableCompletionThreads": "$steps.get-detailed-thread-metrics.outputs.availableCompletionThreads",
+        "availableWorkerThreads": "$steps.get-detailed-thread-metrics.outputs.availableWorkerThreads",
+        "minCompletionThreads": "$steps.get-detailed-thread-metrics.outputs.minCompletionThreads",
+        "minWorkerThreads": "$steps.get-detailed-thread-metrics.outputs.minWorkerThreads",
+        "maxCompletionThreads": "$steps.get-detailed-thread-metrics.outputs.maxCompletionThreads",
+        "maxWorkerThreads": "$steps.get-detailed-thread-metrics.outputs.maxWorkerThreads",
+        "occupiedCompletionThreads": "$steps.get-detailed-thread-metrics.outputs.occupiedCompletionThreads",
+        "occupiedWorkerThreads": "$steps.get-detailed-thread-metrics.outputs.occupiedWorkerThreads"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}

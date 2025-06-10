@@ -1,0 +1,1041 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Jentic Generated Arazzo Specification",
+    "version": "1.0.0",
+    "description": "Automatically generated Arazzo specification from OpenAPI"
+  },
+  "sourceDescriptions": [
+    {
+      "name": "openapi_source",
+      "url": "./apis/openapi/microcks.local/main/1.7.1/openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "setup-and-run-repository-import-job",
+      "summary": "Configures Microcks to automatically import API definitions from a specified repository by creating an Import Job, activating it, and then triggering an immediate import. This workflow can optionally include creating a secret for repository authentication.",
+      "description": "Configures Microcks to automatically import API definitions from a specified repository by creating an Import Job, activating it, and then triggering an immediate import. This workflow can optionally include creating a secret for repository authentication.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "repositoryUrl": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "create-secret",
+          "description": "Optionally creates a new secret for repository authentication if the repository requires it.",
+          "operationId": "CreateSecret",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "name": "$inputs.name",
+              "description": "$inputs.description"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "secretId": "$response.body#/secretId",
+            "secretName": "$response.body#/secretName"
+          }
+        },
+        {
+          "stepId": "create-import-job",
+          "description": "Creates a new Import Job, linking it to the repository URL and optionally the created secret for authentication.",
+          "operationId": "CreateImportJob",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "secretRefId": "$steps.create-secret.outputs.secretId",
+              "secretRefName": "$steps.create-secret.outputs.secretName",
+              "name": "$inputs.name",
+              "repositoryUrl": "$inputs.repositoryUrl"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "jobId": "$response.body#/jobId"
+          }
+        },
+        {
+          "stepId": "activate-import-job",
+          "description": "Activates the newly created Import Job, making it eligible for scheduled execution.",
+          "operationId": "ActivateImportJob",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-import-job.outputs.jobId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "jobId": "$response.body#/jobId"
+          }
+        },
+        {
+          "stepId": "start-import-job",
+          "description": "Triggers an immediate execution of the Import Job to import mock definitions.",
+          "operationId": "StartImportJob",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.activate-import-job.outputs.jobId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "jobId": "$response.body#/jobId"
+          }
+        },
+        {
+          "stepId": "get-import-job-status",
+          "description": "Retrieves the current status and details of the Import Job after its execution.",
+          "operationPath": "openapi_source#/paths/~1jobs~1{id}/get",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.start-import-job.outputs.jobId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "importJob": "$response.body#/importJob"
+          }
+        }
+      ],
+      "outputs": {
+        "secretId": "$steps.create-secret.outputs.secretId",
+        "secretName": "$steps.create-secret.outputs.secretName",
+        "jobId": "$steps.start-import-job.outputs.jobId",
+        "importJob": "$steps.get-import-job-status.outputs.importJob"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "execute-and-review-service-test",
+      "summary": "Initiates a new test run for a specific service against a provided endpoint, then retrieves the overall test result and detailed messages/events for a test case.",
+      "description": "Initiates a new test run for a specific service against a provided endpoint, then retrieves the overall test result and detailed messages/events for a test case.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "string"
+          },
+          "size": {
+            "type": "string"
+          },
+          "testEndpoint": {
+            "type": "string"
+          },
+          "runnerType": {
+            "type": "string"
+          },
+          "timeout": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "testCaseId": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-services",
+          "description": "Retrieves a list of available services to identify the target service for testing.",
+          "operationId": "GetServices",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "size",
+              "in": "query",
+              "value": "$inputs.size"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "services": "$response.body#/services"
+          }
+        },
+        {
+          "stepId": "create-service-test",
+          "description": "Creates and starts a new test run for the selected service against a specified endpoint.",
+          "operationId": "CreateTest",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "serviceId": "$steps.list-services.outputs.services[0].id",
+              "testEndpoint": "$inputs.testEndpoint",
+              "runnerType": "$inputs.runnerType",
+              "timeout": "$inputs.timeout"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "testResultId": "$response.body#/testResultId"
+          }
+        },
+        {
+          "stepId": "get-test-result",
+          "description": "Retrieves the comprehensive result of the initiated test run, including test case outcomes.",
+          "operationId": "GetTestResult",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.create-service-test.outputs.testResultId"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "testResult": "$response.body#/testResult"
+          }
+        },
+        {
+          "stepId": "get-test-case-messages",
+          "description": "Fetches the request and response messages for a specific test case within the test result.",
+          "operationId": "GetMessagesByTestCase",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-test-result.outputs.testResult.id"
+            },
+            {
+              "name": "testCaseId",
+              "in": "path",
+              "value": "$steps.get-test-result.outputs.testResult.testCaseResults[0].operationName"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "messages": "$response.body#/0/messages"
+          }
+        }
+      ],
+      "outputs": {
+        "services": "$steps.list-services.outputs.services",
+        "testResultId": "$steps.create-service-test.outputs.testResultId",
+        "testResult": "$steps.get-test-result.outputs.testResult",
+        "messages": "$steps.get-test-case-messages.outputs.messages"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "upload-and-verify-service-artifact",
+      "summary": "Uploads an API artifact (e.g., OpenAPI spec) to Microcks, which automatically creates a Service, and then retrieves the details of the newly created Service to verify its successful import.",
+      "description": "Uploads an API artifact (e.g., OpenAPI spec) to Microcks, which automatically creates a Service, and then retrieves the details of the newly created Service to verify its successful import.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "mainArtifact": {
+            "type": "string"
+          },
+          "file": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "messages": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "upload-artifact",
+          "description": "Uploads an artifact file to Microcks for service definition import. The response is expected to be the ID of the newly created service.",
+          "operationId": "uploadArtifact",
+          "parameters": [
+            {
+              "name": "mainArtifact",
+              "in": "query",
+              "value": "$inputs.mainArtifact"
+            }
+          ],
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "file": "$inputs.file"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "serviceId": "$response.body#/serviceId"
+          }
+        },
+        {
+          "stepId": "get-service-details",
+          "description": "Retrieves the detailed information of the newly imported service using its ID.",
+          "operationId": "GetService",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.upload-artifact.outputs.serviceId"
+            },
+            {
+              "name": "messages",
+              "in": "query",
+              "value": "$inputs.messages"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "service": "$response.body#/service"
+          }
+        }
+      ],
+      "outputs": {
+        "serviceId": "$steps.upload-artifact.outputs.serviceId",
+        "service": "$steps.get-service-details.outputs.service"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "monitor-mock-service-invocations",
+      "summary": "Provides various ways to monitor the invocation statistics of mocked services, including global daily aggregates, top invoked services, and specific service invocation details.",
+      "description": "Provides various ways to monitor the invocation statistics of mocked services, including global daily aggregates, top invoked services, and specific service invocation details.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "serviceName": {
+            "type": "string"
+          },
+          "serviceVersion": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-global-daily-invocations",
+          "description": "Retrieves aggregated invocation statistics for all services for a specific day.",
+          "operationId": "GetAggregatedInvocationsStats",
+          "parameters": [
+            {
+              "name": "day",
+              "in": "query",
+              "value": "$inputs.day"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "dailyInvocationStatistic": "$response.body#/dailyInvocationStatistic"
+          }
+        },
+        {
+          "stepId": "get-top-invoked-services",
+          "description": "Identifies the most frequently invoked mocked services for a given day.",
+          "operationId": "GetTopIvnocationsStatsByDay",
+          "parameters": [
+            {
+              "name": "day",
+              "in": "query",
+              "value": "$steps.get-global-daily-invocations.outputs.dailyInvocationStatistic.day"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "topInvocations": "$response.body#/0/topInvocations"
+          }
+        },
+        {
+          "stepId": "get-service-invocations",
+          "description": "Retrieves detailed invocation statistics for a specific service and version.",
+          "operationId": "GetInvocationStatsByService",
+          "parameters": [
+            {
+              "name": "serviceName",
+              "in": "path",
+              "value": "$steps.get-top-invoked-services.outputs.topInvocations.serviceName"
+            },
+            {
+              "name": "serviceVersion",
+              "in": "path",
+              "value": "$steps.get-top-invoked-services.outputs.topInvocations.serviceVersion"
+            },
+            {
+              "name": "day",
+              "in": "query",
+              "value": "$steps.get-top-invoked-services.outputs.topInvocations.day"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "serviceInvocationStatistic": "$response.body#/serviceInvocationStatistic"
+          }
+        },
+        {
+          "stepId": "get-latest-global-invocations",
+          "description": "Retrieves aggregated invocation statistics for the most recent days.",
+          "operationId": "GetLatestAggregatedInvocationsStats",
+          "parameters": [
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "latestInvocationsMap": "$response.body#/latestInvocationsMap"
+          }
+        }
+      ],
+      "outputs": {
+        "dailyInvocationStatistic": "$steps.get-global-daily-invocations.outputs.dailyInvocationStatistic",
+        "topInvocations": "$steps.get-top-invoked-services.outputs.topInvocations",
+        "serviceInvocationStatistic": "$steps.get-service-invocations.outputs.serviceInvocationStatistic",
+        "latestInvocationsMap": "$steps.get-latest-global-invocations.outputs.latestInvocationsMap"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "monitor-service-test-conformance-and-results",
+      "summary": "Provides insights into the test coverage and conformance of services, including aggregated metrics, service-specific scores, and a summary of recent test results.",
+      "description": "Provides insights into the test coverage and conformance of services, including aggregated metrics, service-specific scores, and a summary of recent test results.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "string"
+          },
+          "size": {
+            "type": "string"
+          },
+          "serviceId": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-services-for-metrics",
+          "description": "Retrieves a list of services to identify targets for conformance metrics.",
+          "operationId": "GetServices",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "size",
+              "in": "query",
+              "value": "$inputs.size"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "services": "$response.body#/services"
+          }
+        },
+        {
+          "stepId": "get-aggregated-conformance",
+          "description": "Retrieves aggregated conformance metrics across all services.",
+          "operationId": "GetConformanceMetricsAggregation",
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "aggregatedMetrics": "$response.body#/0/aggregatedMetrics"
+          }
+        },
+        {
+          "stepId": "get-service-conformance",
+          "description": "Retrieves detailed conformance metrics for a specific service.",
+          "operationId": "GetServiceTestConformanceMetric",
+          "parameters": [
+            {
+              "name": "serviceId",
+              "in": "path",
+              "value": "$steps.list-services-for-metrics.outputs.services.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "serviceConformanceMetric": "$response.body#/serviceConformanceMetric"
+          }
+        },
+        {
+          "stepId": "get-latest-test-results-summary",
+          "description": "Retrieves a summary of the most recent test results.",
+          "operationId": "GetLatestTestResults",
+          "parameters": [
+            {
+              "name": "limit",
+              "in": "query",
+              "value": "$inputs.limit"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "latestTestResults": "$response.body#/0/latestTestResults"
+          }
+        }
+      ],
+      "outputs": {
+        "services": "$steps.list-services-for-metrics.outputs.services",
+        "aggregatedMetrics": "$steps.get-aggregated-conformance.outputs.aggregatedMetrics",
+        "serviceConformanceMetric": "$steps.get-service-conformance.outputs.serviceConformanceMetric",
+        "latestTestResults": "$steps.get-latest-test-results-summary.outputs.latestTestResults"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "update-service-configuration",
+      "summary": "Retrieves a specific service's details, then updates its general metadata and/or overrides specific operation behaviors like dispatching rules or default delays.",
+      "description": "Retrieves a specific service's details, then updates its general metadata and/or overrides specific operation behaviors like dispatching rules or default delays.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "messages": {
+            "type": "string"
+          },
+          "operationName": {
+            "type": "string"
+          },
+          "dispatcher": {
+            "type": "string"
+          },
+          "dispatcherRules": {
+            "type": "string"
+          },
+          "defaultDelay": {
+            "type": "string"
+          },
+          "parameterConstraints": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-service-details",
+          "description": "Retrieves the current configuration and metadata of a service by its ID.",
+          "operationId": "GetService",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            },
+            {
+              "name": "messages",
+              "in": "query",
+              "value": "$inputs.messages"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "service": "$response.body#/service"
+          }
+        },
+        {
+          "stepId": "update-service-metadata",
+          "description": "Updates the metadata associated with the service, such as labels or annotations.",
+          "operationId": "UpdateServiceMetadata",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-service-details.outputs.service.id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.get-service-details.outputs.service.id",
+              "createdOn": "$steps.get-service-details.outputs.service.metadata.createdOn",
+              "lastUpdate": "$steps.get-service-details.outputs.service.metadata.lastUpdate",
+              "annotations": "$steps.get-service-details.outputs.service.metadata.annotations",
+              "labels": "$steps.get-service-details.outputs.service.metadata.labels"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "metadata_data": "$response.body"
+          }
+        },
+        {
+          "stepId": "override-service-operation",
+          "description": "Overrides specific properties of an operation within the service, such as dispatcher rules or default response delays for mocking.",
+          "operationId": "OverrideServiceOperation",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-service-details.outputs.service.id"
+            },
+            {
+              "name": "operationName",
+              "in": "query",
+              "value": "$steps.get-service-details.outputs.service.operations[0].name"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "id": "$steps.get-service-details.outputs.service.id",
+              "operationName": "$steps.get-service-details.outputs.service.operations[0].name",
+              "dispatcher": "$inputs.dispatcher",
+              "dispatcherRules": "$inputs.dispatcherRules",
+              "defaultDelay": "$inputs.defaultDelay",
+              "parameterConstraints": "$inputs.parameterConstraints"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "operation_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "service": "$steps.get-service-details.outputs.service",
+        "metadata_data": "$steps.update-service-metadata.outputs.metadata_data",
+        "operation_data": "$steps.override-service-operation.outputs.operation_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "export-and-import-microcks-repository-snapshot",
+      "summary": "Allows users to export selected service definitions from Microcks into a snapshot file and then import a previously exported snapshot, facilitating backup, migration, or sharing of API definitions.",
+      "description": "Allows users to export selected service definitions from Microcks into a snapshot file and then import a previously exported snapshot, facilitating backup, migration, or sharing of API definitions.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "string"
+          },
+          "size": {
+            "type": "string"
+          },
+          "serviceIds": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "list-services-for-export",
+          "description": "Retrieves a list of services to identify which ones to include in the snapshot export.",
+          "operationId": "GetServices",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "query",
+              "value": "$inputs.page"
+            },
+            {
+              "name": "size",
+              "in": "query",
+              "value": "$inputs.size"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "services": "$response.body#/services"
+          }
+        },
+        {
+          "stepId": "export-repository-snapshot",
+          "description": "Exports a snapshot file containing the definitions and mocks of specified services.",
+          "operationId": "exportSnapshot",
+          "parameters": [
+            {
+              "name": "serviceIds",
+              "in": "query",
+              "value": "$steps.list-services-for-export.outputs.services.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "snapshotFile": "$response.body#/snapshotFile"
+          }
+        },
+        {
+          "stepId": "import-repository-snapshot",
+          "description": "Imports a previously exported repository snapshot file into Microcks, adding or updating service definitions.",
+          "operationId": "importSnapshot",
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "payload": {
+              "file": "$steps.export-repository-snapshot.outputs.snapshotFile"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "snapshot_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "services": "$steps.list-services-for-export.outputs.services",
+        "snapshotFile": "$steps.export-repository-snapshot.outputs.snapshotFile",
+        "snapshot_data": "$steps.import-repository-snapshot.outputs.snapshot_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    },
+    {
+      "workflowId": "retrieve-and-update-external-connection-secret",
+      "summary": "Retrieves the details of an existing secret and then allows for its modification, such as updating credentials or description.",
+      "description": "Retrieves the details of an existing secret and then allows for its modification, such as updating credentials or description.",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "get-secret-details",
+          "description": "Retrieves the full details of a specific secret by its ID.",
+          "operationId": "GetSecret",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "secret": "$response.body#/secret"
+          }
+        },
+        {
+          "stepId": "update-existing-secret",
+          "description": "Updates the properties of an existing secret using its ID.",
+          "operationId": "UpdateSecret",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.get-secret-details.outputs.secret.id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "secret_data": "$response.body"
+          }
+        }
+      ],
+      "outputs": {
+        "secret": "$steps.get-secret-details.outputs.secret",
+        "secret_data": "$steps.update-existing-secret.outputs.secret_data"
+      },
+      "failureActions": [
+        {
+          "reference": "$components.failureActions.auth_failure"
+        },
+        {
+          "reference": "$components.failureActions.permission_denied"
+        },
+        {
+          "reference": "$components.failureActions.not_found"
+        },
+        {
+          "reference": "$components.failureActions.server_error"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "successActions": {
+      "default_success": {
+        "name": "default_success",
+        "type": "end"
+      }
+    },
+    "failureActions": {
+      "auth_failure": {
+        "name": "auth_failure",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 401"
+          }
+        ]
+      },
+      "permission_denied": {
+        "name": "permission_denied",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 403"
+          }
+        ]
+      },
+      "not_found": {
+        "name": "not_found",
+        "type": "end",
+        "criteria": [
+          {
+            "condition": "$statusCode == 404"
+          }
+        ]
+      },
+      "server_error": {
+        "name": "server_error",
+        "type": "retry",
+        "retryAfter": 2,
+        "retryLimit": 3,
+        "criteria": [
+          {
+            "condition": "$statusCode >= 500"
+          }
+        ]
+      },
+      "default_retry": {
+        "name": "default_retry",
+        "type": "retry",
+        "retryAfter": 1,
+        "retryLimit": 3
+      },
+      "default_failure": {
+        "name": "default_failure",
+        "type": "end"
+      }
+    }
+  }
+}
