@@ -35,13 +35,13 @@ Agents depend on APIs as much as AI. Chatbots chat, but agents act, and they act
 9. **Open Standards Ensure Interoperability**  
    By embracing open standards like OpenAPI and Arazzo, we ensure AI agents can reliably discover, understand, and interact with APIs regardless of which model or platform they use, guaranteeing portability and longevity independent of any single company.
 
-10. **Declarative Schemas Enable Runtime Agentic Composition**
+10. **Declarative Schemas Enable Runtime Agentic Composition**  
    In contrast to traditional software, agents can bind capabilities dynamically at runtime, not at design time. Declarative, machine-readable schemas allow agents to plan, synthesize, and execute actions safely and reliably on demand — enabling flexible, scalable autonomy without brittle prompt engineering or hardcoded toolsets.
 
-11. **Federated Discoverability Supports a Global Knowledge Layer**
-   OAK is a global network of interoperable repositories. Each OAK repository should expose machine-readable discovery metadata — beginning with an `oak.txt` file listing URLs of other OAK repositories, allowing other repositories, agents, and crawlers to automatically discover, import, or synchronize agentic knowledge across the ecosystem.
+11. **Federated Discoverability Supports a Global Knowledge Layer**  
+      OAK is a global network of interoperable repositories. Each OAK repository should expose machine-readable discovery metadata — beginning with an `oak.txt` file listing URLs of other OAK repositories, allowing other repositories, agents, and crawlers to automatically discover, import, or synchronize agentic knowledge across the ecosystem.
 
-12. **Permissive Licensing Ensures Maximal Reuse**
+12. **Permissive Licensing Ensures Maximal Reuse**  
    To enable frictionless reuse, federation, and integration, OAK repositories should adopt fully permissive open-source licenses (such as MIT) for both documentation and code. This guarantees that knowledge remains portable, remixable, and legally interoperable across the full agentic software stack.
 
 13. **Community Collaboration Accelerates Progress**  
